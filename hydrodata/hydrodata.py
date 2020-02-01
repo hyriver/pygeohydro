@@ -449,15 +449,15 @@ def download_url(url, out_dir):
 
 
 def download_extract(url, out_dir):
-    from pyunpack import Archive
+    import py7zr
 
     file = Path(out_dir).joinpath(url.split('/')[-1])
     if file.exists():
-        Archive(file).extractall(out_dir)
+        py7zr.unpack_7zarchive(file, out_dir)
         print(f'Successfully extracted {file}.')
     else:
         download_url(url, out_dir)
-        Archive(file).extractall(out_dir)
+        py7zr.unpack_7zarchive(file, out_dir)
         print(f'Successfully downloaded and extracted {str(file)}.')
 
 
