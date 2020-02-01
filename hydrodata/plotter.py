@@ -1,7 +1,13 @@
+# -*- coding: utf-8 -*-
+"""Plot hydrological signatures.
+
+Plots includes  daily, monthly and annual hydrograph as well as
+regime curve (monthly mean) and flow duration curve.
+"""
+
+
 def RC(daily):
-    """
-    Compute monthly mean over the whole time series for the regime curve.
-    """
+    """Compute monthly mean over the whole time series for the regime curve."""
     import calendar
 
     d = dict(enumerate(calendar.month_abbr))
@@ -11,9 +17,9 @@ def RC(daily):
 
 
 def FDC(daily):
-    """
-    Computes Flow duration (rank, sorted obs). The zero discharges are handled
-    by dropping since log 0 is undefined.
+    """Compute Flow duration (rank, sorted obs).
+
+    The zero discharges are handled by dropping since log 0 is undefined.
     """
     import pandas as pd
 
@@ -37,25 +43,23 @@ def plot(daily_dict,
          threshold=1e-3,
          output=None):
     """Plot hydrological signatures with precipitation as the second axis.
-       Plots includes  daily, monthly and annual hydrograph as well as
-       regime curve (monthly mean) and flow duration curve.
 
-       Arguments:
-           daily_dict (dataframe): Daily discharge timeseries in mm/day.
-                                   A dataframe or a dictionary of dataframes
-                                   can be passed where keys are lables and
-                                   values are dataframes.
-           prcp (dataframe): Daily precipitation timeseries in mm/day.
-           area (float): Watershed area in km$^2$ (for converting
-                         cms to mm/day)
-           title (str): Plot's supertitle.
-           figsize (tuple): Width and height of the plot in inches.
-                            The default is (8, 10)
-           threshold (float): The threshold for cutting off the discharge for
-                              the flow duration curve to deal with log 0 issue.
-                              The default is 1e-3.
-           output (str): Path to save the plot as png. The default is `None`
-                           which means the plot is not saved to a file.
+    Plots includes  daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve.
+
+    Args:
+    daily_dict (dataframe): Daily discharge timeseries in mm/day.
+        A dataframe or a dictionary of dataframes can be passed where keys
+        are lables and values are dataframes.
+    prcp (dataframe): Daily precipitation timeseries in mm/day.
+    area (float): Watershed area in km$^2$ (for converting cms to mm/day)
+    title (str): Plot's supertitle.
+    figsize (tuple): Width and height of the plot in inches.
+        The default is (8, 10)
+    threshold (float): The threshold for cutting off the discharge for
+        the flow duration curve to deal with log 0 issue. The default is 1e-3.
+    output (str): Path to save the plot as png. The default is `None`
+        which means the plot is not saved to a file.
     """
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -216,25 +220,24 @@ def plot_discharge(daily_dict,
                    figsize=(8, 10),
                    threshold=1e-3,
                    output=None):
-    """Plot hydrological signatures without precipitation; daily, monthly and
-       annual hydrograph as well as regime curve (monthly mean) and
-       flow duration curve.
+    """Plot hydrological signatures without precipitation.
 
-       Arguments:
-           daily_dict (dataframe): Daily discharge timeseries in mm/day.
-                                   A dataframe or a dictionary of dataframes
-                                   can be passed where keys are lables and
-                                   values are dataframes.
-           area (float): Watershed area in km$^2$ (for converting
-                         cms to mm/day).
-           title (str): Plot's supertitle.
-           figsize (tuple): Width and height of the plot in inches.
-                            The default is (8, 10)
-           threshold (float): The threshold for cutting off the discharge for
-                              the flow duration curve to deal with log 0 issue.
-                              The default is 1e-3.
-           output (str): Path to save the plot as png. The default is `None`
-                           which means the plot is not saved to a file.
+    The plots include daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve.
+
+    Args:
+    daily_dict (dataframe): Daily discharge timeseries in mm/day. A dataframe
+        or a dictionary of dataframes can be passed where keys are lables and
+        values are dataframes.
+    area (float): Watershed area in km$^2$ (for converting
+        cms to mm/day).
+    title (str): Plot's supertitle.
+    figsize (tuple): Width and height of the plot in inches.
+        The default is (8, 10)
+    threshold (float): The threshold for cutting off the discharge for
+        the flow duration curve to deal with log 0 issue. The default is 1e-3.
+    output (str): Path to save the plot as png. The default is `None`
+        which means the plot is not saved to a file.
     """
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -345,6 +348,7 @@ def plot_discharge(daily_dict,
 
 
 def get_daterange(Q_dict):
+    """Find data range of several data series."""
     import pandas as pd
 
     return pd.date_range(min([q.index[0] for q in list(Q_dict.values())]),

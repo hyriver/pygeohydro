@@ -8,6 +8,7 @@ Welcome to Hydrodata's documentation!
    readme
    installation
    usage
+   modules
    contributing
    authors
    history

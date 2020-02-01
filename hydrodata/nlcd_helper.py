@@ -1,16 +1,22 @@
+# -*- coding: utf-8 -*-
+"""Helper for working with NLCD data."""
+
+
 class NLCD:
-    """ A helper for proccessing NLCD data.
+    """The following references are used.
+
     References:
-        https://github.com/jzmiller1/nlcd
-        https://geopython.github.io/OWSLib/
-        https://www.mrlc.gov/data-services-page
-        https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
-        https://github.com/ozak/georasters
-        https://automating-gis-processes.github.io/CSC18/index.html
-        https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
+    https://github.com/jzmiller1/nlcd
+    https://geopython.github.io/OWSLib/
+    https://www.mrlc.gov/data-services-page
+    https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
+    https://github.com/ozak/georasters
+    https://automating-gis-processes.github.io/CSC18/index.html
+    https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
     """
 
     def __init__(self):
+        """Legends of the NLCD 2016 database."""
         self.years = [2016, 2013, 2011, 2008, 2006, 2004, 2001]
 
         self.values = {

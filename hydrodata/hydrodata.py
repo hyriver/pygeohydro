@@ -1,3 +1,10 @@
+# -*- coding: utf-8 -*-
+"""This is the main module for generating an instance of hydrodata.
+
+It can be loaded as follows:
+    >>> from hydrodata.hydrodata import Dataloader
+"""
+
 from pathlib import Path
 import pandas as pd
 import numpy as np
@@ -9,28 +16,12 @@ import urllib
 
 
 class Dataloader:
-    """Downloads climate and streamflow observation data from Daymet and USGS,
-       respectively. The data is saved to a HDF file.
+    """Generate an instance of hydrodata package.
 
-        Args:
-        start (str or datetime): The starting date of the time period.
-        end (str or datetime): The end of the time period.
-        station_id (str): USGS station ID
-        coords (float, float): A tuple including longitude and latitude of
-                               the observation point.
-        gis_dir (str): Path to the location of NHDPlusV21 root directory;
-                       GageLoc and GageInfo are required.
-        data_dir (str): Path to the location of climate data. The naming
-                        convention is data_dir/{watershed name}_climate.h5
-        phenology (bool): consider phenology for computing PET
-                          based on Thompson et al., 2011
-                          (https://doi.org/10.1029/2010WR009797)
-        width (float): Width of the extracted geotiff image for LULC in pixels.
-                       Default is 2000 px. The height is computed automatically
-                       from the domain's aspect ratio.
-
-        Note: either coords or station_id argument should be specified.
+    Downloads climate and streamflow observation data from Daymet and USGS,
+    respectively. The data is saved to a HDF file.
     """
+
     def __init__(
         self,
         start,
@@ -42,7 +33,27 @@ class Dataloader:
         phenology=False,
         width=2000,
     ):
+        """Initialize the instance.
 
+        Args:
+        start (str or datetime): The starting date of the time period.
+        end (str or datetime): The end of the time period.
+        station_id (str): USGS station ID
+        coords (float, float): A tuple including longitude and latitude of
+            the observation point.
+        gis_dir (str): Path to the location of NHDPlusV21 root directory;
+            GageLoc and GageInfo are required.
+        data_dir (str): Path to the location of climate data. The naming
+            convention is data_dir/{watershed name}_climate.h5
+        phenology (bool): consider phenology for computing PET
+            based on Thompson et al., 2011
+            (https://doi.org/10.1029/2010WR009797)
+        width (float): Width of the geotiff image for LULC in pixels.
+            Default is 2000 px. The height is computed automatically
+            from the domain's aspect ratio.
+
+        Note: either coords or station_id argument should be specified.
+        """
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
 
@@ -70,6 +81,7 @@ class Dataloader:
         self.data_dir = Path(data_dir, self.comid)
 
     def get_coords(self):
+        """Get coordinates of the station from station ID."""
         ginfo = gpd.read_file(self.info_path)
 
         try:
@@ -92,6 +104,7 @@ class Dataloader:
         self.comid = str(station_loc.FLComID.values[0])
 
     def get_id(self):
+        """Get station ID based on the specified coordinates."""
         from shapely.ops import nearest_points
         from shapely.geometry import Point
 
@@ -113,6 +126,15 @@ class Dataloader:
         print(self.wshed_name)
 
     def get_climate(self):
+        """Get climate data from the Daymet database.
+
+        The function first downloads climate data then computes potential
+        evapotranspiration using ETo python package. Then downloads streamflow
+        data from USGS database and saves the data as an HDF5 file and return
+        it as a Pandas dataframe. The naming convention for the HDF5 file is
+        <station_id>_<start>_<end>.h5. If the files already exits on the disk
+        it is read and returned as a Pandas dataframe.
+        """
         import json
         import daymetpy
         import eto
@@ -252,19 +274,23 @@ class Dataloader:
               f"saved to {self.clm_file}")
 
     def get_lulc(self, geom_path=None):
-        """Download and compute land use, canopy and cover from NLCD2016
-           database inside a given Polygon geometry with epsg:4326 projection.
-           Note: NLCD data has a 30 m resolution.
-           Args:
-               geom_path (str): Path to the shapefile.
-                                The default is data/<comid>/geometry.shp.
-           Returns:
-               impervious (dict): A dictionary containing min, max, mean and
-                                  count of the imperviousness of the watershed
-               canpoy (dict): A dictionary containing min, max, mean and count
-                                  of the canpoy of the watershed
-               cover (dataframe): A dataframe containing watershed's land
-                                  coverage percentage.
+        """Get LULC data from NLCD 2016 database.
+
+        Download and compute land use, canopy and cover from NLCD2016
+        database inside a given Polygon geometry with epsg:4326 projection.
+        Note: NLCD data has a 30 m resolution.
+
+        Args:
+        geom_path (str): Path to the shapefile.
+            The default is data/<comid>/geometry.shp.
+
+        Returns:
+        impervious (dict): A dictionary containing min, max, mean and
+            count of the imperviousness of the watershed
+        canpoy (dict): A dictionary containing min, max, mean and count
+            of the canpoy of the watershed
+        cover (dataframe): A dataframe containing watershed's land
+            coverage percentage.
         """
         from owslib.wms import WebMapService
         import rasterstats
@@ -353,12 +379,30 @@ class Dataloader:
         self.cover = params["cover"]
 
     def separate_snow(self, prcp, tmean, tcr=0.0):
-        """Separate snow and rain from the precipitation based on
-           a critical temperature (C). The default value is 0 degree C.
+        """Separate snow and rain from the precipitation.
+
+        The separation is based on a critical temperature (C) with the default
+        value of 0 degree C.
         """
         return _separate_snow(prcp, tmean, tcr)
 
-    def plot(self, Q_dict=None, figsize=(13, 12), output=None):
+    def plot(self, Q_dict=None, figsize=(13, 12), threshold=1e-3, output=None):
+        """Plot hydrological signatures with precipitation as the second axis.
+
+        Plots includes  daily, monthly and annual hydrograph as well as
+        regime curve (monthly mean) and flow duration curve.
+
+        Args:
+        daily_dict (dataframe): Daily discharge timeseries in mm/day.
+            A dataframe or a dictionary of dataframes can be passed where keys
+            are lables and values are dataframes.
+        figsize (tuple): Width and height of the plot in inches.
+            The default is (8, 10)
+        threshold (float): The threshold for cutting off the discharge for the
+            flow duration curve to deal with log 0 issue. The default is 1e-3.
+        output (str): Path to save the plot as png. The default is `None`
+            which means the plot is not saved to a file.
+        """
         from hydrodata.plotter import plot
 
         if Q_dict is None:
@@ -369,6 +413,7 @@ class Dataloader:
              self.DASqKm,
              self.wshed_name,
              figsize=figsize,
+             threshold=threshold,
              output=output)
         return
 
@@ -377,6 +422,24 @@ class Dataloader:
                        title='Streaflow data for the watersheds',
                        figsize=(13, 12),
                        output=None):
+        """Plot hydrological signatures without precipitation.
+
+        The plots include daily, monthly and annual hydrograph as well as
+        regime curve (monthly mean) and flow duration curve.
+
+        Args:
+        daily_dict (dataframe): Daily discharge timeseries in mm/day.
+            A dataframe or a dictionary of dataframes can be passed
+            where keys are lables and values are dataframes.
+        area (float): Watershed area in km$^2$ (for converting cms to mm/day).
+        title (str): Plot's supertitle.
+        figsize (tuple): Width and height of the plot in inches.
+            The default is (8, 10)
+        threshold (float): The threshold for cutting off the discharge for the
+            flow duration curve to deal with log 0 issue. The default is 1e-3.
+        output (str): Path to save the plot as png. The default is `None`
+            which means the plot is not saved to a file.
+        """
         from hydrodata.plotter import plot_discharge
 
         if Q_dict is None:
@@ -392,6 +455,7 @@ class Dataloader:
 
 @njit(parallel=True)
 def _separate_snow(prcp, tmean, tcr=0.0):
+    """Separate snow and rain based on a critical temperature."""
     nt = prcp.shape[0]
     pr = np.zeros(nt, np.float64)
     ps = np.zeros(nt, np.float64)
@@ -406,7 +470,7 @@ def _separate_snow(prcp, tmean, tcr=0.0):
 
 
 def get_nhd(gis_dir):
-
+    """Download and extract NHDPlus V2.1 database."""
     gis_dir = Path(gis_dir)
 
     if not gis_dir.is_dir():
@@ -431,13 +495,27 @@ def get_nhd(gis_dir):
 
 
 class DownloadProgressBar(tqdm):
+    """A tqdm-based class for download progress."""
+
     def update_to(self, b=1, bsize=1, tsize=None):
+        """Inspired from a tqdm example.
+
+        Args:
+        b  : int, optional
+            Number of blocks transferred so far [default: 1].
+        bsize  : int, optional
+            Size of each block (in tqdm units) [default: 1].
+        tsize  : int, optional
+            Total size (in tqdm units). If [default: None] or -1,
+            remains unchanged.
+        """
         if tsize is not None:
             self.total = tsize
         self.update(b * bsize - self.n)
 
 
 def download_url(url, out_dir):
+    """Progress bar for downloading a file."""
     with DownloadProgressBar(unit='B',
                              unit_scale=True,
                              miniters=1,
@@ -449,6 +527,7 @@ def download_url(url, out_dir):
 
 
 def download_extract(url, out_dir):
+    """Download and extract a `.7z` file."""
     import py7zr
 
     file = Path(out_dir).joinpath(url.split('/')[-1])
@@ -462,6 +541,7 @@ def download_extract(url, out_dir):
 
 
 def get_h5data(h5_file, dbname):
+    """Read HDF5 file and return it as a Pandas dataframe."""
     import tables
 
     with tables.open_file(h5_file, "r") as db:

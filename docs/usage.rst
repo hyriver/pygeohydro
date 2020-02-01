@@ -1,7 +1,7 @@
 Usage
 ==================
 
-.. code:: ipython3
+.. code:: python
 
     from hydrodata.hydrodata import Dataloader
 
@@ -17,20 +17,27 @@ Climate Data
 
 For example, let’s consider the following USGS station:
 
-.. code:: ipython3
+.. code:: python
 
     start, end = '2000-01-01', '2015-12-31'
     station_id = '01467087'
 
 Now, we can define an instance based on the station ID as follows:
 
-.. code:: ipython3
+.. code:: python
 
     frankford = Dataloader(start, end, station_id=station_id)
 
 
-.. parsed-literal::
+.. code-block:: bash
 
+    NHDPlusV21_NationalData_GageInfo_05.7z: 0.00B [00:00, ?B/s]
+    Downloading USGS gage information data to gis_data
+    NHDPlusV21_NationalData_GageInfo_05.7z: 729kB [00:00, 1.32MB/s]                            
+    NHDPlusV21_NationalData_GageLoc_05.7z: 0.00B [00:00, ?B/s]
+    Successfully downloaded and extracted gis_data/NHDPlusV21_NationalData_GageInfo_05.7z.
+    NHDPlusV21_NationalData_GageLoc_05.7z: 1.14MB [00:00, 1.85MB/s]
+    Successfully downloaded and extracted gis_data/NHDPlusV21_NationalData_GageLoc_05.7z.
     The gauge station is located in the following watershed:
     Frankford Creek at Castor Ave, Philadelphia, PA
 
@@ -41,19 +48,22 @@ data can be downloaded using ``get_climate`` function. The data is
 downloaded and saved as an HDF5 file. If the file exists, it is read
 from the disk.
 
-.. code:: ipython3
+.. code:: python
 
     frankford.get_climate()
 
 
-.. parsed-literal::
+.. code-block:: bash
 
-    Using existing climate data file: data/4489096/20000101_20151231.h5
+    Downloading climate data from the Daymet database
+    Computing potential evapotranspiration (PET) using FAO method
+    Downloading stream flow data from USGS database
+    climate data was downloaded successfuly andsaved to data/4489096/20000101_20151231.h5
 
 
 The data is returned as a ``pandas`` dataframe.
 
-.. code:: ipython3
+.. code:: python
 
     frankford.climate.head()
 
@@ -143,7 +153,7 @@ The data is returned as a ``pandas`` dataframe.
 Hydrodata has function that can separate snow and rain from the
 precipitation.
 
-.. code:: ipython3
+.. code:: python
 
     df = frankford.climate.copy()
     df["pr (mm/day)"], df["ps (mm/day)"] = frankford.separate_snow(
@@ -253,17 +263,20 @@ closest station to the specified coordinates is found automatically. For
 example, let’s find the climate data for a station close to longitude
 -76.43 and latitude of 41.08.
 
-.. code:: ipython3
+.. code:: python
 
     fishing = Dataloader(start, end, coords=(-76.43, 41.08))
     fishing.get_climate()
 
 
-.. parsed-literal::
+.. code-block:: bash
 
     The gage station is located in the following watershed:
     Fishing Creek near Bloomsburg, PA
-    Using existing climate data file: data/2603023/20000101_20151231.h5
+    Downloading climate data from the Daymet database
+    Computing potential evapotranspiration (PET) using FAO method
+    Downloading stream flow data from USGS database
+    climate data was downloaded successfuly andsaved to data/2603023/20000101_20151231.h5
 
 
 Land Use, Land Cover Data
@@ -276,9 +289,10 @@ as a ``geotiff`` file and will be read from the disk if it’s downloaded
 previousely.
 
 In order to download the shapefile the watershed upstream of the USGS
-stations an R script, ``nhdplus.R``, is provided. First, open up a new
-terminal, then load the Anaconda framework and create an R enviroment as
-follows:
+stations an R script, ``nhdplus.R``, is provided in
+`hydrodata <https://github.com/cheginit/hydrodata>`__ Github repository.
+First, open up a new terminal, then load the Anaconda framework and
+create an R enviroment as follows:
 
 .. code:: bash
 
@@ -309,25 +323,28 @@ This function has an optional argument for providing the path to the
 watershed geometry. The default is the same as the R script which in
 this example is ``gis_dir/4489096/geometry.shp``.
 
-.. code:: ipython3
+.. code:: python
 
     frankford.get_lulc()
 
 
-.. parsed-literal::
+.. code-block:: bash
 
-    Using existing impervious data file: data/4489096/impervious.geotiff
-    Using existing cover data file: data/4489096/cover.geotiff
-    Using existing canopy data file: data/4489096/canopy.geotiff
+    Downloadin impervious data from NLCD 2016 database
+    impervious data was downloaded successfuly and saved to {data}
+    Downloadin cover data from NLCD 2016 database
+    cover data was downloaded successfuly and saved to {data}
+    Downloadin canopy data from NLCD 2016 database
+    canopy data was downloaded successfuly and saved to {data}
 
 
-.. code:: ipython3
+.. code:: python
 
     import rasterio
     from rasterio.plot import show
     import matplotlib.pyplot as plt
 
-.. code:: ipython3
+.. code:: python
 
     canopy = rasterio.open(frankford.data_dir.joinpath('canopy.geotiff'))
     cover = rasterio.open(frankford.data_dir.joinpath('cover.geotiff'))
@@ -346,7 +363,7 @@ this example is ``gis_dir/4489096/geometry.shp``.
 Plotting
 --------
 
-The hydrological signatures can be plotted easily using the ``plot`` and
+The hydrologic signatures can be plotted easily using the ``plot`` and
 ``plot_discharge`` functions. These functions convert the streamflow
 data from cubic meter per second to millimeter per day based on the
 watershed area which should be provided in km\ :math:`^2`. The function
@@ -359,7 +376,7 @@ In this case, the ``plot`` function can simply be called for any
 Hydrodata instance with just one optional argument for saving the plot
 as a ``png`` image.
 
-.. code:: ipython3
+.. code:: python
 
     frankford.plot(output=f'Observed_{frankford.station_id}.png')
 
@@ -397,14 +414,14 @@ Now we can run two simulations for the Frankford watershed and use two
 methods for calibrating the model: Differential Evolution and Monte
 Carlo.
 
-.. code:: ipython3
+.. code:: python
 
     from rrmpg.models import CemaneigeGR4J
     from rrmpg.tools.monte_carlo import monte_carlo
     import pandas as pd
     import numpy as np
 
-.. code:: ipython3
+.. code:: python
 
     # Split climate data for calibration and validation
     start = frankford.climate.index[0]
@@ -442,7 +459,7 @@ this dictionary are the labels (legends shown in the plot) and the
 values are timeseries of observed and simulated data. The function can
 handle multiple discharges.
 
-.. code:: ipython3
+.. code:: python
 
     Q_dict = {'Observed': frankford.climate.loc[val.index, 'qobs (cms)'],
               'Differential Evolution': pd.Series(Q_diff, index=val.index),
@@ -463,7 +480,7 @@ This plot doesn’t include the precipitation data and only compares the
 discharges. Let’s compare the Frankford and Fishing watershed. The
 discahrge dictionary should be provided as before.
 
-.. code:: ipython3
+.. code:: python
 
     Q_dict = {'Frankford': frankford.climate['qobs (cms)'],
               'Fishing': fishing.climate['qobs (cms)']}
