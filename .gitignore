@@ -103,3 +103,7 @@ ENV/
 
 # IDE settings
 .vscode/
+
+# data folders
+data/
+gis_data/
