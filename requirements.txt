@@ -1,5 +1,5 @@
 ETo==1.1.0
-OWSLib==0.18.0
+OWSLib==0.19.1
 pyunpack==0.1.2
 numpy==1.18.1
 rasterstats==0.14.0
