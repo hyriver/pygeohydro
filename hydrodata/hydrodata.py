@@ -242,7 +242,8 @@ class Dataloader:
 
                 os.makedirs(self.clm_file.parent)
             except OSError:
-                raise OSError(f"input directory cannot be created: {self.data_dir}")
+                raise OSError(
+                    f"input directory cannot be created: {self.data_dir}")
 
         with h5py.File(self.clm_file, "w") as f:
             f.create_dataset("c", data=self.climate, dtype="d")
@@ -275,9 +276,10 @@ class Dataloader:
             geom_path = Path(geom_path)
 
         if not geom_path.exists():
-            msg = (f"{geom_path} cannot be found." +
-                   " Watershed geometry needs to be specified for LULC. " +
-                   "The `nhdplus.R` script can be used to download the geometry.")
+            msg = (
+                f"{geom_path} cannot be found." +
+                " Watershed geometry needs to be specified for LULC. " +
+                "The `nhdplus.R` script can be used to download the geometry.")
             raise FileNotFoundError(msg)
         else:
             wshed_info = gpd.read_file(geom_path)
@@ -361,7 +363,7 @@ class Dataloader:
 
         if Q_dict is None:
             Q_dict = self.climate['qobs (cms)']
-            
+
         plot(Q_dict,
              self.climate['prcp (mm/day)'],
              self.DASqKm,
@@ -370,12 +372,16 @@ class Dataloader:
              output=output)
         return
 
-    def plot_discharge(self, Q_dict=None, title='Streaflow data for the watersheds', figsize=(13, 12), output=None):
+    def plot_discharge(self,
+                       Q_dict=None,
+                       title='Streaflow data for the watersheds',
+                       figsize=(13, 12),
+                       output=None):
         from hydrodata.plotter import plot_discharge
 
         if Q_dict is None:
             Q_dict = self.climate['qobs (cms)']
-            
+
         plot_discharge(Q_dict,
                        self.DASqKm,
                        title,
@@ -414,8 +420,10 @@ def get_nhd(gis_dir):
     print(f'Downloading USGS gage information data to {str(gis_dir)}')
     base = 'https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/' + \
            'Data/NationalData/'
-    dbname = ['NHDPlusV21_NationalData_GageInfo_05.7z',
-              'NHDPlusV21_NationalData_GageLoc_05.7z']
+    dbname = [
+        'NHDPlusV21_NationalData_GageInfo_05.7z',
+        'NHDPlusV21_NationalData_GageLoc_05.7z'
+    ]
 
     for db in dbname:
         download_extract(base + db, gis_dir)
@@ -430,10 +438,13 @@ class DownloadProgressBar(tqdm):
 
 
 def download_url(url, out_dir):
-    with DownloadProgressBar(unit='B', unit_scale=True,
-                             miniters=1, desc=url.split('/')[-1]) as t:
-        urllib.request.urlretrieve(url, 
-                                   filename=Path(out_dir, url.split('/')[-1]),
+    with DownloadProgressBar(unit='B',
+                             unit_scale=True,
+                             miniters=1,
+                             desc=url.split('/')[-1]) as t:
+        urllib.request.urlretrieve(url,
+                                   filename=Path(out_dir,
+                                                 url.split('/')[-1]),
                                    reporthook=t.update_to)
 
 
