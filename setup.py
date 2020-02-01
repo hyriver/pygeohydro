@@ -25,7 +25,7 @@ requirements = [
     'matplotlib>=3.1.1',
     'geopandas>=0.6.1',
     'h5py>=2.10.0',
-    'py7zr>=0.4.4',
+    'py7zr==0.4.4',
     'lxml>=4.5']
 
 setup_requirements = ['pytest-runner', ]
