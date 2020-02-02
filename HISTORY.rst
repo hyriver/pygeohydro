@@ -2,6 +2,13 @@
 History
 =======
 
+0.1.4 (2020-02-01)
+------------------
+
+* Added an example notebook with datafiles
+* Added docstring for all the functions
+* Added Module section to the documentation
+
 0.1.3 (2020-02-01)
 ------------------
 
