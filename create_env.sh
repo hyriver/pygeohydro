@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# Path to the parent directory of miniconda installation directory
 APP_DIR=~/.local/apps
 
 ana () {
@@ -21,16 +22,16 @@ ana () {
 
 ana
 
-conda create -y -n hydrodata python=3.7
-conda create -y -n nhdplus -c conda-forge r-rgdal r-sf r-curl r-httr r-prettymapr r-rosm r-optparse r-geojsonio
-
-conda activate nhdplus
-Rscript -e \
-"options(repos = 'https://cran.revolutionanalytics.com'); \
-install.packages('nhdplusTools');"
-
-conda deactivate
-
+conda create -y -n hydrodata python pip
 conda activate hydro
 pip install -U -r requirements.txt
 
+conda deactivate
+
+conda create -y -n nhdplus -c conda-forge r-rgdal r-sf r-curl r-httr r-prettymapr r-rosm r-optparse r-geojsonio
+conda activate nhdplus
+
+# The CRAN server can be changed. This is the Texas server.
+Rscript -e \
+"options(repos = 'https://cran.revolutionanalytics.com'); \
+install.packages('nhdplusTools');"
