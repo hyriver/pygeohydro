@@ -26,3 +26,6 @@ deploy:
     tags: true
     repo: cheginit/hydrodata
     python: 3.8
+
+notifications:
+  email: false
