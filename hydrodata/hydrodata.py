@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
-"""This is the main module for generating an instance of hydrodata.
+"""The main module for generating an instance of hydrodata.
 
-It can be loaded as follows:
+It can be used as follows:
     >>> from hydrodata.hydrodata import Dataloader
+    >>> wshed = Dataloader('2010-01-01', '2015-12-31', station_id='01467087')
+
+For more information refer to the Usage section of the document.
 """
 
 from pathlib import Path
@@ -19,7 +22,8 @@ class Dataloader:
     """Generate an instance of hydrodata package.
 
     Downloads climate and streamflow observation data from Daymet and USGS,
-    respectively. The data is saved to a HDF file.
+    respectively. The data is saved to a HDF5 file. Either coords or station_id
+    argument should be specified.
     """
 
     def __init__(
@@ -35,24 +39,30 @@ class Dataloader:
     ):
         """Initialize the instance.
 
-        Args:
-        start (str or datetime): The starting date of the time period.
-        end (str or datetime): The end of the time period.
-        station_id (str): USGS station ID
-        coords (float, float): A tuple including longitude and latitude of
-            the observation point.
-        gis_dir (str): Path to the location of NHDPlusV21 root directory;
+        Parameters
+        ----------
+        start : string or datetime
+            The starting date of the time period.
+        end : string or datetime
+            The end of the time period.
+        station_id : string
+            USGS station ID
+        coords : tuple
+            A tuple including longitude and latitude of the point of interest.
+        gis_dir : string
+            Path to the location of NHDPlusV21 root directory;
             GageLoc and GageInfo are required.
-        data_dir (str): Path to the location of climate data. The naming
+        data_dir : string
+            Path to the location of climate data. The naming
             convention is data_dir/{watershed name}_climate.h5
-        phenology (bool): consider phenology for computing PET
-            based on Thompson et al., 2011
-            (https://doi.org/10.1029/2010WR009797)
-        width (float): Width of the geotiff image for LULC in pixels.
+        phenology : bool
+            consider phenology for computing PET based on
+            Thompson et al., 2011 (https://doi.org/10.1029/2010WR009797)
+        width : float
+            Width of the geotiff image for LULC in pixels.
             Default is 2000 px. The height is computed automatically
             from the domain's aspect ratio.
 
-        Note: either coords or station_id argument should be specified.
         """
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
@@ -280,17 +290,21 @@ class Dataloader:
         database inside a given Polygon geometry with epsg:4326 projection.
         Note: NLCD data has a 30 m resolution.
 
-        Args:
-        geom_path (str): Path to the shapefile.
-            The default is data/<comid>/geometry.shp.
+        Parameters
+        ----------
+        geom_path : string
+            Path to the shapefile. The default is data/<comid>/geometry.shp.
 
-        Returns:
-        impervious (dict): A dictionary containing min, max, mean and
-            count of the imperviousness of the watershed
-        canpoy (dict): A dictionary containing min, max, mean and count
-            of the canpoy of the watershed
-        cover (dataframe): A dataframe containing watershed's land
-            coverage percentage.
+        Returns
+        -------
+        impervious : dict
+            A dictionary containing min, max, mean and count of the
+            imperviousness of the watershed
+        canpoy : dict
+            A dictionary containing min, max, mean and count of the canpoy
+            of the watershed
+        cover : dataframe
+            A dataframe containing watershed's land coverage percentage.
         """
         from owslib.wms import WebMapService
         import rasterstats
@@ -389,19 +403,25 @@ class Dataloader:
     def plot(self, Q_dict=None, figsize=(13, 12), threshold=1e-3, output=None):
         """Plot hydrological signatures with precipitation as the second axis.
 
-        Plots includes  daily, monthly and annual hydrograph as well as
-        regime curve (monthly mean) and flow duration curve.
+        Plots includes daily, monthly and annual hydrograph as well as
+        regime curve (monthly mean) and flow duration curve. The input
+        discharges are converted from cms to mm/day based on the watershed
+        area.
 
-        Args:
-        daily_dict (dataframe): Daily discharge timeseries in mm/day.
-            A dataframe or a dictionary of dataframes can be passed where keys
-            are lables and values are dataframes.
-        figsize (tuple): Width and height of the plot in inches.
-            The default is (8, 10)
-        threshold (float): The threshold for cutting off the discharge for the
-            flow duration curve to deal with log 0 issue. The default is 1e-3.
-        output (str): Path to save the plot as png. The default is `None`
-            which means the plot is not saved to a file.
+        Parameters
+        ----------
+        daily_dict : dict or dataframe
+            A series containing daily discharges in m$^3$/s.
+            A series or a dictionary of series can be passed where its keys
+            are the labels and its values are the series.
+        figsize : tuple
+            Width and height of the plot in inches. The default is (8, 10)
+        threshold : float
+            The threshold for cutting off the discharge for the flow duration
+            curve to deal with log 0 issue. The default is 1e-3.
+        output : string
+            Path to save the plot as png. The default is `None` which means
+            the plot is not saved to a file.
         """
         from hydrodata.plotter import plot
 
@@ -421,23 +441,28 @@ class Dataloader:
                        Q_dict=None,
                        title='Streaflow data for the watersheds',
                        figsize=(13, 12),
+                       threshold=1e-3,
                        output=None):
         """Plot hydrological signatures without precipitation.
 
         The plots include daily, monthly and annual hydrograph as well as
         regime curve (monthly mean) and flow duration curve.
 
-        Args:
-        daily_dict (dataframe): Daily discharge timeseries in mm/day.
-            A dataframe or a dictionary of dataframes can be passed
-            where keys are lables and values are dataframes.
-        area (float): Watershed area in km$^2$ (for converting cms to mm/day).
-        title (str): Plot's supertitle.
-        figsize (tuple): Width and height of the plot in inches.
-            The default is (8, 10)
-        threshold (float): The threshold for cutting off the discharge for the
-            flow duration curve to deal with log 0 issue. The default is 1e-3.
-        output (str): Path to save the plot as png. The default is `None`
+        Parameters
+        ----------
+        daily_dict : dict or series
+            A series containing daily discharges in m$^3$/s.
+            A series or a dictionary of series can be passed where its keys
+            are the labels and its values are the series.
+        title : string
+            Plot's supertitle.
+        figsize : tuple
+            Width and height of the plot in inches. The default is (8, 10)
+        threshold : float
+            The threshold for cutting off the discharge for the flow duration
+            curve to deal with log 0 issue. The default is 1e-3.
+        output : string
+            Path to save the plot as png. The default is `None` which means
             which means the plot is not saved to a file.
         """
         from hydrodata.plotter import plot_discharge
@@ -449,6 +474,7 @@ class Dataloader:
                        self.DASqKm,
                        title,
                        figsize=figsize,
+                       threshold=threshold,
                        output=output)
         return
 
@@ -500,12 +526,13 @@ class DownloadProgressBar(tqdm):
     def update_to(self, b=1, bsize=1, tsize=None):
         """Inspired from a tqdm example.
 
-        Args:
-        b  : int, optional
+        Parameters
+        ----------
+        b : int, optional
             Number of blocks transferred so far [default: 1].
-        bsize  : int, optional
+        bsize : int, optional
             Size of each block (in tqdm units) [default: 1].
-        tsize  : int, optional
+        tsize : int, optional
             Total size (in tqdm units). If [default: None] or -1,
             remains unchanged.
         """

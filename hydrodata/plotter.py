@@ -44,22 +44,29 @@ def plot(daily_dict,
          output=None):
     """Plot hydrological signatures with precipitation as the second axis.
 
-    Plots includes  daily, monthly and annual hydrograph as well as
-    regime curve (monthly mean) and flow duration curve.
+    Plots includes daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve. The input
+    discharges are converted from cms to mm/day based on the watershed
+    area.
 
-    Args:
-    daily_dict (dataframe): Daily discharge timeseries in mm/day.
-        A dataframe or a dictionary of dataframes can be passed where keys
-        are lables and values are dataframes.
-    prcp (dataframe): Daily precipitation timeseries in mm/day.
-    area (float): Watershed area in km$^2$ (for converting cms to mm/day)
-    title (str): Plot's supertitle.
-    figsize (tuple): Width and height of the plot in inches.
-        The default is (8, 10)
-    threshold (float): The threshold for cutting off the discharge for
-        the flow duration curve to deal with log 0 issue. The default is 1e-3.
-    output (str): Path to save the plot as png. The default is `None`
-        which means the plot is not saved to a file.
+    Parameters
+    ----------
+    daily_dict : dict or dataframe
+        A series containing daily discharges in m$^3$/s.
+        A series or a dictionary of series can be passed where its keys
+        are the labels and its values are the series.
+    prcp : series
+        Daily precipitation time series in mm/day.
+    area : float
+        Watershed area in km$^2$ (for converting cms to mm/day)
+    figsize : tuple
+        Width and height of the plot in inches. The default is (8, 10)
+    threshold : float
+        The threshold for cutting off the discharge for the flow duration
+        curve to deal with log 0 issue. The default is 1e-3.
+    output : string
+        Path to save the plot as png. The default is `None` which means
+        the plot is not saved to a file.
     """
     import matplotlib.pyplot as plt
     import pandas as pd
@@ -220,24 +227,31 @@ def plot_discharge(daily_dict,
                    figsize=(8, 10),
                    threshold=1e-3,
                    output=None):
-    """Plot hydrological signatures without precipitation.
+    """Plot hydrological signatures with precipitation as the second axis.
 
-    The plots include daily, monthly and annual hydrograph as well as
-    regime curve (monthly mean) and flow duration curve.
+    Plots includes daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve. The input
+    discharges are converted from cms to mm/day based on the watershed
+    area.
 
-    Args:
-    daily_dict (dataframe): Daily discharge timeseries in mm/day. A dataframe
-        or a dictionary of dataframes can be passed where keys are lables and
-        values are dataframes.
-    area (float): Watershed area in km$^2$ (for converting
-        cms to mm/day).
-    title (str): Plot's supertitle.
-    figsize (tuple): Width and height of the plot in inches.
-        The default is (8, 10)
-    threshold (float): The threshold for cutting off the discharge for
-        the flow duration curve to deal with log 0 issue. The default is 1e-3.
-    output (str): Path to save the plot as png. The default is `None`
-        which means the plot is not saved to a file.
+    Parameters
+    ----------
+    daily_dict : dict or dataframe
+        A series containing daily discharges in m$^3$/s.
+        A series or a dictionary of series can be passed where its keys
+        are the labels and its values are the series.
+    prcp : series
+        Daily precipitation time series in mm/day.
+    area : float
+        Watershed area in km$^2$ (for converting cms to mm/day)
+    figsize : tuple
+        Width and height of the plot in inches. The default is (8, 10)
+    threshold : float
+        The threshold for cutting off the discharge for the flow duration
+        curve to deal with log 0 issue. The default is 1e-3.
+    output : string
+        Path to save the plot as png. The default is `None` which means
+        the plot is not saved to a file.
     """
     import matplotlib.pyplot as plt
     import pandas as pd
