@@ -2,26 +2,20 @@
 History
 =======
 
-0.1.4 (2020-02-01)
+0.1.6 (2020-02-04)
+------------------
+
+* Change docstring format based on Sphinx
+* Fixed pytest warnings and changed its working directory
+
+0.1.5 (2020-02-02)
 ------------------
 
 * Added an example notebook with datafiles
 * Added docstring for all the functions
 * Added Module section to the documentation
-
-0.1.3 (2020-02-01)
-------------------
-
 * Fixed py7zr issue
-
-0.1.2 (2020-02-01)
-------------------
-
 * Changed 7z extractor from pyunpack to py7zr
-
-0.1.1 (2020-02-01)
-------------------
-
 * Fixed some linting issues.
 
 0.1.0 (2020-01-31)
