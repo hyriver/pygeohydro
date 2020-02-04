@@ -34,7 +34,7 @@ nhdplus <- function(coords=NULL,
                                           nhdplus_data = "download",
                                           return_data = TRUE,
                                           overwrite = TRUE)
-    
+
     flowline_main <- df$NHDFlowline_Network
     length <- sum(flowline_main$slopelenkm)*1e3
     slope <- mean(subset(flowline_main, slope > 0)$slope)
@@ -50,7 +50,7 @@ nhdplus <- function(coords=NULL,
     flowline <- df$NHDFlowline_Network
     catchment <- df$CatchmentSP
     waterbody <- df$NHDWaterbody
-    
+
     area <- sum(df$NHDFlowline_Network$areasqkm)*1e6
     geometry <- sf::st_union(sf::st_buffer(catchment$geometry, 0))
 
@@ -118,7 +118,7 @@ main <- function() {
     arguments <- parse_args(opt_parser, positional_arguments = TRUE);
     opt <- arguments$options
     args <- arguments$args
-    
+
     if (!is.null(opt$coords) && is.null(opt$station_id)){
         nhdplus(coords = as.numeric(c(opt$coords, args)),
                 out_dir = opt$data_directory,
@@ -129,7 +129,7 @@ main <- function() {
                 gis_dir = opt$gis_directory)
     } else {
         print_help(opt_parser)
-        stop("Coordiante or station ID should be provided.", call = FALSE)
+        stop("Coordinate or station ID should be provided.", call = FALSE)
     }
 }
 
