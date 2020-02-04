@@ -195,7 +195,7 @@ def plot(daily_dict,
     ax5.set_yscale("log")
     ax5.set_xlim(0, 100)
     ax5.set_xlabel("% Exceedence")
-    ax5.set_ylabel("$\log(Q)$ (mm/day)")
+    ax5.set_ylabel(r"$\log(Q)$ (mm/day)")
     ax5.set_title("Flow Duration Curve")
 
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=True)
@@ -335,7 +335,7 @@ def plot_discharge(daily_dict,
     ax5.set_yscale("log")
     ax5.set_xlim(0, 100)
     ax5.set_xlabel("% Exceedence")
-    ax5.set_ylabel("$\log(Q)$ (mm/day)")
+    ax5.set_ylabel(r"$\log(Q)$ (mm/day)")
     ax5.set_title("Flow Duration Curve")
 
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=True)
