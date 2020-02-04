@@ -9,4 +9,4 @@ Sphinx
 twine
 
 pytest
-pytest-runner
+pytest-runner==5.2
