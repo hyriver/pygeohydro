@@ -14,8 +14,6 @@ To install Hydrodata, run this command in your terminal:
 
     $ pip install hydrodata
 
-Additionally, a `7z` decompressor is required for extracting the NHDPlus files. For more information please refer
-to `pyunpack` `documentation`_.
 This is the preferred method to install Hydrodata, as it will always install the most recent stable release.
 
 If you don't have `pip`_ installed, this `Python installation guide`_ can guide
