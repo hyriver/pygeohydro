@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 """Tests for `hydrodata` package."""
 
 import pytest
+import shutil
 
 
 from hydrodata.hydrodata import Dataloader
@@ -10,17 +11,23 @@ from hydrodata.hydrodata import Dataloader
 
 @pytest.fixture
 def get_data():
-    """Sample pytest fixture.
-
-    See more at: http://doc.pytest.org/en/latest/fixture.html
-    """
+    """Test all hydrodata functionalities."""
     start, end = '2000-01-01', '2015-12-31'
     station_id = '01467087'
-    frankford = Dataloader(start, end, station_id=station_id)
+    frankford = Dataloader(start,
+                           end,
+                           station_id=station_id,
+                           gis_dir='examples/gis_data',
+                           data_dir='examples/data')
+    shutil.rmtree(frankford.data_dir, ignore_errors=True)
     frankford.get_climate()
-    # frankford.get_lulc()
+    frankford.get_lulc('examples/gis_data/4489096/geometry.shp')
 
-    fishing = Dataloader(start, end, coords=(-76.43, 41.08))
+    fishing = Dataloader(start,
+                         end,
+                         coords=(-76.43, 41.08),
+                         gis_dir='examples/gis_data',
+                         data_dir='examples/data')
     fishing.get_climate()
 
     p = 0
@@ -48,7 +55,7 @@ def get_data():
 
 
 def test_content(get_data):
-    """Sample pytest test function with the pytest fixture as an argument."""
+    """Run the tests"""
     q_id, q_co, pr, p = get_data
     assert abs(q_id - 1.4838) < 1e-5 and \
         abs(q_co - 11.9214) < 1e-5 and \
