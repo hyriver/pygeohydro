@@ -23,7 +23,7 @@ ana () {
 ana
 
 conda create -y -n hydrodata python pip
-conda activate hydro
+conda activate hydrodata
 pip install -U -r requirements.txt
 
 conda deactivate
