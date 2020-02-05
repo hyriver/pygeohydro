@@ -12,6 +12,8 @@ Hydrodata
         :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
+.. image:: https://zenodo.org/badge/237573928.svg
+   :target: https://zenodo.org/badge/latestdoi/237573928
 
 Hydrodata downloads climate data for USGS stations as well as land use, land cover data for the corresponding watershed.
 
