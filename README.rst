@@ -42,7 +42,7 @@ To install Hydrodata, run this command in your terminal:
     $ pip install hydrodata
 
 
-Alternatively, it can be installed from source by first using `create_env.sh` script to generate two environments using Miniconda framework; one for installing hydrodata and its dependencies and one for running the `nhdplus.R` script (for downloading a watershed geometry).
+Alternatively, it can be installed from source by first using ```create_env.sh``` script to generate two environments using Miniconda framework; one for installing hydrodata and its dependencies and one for running the `nhdplus.R` script (for downloading a watershed geometry).
 
 .. code-block:: console
 
