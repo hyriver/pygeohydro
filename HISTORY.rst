@@ -2,6 +2,12 @@
 History
 =======
 
+0.1.7 (2020-02-09)
+------------------
+
+* Autoo-formatting with the black python package
+
+
 0.1.6 (2020-02-04)
 ------------------
 
