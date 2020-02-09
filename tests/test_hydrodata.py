@@ -6,7 +6,7 @@ import pytest
 import shutil
 
 
-from hydrodata.hydrodata import Dataloader
+from hydrodata import Dataloader
 
 
 @pytest.fixture
