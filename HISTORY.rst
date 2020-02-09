@@ -2,9 +2,11 @@
 History
 =======
 
-0.1.7 (2020-02-09)
+0.2.0 (2020-02-09)
 ------------------
 
+* Simplified import method
+* Changed usage from `rst` format to `ipynb`
 * Autoo-formatting with the black python package
 
 
