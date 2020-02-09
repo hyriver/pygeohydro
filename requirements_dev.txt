@@ -7,7 +7,6 @@ tox
 coverage
 sphinx
 sphinx_rtd_theme
-jupyter-sphinx
 sphinx-copybutton
 nbsphinx
 twine
