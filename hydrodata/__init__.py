@@ -2,6 +2,6 @@
 
 __author__ = """Taher Chegini"""
 __email__ = "cheginit@gmail.com"
-__version__ = "0.1.6"
+__version__ = "__version__ = '0.1.7'"
 
 from .hydrodata import Dataloader
