@@ -35,13 +35,7 @@ def FDC(daily):
     return fdc
 
 
-def plot(daily_dict,
-         prcp,
-         area,
-         title,
-         figsize=(8, 10),
-         threshold=1e-3,
-         output=None):
+def plot(daily_dict, prcp, area, title, figsize=(8, 10), threshold=1e-3, output=None):
     """Plot hydrological signatures with precipitation as the second axis.
 
     Plots includes daily, monthly and annual hydrograph as well as
@@ -76,16 +70,16 @@ def plot(daily_dict,
     mpl.rcParams["figure.dpi"] = 300
 
     if isinstance(daily_dict, pd.Series):
-        daily_dict = {'Q': daily_dict}
+        daily_dict = {"Q": daily_dict}
     elif not isinstance(daily_dict, dict):
         raise TypeError(
-            'The daily_dict argument can be either a Pandas series ' +
-            'or a dictionary of Pandas series.')
+            "The daily_dict argument can be either a Pandas series "
+            + "or a dictionary of Pandas series."
+        )
 
     # convert cms to mm/day
     daily_dict = {
-        k: v * 1000.0 * 24.0 * 3600.0 / (area * 1.0e6)
-        for k, v in daily_dict.items()
+        k: v * 1000.0 * 24.0 * 3600.0 / (area * 1.0e6) for k, v in daily_dict.items()
     }
 
     month_Q_dict, year_Q_dict, mean_month_Q_dict, Q_fdc_dict = {}, {}, {}, {}
@@ -114,13 +108,9 @@ def plot(daily_dict,
     ax1.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax1.set_title("Total Hydrograph (daily)")
     if len(daily_dict) > 1:
-        ax1.legend(list(daily_dict.keys()), loc='best')
+        ax1.legend(list(daily_dict.keys()), loc="best")
 
-    ax12.bar(prcp.index.to_pydatetime(),
-             prcp.values,
-             alpha=0.7,
-             width=1,
-             color="g")
+    ax12.bar(prcp.index.to_pydatetime(), prcp.values, alpha=0.7, width=1, color="g")
     ax12.set_ylim(0, prcp.max() * 2.5)
     ax12.set_ylim(ax12.get_ylim()[::-1])
     ax12.set_ylabel("$P$ (mm/day)")
@@ -138,11 +128,9 @@ def plot(daily_dict,
     ax2.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax2.set_title("Total Hydrograph (monthly)")
 
-    ax22.bar(month_P.index.to_pydatetime(),
-             month_P.values,
-             alpha=0.7,
-             width=30,
-             color="g")
+    ax22.bar(
+        month_P.index.to_pydatetime(), month_P.values, alpha=0.7, width=30, color="g"
+    )
     ax22.set_ylim(0, month_P.max() * 2.5)
     ax22.set_ylim(ax22.get_ylim()[::-1])
     ax22.set_ylabel("$P$ (mm/day)")
@@ -178,11 +166,9 @@ def plot(daily_dict,
     ax4.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax4.set_title("Total Hydrograph (annual)")
 
-    ax42.bar(year_P.index.to_pydatetime(),
-             year_P.values,
-             alpha=0.7,
-             width=365,
-             color="g")
+    ax42.bar(
+        year_P.index.to_pydatetime(), year_P.values, alpha=0.7, width=365, color="g"
+    )
     ax42.set_xlim(dates[0], dates[-1])
     ax42.set_ylim(0, year_P.max() * 2.5)
     ax42.set_ylim(ax42.get_ylim()[::-1])
@@ -214,19 +200,15 @@ def plot(daily_dict,
 
                 os.makedirs(output.parent)
             except OSError:
-                print("output directory cannot be created: {:s}".format(
-                    output.parent))
+                print("output directory cannot be created: {:s}".format(output.parent))
 
         plt.savefig(output, dpi=300, bbox_inches="tight")
         return
 
 
-def plot_discharge(daily_dict,
-                   area,
-                   title,
-                   figsize=(8, 10),
-                   threshold=1e-3,
-                   output=None):
+def plot_discharge(
+    daily_dict, area, title, figsize=(8, 10), threshold=1e-3, output=None
+):
     """Plot hydrological signatures with precipitation as the second axis.
 
     Plots includes daily, monthly and annual hydrograph as well as
@@ -261,16 +243,16 @@ def plot_discharge(daily_dict,
     mpl.rcParams["figure.dpi"] = 300
 
     if isinstance(daily_dict, pd.Series):
-        daily_dict = {'Q': daily_dict}
+        daily_dict = {"Q": daily_dict}
     elif not isinstance(daily_dict, dict):
         raise TypeError(
-            'The daily_dict argument can be either a Pandas series ' +
-            'or a dictionary of Pandas series.')
+            "The daily_dict argument can be either a Pandas series "
+            + "or a dictionary of Pandas series."
+        )
 
     # convert cms to mm/day
     daily_dict = {
-        k: v * 1000.0 * 24.0 * 3600.0 / (area * 1.0e6)
-        for k, v in daily_dict.items()
+        k: v * 1000.0 * 24.0 * 3600.0 / (area * 1.0e6) for k, v in daily_dict.items()
     }
 
     month_Q_dict, year_Q_dict, mean_month_Q_dict, Q_fdc_dict = {}, {}, {}, {}
@@ -294,7 +276,7 @@ def plot_discharge(daily_dict,
     ax1.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax1.set_title("Total Hydrograph (daily)")
     if len(daily_dict) > 1:
-        ax1.legend(list(daily_dict.keys()), loc='best')
+        ax1.legend(list(daily_dict.keys()), loc="best")
 
     ax2 = plt.subplot(4, 2, (3, 4))
     dates = get_daterange(month_Q_dict)
@@ -354,8 +336,7 @@ def plot_discharge(daily_dict,
 
                 os.makedirs(output.parent)
             except OSError:
-                print("output directory cannot be created: {:s}".format(
-                    output.parent))
+                print("output directory cannot be created: {:s}".format(output.parent))
 
         plt.savefig(output, dpi=300, bbox_inches="tight")
         return
@@ -365,6 +346,7 @@ def get_daterange(Q_dict):
     """Find data range of several data series."""
     import pandas as pd
 
-    return pd.date_range(min([q.index[0] for q in list(Q_dict.values())]),
-                         max([q.index[-1] for q in list(Q_dict.values())
-                              ])).to_pydatetime()
+    return pd.date_range(
+        min([q.index[0] for q in list(Q_dict.values())]),
+        max([q.index[-1] for q in list(Q_dict.values())]),
+    ).to_pydatetime()
