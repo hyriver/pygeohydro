@@ -3,7 +3,7 @@ Usage
 
 .. code:: python
 
-    from hydrodata.hydrodata import Dataloader
+    from hydrodata import Dataloader
 
 Hydrodata module downloads daily climate data for a USGS station based
 its ID or coordinates (longitude and latitude). It requires at least
@@ -33,7 +33,7 @@ Now, we can define an instance based on the station ID as follows:
 
     NHDPlusV21_NationalData_GageInfo_05.7z: 0.00B [00:00, ?B/s]
     Downloading USGS gage information data to gis_data
-    NHDPlusV21_NationalData_GageInfo_05.7z: 729kB [00:00, 1.32MB/s]                            
+    NHDPlusV21_NationalData_GageInfo_05.7z: 729kB [00:00, 1.32MB/s]
     NHDPlusV21_NationalData_GageLoc_05.7z: 0.00B [00:00, ?B/s]
     Successfully downloaded and extracted gis_data/NHDPlusV21_NationalData_GageInfo_05.7z.
     NHDPlusV21_NationalData_GageLoc_05.7z: 1.14MB [00:00, 1.85MB/s]
@@ -68,8 +68,6 @@ The data is returned as a ``pandas`` dataframe.
     frankford.climate.head()
 
 
-
-
 .. raw:: html
 
     <div>
@@ -77,11 +75,11 @@ The data is returned as a ``pandas`` dataframe.
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -172,11 +170,11 @@ precipitation.
         .dataframe tbody tr th:only-of-type {
             vertical-align: middle;
         }
-    
+
         .dataframe tbody tr th {
             vertical-align: top;
         }
-    
+
         .dataframe thead th {
             text-align: right;
         }
@@ -349,7 +347,7 @@ this example is ``gis_dir/4489096/geometry.shp``.
     canopy = rasterio.open(frankford.data_dir.joinpath('canopy.geotiff'))
     cover = rasterio.open(frankford.data_dir.joinpath('cover.geotiff'))
     impervious = rasterio.open(frankford.data_dir.joinpath('impervious.geotiff'))
-    
+
     fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(21, 7), dpi=300)
     show(canopy, ax=ax1, title='Canopy')
     show(cover, ax=ax2, title='Cover')
@@ -427,12 +425,12 @@ Carlo.
     start = frankford.climate.index[0]
     end = frankford.climate.index[-1]
     cal_size = 70.0  # percentage of data to be used for calibration
-    
+
     cal_period = np.ceil((end.year - start.year) * cal_size / 100.0)
     cal_end = start + pd.DateOffset(years=cal_period + 1) - pd.DateOffset(days=1)
     cal = frankford.climate[:cal_end].copy()  # calibration dataframe
     val = frankford.climate[cal_end:].copy()  # validation dataframe
-    
+
     # Differential Evolution calibration
     model_diff = CemaneigeGR4J()
     result_fit = model_diff.fit(cal['qobs (cms)'], cal['prcp (mm/day)'], cal['tmean (C)'],
@@ -441,10 +439,10 @@ Carlo.
     Q_diff = model_diff.simulate(val['prcp (mm/day)'], val['tmean (C)'],
                                  val['tmin (C)'], val['tmax (C)'], val['pet (mm)'],
                                  frankford.datum).flatten()
-    
+
     # Monte Calro calibration
     model_mc = CemaneigeGR4J()
-    result_mc = monte_carlo(model_mc, num=10000, qobs=cal['qobs (cms)'], 
+    result_mc = monte_carlo(model_mc, num=10000, qobs=cal['qobs (cms)'],
                             prec=cal['prcp (mm/day)'], mean_temp=cal['tmean (C)'],
                             min_temp=cal['tmin (C)'], max_temp=cal['tmax (C)'],
                             etp=cal['pet (mm)'], met_station_height=frankford.datum)
