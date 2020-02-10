@@ -23,7 +23,9 @@ def get_data():
     )
     shutil.rmtree(frankford.data_dir, ignore_errors=True)
     frankford.get_climate()
-    frankford.get_lulc("examples/gis_data/4489096/geometry.shp")
+    years = {'impervious': 2011, 'cover': 2011, 'canopy': 2011}
+    frankford.get_lulc(geom_path="examples/gis_data/4489096/geometry.shp",
+                       years=years)
 
     fishing = Dataloader(
         start,
