@@ -3,6 +3,7 @@
 """The setup script."""
 
 from setuptools import setup, find_packages
+from pathlib import Path
 
 with open('README.rst') as readme_file:
     readme = readme_file.read()
@@ -10,23 +11,12 @@ with open('README.rst') as readme_file:
 with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
-requirements = [
-    'ETo>=1.1.0',
-    'OWSLib>=0.18.0',
-    'numpy>=1.18.1',
-    'rasterstats>=0.14.0',
-    'tables>=3.6.1',
-    'daymetpy>=1.0.0',
-    'numba>=0.48.0',
-    'tqdm>=4.42.0',
-    'requests>=2.22.0',
-    'Shapely>=1.6.4.post2',
-    'pandas>=1.0.0',
-    'matplotlib>=3.1.1',
-    'geopandas>=0.6.1',
-    'h5py>=2.10.0',
-    'py7zr==0.4.4',
-    'lxml>=4.5']
+def read_requirements():
+    """Parse requirements from requirements.txt."""
+    reqs_path = Path('requirements.txt')
+    with open(reqs_path, 'r') as f:
+        requirements = [line.rstrip() for line in f]
+    return requirements
 
 setup_requirements = ['pytest-runner', ]
 
@@ -52,7 +42,7 @@ setup(
             'hydrodata=hydrodata.cli:main',
         ],
     },
-    install_requires=requirements,
+    install_requires=read_requirements(),
     license="MIT license",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
