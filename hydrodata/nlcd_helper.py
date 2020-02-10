@@ -17,7 +17,9 @@ class NLCD:
 
     def __init__(self):
         """Legends of the NLCD 2016 database."""
-        self.years = [2016, 2013, 2011, 2008, 2006, 2004, 2001]
+        self.impervious_years = [2016, 2011, 2006, 2001]
+        self.canopy_years = [2016, 2011]
+        self.cover_years = [2016, 2013, 2011, 2008, 2006, 2004, 2001]
 
         self.values = {
             "0": "Unclassified",
