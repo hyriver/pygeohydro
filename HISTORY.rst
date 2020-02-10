@@ -6,6 +6,7 @@ History
 ------------------
 
 * Clipped the LULC data using the watershed geometry
+* Added support for specifying the year for getting LULC
 
 0.2.0 (2020-02-09)
 ------------------

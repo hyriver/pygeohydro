@@ -291,7 +291,7 @@ class Dataloader:
             "climate data was downloaded successfuly and" + f"saved to {self.clm_file}"
         )
 
-    def get_lulc(self, geom_path=None):
+    def get_lulc(self, geom_path=None, years=None):
         """Get LULC data from NLCD 2016 database.
 
         Download and compute land use, canopy and cover from NLCD2016
@@ -303,6 +303,9 @@ class Dataloader:
         geom_path : string
             Path to the shapefile.
             The default is <gis_dir>/<comid>/geometry.shp.
+        years: dict
+            The years for NLCD data as a dictionary.
+            The default is {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
 
         Returns
         -------
@@ -321,6 +324,15 @@ class Dataloader:
         import rasterio
         import rasterio.mask
         from hydrodata.nlcd_helper import NLCD
+
+        nlcd = NLCD()
+        avail_years = {
+            "impervious": nlcd.impervious_years,
+            "cover": nlcd.cover_years,
+            "canopy": nlcd.canopy_years,
+        }
+        if years is None:
+            years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
 
         if geom_path is None:
             geom_path = self.gis_dir.joinpath(self.comid, "geometry.shp")
@@ -348,15 +360,23 @@ class Dataloader:
                 print(f"input directory cannot be created: {self.data_dir}")
 
         def mrlc_url(service):
+            if years[service] not in avail_years[service]:
+                msg = (
+                    f"{service.capitalize()} data for {years[service]} is not in the databse."
+                    + "Avaible years are:"
+                    + f"{' '.join(str(x) for x in avail_years[service])}"
+                )
+                raise ValueError(msg)
+
             if service == "impervious":
-                s = "NLCD_2016_Impervious_L48"
-            elif service == "cover":
-                s = "NLCD_2016_Land_Cover_L48"
+                link = f"NLCD_{years[service]}_{service.capitalize()}_L48"
             elif service == "canopy":
-                s = "NLCD_2016_Tree_Canopy_L48"
+                link = f"NLCD_{years[service]}_Tree_{service.capitalize()}_L48"
+            elif service == "cover":
+                link = f"NLCD_{years[service]}_Land_{service.capitalize()}_L48"
             return (
                 "https://www.mrlc.gov/geoserver/mrlc_display/"
-                + s
+                + link
                 + "/wms?service=WMS&request=GetCapabilities"
             )
 
@@ -368,7 +388,7 @@ class Dataloader:
 
         params = {}
         for data_type, url in urls.items():
-            data = Path(self.data_dir, f"{data_type}.geotiff")
+            data = Path(self.data_dir, f"{data_type}_{years[data_type]}.geotiff")
             if Path(data).exists():
                 print(f"Using existing {data_type} data file: {data}")
             else:
@@ -376,7 +396,9 @@ class Dataloader:
                 height = int(
                     np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * self.width
                 )
-                print(f"Downloadin {data_type} data from NLCD 2016 database")
+                print(
+                    f"Downloading {data_type} data from NLCD {years[data_type]} database"
+                )
                 wms = WebMapService(url, version="1.3.0")
                 try:
                     img = wms.getmap(
@@ -417,7 +439,7 @@ class Dataloader:
 
             categorical = True if data_type == "cover" else False
             params[data_type] = rasterstats.zonal_stats(
-                self.geometry, data, categorical=categorical, category_map=NLCD().values
+                self.geometry, data, categorical=categorical, category_map=nlcd.values
             )[0]
 
         self.impervious = params["impervious"]
