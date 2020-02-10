@@ -2,6 +2,11 @@
 History
 =======
 
+0.2.0 (2020-02-19)
+------------------
+
+* Clipped the LULC data using the watershed geometry
+
 0.2.0 (2020-02-09)
 ------------------
 
