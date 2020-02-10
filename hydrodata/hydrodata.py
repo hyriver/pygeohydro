@@ -26,6 +26,7 @@ class Dataloader:
     respectively. The data is saved to a HDF5 file. Either coords or station_id
     argument should be specified.
     """
+
     def __init__(
         self,
         start,
@@ -84,8 +85,9 @@ class Dataloader:
             self.station_id = str(station_id)
             self.get_coords()
         else:
-            raise RuntimeError("Either coordinates or station ID" +
-                               " should be specified.")
+            raise RuntimeError(
+                "Either coordinates or station ID" + " should be specified."
+            )
 
         self.lon, self.lat = self.coords
         self.data_dir = Path(data_dir, self.comid)
@@ -96,8 +98,7 @@ class Dataloader:
 
         try:
             station = ginfo[ginfo.GAGEID == self.station_id]
-            self.coords = (station.LonSite.values[0],
-                           station.LatSite.values[0])
+            self.coords = (station.LonSite.values[0], station.LatSite.values[0])
             self.DASqKm = station.DASqKm.values[0]  # drainage area
             self.wshed_name = station.STATION_NM.values[0]
             print("The gauge station is located in the following watershed:")
@@ -106,8 +107,7 @@ class Dataloader:
             raise IndexError("Station ID was not found in the USGS database.")
 
         if not self.loc_path.exists():
-            raise FileNotFoundError(
-                f"GageLoc.shp cannot be found in {self.loc_path}")
+            raise FileNotFoundError(f"GageLoc.shp cannot be found in {self.loc_path}")
         else:
             gloc = gpd.read_file(self.loc_path)
         station_loc = gloc[gloc.SOURCE_FEA == self.station_id]
@@ -123,8 +123,7 @@ class Dataloader:
 
         point = Point(lon, lat)
         pts = gloc.geometry.unary_union
-        station_loc = gloc[gloc.geometry.geom_equals(
-            nearest_points(point, pts)[1])]
+        station_loc = gloc[gloc.geometry.geom_equals(nearest_points(point, pts)[1])]
         self.station_id = str(station_loc.SOURCE_FEA.values[0])
         self.comid = str(station_loc.FLComID.values[0])
 
@@ -151,15 +150,14 @@ class Dataloader:
         import h5py
 
         # Get datum of the station
-        url = ("https://waterservices.usgs.gov/nwis/site/?format=rdb&sites=" +
-               self.station_id)
+        url = (
+            "https://waterservices.usgs.gov/nwis/site/?format=rdb&sites="
+            + self.station_id
+        )
         try:
             r = requests.get(url)
             r.raise_for_status()
-        except requests.exceptions.HTTPError or \
-                requests.exceptions.ConnectionError or \
-                requests.exceptions.Timeout or \
-                requests.exceptions.RequestException:
+        except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
 
         r_text = r.text.split("\n")
@@ -168,10 +166,12 @@ class Dataloader:
         # convert ft to meter
         self.datum = float(r_dict["alt_va"]) * 0.3048
 
-        fname = ("_".join([
-            str(self.start.strftime("%Y%m%d")),
-            str(self.end.strftime("%Y%m%d"))
-        ]) + ".h5")
+        fname = (
+            "_".join(
+                [str(self.start.strftime("%Y%m%d")), str(self.end.strftime("%Y%m%d"))]
+            )
+            + ".h5"
+        )
         self.clm_file = Path(self.data_dir, fname)
 
         if self.clm_file.exists():
@@ -190,8 +190,10 @@ class Dataloader:
             # It removes Dec 31 when leap year.
             index = pd.date_range(self.start, self.end)
             nl = index[~index.is_leap_year]
-            lp = index[(index.is_leap_year)
-                       & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))]
+            lp = index[
+                (index.is_leap_year)
+                & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))
+            ]
             index = index[(index.isin(nl)) | (index.isin(lp))]
             self.climate.index = index
             return
@@ -204,7 +206,7 @@ class Dataloader:
             end_year=self.end.year,
         )
         climate.drop("year", inplace=True, axis=1)
-        climate = climate[self.start:self.end]
+        climate = climate[self.start : self.end]
         climate["tmean"] = climate[["tmin", "tmax"]].mean(axis=1)
 
         print("Computing potential evapotranspiration (PET) using FAO method")
@@ -215,8 +217,9 @@ class Dataloader:
 
         et1 = eto.ETo()
         freq = "D"
-        et1.param_est(df[["R_s", "T_max", "T_min", "e_a"]], freq, self.datum,
-                      self.lat, self.lon)
+        et1.param_est(
+            df[["R_s", "T_max", "T_min", "e_a"]], freq, self.datum, self.lat, self.lon
+        )
         climate["pet"] = et1.eto_fao()
 
         # Multiply pet by growing season index, GSI, for phenology
@@ -237,31 +240,27 @@ class Dataloader:
             climate["pet"] = climate.apply(gsi, axis=1)
 
         print("Downloading stream flow data from USGS database")
-        err = pd.read_html(
-            "https://waterservices.usgs.gov/rest/DV-Service.html")[0]
+        err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
         try:
             r = requests.get(
-                "https://waterservices.usgs.gov/nwis/dv/?format=json" +
-                f"&sites={self.station_id}" +
-                f'&startDT={self.start.strftime("%Y-%m-%d")}' +
-                f'&endDT={self.end.strftime("%Y-%m-%d")}' +
-                "&parameterCd=00060&siteStatus=all")
+                "https://waterservices.usgs.gov/nwis/dv/?format=json"
+                + f"&sites={self.station_id}"
+                + f'&startDT={self.start.strftime("%Y-%m-%d")}'
+                + f'&endDT={self.end.strftime("%Y-%m-%d")}'
+                + "&parameterCd=00060&siteStatus=all"
+            )
             r.raise_for_status()
         except requests.exceptions.HTTPError:
-            print(err[err["HTTP Error Code"] ==
-                      r.status_code].Explanation.values[0])
+            print(err[err["HTTP Error Code"] == r.status_code].Explanation.values[0])
             raise
-        except requests.exceptions.ConnectionError or \
-                requests.exceptions.Timeout or \
-                requests.exceptions.RequestException:
+        except requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
 
         df = json.loads(r.text)
         df = df["value"]["timeSeries"][0]["values"][0]["value"]
         df = pd.DataFrame.from_dict(df, orient="columns")
-        df["dateTime"] = pd.to_datetime(df["dateTime"],
-                                        format="%Y-%m-%dT%H:%M:%S")
+        df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
         df.set_index("dateTime", inplace=True)
         # Convert cfs to cms
         climate["qobs"] = df.value.astype("float64") * 0.028316846592
@@ -275,7 +274,7 @@ class Dataloader:
             "pet (mm)",
             "qobs (cms)",
         ]
-        self.climate = climate[self.start:self.end].dropna()
+        self.climate = climate[self.start : self.end].dropna()
 
         if not self.clm_file.parent.is_dir():
             try:
@@ -283,14 +282,14 @@ class Dataloader:
 
                 os.makedirs(self.clm_file.parent)
             except OSError:
-                raise OSError(
-                    f"input directory cannot be created: {self.data_dir}")
+                raise OSError(f"input directory cannot be created: {self.data_dir}")
 
         with h5py.File(self.clm_file, "w") as f:
             f.create_dataset("c", data=self.climate, dtype="d")
 
-        print("climate data was downloaded successfuly and" +
-              f"saved to {self.clm_file}")
+        print(
+            "climate data was downloaded successfuly and" + f"saved to {self.clm_file}"
+        )
 
     def get_lulc(self, geom_path=None):
         """Get LULC data from NLCD 2016 database.
@@ -330,9 +329,10 @@ class Dataloader:
 
         if not geom_path.exists():
             msg = (
-                f"{geom_path} cannot be found." +
-                " Watershed geometry needs to be specified for LULC. " +
-                "The `nhdplus.R` script can be used to download the geometry.")
+                f"{geom_path} cannot be found."
+                + " Watershed geometry needs to be specified for LULC. "
+                + "The `nhdplus.R` script can be used to download the geometry."
+            )
             raise FileNotFoundError(msg)
         else:
             wshed_info = gpd.read_file(geom_path)
@@ -345,8 +345,7 @@ class Dataloader:
 
                 os.mkdir(self.data_dir)
             except OSError:
-                print("input directory cannot be created: {:s}".format(
-                    self.data_dir))
+                print(f"input directory cannot be created: {self.data_dir}")
 
         def mrlc_url(service):
             if service == "impervious":
@@ -355,8 +354,11 @@ class Dataloader:
                 s = "NLCD_2016_Land_Cover_L48"
             elif service == "canopy":
                 s = "NLCD_2016_Tree_Canopy_L48"
-            return ("https://www.mrlc.gov/geoserver/mrlc_display/" + s +
-                    "/wms?service=WMS&request=GetCapabilities")
+            return (
+                "https://www.mrlc.gov/geoserver/mrlc_display/"
+                + s
+                + "/wms?service=WMS&request=GetCapabilities"
+            )
 
         urls = {
             "impervious": mrlc_url("impervious"),
@@ -372,8 +374,8 @@ class Dataloader:
             else:
                 bbox = self.geometry.bounds
                 height = int(
-                    np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) *
-                    self.width)
+                    np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * self.width
+                )
                 print(f"Downloadin {data_type} data from NLCD 2016 database")
                 wms = WebMapService(url, version="1.3.0")
                 try:
@@ -392,27 +394,31 @@ class Dataloader:
                     out.write(img.read())
 
                 with rasterio.open(data) as src:
-                    out_image, out_transform = rasterio.mask.mask(src,
-                                                                  [self.geometry],
-                                                                  crop=True)
+                    out_image, out_transform = rasterio.mask.mask(
+                        src, [self.geometry], crop=True
+                    )
                     out_meta = src.meta
-                    out_meta.update({"driver": "GTiff",
-                                     "height": out_image.shape[1],
-                                     "width": out_image.shape[2],
-                                     "transform": out_transform})
+                    out_meta.update(
+                        {
+                            "driver": "GTiff",
+                            "height": out_image.shape[1],
+                            "width": out_image.shape[2],
+                            "transform": out_transform,
+                        }
+                    )
 
                 with rasterio.open(data, "w", **out_meta) as dest:
                     dest.write(out_image)
 
-                print(f"{data_type} data was downloaded successfuly" +
-                      f" and saved to {data}")
+                print(
+                    f"{data_type} data was downloaded successfuly"
+                    + f" and saved to {data}"
+                )
 
             categorical = True if data_type == "cover" else False
             params[data_type] = rasterstats.zonal_stats(
-                self.geometry,
-                data,
-                categorical=categorical,
-                category_map=NLCD().values)[0]
+                self.geometry, data, categorical=categorical, category_map=NLCD().values
+            )[0]
 
         self.impervious = params["impervious"]
         self.canopy = params["canopy"]
@@ -540,8 +546,7 @@ def get_nhd(gis_dir):
             print(f"{gis_dir} directory cannot be created")
 
     print(f"Downloading USGS gage information data to {str(gis_dir)}")
-    base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + \
-        "Data/NationalData/"
+    base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
     dbname = [
         "NHDPlusV21_NationalData_GageInfo_05.7z",
         "NHDPlusV21_NationalData_GageLoc_05.7z",
@@ -554,6 +559,7 @@ def get_nhd(gis_dir):
 
 class DownloadProgressBar(tqdm):
     """A tqdm-based class for download progress."""
+
     def update_to(self, b=1, bsize=1, tsize=None):
         """Inspired from a tqdm example.
 
@@ -574,14 +580,12 @@ class DownloadProgressBar(tqdm):
 
 def download_url(url, out_dir):
     """Progress bar for downloading a file."""
-    with DownloadProgressBar(unit="B",
-                             unit_scale=True,
-                             miniters=1,
-                             desc=url.split("/")[-1]) as t:
-        urllib.request.urlretrieve(url,
-                                   filename=Path(out_dir,
-                                                 url.split("/")[-1]),
-                                   reporthook=t.update_to)
+    with DownloadProgressBar(
+        unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
+    ) as t:
+        urllib.request.urlretrieve(
+            url, filename=Path(out_dir, url.split("/")[-1]), reporthook=t.update_to
+        )
 
 
 def download_extract(url, out_dir):

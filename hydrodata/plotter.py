@@ -200,7 +200,7 @@ def plot(daily_dict, prcp, area, title, figsize=(8, 10), threshold=1e-3, output=
 
                 os.makedirs(output.parent)
             except OSError:
-                print("output directory cannot be created: {:s}".format(output.parent))
+                print(f"output directory cannot be created: {output.parent}")
 
         plt.savefig(output, dpi=300, bbox_inches="tight")
         return
@@ -336,7 +336,7 @@ def plot_discharge(
 
                 os.makedirs(output.parent)
             except OSError:
-                print("output directory cannot be created: {:s}".format(output.parent))
+                print(f"output directory cannot be created: {output.parent}")
 
         plt.savefig(output, dpi=300, bbox_inches="tight")
         return
