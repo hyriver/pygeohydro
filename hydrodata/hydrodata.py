@@ -318,6 +318,9 @@ class Dataloader:
         """
         from owslib.wms import WebMapService
         import rasterstats
+        import fiona
+        import rasterio
+        import rasterio.mask
         from hydrodata.nlcd_helper import NLCD
 
         if geom_path is None:
@@ -387,6 +390,19 @@ class Dataloader:
 
                 with open(data, "wb") as out:
                     out.write(img.read())
+
+                with rasterio.open(data) as src:
+                    out_image, out_transform = rasterio.mask.mask(src,
+                                                                  [self.geometry],
+                                                                  crop=True)
+                    out_meta = src.meta
+                    out_meta.update({"driver": "GTiff",
+                                     "height": out_image.shape[1],
+                                     "width": out_image.shape[2],
+                                     "transform": out_transform})
+
+                with rasterio.open(data, "w", **out_meta) as dest:
+                    dest.write(out_image)
 
                 print(f"{data_type} data was downloaded successfuly" +
                       f" and saved to {data}")
