@@ -31,6 +31,11 @@ Features
 * Download land use, land cover data from `NLCD 2016 <https://www.mrlc.gov/>`__ database.
 * Plot hydrological signature graphs.
 
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/master/docs/Observed_01467087.png
+        :target: https://raw.githubusercontent.com/cheginit/hydrodata/master/docs/Observed_01467087.png
+
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/master/docs/NLCD.png
+        :target: https://raw.githubusercontent.com/cheginit/hydrodata/master/docs/NLCD.png
 
 Installation
 ------------
