@@ -21,7 +21,7 @@ class NLCD:
         self.canopy_years = [2016, 2011]
         self.cover_years = [2016, 2013, 2011, 2008, 2006, 2004, 2001]
 
-        self.values = {
+        self.legends = {
             "0": "Unclassified",
             "11": "Open Water",
             "12": "Perennial Ice/Snow",
