@@ -15,20 +15,20 @@ Hydrodata
 .. image:: https://zenodo.org/badge/237573928.svg
    :target: https://zenodo.org/badge/latestdoi/237573928
 
-Hydrodata downloads climate data for USGS stations as well as land use, land cover data for the corresponding watershed.
+Hydrodata is a python library designed to aid in NHDPlus watershed analysis. Hydrodata is capable of downloading,
+preprocessing, and visualizing climatological, hydrological, and geographical datasets pertaining to a given watershed.
+Supported datasets include: Daymet climate, USGS streamflow, and NLCD land use, land cover data with further additions
+planned.
 
-
-* Free software: MIT license
-* Documentation: https://hydrodata.readthedocs.io.
-
+* Documentation: https://hydrodata.readthedocs.io
 
 Features
 --------
 
 * Download daily climate data from the `Daymet <https://daymet.ornl.gov/>`__ database.
-* Download daily streamflow data from the `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ database.
 * Compute potential evapotranspiration using `ETo <https://eto.readthedocs.io/en/latest/>`__ package.
 * Download land use, land cover data from `NLCD 2016 <https://www.mrlc.gov/>`__ database.
+* Download daily streamflow data from the `USGS NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ database.
 * Plot hydrological signature graphs.
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/master/docs/Observed_01467087.png
@@ -47,7 +47,15 @@ To install Hydrodata, run this command in your terminal:
     $ pip install hydrodata
 
 
-Alternatively, it can be installed from source by first using ``create_env.sh`` script to generate two environments using Miniconda framework; one for installing hydrodata and its dependencies and one for running the `nhdplus.R` script (for downloading a watershed geometry based on station ID or coordinates). Before running the script modify it based on the installation folder of Miniconda or Anaconda. Miniconda can be installed on Linux systems as follows:
+Alternatively, it can be installed from source by first using ``create_env.sh`` script, which generates two environments
+using Miniconda; one for installing hydrodata and its dependencies and another for running the `nhdplus.R` script
+(for downloading a watershed geometry based on station ID or coordinates).
+
+Before running the ``create_env.sh`` script, ensure Miniconda is installed, this can be accomplished by
+running the command ``conda`` on the command line. If Miniconda is not installed it can be downloaded on
+continuum_'s site and installed on Linux as follows:
+
+.. _continuum: https://repo.anaconda.com/miniconda/
 
 .. code-block:: console
 
