@@ -369,13 +369,13 @@ class Dataloader:
                 raise ValueError(msg)
 
             if service == "impervious":
-                link = f"NLCD_{years[service]}_{service.capitalize()}_L48"
+                link = f"NLCD_{years[service]}_Impervious_L48"
             elif service == "canopy":
-                link = f"NLCD_{years[service]}_Tree_{service.capitalize()}_L48"
+                link = f"NLCD_{years[service]}_Tree_Canopy_L48"
             elif service == "cover":
-                link = f"NLCD_{years[service]}_Land_{service.capitalize()}_L48"
+                link = f"NLCD_{years[service]}_Land_Cover_Science_product_L48"
             return (
-                "https://www.mrlc.gov/geoserver/mrlc_display/"
+                "https://www.mrlc.gov/geoserver/mrlc_download/"
                 + link
                 + "/wms?service=WMS&request=GetCapabilities"
             )
@@ -439,12 +439,20 @@ class Dataloader:
 
             categorical = True if data_type == "cover" else False
             params[data_type] = rasterstats.zonal_stats(
-                self.geometry, data, categorical=categorical, category_map=nlcd.values
+                self.geometry, data, categorical=categorical, category_map=nlcd.legends
             )[0]
 
         self.impervious = params["impervious"]
         self.canopy = params["canopy"]
         self.cover = params["cover"]
+
+        cover = rasterio.open(self.data_dir.joinpath(f'cover_{years["cover"]}.geotiff'))
+        total_pix = cover.shape[0]*cover.shape[1]
+        cover_arr = cover.read()
+        self.cover_prc = dict(zip(list(nlcd.legends.values()),
+                                  [cover_arr[cover_arr == int(cat)].shape[0]/total_pix*100.0
+                                   for cat in list(nlcd.legends.keys())]))
+        # [[leg in cat for cat in list(nlcd.categories.values())] for leg in list(nlcd.legends.keys())]
 
     def separate_snow(self, prcp, tmean, tcr=0.0):
         """Separate snow and rain from the precipitation.
