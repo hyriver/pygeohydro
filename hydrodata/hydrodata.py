@@ -198,7 +198,7 @@ class Dataloader:
             self.climate.index = index
             return
 
-        print("Downloading climate data from the Daymet database")
+        print("Downloading climate data from the Daymet database ...")
         climate = daymetpy.daymet_timeseries(
             lon=round(self.lon, 6),
             lat=round(self.lat, 6),
@@ -239,7 +239,7 @@ class Dataloader:
 
             climate["pet"] = climate.apply(gsi, axis=1)
 
-        print("Downloading stream flow data from USGS database")
+        print("Downloading stream flow data from USGS database ...")
         err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
         try:
@@ -332,24 +332,41 @@ class Dataloader:
             "canopy": nlcd.canopy_years,
         }
         if years is None:
-            years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
+            self.lulc_years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
+        else:
+            self.lulc_years = years
 
         if geom_path is None:
-            geom_path = self.gis_dir.joinpath(self.comid, "geometry.shp")
+            from streamstats import Watershed
+            import shapely.geometry as geom
+
+            print("Downloading the watershed geometry using Streamstats service ...")
+            wshed = Watershed(lat=self.coords[1], lon=self.coords[0])
+            self.geometry = geom.Polygon(
+                wshed.boundary["features"][0]["geometry"]["coordinates"][0]
+            )
+
+            output = self.gis_dir.joinpath(self.comid, "geometry.shp")
+            if not output.parent.is_dir():
+                try:
+                    import os
+
+                    os.mkdir(output.parent)
+                except OSError:
+                    print(f"input directory cannot be created: {output.parent}")
+            gpd.GeoSeries(self.geometry).to_file(output)
+            print(f"The geometry saved as {output}")
         else:
             geom_path = Path(geom_path)
-
-        if not geom_path.exists():
-            msg = (
-                f"{geom_path} cannot be found."
-                + " Watershed geometry needs to be specified for LULC. "
-                + "The `nhdplus.R` script can be used to download the geometry."
-            )
-            raise FileNotFoundError(msg)
-        else:
-            wshed_info = gpd.read_file(geom_path)
-
-        self.geometry = wshed_info.geometry.values[0]
+            if not geom_path.exists():
+                msg = (
+                    f"{geom_path} cannot be found."
+                    + " Watershed geometry is required for LULC. "
+                )
+                raise FileNotFoundError(msg)
+            else:
+                wshed_info = gpd.read_file(geom_path)
+                self.geometry = wshed_info.geometry.values[0]
 
         if not Path(self.data_dir).is_dir():
             try:
@@ -360,20 +377,20 @@ class Dataloader:
                 print(f"input directory cannot be created: {self.data_dir}")
 
         def mrlc_url(service):
-            if years[service] not in avail_years[service]:
+            if self.lulc_years[service] not in avail_years[service]:
                 msg = (
-                    f"{service.capitalize()} data for {years[service]} is not in the databse."
+                    f"{service.capitalize()} data for {self.lulc_years[service]} is not in the databse."
                     + "Avaible years are:"
                     + f"{' '.join(str(x) for x in avail_years[service])}"
                 )
                 raise ValueError(msg)
 
             if service == "impervious":
-                link = f"NLCD_{years[service]}_Impervious_L48"
+                link = f"NLCD_{self.lulc_years[service]}_Impervious_L48"
             elif service == "canopy":
-                link = f"NLCD_{years[service]}_Tree_Canopy_L48"
+                link = f"NLCD_{self.lulc_years[service]}_Tree_Canopy_L48"
             elif service == "cover":
-                link = f"NLCD_{years[service]}_Land_Cover_Science_product_L48"
+                link = f"NLCD_{self.lulc_years[service]}_Land_Cover_Science_product_L48"
             return (
                 "https://www.mrlc.gov/geoserver/mrlc_download/"
                 + link
@@ -388,7 +405,9 @@ class Dataloader:
 
         params = {}
         for data_type, url in urls.items():
-            data = Path(self.data_dir, f"{data_type}_{years[data_type]}.geotiff")
+            data = Path(
+                self.data_dir, f"{data_type}_{self.lulc_years[data_type]}.geotiff"
+            )
             if Path(data).exists():
                 print(f"Using existing {data_type} data file: {data}")
             else:
@@ -397,7 +416,7 @@ class Dataloader:
                     np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * self.width
                 )
                 print(
-                    f"Downloading {data_type} data from NLCD {years[data_type]} database"
+                    f"Downloading {data_type} data from NLCD {self.lulc_years[data_type]} database ..."
                 )
                 wms = WebMapService(url, version="1.3.0")
                 try:
@@ -436,6 +455,7 @@ class Dataloader:
                     f"{data_type} data was downloaded successfuly"
                     + f" and saved to {data}"
                 )
+                self.impervious_path = data
 
             categorical = True if data_type == "cover" else False
             params[data_type] = rasterstats.zonal_stats(
@@ -446,13 +466,36 @@ class Dataloader:
         self.canopy = params["canopy"]
         self.cover = params["cover"]
 
-        cover = rasterio.open(self.data_dir.joinpath(f'cover_{years["cover"]}.geotiff'))
-        total_pix = cover.shape[0]*cover.shape[1]
+    def cover_stats(self):
+        import rasterio
+        from hydrodata.nlcd_helper import NLCD
+        import numpy as np
+
+        nlcd = NLCD()
+
+        cover = rasterio.open(
+            self.data_dir.joinpath(f'cover_{self.lulc_years["cover"]}.geotiff')
+        )
+        total_pix = cover.shape[0] * cover.shape[1]
         cover_arr = cover.read()
-        self.cover_prc = dict(zip(list(nlcd.legends.values()),
-                                  [cover_arr[cover_arr == int(cat)].shape[0]/total_pix*100.0
-                                   for cat in list(nlcd.legends.keys())]))
-        # [[leg in cat for cat in list(nlcd.categories.values())] for leg in list(nlcd.legends.keys())]
+        class_percentage = dict(
+            zip(
+                list(nlcd.legends.values()),
+                [
+                    cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
+                    for cat in list(nlcd.legends.keys())
+                ],
+            )
+        )
+        masks = [
+            [leg in cat for leg in list(nlcd.legends.keys())]
+            for cat in list(nlcd.categories.values())
+        ]
+        cat_list = [
+            np.array(list(class_percentage.values()))[msk].sum() for msk in masks
+        ]
+        category_percentage = dict(zip(list(nlcd.categories.keys()), cat_list))
+        return class_percentage, category_percentage
 
     def separate_snow(self, prcp, tmean, tcr=0.0):
         """Separate snow and rain from the precipitation.
@@ -575,7 +618,7 @@ def get_nhd(gis_dir):
         except OSError:
             print(f"{gis_dir} directory cannot be created")
 
-    print(f"Downloading USGS gage information data to {str(gis_dir)}")
+    print(f"Downloading USGS gage information data to {str(gis_dir)} ...")
     base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
     dbname = [
         "NHDPlusV21_NationalData_GageInfo_05.7z",
