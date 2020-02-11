@@ -10,6 +10,5 @@ sphinx_rtd_theme
 sphinx-copybutton
 nbsphinx
 twine
-
 pytest
 pytest-runner

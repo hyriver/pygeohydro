@@ -68,8 +68,8 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
 
     $ conda create -n hydrodata python pip
     $ cd hydrodata/
-    $ pip install requirement.txt
-    $ pip install requirement_dev.txt
+    $ pip install -r requirement.txt
+    $ pip install -r requirement_dev.txt
     $ python setup.py develop
 
 4. Create a branch for local development::
