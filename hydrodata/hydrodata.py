@@ -15,8 +15,7 @@ import numpy as np
 import geopandas as gpd
 from numba import njit, prange
 import requests
-from tqdm import tqdm
-import urllib
+from hydrodata import utils
 
 
 class Dataloader:
@@ -98,13 +97,15 @@ class Dataloader:
 
         try:
             station = ginfo[ginfo.GAGEID == self.station_id]
-            self.coords = (station.LonSite.values[0], station.LatSite.values[0])
-            self.DASqKm = station.DASqKm.values[0]  # drainage area
-            self.wshed_name = station.STATION_NM.values[0]
-            print("The gauge station is located in the following watershed:")
-            print(self.wshed_name)
         except IndexError:
             raise IndexError("Station ID was not found in the USGS database.")
+
+        self.coords = (station.LonSite.values[0], station.LatSite.values[0])
+        self.DASqKm = station.DASqKm.values[0]  # drainage area
+        self.state = station.STATE.values[0]
+        self.wshed_name = station.STATION_NM.values[0]
+        print("The gauge station is located in the following watershed:")
+        print(self.wshed_name)
 
         if not self.loc_path.exists():
             raise FileNotFoundError(f"GageLoc.shp cannot be found in {self.loc_path}")
@@ -128,8 +129,14 @@ class Dataloader:
         self.comid = str(station_loc.FLComID.values[0])
 
         ginfo = gpd.read_file(self.info_path)
-        station = ginfo[ginfo.GAGEID == self.station_id]
+
+        try:
+            station = ginfo[ginfo.GAGEID == self.station_id]
+        except IndexError:
+            raise IndexError("Station ID was not found in the USGS database.")
+
         self.DASqKm = station.DASqKm.values[0]  # drainage area
+        self.state = station.STATE.values[0]
         self.wshed_name = station.STATION_NM.values[0]
         print("The gage station is located in the following watershed:")
         print(self.wshed_name)
@@ -198,7 +205,7 @@ class Dataloader:
             self.climate.index = index
             return
 
-        print("Downloading climate data from the Daymet database ...")
+        print("Downloading climate data from the Daymet database >>>")
         climate = daymetpy.daymet_timeseries(
             lon=round(self.lon, 6),
             lat=round(self.lat, 6),
@@ -239,7 +246,7 @@ class Dataloader:
 
             climate["pet"] = climate.apply(gsi, axis=1)
 
-        print("Downloading stream flow data from USGS database ...")
+        print("Downloading stream flow data from USGS database >>>")
         err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
         try:
@@ -288,7 +295,7 @@ class Dataloader:
             f.create_dataset("c", data=self.climate, dtype="d")
 
         print(
-            "climate data was downloaded successfuly and" + f"saved to {self.clm_file}"
+            "climate data was downloaded successfuly and " + f"saved to {self.clm_file}"
         )
 
     def get_lulc(self, geom_path=None, years=None):
@@ -337,25 +344,7 @@ class Dataloader:
             self.lulc_years = years
 
         if geom_path is None:
-            from streamstats import Watershed
-            import shapely.geometry as geom
-
-            print("Downloading the watershed geometry using Streamstats service ...")
-            wshed = Watershed(lat=self.coords[1], lon=self.coords[0])
-            self.geometry = geom.Polygon(
-                wshed.boundary["features"][0]["geometry"]["coordinates"][0]
-            )
-
-            output = self.gis_dir.joinpath(self.comid, "geometry.shp")
-            if not output.parent.is_dir():
-                try:
-                    import os
-
-                    os.mkdir(output.parent)
-                except OSError:
-                    print(f"input directory cannot be created: {output.parent}")
-            gpd.GeoSeries(self.geometry).to_file(output)
-            print(f"The geometry saved as {output}")
+            self.get_geometry()
         else:
             geom_path = Path(geom_path)
             if not geom_path.exists():
@@ -416,7 +405,7 @@ class Dataloader:
                     np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * self.width
                 )
                 print(
-                    f"Downloading {data_type} data from NLCD {self.lulc_years[data_type]} database ..."
+                    f"Downloading {data_type} data from NLCD {self.lulc_years[data_type]} database >>>"
                 )
                 wms = WebMapService(url, version="1.3.0")
                 try:
@@ -466,7 +455,34 @@ class Dataloader:
         self.canopy = params["canopy"]
         self.cover = params["cover"]
 
+    @utils.retry(exception_class=IndexError)
+    def get_geometry(self):
+        """Download the watershed geometry from the StreamStats service."""
+        from streamstats import Watershed
+        import shapely.geometry as geom
+
+        print("Downloading the watershed geometry using StreamStats service >>>")
+
+        try:
+            wshed = Watershed(lat=self.coords[1], lon=self.coords[0])
+            self.geometry = geom.Polygon(
+                wshed.boundary["features"][0]["geometry"]["coordinates"][0]
+            )
+            output = self.gis_dir.joinpath(self.comid, "geometry.shp")
+            if not output.parent.is_dir():
+                try:
+                    import os
+
+                    os.mkdir(output.parent)
+                except OSError:
+                    print(f"input directory cannot be created: {output.parent}")
+            gpd.GeoSeries(self.geometry).to_file(output)
+            print(f"The geometry was downloaded successfuly and saved to {output}")
+        except IndexError:
+            raise
+
     def cover_stats(self):
+        """Compute percentages of the land cover classes and categories."""
         import rasterio
         from hydrodata.nlcd_helper import NLCD
         import numpy as np
@@ -618,7 +634,7 @@ def get_nhd(gis_dir):
         except OSError:
             print(f"{gis_dir} directory cannot be created")
 
-    print(f"Downloading USGS gage information data to {str(gis_dir)} ...")
+    print(f"Downloading USGS gage information data to {str(gis_dir)} >>>")
     base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
     dbname = [
         "NHDPlusV21_NationalData_GageInfo_05.7z",
@@ -626,58 +642,5 @@ def get_nhd(gis_dir):
     ]
 
     for db in dbname:
-        download_extract(base + db, gis_dir)
+        utils.download_extract(base + db, gis_dir)
     return gis_dir.joinpath("NHDPlusNationalData")
-
-
-class DownloadProgressBar(tqdm):
-    """A tqdm-based class for download progress."""
-
-    def update_to(self, b=1, bsize=1, tsize=None):
-        """Inspired from a tqdm example.
-
-        Parameters
-        ----------
-        b : int, optional
-            Number of blocks transferred so far [default: 1].
-        bsize : int, optional
-            Size of each block (in tqdm units) [default: 1].
-        tsize : int, optional
-            Total size (in tqdm units). If [default: None] or -1,
-            remains unchanged.
-        """
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
-
-
-def download_url(url, out_dir):
-    """Progress bar for downloading a file."""
-    with DownloadProgressBar(
-        unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
-    ) as t:
-        urllib.request.urlretrieve(
-            url, filename=Path(out_dir, url.split("/")[-1]), reporthook=t.update_to
-        )
-
-
-def download_extract(url, out_dir):
-    """Download and extract a `.7z` file."""
-    import py7zr
-
-    file = Path(out_dir).joinpath(url.split("/")[-1])
-    if file.exists():
-        py7zr.unpack_7zarchive(str(file), str(out_dir))
-        print(f"Successfully extracted {file}.")
-    else:
-        download_url(url, out_dir)
-        py7zr.unpack_7zarchive(str(file), str(out_dir))
-        print(f"Successfully downloaded and extracted {str(file)}.")
-
-
-def get_h5data(h5_file, dbname):
-    """Read HDF5 file and return it as a Pandas dataframe."""
-    import tables
-
-    with tables.open_file(h5_file, "r") as db:
-        return db.root[dbname][:]
