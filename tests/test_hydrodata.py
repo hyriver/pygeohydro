@@ -14,17 +14,23 @@ def get_data():
     """Test all hydrodata functionalities."""
     start, end = "2000-01-01", "2015-12-31"
     station_id = "01467087"
+    gis_dir = "examples/gis_data"
+    data_dir = "examples/data"
+
+    shutil.rmtree(gis_dir, ignore_errors=True)
+    shutil.rmtree(data_dir, ignore_errors=True)
+
     frankford = Dataloader(
         start,
         end,
         station_id=station_id,
-        gis_dir="examples/gis_data",
-        data_dir="examples/data",
+        gis_dir=gis_dir,
+        data_dir=data_dir,
     )
-    shutil.rmtree(frankford.data_dir, ignore_errors=True)
+
     frankford.get_climate()
     years = {"impervious": 2011, "cover": 2011, "canopy": 2011}
-    frankford.get_lulc(geom_path="examples/gis_data/4489096/geometry.shp", years=years)
+    frankford.get_nlcd(years=years)
 
     fishing = Dataloader(
         start,
