@@ -48,6 +48,6 @@ setup(
     test_suite="tests",
     tests_require=test_requirements,
     url="https://github.com/cheginit/hydrodata",
-    version="version='0.3.0'",
+    version="version='0.3.1'",
     zip_safe=False,
 )
