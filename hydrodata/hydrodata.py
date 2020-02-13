@@ -246,7 +246,7 @@ class Dataloader:
 
         fname = (
             "_".join(
-                [str(self.start.strftime("%Y%m%d")), str(self.end.strftime("%Y%m%d"))]
+                [self.start.strftime("%Y%m%d"), self.end.strftime("%Y%m%d")]
             )
             + ".h5"
         )
