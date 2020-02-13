@@ -21,11 +21,7 @@ def get_data():
     shutil.rmtree(data_dir, ignore_errors=True)
 
     frankford = Dataloader(
-        start,
-        end,
-        station_id=station_id,
-        gis_dir=gis_dir,
-        data_dir=data_dir,
+        start, end, station_id=station_id, gis_dir=gis_dir, data_dir=data_dir,
     )
 
     frankford.get_climate()

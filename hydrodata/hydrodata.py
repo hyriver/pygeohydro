@@ -138,10 +138,15 @@ class Dataloader:
         )
         url = "https://waterservices.usgs.gov/nwis/site"
         payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
-        s = retry_requests.retry(
-            retry_requests.RSession(), retries=5, backoff_factor=0.2
-        )
-        r = s.get(url, params=payload)
+        try:
+            s = retry_requests.retry(
+                retry_requests.RSession(), retries=5, backoff_factor=0.2
+            )
+            r = s.get(url, params=payload)
+        except requests.HTTPError:
+            raise requests.HTTPError(
+                f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
+            )
 
         r_text = r.text.split("\n")
         r_list = [l.split("\t") for l in r_text if "#" not in l]
@@ -161,9 +166,8 @@ class Dataloader:
             ]
         )
         gdf = gpd.GeoSeries(pts)
-        idx = gdf[gdf.geom_equals(ops.nearest_points(point, gdf.unary_union)[1])].index[
-            0
-        ]
+        nearest = ops.nearest_points(point, gdf.unary_union)[1]
+        idx = gdf[gdf.geom_equals(nearest)].index[0]
         station = df[df.site_no == idx]
 
         self.station_id = station.site_no.values[0]
@@ -245,9 +249,7 @@ class Dataloader:
         import h5py
 
         fname = (
-            "_".join(
-                [self.start.strftime("%Y%m%d"), self.end.strftime("%Y%m%d")]
-            )
+            "_".join([self.start.strftime("%Y%m%d"), self.end.strftime("%Y%m%d")])
             + ".h5"
         )
         self.clm_file = self.data_dir.joinpath(fname)
