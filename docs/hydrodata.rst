@@ -28,6 +28,14 @@ hydrodata.plotter module
    :undoc-members:
    :show-inheritance:
 
+hydrodata.utils module
+----------------------
+
+.. automodule:: hydrodata.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
