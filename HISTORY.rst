@@ -2,7 +2,7 @@
 History
 =======
 
-0.3.0 (2020-02-19)
+0.3.1 (2020-02-19)
 ------------------
 
 * Clipped the obtained NLCD data using the watershed geometry
