@@ -77,3 +77,27 @@ def download_extract(url, out_dir):
         download_url(url, out_dir)
         py7zr.unpack_7zarchive(str(file), str(out_dir))
         print(f"Successfully downloaded and extracted {str(file)}.")
+
+
+def get_nhd(gis_dir):
+    """Download and extract NHDPlus V2.1 database."""
+    gis_dir = Path(gis_dir)
+
+    if not gis_dir.is_dir():
+        try:
+            import os
+
+            os.mkdir(gis_dir)
+        except OSError:
+            print(f"{gis_dir} directory cannot be created")
+
+    print(f"Downloading USGS gage information data to {str(gis_dir)} >>>")
+    base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
+    dbname = [
+        "NHDPlusV21_NationalData_GageInfo_05.7z",
+        "NHDPlusV21_NationalData_GageLoc_05.7z",
+    ]
+
+    for db in dbname:
+        utils.download_extract(base + db, gis_dir)
+    return gis_dir.joinpath("NHDPlusNationalData")
