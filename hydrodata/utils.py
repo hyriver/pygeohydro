@@ -13,7 +13,8 @@ def retry(num_attempts=3, exception_class=Exception, log=None, sleeptime=1):
     From https://codereview.stackexchange.com/questions/188539/python-code-to-retry-function
     """
     import functools
-    import logging as log
+    import logging
+    import time
 
     def decorator(func):
         @functools.wraps(func)
@@ -26,8 +27,8 @@ def retry(num_attempts=3, exception_class=Exception, log=None, sleeptime=1):
                         raise
                     else:
                         if log:
-                            log.error(f"Failed with error {e}, trying again")
-                        sleep(sleeptime)
+                            logging.error(f"Failed with error {e}, trying again")
+                        time.sleep(sleeptime)
 
         return wrapper
 
