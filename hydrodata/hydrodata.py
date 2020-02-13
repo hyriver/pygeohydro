@@ -4,7 +4,7 @@
 
 It can be used as follows:
     >>> from hydrodata import Dataloader
-    >>> wshed = Dataloader('2010-01-01', '2015-12-31', station_id='01467087')
+    >>> frankford = Dataloader('2010-01-01', '2015-12-31', station_id='01467087')
 
 For more information refer to the Usage section of the document.
 """
@@ -14,8 +14,10 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 from numba import njit, prange
+import retry_requests
 import requests
 from hydrodata import utils
+import os
 
 
 class Dataloader:
@@ -50,8 +52,7 @@ class Dataloader:
         coords : tuple
             A tuple including longitude and latitude of the point of interest.
         gis_dir : string
-            Path to the location of NHDPlusV21 root directory;
-            GageLoc and GageInfo are required.
+            Path to the root directory for storing the watershed geometry file.
         data_dir : string
             Path to the location of climate data. The naming
             convention is data_dir/{watershed name}_climate.h5
@@ -66,16 +67,8 @@ class Dataloader:
         """
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
-
-        self.gis_dir = Path(gis_dir)
-        self.info_path = Path(gis_dir, "NHDPlusNationalData", "GageInfo.dbf")
-        self.loc_path = Path(gis_dir, "NHDPlusNationalData", "GageLoc.shp")
-
         self.phenology = phenology
         self.width = width
-
-        if not self.info_path.exists() or not self.loc_path.exists():
-            get_nhd(self.gis_dir)
 
         if station_id is None and coords is not None:
             self.coords = coords
@@ -89,57 +82,152 @@ class Dataloader:
             )
 
         self.lon, self.lat = self.coords
-        self.data_dir = Path(data_dir, self.comid)
+        self.data_dir = Path(data_dir, self.huc8)
+        self.gis_dir = Path(gis_dir, self.huc8)
+
+        for d in [self.gis_dir, self.data_dir]:
+            if not d.is_dir():
+                try:
+                    os.makedirs(d)
+                except OSError:
+                    print(f"input directory cannot be created: {d}")
+
+        self.get_watershed()
+
+        # drainage area in sq. km
+        self.drainage_area = self.get_characteristic("DRNAREA")["value"] * 2.59
 
     def get_coords(self):
         """Get coordinates of the station from station ID."""
-        ginfo = gpd.read_file(self.info_path)
 
+        # Get datum of the station
+        url = "https://waterservices.usgs.gov/nwis/site"
+        payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
         try:
-            station = ginfo[ginfo.GAGEID == self.station_id]
-        except IndexError:
-            raise IndexError("Station ID was not found in the USGS database.")
+            s = retry_requests.retry(
+                retry_requests.RSession(), retries=5, backoff_factor=0.2
+            )
+            r = s.get(url, params=payload)
+        except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
+            raise
 
-        self.coords = (station.LonSite.values[0], station.LatSite.values[0])
-        self.DASqKm = station.DASqKm.values[0]  # drainage area
-        self.state = station.STATE.values[0]
-        self.wshed_name = station.STATION_NM.values[0]
+        r_text = r.text.split("\n")
+        r_list = [l.split("\t") for l in r_text if "#" not in l]
+        station = dict(zip(r_list[0], r_list[2]))
+
+        self.coords = (float(station["dec_long_va"]), float(station["dec_lat_va"]))
+        self.datum = float(station["alt_va"]) * 0.3048  # convert ft to meter
+        self.huc8 = station["huc_cd"]
+        self.wshed_name = station["station_nm"]
+
         print("The gauge station is located in the following watershed:")
         print(self.wshed_name)
 
-        if not self.loc_path.exists():
-            raise FileNotFoundError(f"GageLoc.shp cannot be found in {self.loc_path}")
-        else:
-            gloc = gpd.read_file(self.loc_path)
-        station_loc = gloc[gloc.SOURCE_FEA == self.station_id]
-        self.comid = str(station_loc.FLComID.values[0])
-
     def get_id(self):
         """Get station ID based on the specified coordinates."""
-        from shapely.ops import nearest_points
-        from shapely.geometry import Point
+        import shapely.ops as ops
+        import shapely.geometry as geom
 
-        gloc = gpd.read_file(self.loc_path)
-        lon, lat = self.coords
+        bbox = "".join(
+            [
+                f"{self.coords[0] - 0.5:.6f},",
+                f"{self.coords[1] - 0.5:.6f},",
+                f"{self.coords[0] + 0.5:.6f},",
+                f"{self.coords[1] + 0.5:.6f}",
+            ]
+        )
+        url = "https://waterservices.usgs.gov/nwis/site"
+        payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
+        s = retry_requests.retry(
+            retry_requests.RSession(), retries=5, backoff_factor=0.2
+        )
+        r = s.get(url, params=payload)
 
-        point = Point(lon, lat)
-        pts = gloc.geometry.unary_union
-        station_loc = gloc[gloc.geometry.geom_equals(nearest_points(point, pts)[1])]
-        self.station_id = str(station_loc.SOURCE_FEA.values[0])
-        self.comid = str(station_loc.FLComID.values[0])
+        r_text = r.text.split("\n")
+        r_list = [l.split("\t") for l in r_text if "#" not in l]
+        r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
 
-        ginfo = gpd.read_file(self.info_path)
+        df = pd.DataFrame.from_dict(r_dict).dropna()
+        df = df.drop(df[df.alt_va == ""].index)
+        df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
+            ["dec_lat_va", "dec_long_va", "alt_va"]
+        ].astype("float")
 
-        try:
-            station = ginfo[ginfo.GAGEID == self.station_id]
-        except IndexError:
-            raise IndexError("Station ID was not found in the USGS database.")
+        point = geom.Point(self.coords)
+        pts = dict(
+            [
+                [row.site_no, geom.Point(row.dec_long_va, row.dec_lat_va)]
+                for row in df[["site_no", "dec_lat_va", "dec_long_va"]].itertuples()
+            ]
+        )
+        gdf = gpd.GeoSeries(pts)
+        idx = gdf[gdf.geom_equals(ops.nearest_points(point, gdf.unary_union)[1])].index[
+            0
+        ]
+        station = df[df.site_no == idx]
 
-        self.DASqKm = station.DASqKm.values[0]  # drainage area
-        self.state = station.STATE.values[0]
-        self.wshed_name = station.STATION_NM.values[0]
+        self.station_id = station.site_no.values[0]
+        self.datum = float(station["alt_va"].values[0]) * 0.3048  # convert ft to meter
+        self.huc8 = station.huc_cd.values[0]
+        self.wshed_name = station.station_nm.values[0]
+
         print("The gage station is located in the following watershed:")
         print(self.wshed_name)
+
+    @utils.retry(exception_class=IndexError)
+    def get_watershed(self):
+        """Download the watershed geometry from the StreamStats service."""
+        from streamstats import Watershed
+        import shapely.geometry as geom
+        import json
+
+        param_file = self.data_dir.joinpath("parameters.json")
+        geom_file = self.gis_dir.joinpath("geometry.shp")
+
+        if param_file.exists() and geom_file.exists():
+            with open(param_file, "r") as fp:
+                self.wshed_params = json.load(fp)
+            self.geometry = gpd.read_file(geom_file)
+            return
+
+        print("Downloading the watershed geometry using StreamStats service >>>")
+
+        try:
+            watershed = Watershed(lon=self.coords[0], lat=self.coords[1])
+            self.wshed_params = watershed.parameters
+
+            with open(param_file, "w") as fp:
+                json.dump(self.wshed_params, fp)
+
+            print(f"The watershed parameters saved to {param_file}")
+
+            self.geometry = geom.Polygon(
+                watershed.boundary["features"][0]["geometry"]["coordinates"][0]
+            )
+
+            gpd.GeoSeries(self.geometry).to_file(geom_file)
+            print(f"The geometry was downloaded successfuly and saved to {geom_file}")
+        except IndexError:
+            raise
+
+    def get_characteristic(self, code=None):
+        """Get watershed characteristic based on a code.
+        
+        Parmeters
+        ---------
+        code : string
+        
+        Returns
+        -------
+        characteristic : dict
+        """
+        codes = [p["code"] for p in self.wshed_params]
+        if code not in codes:
+            raise ValueError(
+                f'code must be a valid key: {" ".join(str(x) for x in codes)}'
+            )
+
+        return next(item for item in self.wshed_params if item["code"] == code)
 
     def get_climate(self):
         """Get climate data from the Daymet database.
@@ -156,30 +244,13 @@ class Dataloader:
         import eto
         import h5py
 
-        # Get datum of the station
-        url = (
-            "https://waterservices.usgs.gov/nwis/site/?format=rdb&sites="
-            + self.station_id
-        )
-        try:
-            r = requests.get(url)
-            r.raise_for_status()
-        except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
-            raise
-
-        r_text = r.text.split("\n")
-        r_list = [l.split("\t") for l in r_text if "#" not in l]
-        r_dict = dict(zip(r_list[0], r_list[2]))
-        # convert ft to meter
-        self.datum = float(r_dict["alt_va"]) * 0.3048
-
         fname = (
             "_".join(
                 [str(self.start.strftime("%Y%m%d")), str(self.end.strftime("%Y%m%d"))]
             )
             + ".h5"
         )
-        self.clm_file = Path(self.data_dir, fname)
+        self.clm_file = self.data_dir.joinpath(fname)
 
         if self.clm_file.exists():
             print(f"Using existing climate data file: {self.clm_file}")
@@ -247,17 +318,21 @@ class Dataloader:
             climate["pet"] = climate.apply(gsi, axis=1)
 
         print("Downloading stream flow data from USGS database >>>")
+        url = "https://waterservices.usgs.gov/nwis/dv/?format=json"
+        payload = {
+            "sites": self.station_id,
+            "startDT": self.start.strftime("%Y-%m-%d"),
+            "endDT": self.end.strftime("%Y-%m-%d"),
+            "parameterCd": "00060",
+            "siteStatus": "all",
+        }
         err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
         try:
-            r = requests.get(
-                "https://waterservices.usgs.gov/nwis/dv/?format=json"
-                + f"&sites={self.station_id}"
-                + f'&startDT={self.start.strftime("%Y-%m-%d")}'
-                + f'&endDT={self.end.strftime("%Y-%m-%d")}'
-                + "&parameterCd=00060&siteStatus=all"
+            s = retry_requests.retry(
+                retry_requests.RSession(), retries=5, backoff_factor=0.2
             )
-            r.raise_for_status()
+            r = s.get(url, params=payload)
         except requests.exceptions.HTTPError:
             print(err[err["HTTP Error Code"] == r.status_code].Explanation.values[0])
             raise
@@ -283,14 +358,6 @@ class Dataloader:
         ]
         self.climate = climate[self.start : self.end].dropna()
 
-        if not self.clm_file.parent.is_dir():
-            try:
-                import os
-
-                os.makedirs(self.clm_file.parent)
-            except OSError:
-                raise OSError(f"input directory cannot be created: {self.data_dir}")
-
         with h5py.File(self.clm_file, "w") as f:
             f.create_dataset("c", data=self.climate, dtype="d")
 
@@ -298,18 +365,14 @@ class Dataloader:
             "climate data was downloaded successfuly and " + f"saved to {self.clm_file}"
         )
 
-    def get_lulc(self, geom_path=None, years=None):
-        """Get LULC data from NLCD 2016 database.
+    def get_nlcd(self, years=None):
+        """Get data from NLCD 2016 database.
 
-        Download and compute land use, canopy and cover from NLCD2016
-        database inside a given Polygon geometry with epsg:4326 projection.
+        Download land use, land cover, canopy and impervious data from NLCD2016
+        database clipped by a given Polygon geometry with epsg:4326 projection.
         Note: NLCD data has a 30 m resolution.
 
         Parameters
-        ----------
-        geom_path : string
-            Path to the shapefile.
-            The default is <gis_dir>/<comid>/geometry.shp.
         years: dict
             The years for NLCD data as a dictionary.
             The default is {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
@@ -342,28 +405,6 @@ class Dataloader:
             self.lulc_years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
         else:
             self.lulc_years = years
-
-        if geom_path is None:
-            self.get_geometry()
-        else:
-            geom_path = Path(geom_path)
-            if not geom_path.exists():
-                msg = (
-                    f"{geom_path} cannot be found."
-                    + " Watershed geometry is required for LULC. "
-                )
-                raise FileNotFoundError(msg)
-            else:
-                wshed_info = gpd.read_file(geom_path)
-                self.geometry = wshed_info.geometry.values[0]
-
-        if not Path(self.data_dir).is_dir():
-            try:
-                import os
-
-                os.mkdir(self.data_dir)
-            except OSError:
-                print(f"input directory cannot be created: {self.data_dir}")
 
         def mrlc_url(service):
             if self.lulc_years[service] not in avail_years[service]:
@@ -455,32 +496,6 @@ class Dataloader:
         self.canopy = params["canopy"]
         self.cover = params["cover"]
 
-    @utils.retry(exception_class=IndexError)
-    def get_geometry(self):
-        """Download the watershed geometry from the StreamStats service."""
-        from streamstats import Watershed
-        import shapely.geometry as geom
-
-        print("Downloading the watershed geometry using StreamStats service >>>")
-
-        try:
-            wshed = Watershed(lat=self.coords[1], lon=self.coords[0])
-            self.geometry = geom.Polygon(
-                wshed.boundary["features"][0]["geometry"]["coordinates"][0]
-            )
-            output = self.gis_dir.joinpath(self.comid, "geometry.shp")
-            if not output.parent.is_dir():
-                try:
-                    import os
-
-                    os.mkdir(output.parent)
-                except OSError:
-                    print(f"input directory cannot be created: {output.parent}")
-            gpd.GeoSeries(self.geometry).to_file(output)
-            print(f"The geometry was downloaded successfuly and saved to {output}")
-        except IndexError:
-            raise
-
     def cover_stats(self):
         """Compute percentages of the land cover classes and categories."""
         import rasterio
@@ -552,7 +567,7 @@ class Dataloader:
         plot(
             Q_dict,
             self.climate["prcp (mm/day)"],
-            self.DASqKm,
+            self.drainage_area,
             self.wshed_name,
             figsize=figsize,
             threshold=threshold,
@@ -597,7 +612,7 @@ class Dataloader:
 
         plot_discharge(
             Q_dict,
-            self.DASqKm,
+            self.drainage_area,
             title,
             figsize=figsize,
             threshold=threshold,
@@ -620,27 +635,3 @@ def _separate_snow(prcp, tmean, tcr=0.0):
             pr[t] = 0.0
             ps[t] = prcp[t]
     return pr, ps
-
-
-def get_nhd(gis_dir):
-    """Download and extract NHDPlus V2.1 database."""
-    gis_dir = Path(gis_dir)
-
-    if not gis_dir.is_dir():
-        try:
-            import os
-
-            os.mkdir(gis_dir)
-        except OSError:
-            print(f"{gis_dir} directory cannot be created")
-
-    print(f"Downloading USGS gage information data to {str(gis_dir)} >>>")
-    base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
-    dbname = [
-        "NHDPlusV21_NationalData_GageInfo_05.7z",
-        "NHDPlusV21_NationalData_GageLoc_05.7z",
-    ]
-
-    for db in dbname:
-        utils.download_extract(base + db, gis_dir)
-    return gis_dir.joinpath("NHDPlusNationalData")
