@@ -174,7 +174,7 @@ class Dataloader:
         print("The gage station is located in the following watershed:")
         print(self.wshed_name)
 
-    @utils.retry(exception_class=IndexError)
+    @utils.retry(exception_class=IndexError, log=True)
     def get_watershed(self):
         """Download the watershed geometry from the StreamStats service."""
         from streamstats import Watershed
