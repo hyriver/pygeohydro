@@ -2,11 +2,13 @@
 History
 =======
 
-0.2.1 (2020-02-19)
+0.3.0 (2020-02-19)
 ------------------
 
-* Clipped the LULC data using the watershed geometry
-* Added support for specifying the year for getting LULC
+* Clipped the obtained NLCD data using the watershed geometry
+* Added support for specifying the year for getting NLCD
+* Cut NHDPlus dependecy but using StreamStats and USGS APIs
+* Renamed get_lulc function to get_nlcd
 
 0.2.0 (2020-02-09)
 ------------------
