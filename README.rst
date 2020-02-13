@@ -17,8 +17,7 @@ Hydrodata
 
 Hydrodata is a python library designed to aid in NHDPlus watershed analysis. Hydrodata is capable of downloading,
 preprocessing, and visualizing climatological, hydrological, and geographical datasets pertaining to a given watershed.
-Supported datasets include: Daymet climate, USGS streamflow, and NLCD land use, land cover data with further additions
-planned.
+Supported datasets include: Daymet climate, USGS streamflow, and NLCD data with further additions planned.
 
 * Documentation: https://hydrodata.readthedocs.io
 
@@ -26,8 +25,9 @@ Features
 --------
 
 * Download daily climate data from the `Daymet <https://daymet.ornl.gov/>`__ database.
+* Download watershed geometries and characteristics using `StreamStats <https://www.usgs.gov/mission-areas/water-resources/science/streamstats-streamflow-statistics-and-spatial-analysis-tools?qt-science_center_objects=0#qt-science_center_objects>`_ service.
 * Compute potential evapotranspiration using `ETo <https://eto.readthedocs.io/en/latest/>`__ package.
-* Download land use, land cover data from `NLCD 2016 <https://www.mrlc.gov/>`__ database.
+* Download land use, land cover, canopy and impervious data from `NLCD 2016 <https://www.mrlc.gov/>`__ database.
 * Download daily streamflow data from the `USGS NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ database.
 * Plot hydrological signature graphs.
 
