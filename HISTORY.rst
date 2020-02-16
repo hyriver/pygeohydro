@@ -2,12 +2,18 @@
 History
 =======
 
-0.3.0 (2020-02-19)
+0.3.1 (2020-02-15)
+------------------
+
+* Removed dependencies on retry-requests and streamstats
+* Made download requests more robust
+
+0.3.0 (2020-02-10)
 ------------------
 
 * Clipped the obtained NLCD data using the watershed geometry
 * Added support for specifying the year for getting NLCD
-* Cut NHDPlus dependecy but using StreamStats and USGS APIs
+* Cut NHDPlus dependency but using StreamStats and USGS APIs
 * Renamed get_lulc function to get_nlcd
 
 0.2.0 (2020-02-09)
