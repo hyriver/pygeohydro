@@ -14,8 +14,6 @@ import pandas as pd
 import numpy as np
 import geopandas as gpd
 from numba import njit, prange
-import retry_requests
-import requests
 from hydrodata import utils
 import os
 
@@ -70,6 +68,8 @@ class Dataloader:
         self.phenology = phenology
         self.width = width
 
+        self.session = utils.retry_requests()
+
         if station_id is None and coords is not None:
             self.coords = coords
             self.get_id()
@@ -97,6 +97,11 @@ class Dataloader:
         # drainage area in sq. km
         self.drainage_area = self.get_characteristic("DRNAREA")["value"] * 2.59
 
+        print(self.__repr__())
+
+    def __repr__(self):
+        return f"The station is located in the {self.wshed_name} watershed"
+        
     def get_coords(self):
         """Get coordinates of the station from station ID."""
 
@@ -104,10 +109,7 @@ class Dataloader:
         url = "https://waterservices.usgs.gov/nwis/site"
         payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
         try:
-            s = retry_requests.retry(
-                retry_requests.RSession(), retries=5, backoff_factor=0.2
-            )
-            r = s.get(url, params=payload)
+            r = self.session.get(url, params=payload)
         except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
 
@@ -119,9 +121,6 @@ class Dataloader:
         self.datum = float(station["alt_va"]) * 0.3048  # convert ft to meter
         self.huc8 = station["huc_cd"]
         self.wshed_name = station["station_nm"]
-
-        print("The gauge station is located in the following watershed:")
-        print(self.wshed_name)
 
     def get_id(self):
         """Get station ID based on the specified coordinates."""
@@ -139,10 +138,7 @@ class Dataloader:
         url = "https://waterservices.usgs.gov/nwis/site"
         payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
         try:
-            s = retry_requests.retry(
-                retry_requests.RSession(), retries=5, backoff_factor=0.2
-            )
-            r = s.get(url, params=payload)
+            r = self.session.get(url, params=payload)
         except requests.HTTPError:
             raise requests.HTTPError(
                 f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
@@ -175,13 +171,10 @@ class Dataloader:
         self.huc8 = station.huc_cd.values[0]
         self.wshed_name = station.station_nm.values[0]
 
-        print("The gage station is located in the following watershed:")
-        print(self.wshed_name)
-
     @utils.retry(exception_class=IndexError, log=True)
     def get_watershed(self):
         """Download the watershed geometry from the StreamStats service."""
-        from streamstats import Watershed
+        from hydrodata.streamstats import Watershed
         import shapely.geometry as geom
         import json
 
@@ -194,25 +187,25 @@ class Dataloader:
             self.geometry = gpd.read_file(geom_file)
             return
 
-        print("Downloading the watershed geometry using StreamStats service >>>")
+        print("Downloading the watershed characteristics using StreamStats service >>>")
 
         try:
             watershed = Watershed(lon=self.coords[0], lat=self.coords[1])
-            self.wshed_params = watershed.parameters
-
-            with open(param_file, "w") as fp:
-                json.dump(self.wshed_params, fp)
-
-            print(f"The watershed parameters saved to {param_file}")
-
-            self.geometry = geom.Polygon(
-                watershed.boundary["features"][0]["geometry"]["coordinates"][0]
-            )
-
-            gpd.GeoSeries(self.geometry).to_file(geom_file)
-            print(f"The geometry was downloaded successfuly and saved to {geom_file}")
         except IndexError:
             raise
+
+        self.wshed_params = watershed.parameters
+
+        with open(param_file, "w") as fp:
+            json.dump(self.wshed_params, fp)
+        print(f"The watershed parameters saved to {param_file}")
+
+        self.geometry = geom.Polygon(
+            watershed.boundary["features"][0]["geometry"]["coordinates"][0]
+        )
+
+        gpd.GeoSeries(self.geometry).to_file(geom_file)
+        print(f"The watershed geometry was saved to {geom_file}")
 
     def get_characteristic(self, code=None):
         """Get watershed characteristic based on a code.
@@ -331,10 +324,7 @@ class Dataloader:
         err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
         try:
-            s = retry_requests.retry(
-                retry_requests.RSession(), retries=5, backoff_factor=0.2
-            )
-            r = s.get(url, params=payload)
+            r = self.session.get(url, params=payload)
         except requests.exceptions.HTTPError:
             print(err[err["HTTP Error Code"] == r.status_code].Explanation.values[0])
             raise
@@ -375,7 +365,8 @@ class Dataloader:
         Note: NLCD data has a 30 m resolution.
 
         Parameters
-        years: dict
+        ----------
+        years : dict
             The years for NLCD data as a dictionary.
             The default is {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
 

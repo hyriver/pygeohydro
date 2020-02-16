@@ -102,3 +102,48 @@ def get_nhd(gis_dir):
     for db in dbname:
         utils.download_extract(base + db, gis_dir)
     return gis_dir.joinpath("NHDPlusNationalData")
+
+
+def retry_requests(retries=3,
+                   backoff_factor=0.5,
+                   status_to_retry=(500, 502, 504),
+                   prefixes=("http://", "https://")):
+    """Configures the passed-in session to retry on failed requests.
+    
+    The fails can be due to connection errors, specific HTTP response
+    codes and 30X redirections. The original code is taken from:
+    https://github.com/bustawin/retry-requests
+    
+    Paramters
+    ---------
+    retries: int
+        The number of maximum retries before raising an exception.
+    backoff_factor: float
+        A factor used to compute the waiting time between retries.
+    status_to_retry: tuple of ints
+        A tuple of status codes that trigger the reply behaviour.
+
+    Returns
+    -------
+        A session object with the retry setup.
+    """
+    import requests
+    from requests.adapters import HTTPAdapter
+    from urllib3 import Retry
+
+    session = requests.Session()
+    session.hooks = {'response': lambda r, *args, **kwargs: r.raise_for_status()}
+
+    r = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=status_to_retry,
+        method_whitelist=False
+    )
+    adapter = HTTPAdapter(max_retries=r)
+    for prefix in prefixes:
+        session.mount(prefix, adapter)
+
+    return session
