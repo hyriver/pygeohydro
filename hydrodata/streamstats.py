@@ -32,7 +32,10 @@ class Watershed():
 
         self.data = self._delineate()
         self.workspace = self.data['workspaceID']
-        self.parameters = self.data['parameters']
+        parameters = self.data['parameters']
+        
+        # Remove the NLCD elements since they are handled by the get_nlcd function
+        self.parameters = [i for j, i in enumerate(parameters) if j not in [8, 10, 11, 12, 13, 23]]
 
     def __repr__(self):
         """Get the string representation of a watershed."""
@@ -66,10 +69,11 @@ class Watershed():
 
         try:
             session = utils.retry_requests()
-            response = session.get(url, params=payload)
+            r = session.get(url, params=payload)
+            r.raise_for_status()
         except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
-        return response.json()
+        return r.json()
 
     @property
     def huc(self):
