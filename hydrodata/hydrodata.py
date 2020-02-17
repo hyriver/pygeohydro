@@ -15,14 +15,17 @@ import numpy as np
 import geopandas as gpd
 from numba import njit, prange
 from hydrodata import utils
+import xarray as xr
+from tenacity import retry, stop_after_attempt
+import json
 import os
 
 
-class Dataloader:
-    """Generate an instance of hydrodata package.
+class Dataloader():
+    """Download data from the databases.
 
-    Downloads climate and streamflow observation data from Daymet and USGS,
-    respectively. The data is saved to a HDF5 file. Either coords or station_id
+    Download climate and streamflow observation data from Daymet and USGS,
+    respectively. The data is saved to an HDF5 file. Either coords or station_id
     argument should be specified.
     """
 
@@ -32,8 +35,9 @@ class Dataloader:
         end,
         station_id=None,
         coords=None,
-        gis_dir="gis_data",
         data_dir="data",
+        rain_snow=False,
+        tcr=0.0,
         phenology=False,
         width=2000,
     ):
@@ -49,11 +53,15 @@ class Dataloader:
             USGS station ID
         coords : tuple
             A tuple including longitude and latitude of the point of interest.
-        gis_dir : string
-            Path to the root directory for storing the watershed geometry file.
         data_dir : string
             Path to the location of climate data. The naming
-            convention is data_dir/{watershed name}_climate.h5
+            convention is data_dir/{watershed name}_climate.nc
+        rain_snow : bool
+            Wethere to separate snow from precipitation. if True, ``tcr``
+            variable can be provided.
+        tcr : float
+            Critical temperetature for separating snow from precipitation.
+            The default value is 0 degree C.
         phenology : bool
             consider phenology for computing PET based on
             Thompson et al., 2011 (https://doi.org/10.1029/2010WR009797)
@@ -65,6 +73,8 @@ class Dataloader:
         """
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
+        self.rain_snow = rain_snow
+        self.tcr = tcr
         self.phenology = phenology
         self.width = width
 
@@ -82,22 +92,21 @@ class Dataloader:
             )
 
         self.lon, self.lat = self.coords
-        self.data_dir = Path(data_dir, self.huc8)
-        self.gis_dir = Path(gis_dir, self.huc8)
+        
+        self.data_dir = Path(data_dir, self.station_id)
 
-        for d in [self.gis_dir, self.data_dir]:
-            if not d.is_dir():
-                try:
-                    os.makedirs(d)
-                except OSError:
-                    print(f"input directory cannot be created: {d}")
+        if not self.data_dir.is_dir():
+            try:
+                os.makedirs(self.data_dir)
+            except OSError:
+                print(f"[ID: {self.station_id}] Input directory cannot be created: {d}")
 
         self.get_watershed()
 
         # drainage area in sq. km
         self.drainage_area = self.get_characteristic("DRNAREA")["value"] * 2.59
 
-        print(self.__repr__())
+        print(f"[ID: {self.station_id}] {self.__repr__()}")
 
     def __repr__(self):
         return f"The station is located in the {self.wshed_name} watershed"
@@ -105,11 +114,12 @@ class Dataloader:
     def get_coords(self):
         """Get coordinates of the station from station ID."""
 
-        # Get datum of the station
+        # Get altitude of the station
         url = "https://waterservices.usgs.gov/nwis/site"
         payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
+            r.raise_for_status()
         except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
 
@@ -118,8 +128,8 @@ class Dataloader:
         station = dict(zip(r_list[0], r_list[2]))
 
         self.coords = (float(station["dec_long_va"]), float(station["dec_lat_va"]))
-        self.datum = float(station["alt_va"]) * 0.3048  # convert ft to meter
-        self.huc8 = station["huc_cd"]
+        self.altitude = float(station["alt_va"]) * 0.3048  # convert ft to meter
+        self.datum = station["alt_datum_cd"]
         self.wshed_name = station["station_nm"]
 
     def get_id(self):
@@ -139,6 +149,7 @@ class Dataloader:
         payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
+            r.raise_for_status()
         except requests.HTTPError:
             raise requests.HTTPError(
                 f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
@@ -167,45 +178,58 @@ class Dataloader:
         station = df[df.site_no == idx]
 
         self.station_id = station.site_no.values[0]
-        self.datum = float(station["alt_va"].values[0]) * 0.3048  # convert ft to meter
-        self.huc8 = station.huc_cd.values[0]
+        self.coords = (station.dec_long_va.values[0], station.dec_lat_va.values[0])
+        self.altitude = float(station["alt_va"].values[0]) * 0.3048  # convert ft to meter
+        self.datum = station["alt_datum_cd"].values[0]
         self.wshed_name = station.station_nm.values[0]
 
-    @utils.retry(exception_class=IndexError, log=True)
+    @retry(stop=stop_after_attempt(3))
     def get_watershed(self):
         """Download the watershed geometry from the StreamStats service."""
         from hydrodata.streamstats import Watershed
         import shapely.geometry as geom
         import json
+        import geojson
 
-        param_file = self.data_dir.joinpath("parameters.json")
-        geom_file = self.gis_dir.joinpath("geometry.shp")
+        wshed_file = self.data_dir.joinpath("watershed.json")
 
-        if param_file.exists() and geom_file.exists():
-            with open(param_file, "r") as fp:
-                self.wshed_params = json.load(fp)
-            self.geometry = gpd.read_file(geom_file)
+        if wshed_file.exists():
+            with open(wshed_file, "r") as fp:
+                watershed = json.load(fp)
+                for dictionary in watershed['featurecollection']:
+                    if dictionary.get('name', '') == 'globalwatershed':
+                        gdf = gpd.GeoDataFrame.from_features(dictionary['feature'])
+                    else:
+                        raise LookupError('Could not find "globalwatershed" in the feature'
+                                      'collection.')
+                self.wshed_params = watershed['parameters']
+                self.geometry = gdf.geometry.values[0]
             return
 
-        print("Downloading the watershed characteristics using StreamStats service >>>")
+        print(f"[ID: {self.station_id}] Downloading watershed characteristics using StreamStats service >>>")
 
         try:
             watershed = Watershed(lon=self.coords[0], lat=self.coords[1])
+            self.huc = watershed.huc
+            params = watershed.parameters
+            huc = {'ID': 0,
+                    'name': 'HUC number',
+                    'description': 'Hudrologic Unit Code of the watershed',
+                    'code': 'HUC',
+                    'unit': 'string',
+                    'value': self.huc}
+            params.insert(0, huc)
+
+            self.wshed_params = params
+
+            gdf = gpd.GeoDataFrame.from_features(watershed.boundary)
+            self.geometry = gdf.geometry.values[0]
         except IndexError:
             raise
 
-        self.wshed_params = watershed.parameters
-
-        with open(param_file, "w") as fp:
-            json.dump(self.wshed_params, fp)
-        print(f"The watershed parameters saved to {param_file}")
-
-        self.geometry = geom.Polygon(
-            watershed.boundary["features"][0]["geometry"]["coordinates"][0]
-        )
-
-        gpd.GeoSeries(self.geometry).to_file(geom_file)
-        print(f"The watershed geometry was saved to {geom_file}")
+        with open(wshed_file, "w") as fp:
+            json.dump(watershed.data, fp)
+        print(f"[ID: {self.station_id}] The watershed data saved to {wshed_file}.")
 
     def get_characteristic(self, code=None):
         """Get watershed characteristic based on a code.
@@ -233,45 +257,25 @@ class Dataloader:
         evapotranspiration using ETo python package. Then downloads streamflow
         data from USGS database and saves the data as an HDF5 file and return
         it as a Pandas dataframe. The naming convention for the HDF5 file is
-        <station_id>_<start>_<end>.h5. If the files already exits on the disk
+        <station_id>_<start>_<end>.nc. If the files already exits on the disk
         it is read and returned as a Pandas dataframe.
         """
         import json
         import daymetpy
         import eto
-        import h5py
 
         fname = (
             "_".join([self.start.strftime("%Y%m%d"), self.end.strftime("%Y%m%d")])
-            + ".h5"
+            + ".nc"
         )
         self.clm_file = self.data_dir.joinpath(fname)
 
         if self.clm_file.exists():
-            print(f"Using existing climate data file: {self.clm_file}")
-            with h5py.File(self.clm_file, "r") as f:
-                self.climate = pd.DataFrame(f["c"])
-            self.climate.columns = [
-                "prcp (mm/day)",
-                "tmin (C)",
-                "tmax (C)",
-                "tmean (C)",
-                "pet (mm)",
-                "qobs (cms)",
-            ]
-            # daymet doesn't account for leap years.
-            # It removes Dec 31 when leap year.
-            index = pd.date_range(self.start, self.end)
-            nl = index[~index.is_leap_year]
-            lp = index[
-                (index.is_leap_year)
-                & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))
-            ]
-            index = index[(index.isin(nl)) | (index.isin(lp))]
-            self.climate.index = index
+            print(f"[ID: {self.station_id}] Using existing climate data file: {self.clm_file}")
+            self.climate = xr.open_dataset(self.clm_file)
             return
 
-        print("Downloading climate data from the Daymet database >>>")
+        print(f"[ID: {self.station_id}] Downloading climate data from the Daymet database >>>")
         climate = daymetpy.daymet_timeseries(
             lon=round(self.lon, 6),
             lat=round(self.lat, 6),
@@ -282,7 +286,7 @@ class Dataloader:
         climate = climate[self.start : self.end]
         climate["tmean"] = climate[["tmin", "tmax"]].mean(axis=1)
 
-        print("Computing potential evapotranspiration (PET) using FAO method")
+        print(f"[ID: {self.station_id}] Computing potential evapotranspiration (PET) using FAO method")
         df = climate[["tmax", "tmin", "vp"]].copy()
         df.columns = ["T_max", "T_min", "e_a"]
         df["R_s"] = climate.srad * climate.dayl * 1e-6  # to MJ/m2
@@ -291,14 +295,15 @@ class Dataloader:
         et1 = eto.ETo()
         freq = "D"
         et1.param_est(
-            df[["R_s", "T_max", "T_min", "e_a"]], freq, self.datum, self.lat, self.lon
+            df[["R_s", "T_max", "T_min", "e_a"]], freq, self.altitude, self.lat, self.lon
         )
         climate["pet"] = et1.eto_fao()
 
-        # Multiply pet by growing season index, GSI, for phenology
+        # Multiply PET by growing season index, GSI, for phenology
         # (Thompson et al., 2011)
         # https://doi.org/10.1029/2010WR009797
         if self.phenology:
+            print(f"[ID: {self.station_id}] Considering phenology in PET")
             tmax, tmin = 10.0, -5.0
             trng = 1.0 / (tmax - tmin)
 
@@ -312,7 +317,7 @@ class Dataloader:
 
             climate["pet"] = climate.apply(gsi, axis=1)
 
-        print("Downloading stream flow data from USGS database >>>")
+        print(f"[ID: {self.station_id}] Downloading stream flow data from USGS database >>>")
         url = "https://waterservices.usgs.gov/nwis/dv/?format=json"
         payload = {
             "sites": self.station_id,
@@ -325,8 +330,9 @@ class Dataloader:
 
         try:
             r = self.session.get(url, params=payload)
+            r.raise_for_status()
         except requests.exceptions.HTTPError:
-            print(err[err["HTTP Error Code"] == r.status_code].Explanation.values[0])
+            print(f"[ID: {self.station_id}] {err[err['HTTP Error Code'] == r.status_code].Explanation.values[0]}")
             raise
         except requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
@@ -340,21 +346,37 @@ class Dataloader:
         climate["qobs"] = df.value.astype("float64") * 0.028316846592
 
         climate = climate[["prcp", "tmin", "tmax", "tmean", "pet", "qobs"]]
-        climate.columns = [
-            "prcp (mm/day)",
-            "tmin (C)",
-            "tmax (C)",
-            "tmean (C)",
-            "pet (mm)",
-            "qobs (cms)",
-        ]
-        self.climate = climate[self.start : self.end].dropna()
 
-        with h5py.File(self.clm_file, "w") as f:
-            f.create_dataset("c", data=self.climate, dtype="d")
+        if self.rain_snow:
+            print(f"[ID: {self.station_id}] Separating snow from precipitation")
+            rain, snow = separate_snow(climate["prcp"].values,
+                                       climate["tmean"].values,
+                                       self.tcr)
+            
+            climate["rain"], climate["snow"] = rain, snow
 
-        print(
-            "climate data was downloaded successfuly and " + f"saved to {self.clm_file}"
+        climate = climate[self.start : self.end].dropna()
+        
+        df = xr.Dataset.from_dataframe(climate)
+
+        df.prcp.attrs['units'] = 'mm/day'
+        df[["tmin", "tmax", "tmean"]].attrs['units'] = 'C'
+        df.pet.attrs['units'] = 'mm'
+        df.qobs.attrs['units'] = 'cms'
+        if self.rain_snow:
+            df[["rain", "snow"]].attrs['units'] = 'mm/day'
+
+        df.attrs['alt_meter'] = self.altitude
+        df.attrs['datum'] = self.datum
+        df.attrs['name'] = self.wshed_name
+        df.attrs['id'] = self.station_id
+        df.attrs['lon'] = self.lon
+        df.attrs['lat'] = self.lat
+
+        df.to_netcdf(self.clm_file)
+        self.climate = df
+        print(f"[ID: {self.station_id}] " +
+              f"Climate data was saved to {self.clm_file}"
         )
 
     def get_nlcd(self, years=None):
@@ -432,14 +454,14 @@ class Dataloader:
                 self.data_dir, f"{data_type}_{self.lulc_years[data_type]}.geotiff"
             )
             if Path(data).exists():
-                print(f"Using existing {data_type} data file: {data}")
+                print(f"[ID: {self.station_id}] Using existing {data_type} data file: {data}")
             else:
                 bbox = self.geometry.bounds
                 height = int(
                     np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * self.width
                 )
                 print(
-                    f"Downloading {data_type} data from NLCD {self.lulc_years[data_type]} database >>>"
+                    f"[ID: {self.station_id}] Downloading {data_type} data from NLCD {self.lulc_years[data_type]} database >>>"
                 )
                 wms = WebMapService(url, version="1.3.0")
                 try:
@@ -455,30 +477,28 @@ class Dataloader:
                     raise ("Data is not availble on the server.")
 
                 with open(data, "wb") as out:
-                    out.write(img.read())
-
-                with rasterio.open(data) as src:
-                    out_image, out_transform = rasterio.mask.mask(
-                        src, [self.geometry], crop=True
-                    )
-                    out_meta = src.meta
-                    out_meta.update(
-                        {
-                            "driver": "GTiff",
-                            "height": out_image.shape[1],
-                            "width": out_image.shape[2],
-                            "transform": out_transform,
-                        }
-                    )
+                    with rasterio.MemoryFile() as memfile:
+                        memfile.write(img.read())
+                        with memfile.open() as src:
+                            out_image, out_transform = rasterio.mask.mask(
+                                src, [self.geometry], crop=True
+                            )
+                            out_meta = src.meta
+                            out_meta.update(
+                                {
+                                    "driver": "GTiff",
+                                    "height": out_image.shape[1],
+                                    "width": out_image.shape[2],
+                                    "transform": out_transform,
+                                }
+                            )
 
                 with rasterio.open(data, "w", **out_meta) as dest:
                     dest.write(out_image)
 
-                print(
-                    f"{data_type} data was downloaded successfuly"
-                    + f" and saved to {data}"
+                print(f"[ID: {self.station_id}] " +
+                    f"{data_type.capitalize()} data was saved to {data}"
                 )
-                self.impervious_path = data
 
             categorical = True if data_type == "cover" else False
             params[data_type] = rasterstats.zonal_stats(
@@ -489,134 +509,14 @@ class Dataloader:
         self.canopy = params["canopy"]
         self.cover = params["cover"]
 
-    def cover_stats(self):
-        """Compute percentages of the land cover classes and categories."""
-        import rasterio
-        from hydrodata.nlcd_helper import NLCD
-        import numpy as np
-
-        nlcd = NLCD()
-
-        cover = rasterio.open(
-            self.data_dir.joinpath(f'cover_{self.lulc_years["cover"]}.geotiff')
-        )
-        total_pix = cover.shape[0] * cover.shape[1]
-        cover_arr = cover.read()
-        class_percentage = dict(
-            zip(
-                list(nlcd.legends.values()),
-                [
-                    cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                    for cat in list(nlcd.legends.keys())
-                ],
-            )
-        )
-        masks = [
-            [leg in cat for leg in list(nlcd.legends.keys())]
-            for cat in list(nlcd.categories.values())
-        ]
-        cat_list = [
-            np.array(list(class_percentage.values()))[msk].sum() for msk in masks
-        ]
-        category_percentage = dict(zip(list(nlcd.categories.keys()), cat_list))
-        return class_percentage, category_percentage
-
-    def separate_snow(self, prcp, tmean, tcr=0.0):
-        """Separate snow and rain from the precipitation.
-
-        The separation is based on a critical temperature (C) with the default
-        value of 0 degree C.
-        """
-        return _separate_snow(prcp, tmean, tcr)
-
-    def plot(self, Q_dict=None, figsize=(13, 12), threshold=1e-3, output=None):
-        """Plot hydrological signatures with precipitation as the second axis.
-
-        Plots includes daily, monthly and annual hydrograph as well as
-        regime curve (monthly mean) and flow duration curve. The input
-        discharges are converted from cms to mm/day based on the watershed
-        area.
-
-        Parameters
-        ----------
-        daily_dict : dict or dataframe
-            A series containing daily discharges in m$^3$/s.
-            A series or a dictionary of series can be passed where its keys
-            are the labels and its values are the series.
-        figsize : tuple
-            Width and height of the plot in inches. The default is (8, 10)
-        threshold : float
-            The threshold for cutting off the discharge for the flow duration
-            curve to deal with log 0 issue. The default is 1e-3.
-        output : string
-            Path to save the plot as png. The default is `None` which means
-            the plot is not saved to a file.
-        """
-        from hydrodata.plotter import plot
-
-        if Q_dict is None:
-            Q_dict = self.climate["qobs (cms)"]
-
-        plot(
-            Q_dict,
-            self.climate["prcp (mm/day)"],
-            self.drainage_area,
-            self.wshed_name,
-            figsize=figsize,
-            threshold=threshold,
-            output=output,
-        )
-        return
-
-    def plot_discharge(
-        self,
-        Q_dict=None,
-        title="Streaflow data for the watersheds",
-        figsize=(13, 12),
-        threshold=1e-3,
-        output=None,
-    ):
-        """Plot hydrological signatures without precipitation.
-
-        The plots include daily, monthly and annual hydrograph as well as
-        regime curve (monthly mean) and flow duration curve.
-
-        Parameters
-        ----------
-        daily_dict : dict or series
-            A series containing daily discharges in m$^3$/s.
-            A series or a dictionary of series can be passed where its keys
-            are the labels and its values are the series.
-        title : string
-            Plot's supertitle.
-        figsize : tuple
-            Width and height of the plot in inches. The default is (8, 10)
-        threshold : float
-            The threshold for cutting off the discharge for the flow duration
-            curve to deal with log 0 issue. The default is 1e-3.
-        output : string
-            Path to save the plot as png. The default is `None` which means
-            which means the plot is not saved to a file.
-        """
-        from hydrodata.plotter import plot_discharge
-
-        if Q_dict is None:
-            Q_dict = self.climate["qobs (cms)"]
-
-        plot_discharge(
-            Q_dict,
-            self.drainage_area,
-            title,
-            figsize=figsize,
-            threshold=threshold,
-            output=output,
-        )
-        return
-
 
 @njit(parallel=True)
-def _separate_snow(prcp, tmean, tcr=0.0):
-    """Separate snow and rain based on a critical temperature."""
+def separate_snow(prcp, tmean, tcr=0.0):
+    """Separate snow and rain based on a critical temperature.
+
+    The separation is based on a critical temperature (C) with the default
+    value of 0 degree C.
+    """
     nt = prcp.shape[0]
     pr = np.zeros(nt, np.float64)
     ps = np.zeros(nt, np.float64)
@@ -628,3 +528,167 @@ def _separate_snow(prcp, tmean, tcr=0.0):
             pr[t] = 0.0
             ps[t] = prcp[t]
     return pr, ps
+
+
+def cover_stats(fpath):
+    """Compute percentages of the land cover classes and categories.
+    
+    Parameters
+    ----------
+    fpath : string or Path
+        Path to the cover ``.geotiff`` file.
+    
+    Returns
+    -------
+    class_percentage : dict
+        Percentage of all the 20 NLCD's cover classes
+    category_percentage : dict
+        Percentage of all the 9 NLCD's cover categories
+    """
+    import rasterio
+    from hydrodata.nlcd_helper import NLCD
+    import numpy as np
+
+    nlcd = NLCD()
+
+    cover = rasterio.open(fpath)
+    total_pix = cover.shape[0] * cover.shape[1]
+    cover_arr = cover.read()
+    class_percentage = dict(
+        zip(
+            list(nlcd.legends.values()),
+            [
+                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
+                for cat in list(nlcd.legends.keys())
+            ],
+        )
+    )
+    masks = [
+        [leg in cat for leg in list(nlcd.legends.keys())]
+        for cat in list(nlcd.categories.values())
+    ]
+    cat_list = [
+        np.array(list(class_percentage.values()))[msk].sum() for msk in masks
+    ]
+    category_percentage = dict(zip(list(nlcd.categories.keys()), cat_list))
+    return class_percentage, category_percentage
+
+
+def plot(Q_dict,
+         prcp,
+         drainage_area,
+         title,
+         figsize=(13, 12),
+         threshold=1e-3,
+         output=None):
+    """Plot hydrological signatures with precipitation as the second axis.
+
+    Plots includes daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve. The input
+    discharges are converted from cms to mm/day based on the watershed
+    area.
+
+    Parameters
+    ----------
+    daily_dict : dict or dataframe
+        A series containing daily discharges in m$^3$/s.
+        A series or a dictionary of series can be passed where its keys
+        are the labels and its values are the series.
+    prcp : Series
+        A series containing daily precipitation in mm/day
+    drainage_area : float
+        Watershed drainage area in km$^2$
+    title : string
+        Plot's supertitle
+    figsize : tuple
+        Width and height of the plot in inches. The default is (8, 10)
+    threshold : float
+        The threshold for cutting off the discharge for the flow duration
+        curve to deal with log 0 issue. The default is 1e-3.
+    output : string
+        Path to save the plot as png. The default is `None` which means
+        the plot is not saved to a file.
+    """
+    from hydrodata.plotter import plot
+
+    plot(
+        Q_dict,
+        prcp,
+        drainage_area,
+        title,
+        figsize=figsize,
+        threshold=threshold,
+        output=output,
+    )
+    return
+
+
+def plot_discharge(
+    Q_dict,
+    drainage_area,
+    title="Streaflow data for the watersheds",
+    figsize=(13, 12),
+    threshold=1e-3,
+    output=None,
+):
+    """Plot hydrological signatures without precipitation.
+
+    The plots include daily, monthly and annual hydrograph as well as
+    regime curve (monthly mean) and flow duration curve.
+
+    Parameters
+    ----------
+    daily_dict : dict or series
+        A series containing daily discharges in m$^3$/s.
+        A series or a dictionary of series can be passed where its keys
+        are the labels and its values are the series.
+    drainage_area : float
+        Watershed drainage area in km$^2$
+    title : string
+        Plot's supertitle.
+    figsize : tuple
+        Width and height of the plot in inches. The default is (8, 10)
+    threshold : float
+        The threshold for cutting off the discharge for the flow duration
+        curve to deal with log 0 issue. The default is 1e-3.
+    output : string
+        Path to save the plot as png. The default is `None` which means
+        which means the plot is not saved to a file.
+    """
+    from hydrodata.plotter import plot_discharge
+
+    plot_discharge(
+        Q_dict,
+        drainage_area,
+        title,
+        figsize=figsize,
+        threshold=threshold,
+        output=output,
+    )
+    return
+
+
+def read_climate(fpath):
+    import h5py
+
+    fpath = Path(fpath)
+    with h5py.File(fpath, "r") as f:
+        climate = pd.DataFrame(f["c"])
+    climate.columns = [
+        "prcp (mm/day)",
+        "tmin (C)",
+        "tmax (C)",
+        "tmean (C)",
+        "pet (mm)",
+        "qobs (cms)",
+    ]
+    # daymet doesn't account for leap years.
+    # It removes Dec 31 when leap year.
+    index = pd.date_range(self.start, self.end)
+    nl = index[~index.is_leap_year]
+    lp = index[
+        (index.is_leap_year)
+        & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))
+    ]
+    index = index[(index.isin(nl)) | (index.isin(lp))]
+    self.climate.index = index
