@@ -119,7 +119,6 @@ class Dataloader():
         payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
-            r.raise_for_status()
         except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
             raise
 
@@ -149,7 +148,6 @@ class Dataloader():
         payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
-            r.raise_for_status()
         except requests.HTTPError:
             raise requests.HTTPError(
                 f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
@@ -196,11 +194,12 @@ class Dataloader():
         if wshed_file.exists():
             with open(wshed_file, "r") as fp:
                 watershed = json.load(fp)
+                gdf = None
                 for dictionary in watershed['featurecollection']:
                     if dictionary.get('name', '') == 'globalwatershed':
                         gdf = gpd.GeoDataFrame.from_features(dictionary['feature'])
-                    else:
-                        raise LookupError('Could not find "globalwatershed" in the feature'
+                if gdf is None:
+                    raise LookupError('Could not find "globalwatershed" in the feature'
                                       'collection.')
                 self.wshed_params = watershed['parameters']
                 self.geometry = gdf.geometry.values[0]
@@ -330,7 +329,6 @@ class Dataloader():
 
         try:
             r = self.session.get(url, params=payload)
-            r.raise_for_status()
         except requests.exceptions.HTTPError:
             print(f"[ID: {self.station_id}] {err[err['HTTP Error Code'] == r.status_code].Explanation.values[0]}")
             raise

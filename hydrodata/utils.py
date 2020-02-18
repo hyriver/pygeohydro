@@ -116,6 +116,9 @@ def retry_requests(retries=3,
     adapter = HTTPAdapter(max_retries=r)
     for prefix in prefixes:
         session.mount(prefix, adapter)
+    session.hooks = {
+       'response': lambda r, *args, **kwargs: r.raise_for_status()
+    }
 
     return session
 
@@ -186,17 +189,11 @@ def batch(stations):
         
         
     """
-    import multiprocessing
+    from concurrent import futures
     import psutil
-
-    # get number of physical cores
-    max_procs = psutil.cpu_count(logical=False)
-
-    pool = multiprocessing.Pool(processes=min(len(stations), max_procs))
-    print(f"Processing queries in batch with {pool._processes} processors ...")
-
-    data_dirs = pool.map(get_data, stations)
-    pool.close()
+    
+    with futures.ThreadPoolExecutor() as executor:
+        data_dirs = list(executor.map(get_data, stations))
 
     print("All the jobs finished successfully.")
     return data_dirs
@@ -245,4 +242,3 @@ def open_workspace(data_dir):
         return
     else:
         return stations
-                
