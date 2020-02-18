@@ -242,3 +242,13 @@ def open_workspace(data_dir):
         return
     else:
         return stations
+    
+def get_state(lon, lat):
+    """Get the state code from US Censue database"""
+    import geocoder
+    
+    try:
+        g = geocoder.uscensus([lat, lon], method='reverse')
+        return g.geojson['features'][0]['properties']['raw']['States'][0]['STUSAB']
+    except KeyError:
+        raise KeyError('The location should be inside the US.')
