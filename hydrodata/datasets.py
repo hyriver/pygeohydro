@@ -91,7 +91,10 @@ class NLDI():
         navigation = self.navigation if navigation is None else self.nav_options[navigation]
         url = self.base_url + f"/USGS-{self.station_id}/navigate/{navigation}"
         r = self.session.get(url)
-        return gpd.GeoDataFrame.from_features(r.json())
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf.columns = ['geometry', 'comid']
+        gdf.set_index('comid', inplace=True)
+        return gdf
         
     def get_stations(self, navigation=None, distance=None):
         navigation = self.navigation if navigation is None else self.nav_options[navigation]
@@ -102,7 +105,50 @@ class NLDI():
         else:
             url = self.base_url + f"/USGS-{self.station_id}/navigate/{navigation}/nwissite?distance={distance}"
         r = self.session.get(url)
-        return gpd.GeoDataFrame.from_features(r.json())
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf.set_index('comid', inplace=True)
+        return gdf
+    
+    def get_nhdplus_byid(self, comids, layer):
+        id_name = dict(catchmentsp = "featureid", nhdflowline_network = "comid")
+        if layer not in list(id_name.keys()):
+            raise ValueError(f"Acceptable values for layer are {', '.join(x for x in list(id_name.keys()))}")
+
+        url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
+
+        filter_1 = ''.join(['<?xml version="1.0"?>',
+                         '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
+                         '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
+                         layer, '" srsName="EPSG:4326">',
+                         '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
+                         '<ogc:Or>',
+                         '<ogc:PropertyIsEqualTo>',
+                         '<ogc:PropertyName>',
+                         id_name[layer],
+                         '</ogc:PropertyName>',
+                         '<ogc:Literal>'])
+
+        filter_2 = ''.join(['</ogc:Literal>',
+                         '</ogc:PropertyIsEqualTo>',
+                         '<ogc:PropertyIsEqualTo>',
+                         '<ogc:PropertyName>',
+                         id_name[layer],
+                         '</ogc:PropertyName>',
+                         '<ogc:Literal>'])
+
+        filter_3 = ''.join(['</ogc:Literal>',
+                         '</ogc:PropertyIsEqualTo>',
+                         '</ogc:Or>',
+                         '</ogc:Filter>',
+                         '</wfs:Query>',
+                         '</wfs:GetFeature>'])
+
+        filter_xml = ''.join([filter_1, filter_2.join(comids), filter_3])
+
+        session = utils.retry_requests()
+        r = session.post(url, data=filter_xml)
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        return gdf
 
 
 def streamstats(lon, lat, data_dir=None):

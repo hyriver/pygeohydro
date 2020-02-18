@@ -35,7 +35,7 @@ def FDC(daily):
     return fdc
 
 
-def plot(daily_dict, prcp, area, title, figsize=(8, 10), threshold=1e-3, output=None):
+def signatures(daily_dict, prcp, area, title, figsize=(8, 10), threshold=1e-3, output=None):
     """Plot hydrological signatures with precipitation as the second axis.
 
     Plots includes daily, monthly and annual hydrograph as well as
