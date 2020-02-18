@@ -138,7 +138,7 @@ def streamstats(lon, lat, data_dir=None):
     """
     url = "https://streamstats.usgs.gov/streamstatsservices/watershed.geojson"
     payload = {
-        'rcode': get_state(lon, lat),
+        'rcode': utils.get_state(lon, lat),
         'xlocation': lon,
         'ylocation': lat,
         'crs': 4326,
@@ -183,14 +183,3 @@ def streamstats(lon, lat, data_dir=None):
             json.dump(data, fp)
 
     return parameters, geometry
-
-
-def get_state(lon, lat):
-    """Get the state code from US Censue database"""
-    import geocoder
-    
-    try:
-        g = geocoder.uscensus([lat, lon], method='reverse')
-        return g.geojson['features'][0]['properties']['raw']['States'][0]['STUSAB']
-    except KeyError:
-        raise KeyError('The location should be inside the US.')
