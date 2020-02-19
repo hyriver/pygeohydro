@@ -16,12 +16,12 @@ import geopandas as gpd
 from numba import njit, prange
 from hydrodata import utils
 import xarray as xr
-from tenacity import retry, stop_after_attempt
 import json
 import os
+from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
 
 
-class Dataloader():
+class Dataloader:
     """Download data from the databases.
 
     Download climate and streamflow observation data from Daymet and USGS,
@@ -92,7 +92,7 @@ class Dataloader():
             )
 
         self.lon, self.lat = self.coords
-        
+
         self.data_dir = Path(data_dir, self.station_id)
 
         if not self.data_dir.is_dir():
@@ -110,7 +110,7 @@ class Dataloader():
 
     def __repr__(self):
         return f"The station is located in the {self.wshed_name} watershed"
-        
+
     def get_coords(self):
         """Get coordinates of the station from station ID."""
 
@@ -119,7 +119,7 @@ class Dataloader():
         payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
-        except requests.exceptions.HTTPError or requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
+        except HTTPError or ConnectionError or Timeout or RequestException:
             raise
 
         r_text = r.text.split("\n")
@@ -177,77 +177,34 @@ class Dataloader():
 
         self.station_id = station.site_no.values[0]
         self.coords = (station.dec_long_va.values[0], station.dec_lat_va.values[0])
-        self.altitude = float(station["alt_va"].values[0]) * 0.3048  # convert ft to meter
+        self.altitude = (
+            float(station["alt_va"].values[0]) * 0.3048
+        )  # convert ft to meter
         self.datum = station["alt_datum_cd"].values[0]
         self.wshed_name = station.station_nm.values[0]
 
-    @retry(stop=stop_after_attempt(3))
     def get_watershed(self):
-        """Download the watershed geometry from the StreamStats service."""
-        from hydrodata.streamstats import Watershed
-        import shapely.geometry as geom
-        import json
-        import geojson
+        """Download the watershed geometry from the NLDI service."""
+        from hydrodata.datasets import NLDI
 
-        wshed_file = self.data_dir.joinpath("watershed.json")
+        geom_file = self.data_dir.joinpath("geometry.gpkg")
 
-        if wshed_file.exists():
-            with open(wshed_file, "r") as fp:
-                watershed = json.load(fp)
-                gdf = None
-                for dictionary in watershed['featurecollection']:
-                    if dictionary.get('name', '') == 'globalwatershed':
-                        gdf = gpd.GeoDataFrame.from_features(dictionary['feature'])
-                if gdf is None:
-                    raise LookupError('Could not find "globalwatershed" in the feature'
-                                      'collection.')
-                self.wshed_params = watershed['parameters']
-                self.geometry = gdf.geometry.values[0]
+        self.watershed = NLDI(station_id=self.station_id)
+        self.comid = self.watershed.comid
+
+        if geom_file.exists():
+            gdf = gpd.read_file(geom_file)
+            self.geometry = gdf.geometry.values[0]
             return
 
-        print(f"[ID: {self.station_id}] Downloading watershed characteristics using StreamStats service >>>")
+        print(
+            f"[ID: {self.station_id}] Downloading watershed geometry using NLDI service >>>"
+        )
+        geom = self.watershed.basin
+        self.geometry = geom.values[0]
+        geom.to_file(geom_file)
 
-        try:
-            watershed = Watershed(lon=self.coords[0], lat=self.coords[1])
-            self.huc = watershed.huc
-            params = watershed.parameters
-            huc = {'ID': 0,
-                    'name': 'HUC number',
-                    'description': 'Hudrologic Unit Code of the watershed',
-                    'code': 'HUC',
-                    'unit': 'string',
-                    'value': self.huc}
-            params.insert(0, huc)
-
-            self.wshed_params = params
-
-            gdf = gpd.GeoDataFrame.from_features(watershed.boundary)
-            self.geometry = gdf.geometry.values[0]
-        except IndexError:
-            raise
-
-        with open(wshed_file, "w") as fp:
-            json.dump(watershed.data, fp)
-        print(f"[ID: {self.station_id}] The watershed data saved to {wshed_file}.")
-
-    def get_characteristic(self, code=None):
-        """Get watershed characteristic based on a code.
-        
-        Parmeters
-        ---------
-        code : string
-        
-        Returns
-        -------
-        characteristic : dict
-        """
-        codes = [p["code"] for p in self.wshed_params]
-        if code not in codes:
-            raise ValueError(
-                f'code must be a valid key: {" ".join(str(x) for x in codes)}'
-            )
-
-        return next(item for item in self.wshed_params if item["code"] == code)
+        print(f"[ID: {self.station_id}] The watershed geometry saved to {geom_file}.")
 
     def get_climate(self):
         """Get climate data from the Daymet database.
@@ -270,11 +227,15 @@ class Dataloader():
         self.clm_file = self.data_dir.joinpath(fname)
 
         if self.clm_file.exists():
-            print(f"[ID: {self.station_id}] Using existing climate data file: {self.clm_file}")
+            print(
+                f"[ID: {self.station_id}] Using existing climate data file: {self.clm_file}"
+            )
             self.climate = xr.open_dataset(self.clm_file)
             return
 
-        print(f"[ID: {self.station_id}] Downloading climate data from the Daymet database >>>")
+        print(
+            f"[ID: {self.station_id}] Downloading climate data from the Daymet database >>>"
+        )
         climate = daymetpy.daymet_timeseries(
             lon=round(self.lon, 6),
             lat=round(self.lat, 6),
@@ -285,7 +246,9 @@ class Dataloader():
         climate = climate[self.start : self.end]
         climate["tmean"] = climate[["tmin", "tmax"]].mean(axis=1)
 
-        print(f"[ID: {self.station_id}] Computing potential evapotranspiration (PET) using FAO method")
+        print(
+            f"[ID: {self.station_id}] Computing potential evapotranspiration (PET) using FAO method"
+        )
         df = climate[["tmax", "tmin", "vp"]].copy()
         df.columns = ["T_max", "T_min", "e_a"]
         df["R_s"] = climate.srad * climate.dayl * 1e-6  # to MJ/m2
@@ -294,7 +257,11 @@ class Dataloader():
         et1 = eto.ETo()
         freq = "D"
         et1.param_est(
-            df[["R_s", "T_max", "T_min", "e_a"]], freq, self.altitude, self.lat, self.lon
+            df[["R_s", "T_max", "T_min", "e_a"]],
+            freq,
+            self.altitude,
+            self.lat,
+            self.lon,
         )
         climate["pet"] = et1.eto_fao()
 
@@ -316,7 +283,9 @@ class Dataloader():
 
             climate["pet"] = climate.apply(gsi, axis=1)
 
-        print(f"[ID: {self.station_id}] Downloading stream flow data from USGS database >>>")
+        print(
+            f"[ID: {self.station_id}] Downloading stream flow data from USGS database >>>"
+        )
         url = "https://waterservices.usgs.gov/nwis/dv/?format=json"
         payload = {
             "sites": self.station_id,
@@ -329,10 +298,12 @@ class Dataloader():
 
         try:
             r = self.session.get(url, params=payload)
-        except requests.exceptions.HTTPError:
-            print(f"[ID: {self.station_id}] {err[err['HTTP Error Code'] == r.status_code].Explanation.values[0]}")
+        except HTTPError:
+            print(
+                f"[ID: {self.station_id}] {err[err['HTTP Error Code'] == r.status_code].Explanation.values[0]}"
+            )
             raise
-        except requests.exceptions.ConnectionError or requests.exceptions.Timeout or requests.exceptions.RequestException:
+        except ConnectionError or Timeout or RequestException:
             raise
 
         df = json.loads(r.text)
@@ -347,34 +318,34 @@ class Dataloader():
 
         if self.rain_snow:
             print(f"[ID: {self.station_id}] Separating snow from precipitation")
-            rain, snow = separate_snow(climate["prcp"].values,
-                                       climate["tmean"].values,
-                                       self.tcr)
-            
+            rain, snow = separate_snow(
+                climate["prcp"].values, climate["tmean"].values, self.tcr
+            )
+
             climate["rain"], climate["snow"] = rain, snow
 
         climate = climate[self.start : self.end].dropna()
-        
+
         df = xr.Dataset.from_dataframe(climate)
 
-        df.prcp.attrs['units'] = 'mm/day'
-        df[["tmin", "tmax", "tmean"]].attrs['units'] = 'C'
-        df.pet.attrs['units'] = 'mm'
-        df.qobs.attrs['units'] = 'cms'
+        df.prcp.attrs["units"] = "mm/day"
+        df[["tmin", "tmax", "tmean"]].attrs["units"] = "C"
+        df.pet.attrs["units"] = "mm"
+        df.qobs.attrs["units"] = "cms"
         if self.rain_snow:
-            df[["rain", "snow"]].attrs['units'] = 'mm/day'
+            df[["rain", "snow"]].attrs["units"] = "mm/day"
 
-        df.attrs['alt_meter'] = self.altitude
-        df.attrs['datum'] = self.datum
-        df.attrs['name'] = self.wshed_name
-        df.attrs['id'] = self.station_id
-        df.attrs['lon'] = self.lon
-        df.attrs['lat'] = self.lat
+        df.attrs["alt_meter"] = self.altitude
+        df.attrs["datum"] = self.datum
+        df.attrs["name"] = self.wshed_name
+        df.attrs["id"] = self.station_id
+        df.attrs["lon"] = self.lon
+        df.attrs["lat"] = self.lat
 
         df.to_netcdf(self.clm_file)
         self.climate = df
-        print(f"[ID: {self.station_id}] " +
-              f"Climate data was saved to {self.clm_file}"
+        print(
+            f"[ID: {self.station_id}] " + f"Climate data was saved to {self.clm_file}"
         )
 
     def get_nlcd(self, years=None):
@@ -452,7 +423,9 @@ class Dataloader():
                 self.data_dir, f"{data_type}_{self.lulc_years[data_type]}.geotiff"
             )
             if Path(data).exists():
-                print(f"[ID: {self.station_id}] Using existing {data_type} data file: {data}")
+                print(
+                    f"[ID: {self.station_id}] Using existing {data_type} data file: {data}"
+                )
             else:
                 bbox = self.geometry.bounds
                 height = int(
@@ -494,8 +467,9 @@ class Dataloader():
                 with rasterio.open(data, "w", **out_meta) as dest:
                     dest.write(out_image)
 
-                print(f"[ID: {self.station_id}] " +
-                    f"{data_type.capitalize()} data was saved to {data}"
+                print(
+                    f"[ID: {self.station_id}] "
+                    + f"{data_type.capitalize()} data was saved to {data}"
                 )
 
             categorical = True if data_type == "cover" else False
@@ -565,20 +539,14 @@ def cover_stats(fpath):
         [leg in cat for leg in list(nlcd.legends.keys())]
         for cat in list(nlcd.categories.values())
     ]
-    cat_list = [
-        np.array(list(class_percentage.values()))[msk].sum() for msk in masks
-    ]
+    cat_list = [np.array(list(class_percentage.values()))[msk].sum() for msk in masks]
     category_percentage = dict(zip(list(nlcd.categories.keys()), cat_list))
     return class_percentage, category_percentage
 
 
-def plot(Q_dict,
-         prcp,
-         drainage_area,
-         title,
-         figsize=(13, 12),
-         threshold=1e-3,
-         output=None):
+def plot(
+    Q_dict, prcp, drainage_area, title, figsize=(13, 12), threshold=1e-3, output=None
+):
     """Plot hydrological signatures with precipitation as the second axis.
 
     Plots includes daily, monthly and annual hydrograph as well as
@@ -685,8 +653,7 @@ def read_climate(fpath):
     index = pd.date_range(self.start, self.end)
     nl = index[~index.is_leap_year]
     lp = index[
-        (index.is_leap_year)
-        & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))
+        (index.is_leap_year) & (~index.strftime("%Y-%m-%d").str.endswith("12-31"))
     ]
     index = index[(index.isin(nl)) | (index.isin(lp))]
     self.climate.index = index

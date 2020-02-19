@@ -52,19 +52,19 @@ def download_extract(url, out_dir):
         print(f"Successfully downloaded and extracted {str(file)}.")
 
 
-def get_nhd(gis_dir):
+def get_nhd(data_dir):
     """Download and extract NHDPlus V2.1 database."""
-    gis_dir = Path(gis_dir)
+    data_dir = Path(data_dir)
 
-    if not gis_dir.is_dir():
+    if not data_dir.is_dir():
         try:
             import os
 
-            os.mkdir(gis_dir)
+            os.mkdir(data_dir)
         except OSError:
-            print(f"{gis_dir} directory cannot be created")
+            print(f"{data_dir} directory cannot be created")
 
-    print(f"Downloading USGS gage information data to {str(gis_dir)} >>>")
+    print(f"Downloading USGS gage information data to {str(data_dir)} >>>")
     base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
     dbname = [
         "NHDPlusV21_NationalData_GageInfo_05.7z",
@@ -72,14 +72,16 @@ def get_nhd(gis_dir):
     ]
 
     for db in dbname:
-        utils.download_extract(base + db, gis_dir)
-    return gis_dir.joinpath("NHDPlusNationalData")
+        utils.download_extract(base + db, data_dir)
+    return data_dir.joinpath("NHDPlusNationalData")
 
 
-def retry_requests(retries=3,
-                   backoff_factor=0.5,
-                   status_to_retry=(500, 502, 504),
-                   prefixes=("http://", "https://")):
+def retry_requests(
+    retries=3,
+    backoff_factor=0.5,
+    status_to_retry=(500, 502, 504),
+    prefixes=("http://", "https://"),
+):
     """Configures the passed-in session to retry on failed requests.
     
     The fails can be due to connection errors, specific HTTP response
@@ -111,58 +113,60 @@ def retry_requests(retries=3,
         connect=retries,
         backoff_factor=backoff_factor,
         status_forcelist=status_to_retry,
-        method_whitelist=False
+        method_whitelist=False,
     )
     adapter = HTTPAdapter(max_retries=r)
     for prefix in prefixes:
         session.mount(prefix, adapter)
-    session.hooks = {
-       'response': lambda r, *args, **kwargs: r.raise_for_status()
-    }
+    session.hooks = {"response": lambda r, *args, **kwargs: r.raise_for_status()}
 
     return session
 
 
 def get_data(stations):
     from hydrodata import Dataloader
-    
-    default = dict(start=None,
-                   end=None,
-                   station_id=None,
-                   coords=None,
-                   data_dir='./data',
-                   rain_snow=False,
-                   phenology=False,
-                   width=2000,
-                   climate=False,
-                   nlcd=False,
-                   yreas={'impervious': 2016, 'cover': 2016, 'canopy': 2016})
+
+    default = dict(
+        start=None,
+        end=None,
+        station_id=None,
+        coords=None,
+        data_dir="./data",
+        rain_snow=False,
+        phenology=False,
+        width=2000,
+        climate=False,
+        nlcd=False,
+        yreas={"impervious": 2016, "cover": 2016, "canopy": 2016},
+    )
 
     params = list(stations.keys())
 
     if "station_id" in params and "coords" in params:
         if stations["station_id"] is not None and stations["coords"] is not None:
-            raise KeyError('Either coords or station_id should be provided.')
+            raise KeyError("Either coords or station_id should be provided.")
 
     for k in list(default.keys()):
         if k not in params:
             stations[k] = default[k]
 
-    station = Dataloader(start=stations["start"],
-                         end=stations["end"],
-                         station_id=stations["station_id"],
-                         coords=stations["coords"],
-                         data_dir=stations["data_dir"],
-                         rain_snow=stations["rain_snow"],
-                         phenology=stations["phenology"],
-                         width=stations["width"])
+    station = Dataloader(
+        start=stations["start"],
+        end=stations["end"],
+        station_id=stations["station_id"],
+        coords=stations["coords"],
+        data_dir=stations["data_dir"],
+        rain_snow=stations["rain_snow"],
+        phenology=stations["phenology"],
+        width=stations["width"],
+    )
 
     if stations["climate"]:
         station.get_climate()
-        
+
     if stations["nlcd"]:
         station.get_nlcd(stations["years"])
-    
+
     return station.data_dir
 
 
@@ -173,8 +177,7 @@ def batch(stations):
     ----------
     stations : list of dict
         A list of dictionary containing the input variables:
-        stations = [{
-                     "start" : 'YYYY-MM-DD', [Requaired]
+        stations = [{"start" : 'YYYY-MM-DD', [Requaired]
                      "end" : 'YYYY-MM-DD', [Requaired]
                      "station_id" : '<ID>', OR "coords" : (<lon>, <lat>), [Requaired]
                      "data_dir" : '<path/to/store/data>',  [Optional] Default : ./data
@@ -186,12 +189,11 @@ def batch(stations):
                      "width" : 2000, [Optional] Default : 200
                      },
                     ...]
-        
-        
+
     """
     from concurrent import futures
     import psutil
-    
+
     with futures.ThreadPoolExecutor() as executor:
         data_dirs = list(executor.map(get_data, stations))
 
@@ -206,7 +208,7 @@ def open_workspace(data_dir):
     import json
     import geopandas as gpd
 
-    dirs = Path(data_dir).glob('*')
+    dirs = Path(data_dir).glob("*")
     stations = {}
     for d in dirs:
         if d.is_dir() and d.name.isdigit():
@@ -215,40 +217,64 @@ def open_workspace(data_dir):
                 with open(wshed_file, "r") as fp:
                     watershed = json.load(fp)
                     gdf = None
-                    for dictionary in watershed['featurecollection']:
-                        if dictionary.get('name', '') == 'globalwatershed':
-                            gdf = gpd.GeoDataFrame.from_features(dictionary['feature'])
-                        
+                    for dictionary in watershed["featurecollection"]:
+                        if dictionary.get("name", "") == "globalwatershed":
+                            gdf = gpd.GeoDataFrame.from_features(dictionary["feature"])
+
                     if gdf is None:
-                        raise LookupError(f"Could not find 'globalwatershed' in the {wshed_file}.")
-                    
-                    wshed_params = watershed['parameters']
+                        raise LookupError(
+                            f"Could not find 'globalwatershed' in the {wshed_file}."
+                        )
+
+                    wshed_params = watershed["parameters"]
                     geometry = gdf.geometry.values[0]
             except FileNotFoundError:
                 raise FileNotFoundError(f"{wshed_file} file cannot be found in {d}.")
 
             climates = []
-            for clm in d.glob('*.nc'):
+            for clm in d.glob("*.nc"):
                 climates.append(xr.open_dataset(clm))
 
             if len(climates) == 0:
                 raise FileNotFoundError(f"No climate data file (*.nc) exits in {d}.")
-            
-            stations[d.name] = {'wshed_params' : wshed_params,
-                                'geometry' : geometry,
-                                'climates' : climates}
+
+            stations[d.name] = {
+                "wshed_params": wshed_params,
+                "geometry": geometry,
+                "climates": climates,
+            }
     if len(stations) == 0:
         print(f"No data was found in {data_dir}")
         return
     else:
         return stations
-    
+
+
 def get_state(lon, lat):
     """Get the state code from US Censue database"""
     import geocoder
-    
+
     try:
-        g = geocoder.uscensus([lat, lon], method='reverse')
-        return g.geojson['features'][0]['properties']['raw']['States'][0]['STUSAB']
+        g = geocoder.uscensus([lat, lon], method="reverse")
+        return g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
     except KeyError:
-        raise KeyError('The location should be inside the US.')
+        raise KeyError("The location should be inside the US.")
+
+
+def daymet_dates(start, end):
+    """Correct dates for Daymet when leap years.
+    
+    Daymet doesn't account for leap years and removes
+    Dec 31 when it's leap year. This function returns all
+    the dates in the Daymet database within the provided year.
+    """
+    import pandas as pd
+
+    period = pd.date_range(start, end)
+    nl = period[~period.is_leap_year]
+    lp = period[
+        (period.is_leap_year) & (~period.strftime("%Y-%m-%d").str.endswith("12-31"))
+    ]
+    period = period[(period.isin(nl)) | (period.isin(lp))]
+    years = [period[period.year == y] for y in period.year.unique()]
+    return [(y[0], y[-1]) for y in years]
