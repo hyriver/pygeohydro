@@ -251,13 +251,30 @@ def open_workspace(data_dir):
         return stations
 
 
-def get_state(lon, lat):
-    """Get the state code from US Censue database"""
+def get_location(lon, lat):
+    """Get the state code and county name from US Censue database.
+    
+    Parameters
+    ----------
+    lon : float
+        Longitude
+    lan : float
+        Latitude
+        
+    Returns
+    -------
+    state : string
+        The state code
+    county : string
+        The county name
+    """
     import geocoder
 
     try:
         g = geocoder.uscensus([lat, lon], method="reverse")
-        return g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
+        state = g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
+        county = g.geojson['features'][0]['properties']['county']
+        return state, county
     except KeyError:
         raise KeyError("The location should be inside the US.")
 
@@ -281,8 +298,8 @@ def daymet_dates(start, end):
     return [(y[0], y[-1]) for y in years]
 
 
-def get_altitude(lon, lat):
-    """Get altitude from USGS 3DEP service for a coordinate.
+def get_elevation(lon, lat):
+    """Get elevation from USGS 3DEP service for a coordinate.
     
     Parameters
     ----------
@@ -290,6 +307,11 @@ def get_altitude(lon, lat):
         Longitude
     lat : float
         Latitude
+        
+    Returns
+    -------
+    elevation : float
+        Elevation in meter
     """
     url = 'https://nationalmap.gov/epqs/pqs.php?'
     session = retry_requests()
@@ -297,7 +319,6 @@ def get_altitude(lon, lat):
     lat = lat if isinstance(lat, list) else [lat]
     coords = [(i, j) for i, j in zip(lon, lat)]
     try:
-        for lon, lat in coords:
         payload = {
             'output': 'json',
             'x': lon,
@@ -307,8 +328,49 @@ def get_altitude(lon, lat):
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
         raise
-    altitude = r.json()['USGS_Elevation_Point_Query_Service']['Elevation_Query']['Elevation']
-    if altitude == -1000000:
-        raise ValueError('The altitude of the requested coordinate ({lon}, {lat}) cannot be found.')
+    elevation = r.json()['USGS_Elevation_Point_Query_Service']['Elevation_Query']['Elevation']
+    if elevation == -1000000:
+        raise ValueError(f'The altitude of the requested coordinate ({lon}, {lat}) cannot be found.')
     else:
-        return altitude
+        return elevation
+
+
+def get_elevation_bybbox(bbox, coords, data_dir='.'):
+    """Get elevation from DEM data for a list of coordinates.
+    
+    The elevations are extracted from SRTM3 (90-m resolution) data.
+    This function is intended for getting elevations for gridded data.
+    
+    Parameters
+    ----------
+    bbox : list
+        Bounding box with coordinates in [west, south, east, north] format.
+    coords : list of tuples
+        A list of coordinates in (lon, lat) foramt.
+    data_dir : string or Path
+        The path to the directory for saving the DEM file in `tif` format.
+        The file name is the name of the county where the center of the bbox
+        is located. The default directory is the current working directory.
+        
+    Returns
+    -------
+    elevations : list
+        List of elevations in meter
+    """
+    import elevation
+    import rasterio
+    import numpy as np
+
+    lon, lat = (bbox[0] + bbox[2])*0.5, (bbox[1] + bbox[3])*0.5
+    _, county = get_location(lon, lat)
+    output = county.replace(' ', '_') + '.tif'
+
+    output = Path(data_dir, output).absolute()
+    if not output.exists():
+        elevation.clip(bounds=bbox, output=str(output), product='SRTM3')
+        elevation.clean()
+
+    with rasterio.open(output) as src:
+        elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
+
+    return elevations

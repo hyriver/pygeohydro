@@ -128,11 +128,11 @@ def deymet_singlepixel(lon, lat, start, end, pet=False, pheonolgy=False):
 
         et = eto.ETo()
         freq = "D"
-        altitude = utils.get_altitude(lon, lat)
+        elevation = utils.get_elevation(lon, lat)
         et.param_est(
             data[["R_s", "T_max", "T_min", "e_a"]],
             freq,
-            altitude,
+            elevation,
             lat,
             lon,
         )
