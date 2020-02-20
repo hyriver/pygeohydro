@@ -5,6 +5,7 @@
 from tqdm import tqdm
 import urllib
 from pathlib import Path
+from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
 
 
 class DownloadProgressBar(tqdm):
@@ -278,3 +279,36 @@ def daymet_dates(start, end):
     period = period[(period.isin(nl)) | (period.isin(lp))]
     years = [period[period.year == y] for y in period.year.unique()]
     return [(y[0], y[-1]) for y in years]
+
+
+def get_altitude(lon, lat):
+    """Get altitude from USGS 3DEP service for a coordinate.
+    
+    Parameters
+    ----------
+    lon : float
+        Longitude
+    lat : float
+        Latitude
+    """
+    url = 'https://nationalmap.gov/epqs/pqs.php?'
+    session = retry_requests()
+    lon = lon if isinstance(lon, list) else [lon]
+    lat = lat if isinstance(lat, list) else [lat]
+    coords = [(i, j) for i, j in zip(lon, lat)]
+    try:
+        for lon, lat in coords:
+        payload = {
+            'output': 'json',
+            'x': lon,
+            'y': lat,
+            'units': 'Meters'
+        }
+        r = session.get(url, params=payload)
+    except ConnectionError or Timeout or RequestException:
+        raise
+    altitude = r.json()['USGS_Elevation_Point_Query_Service']['Elevation_Query']['Elevation']
+    if altitude == -1000000:
+        raise ValueError('The altitude of the requested coordinate ({lon}, {lat}) cannot be found.')
+    else:
+        return altitude

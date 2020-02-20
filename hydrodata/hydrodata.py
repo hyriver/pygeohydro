@@ -266,7 +266,7 @@ class Dataloader:
         climate["pet"] = et1.eto_fao()
 
         # Multiply PET by growing season index, GSI, for phenology
-        # (Thompson et al., 2011)
+        # (Thompson et al., 2011) 
         # https://doi.org/10.1029/2010WR009797
         if self.phenology:
             print(f"[ID: {self.station_id}] Considering phenology in PET")

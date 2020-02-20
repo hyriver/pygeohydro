@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Accessing data from the supported databases using their APIs."""
+"""Accessing data from the supported databases through their APIs."""
 
 from hydrodata import utils
 import pandas as pd
@@ -62,23 +62,35 @@ def nwis(station_id, start, end):
     return qobs
 
 
-def deymet_singlepixel(lon=None, lat=None, start=None, end=None):
+def deymet_singlepixel(lon, lat, start, end, pet=False, pheonolgy=False):
     """Get daily climate data from Daymet for a single point.
 
     Parameters
     ----------
     lon : float
-        Longitude of the 
+        Longitude of the point of interest
+    lat : float
+        Latitude of the point of interest
     start : string or datetime
         Start date
     end : string or datetime
         End date
+    pet : bool
+        Whether to compute evapotranspiration based on
+        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
+        The default is False
+    pheonolgy : bool
+        Whether to consider pheology in computing PET using growing season index.
+        `Thompson et al., 2011 <https://doi.org/10.1029/2010WR009797>`_.
+        The default is False.
         
     Returns
     -------
         qobs : dataframe
         Streamflow data observations in cubic meter per second (cms)
     """
+    import eto
+
     if not (14.5 < lat < 52.0) or not (-131.0 < lon < -53.0):
         msg = "The location is outside the Daymet dataset. The acceptable range is: "
         msg += "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
@@ -106,6 +118,41 @@ def deymet_singlepixel(lon=None, lat=None, start=None, end=None):
     df = pd.DataFrame(r.json()["data"])
     df.index = pd.to_datetime(df.year * 1000.0 + df.yday, format="%Y%j")
     df.drop(["year", "yday"], axis=1, inplace=True)
+
+    if pet:
+        data = df[["tmax (deg c)", "tmin (deg c)", "vp (Pa)"]].copy()
+        data.columns = ["T_max", "T_min", "e_a"]
+        data["T_mean"] = data[["T_max", "T_min"]].mean(axis=1)
+        data["R_s"] = df['srad (W/m^2)'] * df['dayl (s)'] * 1e-6  # to MJ/m2
+        data["e_a"] *= 1e-3  # to kPa
+
+        et = eto.ETo()
+        freq = "D"
+        altitude = utils.get_altitude(lon, lat)
+        et.param_est(
+            data[["R_s", "T_max", "T_min", "e_a"]],
+            freq,
+            altitude,
+            lat,
+            lon,
+        )
+        data["pet"] = et.eto_fao()
+
+        if pheonolgy:
+            tmax, tmin = 10.0, -5.0
+            trng = 1.0 / (tmax - tmin)
+
+            def gsi(row):
+                if row.T_mean < tmin:
+                    return 0
+                elif row.T_mean > tmax:
+                    return row.pet
+                else:
+                    return (row.T_mean - tmin) * trng * row.pet
+
+            data["pet"] = data.apply(gsi, axis=1)
+            
+        df["pet (mm)"] = data["pet"]
     return df
 
 
@@ -128,7 +175,7 @@ def daymet_gridded(start_date, end_date, variables, bbox, tabel=False):
         as follows:
         bbox = [west, south, east, north]
     tabel : bool
-        If True the function additionally a dataframe is returned that includes
+        If True, additionally a dataframe is returned that includes
         description of all the Daymet variables and their units.
     
     Returns
@@ -137,7 +184,7 @@ def daymet_gridded(start_date, end_date, variables, bbox, tabel=False):
         The output dataset.
     var_tabel : Pandas dataframe
         A dataframe that includes description of all the Daymet variables. Only if
-        tabel is set to True.
+        tabel is set to True. The default is False.
     """
     from pandas.tseries.offsets import DateOffset
     import numpy as np
@@ -146,6 +193,8 @@ def daymet_gridded(start_date, end_date, variables, bbox, tabel=False):
 
     start_date = pd.to_datetime(start_date) + DateOffset(hour=12)
     end_date = pd.to_datetime(end_date) + DateOffset(hour=12)
+
+    variables = variables if isinstance(variables, list) else [variables]
 
     vars_table = pd.read_html("https://daymet.ornl.gov/overview")[1]
     valid_variables = vars_table.Abbr.values
@@ -468,10 +517,6 @@ def streamstats(lon, lat, data_dir=None):
     data = r.json()
 
     parameters = data["parameters"]
-    # Remove the NLCD elements since they are handled by the get_nlcd function
-    parameters = [
-        i for j, i in enumerate(parameters) if j not in [8, 10, 11, 12, 13, 23]
-    ]
 
     watershed_point = data["featurecollection"][0]["feature"]
     huc = watershed_point["features"][0]["properties"]["HUCID"]
