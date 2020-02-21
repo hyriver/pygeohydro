@@ -8,51 +8,6 @@ from pathlib import Path
 from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
 
 
-class DownloadProgressBar(tqdm):
-    """A tqdm-based class for download progress."""
-
-    def update_to(self, b=1, bsize=1, tsize=None):
-        """Insnp.pired from a tqdm example.
-
-        Parameters
-        ----------
-        b : int, optional
-            Number of blocks transferred so far [default: 1].
-        bsize : int, optional
-            Size of each block (in tqdm units) [default: 1].
-        tsize : int, optional
-            Total size (in tqdm units). If [default: None] or -1,
-            remains unchanged.
-        """
-        if tsize is not None:
-            self.total = tsize
-        self.update(b * bsize - self.n)
-
-
-def download_url(url, out_dir):
-    """Progress bar for downloading a file."""
-    with DownloadProgressBar(
-        unit="B", unit_scale=True, miniters=1, desc=url.split("/")[-1]
-    ) as t:
-        urllib.request.urlretrieve(
-            url, filename=Path(out_dir, url.split("/")[-1]), reporthook=t.update_to
-        )
-
-
-def download_extract(url, out_dir):
-    """Download and extract a `.7z` file."""
-    import py7zr
-
-    file = Path(out_dir).joinpath(url.split("/")[-1])
-    if file.exists():
-        py7zr.unpack_7zarchive(str(file), str(out_dir))
-        print(f"Successfully extracted {file}.")
-    else:
-        download_url(url, out_dir)
-        py7zr.unpack_7zarchive(str(file), str(out_dir))
-        print(f"Successfully downloaded and extracted {str(file)}.")
-
-
 def get_nhd(data_dir):
     """Download and extract NHDPlus V2.1 database."""
     data_dir = Path(data_dir)
@@ -260,6 +215,8 @@ def get_location(lon, lat, retry=3):
         Longitude
     lan : float
         Latitude
+    retry : int
+        Number of retries if a request fails. The default is 3.
         
     Returns
     -------
@@ -267,8 +224,6 @@ def get_location(lon, lat, retry=3):
         The state code
     county : string
         The county name
-    retry : int
-        Number of retries if request fails. The default is 3.
     """
     import time
     import geocoder
@@ -280,9 +235,11 @@ def get_location(lon, lat, retry=3):
         state = g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
         county = g.geojson['features'][0]['properties']['county']
 
-        if state is None or county is None:
+        if state is None or county is None and retry > 0:
             time.sleep(0.5)
             get_location(lon, lat, retry=retry-1)
+        elif state is None or county is None and retry <= 0:
+            raise ConnectionError("UN Census service is not available at the moment.")
         else:
             return state, county
     except KeyError:
