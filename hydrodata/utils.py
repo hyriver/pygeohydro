@@ -497,7 +497,7 @@ def pet_fao_gridded(ds):
                 ds.lat.min().values - margine,
                 ds.lon.max().values + margine,
                 ds.lat.max().values + margine]
-        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'])
+        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'], data_dir='.')
         ds['elevation'] = ({'y' : ds.dims['y'], 'x' : ds.dims['x']}, elevation)
 
     P = 101.3*((293.0 - 0.0065*ds['elevation'])/293.0)**5.26
