@@ -12,7 +12,7 @@ class DownloadProgressBar(tqdm):
     """A tqdm-based class for download progress."""
 
     def update_to(self, b=1, bsize=1, tsize=None):
-        """Inspired from a tqdm example.
+        """Insnp.pired from a tqdm example.
 
         Parameters
         ----------
@@ -73,7 +73,7 @@ def get_nhd(data_dir):
     ]
 
     for db in dbname:
-        utils.download_extract(base + db, data_dir)
+        download_extract(base + db, data_dir)
     return data_dir.joinpath("NHDPlusNationalData")
 
 
@@ -251,7 +251,7 @@ def open_workspace(data_dir):
         return stations
 
 
-def get_location(lon, lat):
+def get_location(lon, lat, retry=3):
     """Get the state code and county name from US Censue database.
     
     Parameters
@@ -267,16 +267,30 @@ def get_location(lon, lat):
         The state code
     county : string
         The county name
+    retry : int
+        Number of retries if request fails. The default is 3.
     """
+    import time
     import geocoder
+    
+    retry = int(retry)
 
     try:
         g = geocoder.uscensus([lat, lon], method="reverse")
         state = g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
         county = g.geojson['features'][0]['properties']['county']
+
+        if state is None or county is None:
+            time.sleep(0.5)
+            get_location(lon, lat, retry=retry-1)
+
         return state, county
     except KeyError:
-        raise KeyError("The location should be inside the US.")
+        if retry <= 0:
+            raise KeyError("The location should be inside the US.")
+        else:
+            time.sleep(0.5)
+            get_location(lon, lat, retry=retry-1)
 
 
 def daymet_dates(start, end):
@@ -335,11 +349,11 @@ def get_elevation(lon, lat):
         return elevation
 
 
-def get_elevation_bybbox(bbox, coords, data_dir='.'):
+def get_elevation_bybbox(bbox, coords, data_dir=None):
     """Get elevation from DEM data for a list of coordinates.
     
     The elevations are extracted from SRTM3 (90-m resolution) data.
-    This function is intended for getting elevations for gridded data.
+    This function is intended for getting elevations for ds data.
     
     Parameters
     ----------
@@ -350,12 +364,14 @@ def get_elevation_bybbox(bbox, coords, data_dir='.'):
     data_dir : string or Path
         The path to the directory for saving the DEM file in `tif` format.
         The file name is the name of the county where the center of the bbox
-        is located. The default directory is the current working directory.
+        is located. If None the DEM file is not saved. The default is None.
         
     Returns
     -------
-    elevations : list
-        List of elevations in meter
+    elevations : array
+        A numpy array of elevations in meter
+    output : Path
+        Path to the downloaded DEM file only if data_dir is not None.
     """
     import elevation
     import rasterio
@@ -365,7 +381,9 @@ def get_elevation_bybbox(bbox, coords, data_dir='.'):
     _, county = get_location(lon, lat)
     output = county.replace(' ', '_') + '.tif'
 
-    output = Path(data_dir, output).absolute()
+    root = '.' if data_dir is None else data_dir
+
+    output = Path(root, output).absolute()
     if not output.exists():
         elevation.clip(bounds=bbox, output=str(output), product='SRTM3')
         elevation.clean()
@@ -373,4 +391,157 @@ def get_elevation_bybbox(bbox, coords, data_dir='.'):
     with rasterio.open(output) as src:
         elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
 
-    return elevations
+    if data_dir is None:
+        output.unlink()
+        return elevations
+    else:
+        return elevations, output
+
+
+def pet_fao(df, lon, lat):
+    """Compute Potential EvapoTranspiration using Daymet dataset.
+    
+    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+    The following variables are required:
+    tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m^2), dayl (s)
+    """
+    import numpy as np
+    import pandas as pd
+    
+    keys = [v for v in df.columns]
+    reqs = ['tmin (deg c)', 'tmax (deg c)', 'vp (Pa)', 'srad (W/m^2)', 'dayl (s)']
+
+    missing = [r for r in reqs if r not in keys]
+    if len(missing) > 0:
+        msg = "These required variables are not in the dataset: "
+        msg += ", ".join(x for x in missing)
+        msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
+        raise KeyError(msg)
+    
+    dtype = df.dtypes[0]
+    df['tmean (deg c)'] = 0.5*(df['tmax (deg c)'] + df['tmin (deg c)'])
+    Delta = 4098*(0.6108*np.exp(17.27*df['tmean (deg c)']/(df['tmean (deg c)'] + 237.3), dtype=dtype))/((df['tmean (deg c)'] + 237.3)**2)
+    elevation = get_elevation(lon, lat)
+
+    P = 101.3*((293.0 - 0.0065*elevation)/293.0)**5.26
+    gamma = P*0.665e-3
+
+    G = 0.0  # recommended for daily data
+    df['vp (Pa)'] = df['vp (Pa)']*1e-3
+
+    e_max = 0.6108*np.exp(17.27*df['tmax (deg c)']/(df['tmax (deg c)'] + 237.3), dtype=dtype)
+    e_min = 0.6108*np.exp(17.27*df['tmin (deg c)']/(df['tmin (deg c)'] + 237.3), dtype=dtype)
+    e_s = (e_max + e_min)*0.5
+    e_def = e_s - df['vp (Pa)']
+
+    u_2 = 2.0  # recommended when no data is available
+
+    jday = df.index.dayofyear
+    R_s = df['srad (W/m^2)']*df['dayl (s)']*1e-6
+
+    alb = 0.23
+
+    jp = 2.0*np.pi*jday/365.0
+    d_r = 1.0 + 0.033*np.cos(jp, dtype=dtype)
+    delta = 0.409*np.sin(jp - 1.39, dtype=dtype)
+    phi = lat*np.pi/180.0
+    w_s = np.arccos(-np.tan(phi, dtype=dtype)*np.tan(delta, dtype=dtype))
+    R_a = 24.0*60.0/np.pi*0.082*d_r*(w_s*np.sin(phi, dtype=dtype)*np.sin(delta, dtype=dtype)
+                                  + np.cos(phi, dtype=dtype)*np.cos(delta, dtype=dtype)*np.sin(w_s, dtype=dtype))
+    R_so = (0.75 + 2e-5*elevation)*R_a
+    R_ns = (1.0 - alb)*R_s
+    R_nl = 4.903e-9*(((df['tmax (deg c)'] + 273.16)**4
+                      + (df['tmin (deg c)'] + 273.16)**4)*0.5)*(0.34 - 0.14*np.sqrt(df['vp (Pa)']))*((1.35*R_s/R_so) - 0.35)
+    R_n = R_ns - R_nl
+
+    df['pet (mm/day)'] = (0.408*Delta*(R_n - G) + gamma*900.0/(df['tmean (deg c)'] + 273.0)*u_2*e_def) \
+                         / (Delta + gamma*(1 + 0.34*u_2))
+    df['vp (Pa)'] = df['vp (Pa)']*1.0e3
+    
+    return df
+
+
+def pet_fao_gridded(ds):
+    """Compute Potential EvapoTranspiration using Daymet dataset.
+    
+    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+    The following variables are required:
+    tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
+    """
+    import numpy as np
+    import pandas as pd
+    
+    keys = [v for v in ds.keys()]
+    reqs = ['tmin', 'tmax', 'lat', 'lon', 'vp', 'srad', 'dayl']
+
+    missing = [r for r in reqs if r not in keys]
+    if len(missing) > 0:
+        msg = "These required variables are not in the dataset: "
+        msg += ", ".join(x for x in missing)
+        msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
+        raise KeyError(msg)
+    
+    dtype = ds.tmin.dtype
+    dates = ds['time']
+    ds['tmean'] = 0.5*(ds['tmax'] + ds['tmin'])
+    ds['tmean'].attrs['units'] = 'degree C'
+    ds['delta'] = 4098*(0.6108*np.exp(17.27*ds['tmean']/(ds['tmean'] + 237.3), dtype=dtype))/((ds['tmean'] + 237.3)**2)
+    
+    no_elev = False
+    if 'elevation' not in keys:
+        coords = [(i, j) for i, j in zip(ds.sel(time=ds['time'][0]).lon.values.flatten(),
+                                         ds.sel(time=ds['time'][0]).lat.values.flatten())]
+        no_elev = True
+        margine = 0.1
+        bbox = [ds.lon.min().values - margine,
+                ds.lat.min().values - margine,
+                ds.lon.max().values + margine,
+                ds.lat.max().values + margine]
+        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'])
+        ds['elevation'] = ({'y' : ds.dims['y'], 'x' : ds.dims['x']}, elevation)
+
+    P = 101.3*((293.0 - 0.0065*ds['elevation'])/293.0)**5.26
+    ds['gamma'] = P*0.665e-3
+
+    G = 0.0  # recommended for daily data
+    ds['vp'] *= 1e-3
+
+    e_max = 0.6108*np.exp(17.27*ds['tmax']/(ds['tmax'] + 237.3), dtype=dtype)
+    e_min = 0.6108*np.exp(17.27*ds['tmin']/(ds['tmin'] + 237.3), dtype=dtype)
+    e_s = (e_max + e_min)*0.5
+    ds['e_def'] = e_s - ds['vp']
+
+    u_2 = 2.0  # recommended when no data is available
+
+    lat = ds.sel(time=ds['time'][0]).lat
+    ds['time'] = pd.to_datetime(ds.time.values).dayofyear.astype(dtype)
+    R_s = ds['srad']*ds['dayl']*1e-6
+
+    alb = 0.23
+
+    jp = 2.0*np.pi*ds['time']/365.0
+    d_r = 1.0 + 0.033*np.cos(jp, dtype=dtype)
+    delta = 0.409*np.sin(jp - 1.39, dtype=dtype)
+    phi = lat*np.pi/180.0
+    w_s = np.arccos(-np.tan(phi, dtype=dtype)*np.tan(delta, dtype=dtype))
+    R_a = 24.0*60.0/np.pi*0.082*d_r*(w_s*np.sin(phi, dtype=dtype)*np.sin(delta, dtype=dtype)
+                                  + np.cos(phi, dtype=dtype)*np.cos(delta, dtype=dtype)*np.sin(w_s, dtype=dtype))
+    R_so = (0.75 + 2e-5*ds['elevation'])*R_a
+    R_ns = (1.0 - alb)*R_s
+    R_nl = 4.903e-9*(((ds['tmax'] + 273.16)**4
+                      + (ds['tmin'] + 273.16)**4)*0.5)*(0.34 - 0.14*np.sqrt(ds['vp']))*((1.35*R_s/R_so) - 0.35)
+    ds['R_n'] = R_ns - R_nl
+
+    ds['pet'] = (0.408*ds['delta']*(ds['R_n'] - G) + ds['gamma']*900.0/(ds['tmean'] + 273.0)*u_2*ds['e_def']) \
+                     / (ds['delta'] + ds['gamma']*(1 + 0.34*u_2))
+    ds['pet'].attrs['units'] = 'mm/day'
+
+    ds['time'] = dates
+    ds['vp'] *= 1.0e3
+    if no_elev:
+        ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n', 'elevation'])
+    else:
+        ds['elevation'].attrs['units'] = 'm'
+        ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n'])
+    
+    return ds
