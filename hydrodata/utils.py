@@ -283,8 +283,8 @@ def get_location(lon, lat, retry=3):
         if state is None or county is None:
             time.sleep(0.5)
             get_location(lon, lat, retry=retry-1)
-
-        return state, county
+        else:
+            return state, county
     except KeyError:
         if retry <= 0:
             raise KeyError("The location should be inside the US.")
@@ -360,7 +360,7 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
     bbox : list
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
-        A list of coordinates in (lon, lat) foramt.
+        A list of coordinates in (lon, lat) foramt to extract the elevation.
     data_dir : string or Path
         The path to the directory for saving the DEM file in `tif` format.
         The file name is the name of the county where the center of the bbox
@@ -385,7 +385,7 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
 
     output = Path(root, output).absolute()
     if not output.exists():
-        elevation.clip(bounds=bbox, output=str(output), product='SRTM3')
+        elevation.clip(bounds=bbox, output=str(output), product='SRTM1')
         elevation.clean()
 
     with rasterio.open(output) as src:
@@ -486,19 +486,18 @@ def pet_fao_gridded(ds):
     ds['tmean'] = 0.5*(ds['tmax'] + ds['tmin'])
     ds['tmean'].attrs['units'] = 'degree C'
     ds['delta'] = 4098*(0.6108*np.exp(17.27*ds['tmean']/(ds['tmean'] + 237.3), dtype=dtype))/((ds['tmean'] + 237.3)**2)
-    
-    no_elev = False
+
     if 'elevation' not in keys:
         coords = [(i, j) for i, j in zip(ds.sel(time=ds['time'][0]).lon.values.flatten(),
                                          ds.sel(time=ds['time'][0]).lat.values.flatten())]
-        no_elev = True
-        margine = 0.1
+        margine = 0.05
         bbox = [ds.lon.min().values - margine,
                 ds.lat.min().values - margine,
                 ds.lon.max().values + margine,
                 ds.lat.max().values + margine]
-        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'], data_dir='.')
+        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'])
         ds['elevation'] = ({'y' : ds.dims['y'], 'x' : ds.dims['x']}, elevation)
+        ds['elevation'].attrs['units'] = 'm'
 
     P = 101.3*((293.0 - 0.0065*ds['elevation'])/293.0)**5.26
     ds['gamma'] = P*0.665e-3
@@ -538,10 +537,7 @@ def pet_fao_gridded(ds):
 
     ds['time'] = dates
     ds['vp'] *= 1.0e3
-    if no_elev:
-        ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n', 'elevation'])
-    else:
-        ds['elevation'].attrs['units'] = 'm'
-        ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n'])
+    
+    ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n'])
     
     return ds
