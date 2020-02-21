@@ -62,7 +62,7 @@ def nwis(station_id, start, end):
     return qobs
 
 
-def deymet_bypoint(lon, lat, start=None, end=None, years=None, variables=None, pet=False, pheonolgy=False):
+def deymet_bypoint(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
     """Get daily climate data from Daymet for a single point.
 
     Parameters
@@ -85,11 +85,7 @@ def deymet_bypoint(lon, lat, start=None, end=None, years=None, variables=None, p
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
-    pheonolgy : bool
-        Whether to consider pheology in computing PET using growing season index.
-        `Thompson et al., 2011 <https://doi.org/10.1029/2010WR009797>`_.
-        The default is False.
-        
+
     Returns
     -------
         qobs : dataframe
@@ -177,7 +173,7 @@ def deymet_bypoint(lon, lat, start=None, end=None, years=None, variables=None, p
     return df
 
 
-def daymet_bybbox(bbox, start=None, end=None, years=None, variables=None, pet=False, pheonolgy=False, tabel=False):
+def daymet_bybbox(bbox, start=None, end=None, years=None, variables=None, pet=False):
     """Gridded data from the Daymet database.
     
     The data is clipped using netCDF Subset Service.
@@ -201,33 +197,22 @@ def daymet_bybbox(bbox, start=None, end=None, years=None, variables=None, pet=Fa
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
-    pheonolgy : bool
-        Whether to consider pheology in computing PET using growing season index.
-        `Thompson et al., 2011 <https://doi.org/10.1029/2010WR009797>`_.
-        The default is False.
-    tabel : bool
-        If True, additionally a dataframe is returned that includes
-        description of all the Daymet variables and their units.
     
     Returns
     -------
     data : xarray dataset
         The output dataset.
-    var_tabel : Pandas dataframe
-        A dataframe that includes description of all the Daymet variables. Only if
-        tabel is set to True. The default is False.
     """
     from pandas.tseries.offsets import DateOffset
     import numpy as np
 
-        
     base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
 
     if years is None and start is not None and end is not None:
         start = pd.to_datetime(start) + DateOffset(hour=12)
         end = pd.to_datetime(end) + DateOffset(hour=12)
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 till present.")
+            raise ValueError("Daymet database ranges from 1980 till 2018.")
         dates = utils.daymet_dates(start, end)
     elif years is not None and start is None and end is None:
         years = years if isinstance(years, list) else [years]
@@ -306,10 +291,7 @@ def daymet_bybbox(bbox, start=None, end=None, years=None, variables=None, pet=Fa
     if pet:
         data = utils.pet_fao_gridded(data)
     
-    if tabel:
-        return data, vars_table
-    else:
-        return data
+    return data
 
 
 class NLDI:
@@ -528,84 +510,78 @@ class NLDI:
         return gdf
 
 
-def streamstats(lon, lat, data_dir=None):
-    """Get watershed geometr and characteristics from StreamStats service.
-
-    The USGS StreamStats API is built around watersheds as organizational
-    units. Watersheds in the 50 U.S. states can be found using lat/lon
-    lookups, along with information about the watershed including its HUC code
-    and a GeoJSON representation of the polygon of a watershed. Basin
-    characteristics can also be extracted from watersheds. Additionally,
-    the data including parameters and geometry will be saved as a json file.
+def ssebopeta_bybbox(bbox, start=None, end=None, years=None):
+    """Gridded data from the SSEBop database.
     
-    The original code is taken from:
-    https://github.com/earthlab/streamstats
-    
+    The data is clipped using netCDF Subset Service.
     Parameters
     ----------
-    lon : float
-        Longitude of point in decimal degrees.
-    lat : float
-        Latitude of point in decimal degrees.
-    data_dir : string or Path
-        The directory for storing the data. If not provided, the data will not
-        be saved on disk.
-        
+    bbox : list
+        The bounding box for downloading the data. The order should be
+        as follows:
+        bbox = [west, south, east, north]
+    start : string or datetime
+        Starting date
+    end : string or datetime
+        Ending date
+    years : list
+        List of years
+    
     Returns
     -------
-    parameters : dict
-        A dictionary of watershed parameters except for NLCD related which
-        can be retieved using the `nlcd` function separately.
-    geometry : Polygon
-        A Shapely polygon containing the watershed geometry.
+    data : xarray dataset
+        The output dataset.
     """
-    url = "https://streamstats.usgs.gov/streamstatsservices/watershed.geojson"
-    payload = {
-        "rcode": utils.get_state(lon, lat),
-        "xlocation": lon,
-        "ylocation": lat,
-        "crs": 4326,
-        "includeparameters": True,
-        "includeflowtypes": False,
-        "includefeatures": True,
-        "simplify": False,
-    }
+    import numpy as np
 
-    try:
-        session = utils.retry_requests()
-        r = session.get(url, params=payload)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    base_url = "https://cida.usgs.gov/thredds/ncss/ssebopeta/monthly?"
 
-    data = r.json()
+    if years is None and start is not None and end is not None:
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+        if start < pd.to_datetime("2000-01-01"):
+            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+        dates = [(start, end)]
+    elif years is not None and start is None and end is None:
+        years = years if isinstance(years, list) else [years]
+        dates = [(pd.to_datetime(f'{year}0101'), pd.to_datetime(f'{year}1231')) for year in years]
+        for s, _ in dates:
+            if start < pd.to_datetime("2000-01-01"):
+                raise ValueError("SSEBop database ranges from 2000 till 2018.")
+    else:
+        raise ValueError('Either years or start and end arguments should be provided.')
 
-    parameters = data["parameters"]
+    west, south, east, north = np.round(bbox, 6)
+    urls = []
+    for s, e in dates:
+        urls.append(
+            base_url
+            + "&".join(
+                [
+                    "var=et",
+                    f"north={north}",
+                    f"west={west}",
+                    f"east={east}",
+                    f"south={south}",
+                    "disableProjSubset=on",
+                    "horizStride=1",
+                    f'time_start={s.strftime("%Y-%m-%dT%H:%M:%SZ")}',
+                    f'time_end={e.strftime("%Y-%m-%dT%H:%M:%SZ")}',
+                    "timeStride=1",
+                    "accept=netcdf",
+                ]
+            )
+        )
+    session = utils.retry_requests()
+    ds_list = []
+    for url in urls:
+        try:
+            r = session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+        ds_list.append(xr.open_dataset(r.content))
 
-    watershed_point = data["featurecollection"][0]["feature"]
-    huc = watershed_point["features"][0]["properties"]["HUCID"]
-    parameters.insert(
-        0,
-        {
-            "ID": 0,
-            "name": "HUC number",
-            "description": "Hudrologic Unit Code of the watershed",
-            "code": "HUC",
-            "unit": "string",
-            "value": huc,
-        },
-    )
-    try:
-        for dictionary in data["featurecollection"]:
-            print(dictionary)
-            gdf = gpd.GeoDataFrame.from_features(dictionary["feature"])
-    except LookupError:
-        raise LookupError(f"Could not find 'globalwatershed' in the data.")
-
-    geometry = gdf.geometry.values[0]
-
-    if data_dir is not None:
-        wshed_file = Path(data_dir, "watershed.json")
-        with open(wshed_file, "w") as fp:
-            json.dump(data, fp)
-
-    return parameters, geometry
+    data = xr.merge(ds_list)
+    data["et"].attrs['units'] = "mm/day"
+    
+    return data
