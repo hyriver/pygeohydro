@@ -16,3 +16,4 @@ rasterstats>=0.14.0
 tables>=3.6.1
 geocoder>=1.38.1
 elevation>=1.0.6
+pycurl>=7.43.0.5

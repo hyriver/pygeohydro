@@ -2,34 +2,10 @@
 # -*- coding: utf-8 -*-
 """Some utilities for Hydrodata"""
 
-from tqdm import tqdm
-import urllib
 from pathlib import Path
+import numpy as np
+import pandas as pd
 from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
-
-
-def get_nhd(data_dir):
-    """Download and extract NHDPlus V2.1 database."""
-    data_dir = Path(data_dir)
-
-    if not data_dir.is_dir():
-        try:
-            import os
-
-            os.mkdir(data_dir)
-        except OSError:
-            print(f"{data_dir} directory cannot be created")
-
-    print(f"Downloading USGS gage information data to {str(data_dir)} >>>")
-    base = "https://s3.amazonaws.com/edap-nhdplus/NHDPlusV21/" + "Data/NationalData/"
-    dbname = [
-        "NHDPlusV21_NationalData_GageInfo_05.7z",
-        "NHDPlusV21_NationalData_GageLoc_05.7z",
-    ]
-
-    for db in dbname:
-        download_extract(base + db, data_dir)
-    return data_dir.joinpath("NHDPlusNationalData")
 
 
 def retry_requests(
@@ -57,6 +33,7 @@ def retry_requests(
     -------
         A session object with the retry setup.
     """
+
     import requests
     from requests.adapters import HTTPAdapter
     from urllib3 import Retry
@@ -80,7 +57,8 @@ def retry_requests(
 
 
 def get_data(stations):
-    from hydrodata import Dataloader
+    """Instantiate Station class in batch."""
+    from hydrodata import Station
 
     default = dict(
         start=None,
@@ -106,7 +84,7 @@ def get_data(stations):
         if k not in params:
             stations[k] = default[k]
 
-    station = Dataloader(
+    station = Station(
         start=stations["start"],
         end=stations["end"],
         station_id=stations["station_id"],
@@ -133,22 +111,21 @@ def batch(stations):
     ----------
     stations : list of dict
         A list of dictionary containing the input variables:
-        stations = [{"start" : 'YYYY-MM-DD', [Requaired]
-                     "end" : 'YYYY-MM-DD', [Requaired]
-                     "station_id" : '<ID>', OR "coords" : (<lon>, <lat>), [Requaired]
-                     "data_dir" : '<path/to/store/data>',  [Optional] Default : ./data
-                     "climate" : True or Flase, [Optional] Default : False
-                     "nlcd" : True or False, [Optional] Default : False
-                     "years" : {'impervious': <YYYY>, 'cover': <YYYY>, 'canopy': <YYYY>}, [Optional] Default is 2016
-                     "rain_snow" : True or False, [Optional] Default : False
-                     "phenology" : True or False, [Optional] Default : False
-                     "width" : 2000, [Optional] Default : 200
-                     },
-                    ...]
-
+        [{
+        "start" : 'YYYY-MM-DD', [Requaired]
+        "end" : 'YYYY-MM-DD', [Requaired]
+        "station_id" : '<ID>', OR "coords" : (<lon>, <lat>), [Requaired]
+        "data_dir" : '<path/to/store/data>',  [Optional] Default : ./data
+        "climate" : True or Flase, [Optional] Default : False
+        "nlcd" : True or False, [Optional] Default : False
+        "years" : {'impervious': <YYYY>, 'cover': <YYYY>, 'canopy': <YYYY>}, [Optional] Default is 2016
+        "rain_snow" : True or False, [Optional] Default : False
+        "width" : 2000, [Optional] Default : 200
+        },
+        ...]
     """
+
     from concurrent import futures
-    import psutil
 
     with futures.ThreadPoolExecutor() as executor:
         data_dirs = list(executor.map(get_data, stations))
@@ -160,7 +137,7 @@ def batch(stations):
 def open_workspace(data_dir):
     """Open a hydrodata workspace using the root of data directory."""
     import xarray as xr
-    from hydrodata import Dataloader
+    from hydrodata import Station
     import json
     import geopandas as gpd
 
@@ -225,19 +202,20 @@ def get_location(lon, lat, retry=3):
     county : string
         The county name
     """
+
     import time
     import geocoder
-    
+
     retry = int(retry)
 
     try:
         g = geocoder.uscensus([lat, lon], method="reverse")
         state = g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
-        county = g.geojson['features'][0]['properties']['county']
+        county = g.geojson["features"][0]["properties"]["county"]
 
         if state is None or county is None and retry > 0:
             time.sleep(0.5)
-            get_location(lon, lat, retry=retry-1)
+            get_location(lon, lat, retry=retry - 1)
         elif state is None or county is None and retry <= 0:
             raise ConnectionError("UN Census service is not available at the moment.")
         else:
@@ -247,7 +225,7 @@ def get_location(lon, lat, retry=3):
             raise KeyError("The location should be inside the US.")
         else:
             time.sleep(0.5)
-            get_location(lon, lat, retry=retry-1)
+            get_location(lon, lat, retry=retry - 1)
 
 
 def daymet_dates(start, end):
@@ -257,7 +235,6 @@ def daymet_dates(start, end):
     Dec 31 when it's leap year. This function returns all
     the dates in the Daymet database within the provided year.
     """
-    import pandas as pd
 
     period = pd.date_range(start, end)
     nl = period[~period.is_leap_year]
@@ -284,24 +261,24 @@ def get_elevation(lon, lat):
     elevation : float
         Elevation in meter
     """
-    url = 'https://nationalmap.gov/epqs/pqs.php?'
+
+    url = "https://nationalmap.gov/epqs/pqs.php?"
     session = retry_requests()
     lon = lon if isinstance(lon, list) else [lon]
     lat = lat if isinstance(lat, list) else [lat]
     coords = [(i, j) for i, j in zip(lon, lat)]
     try:
-        payload = {
-            'output': 'json',
-            'x': lon,
-            'y': lat,
-            'units': 'Meters'
-        }
+        payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
         raise
-    elevation = r.json()['USGS_Elevation_Point_Query_Service']['Elevation_Query']['Elevation']
+    elevation = r.json()["USGS_Elevation_Point_Query_Service"]["Elevation_Query"][
+        "Elevation"
+    ]
     if elevation == -1000000:
-        raise ValueError(f'The altitude of the requested coordinate ({lon}, {lat}) cannot be found.')
+        raise ValueError(
+            f"The altitude of the requested coordinate ({lon}, {lat}) cannot be found."
+        )
     else:
         return elevation
 
@@ -330,19 +307,19 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
     output : Path
         Path to the downloaded DEM file only if data_dir is not None.
     """
+
     import elevation
     import rasterio
-    import numpy as np
 
-    lon, lat = (bbox[0] + bbox[2])*0.5, (bbox[1] + bbox[3])*0.5
+    lon, lat = (bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5
     _, county = get_location(lon, lat)
-    output = county.replace(' ', '_') + '.tif'
+    output = county.replace(" ", "_") + ".tif"
 
-    root = '.' if data_dir is None else data_dir
+    root = "." if data_dir is None else data_dir
 
     output = Path(root, output).absolute()
     if not output.exists():
-        elevation.clip(bounds=bbox, output=str(output), product='SRTM1')
+        elevation.clip(bounds=bbox, output=str(output), product="SRTM1")
         elevation.clean()
 
     with rasterio.open(output) as src:
@@ -362,11 +339,9 @@ def pet_fao(df, lon, lat):
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m^2), dayl (s)
     """
-    import numpy as np
-    import pandas as pd
-    
+
     keys = [v for v in df.columns]
-    reqs = ['tmin (deg c)', 'tmax (deg c)', 'vp (Pa)', 'srad (W/m^2)', 'dayl (s)']
+    reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
     missing = [r for r in reqs if r not in keys]
     if len(missing) > 0:
@@ -374,47 +349,80 @@ def pet_fao(df, lon, lat):
         msg += ", ".join(x for x in missing)
         msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
         raise KeyError(msg)
-    
+
     dtype = df.dtypes[0]
-    df['tmean (deg c)'] = 0.5*(df['tmax (deg c)'] + df['tmin (deg c)'])
-    Delta = 4098*(0.6108*np.exp(17.27*df['tmean (deg c)']/(df['tmean (deg c)'] + 237.3), dtype=dtype))/((df['tmean (deg c)'] + 237.3)**2)
+    df["tmean (deg c)"] = 0.5 * (df["tmax (deg c)"] + df["tmin (deg c)"])
+    Delta = (
+        4098
+        * (
+            0.6108
+            * np.exp(
+                17.27 * df["tmean (deg c)"] / (df["tmean (deg c)"] + 237.3), dtype=dtype
+            )
+        )
+        / ((df["tmean (deg c)"] + 237.3) ** 2)
+    )
     elevation = get_elevation(lon, lat)
 
-    P = 101.3*((293.0 - 0.0065*elevation)/293.0)**5.26
-    gamma = P*0.665e-3
+    P = 101.3 * ((293.0 - 0.0065 * elevation) / 293.0) ** 5.26
+    gamma = P * 0.665e-3
 
     G = 0.0  # recommended for daily data
-    df['vp (Pa)'] = df['vp (Pa)']*1e-3
+    df["vp (Pa)"] = df["vp (Pa)"] * 1e-3
 
-    e_max = 0.6108*np.exp(17.27*df['tmax (deg c)']/(df['tmax (deg c)'] + 237.3), dtype=dtype)
-    e_min = 0.6108*np.exp(17.27*df['tmin (deg c)']/(df['tmin (deg c)'] + 237.3), dtype=dtype)
-    e_s = (e_max + e_min)*0.5
-    e_def = e_s - df['vp (Pa)']
+    e_max = 0.6108 * np.exp(
+        17.27 * df["tmax (deg c)"] / (df["tmax (deg c)"] + 237.3), dtype=dtype
+    )
+    e_min = 0.6108 * np.exp(
+        17.27 * df["tmin (deg c)"] / (df["tmin (deg c)"] + 237.3), dtype=dtype
+    )
+    e_s = (e_max + e_min) * 0.5
+    e_def = e_s - df["vp (Pa)"]
 
     u_2 = 2.0  # recommended when no data is available
 
     jday = df.index.dayofyear
-    R_s = df['srad (W/m^2)']*df['dayl (s)']*1e-6
+    R_s = df["srad (W/m^2)"] * df["dayl (s)"] * 1e-6
 
     alb = 0.23
 
-    jp = 2.0*np.pi*jday/365.0
-    d_r = 1.0 + 0.033*np.cos(jp, dtype=dtype)
-    delta = 0.409*np.sin(jp - 1.39, dtype=dtype)
-    phi = lat*np.pi/180.0
-    w_s = np.arccos(-np.tan(phi, dtype=dtype)*np.tan(delta, dtype=dtype))
-    R_a = 24.0*60.0/np.pi*0.082*d_r*(w_s*np.sin(phi, dtype=dtype)*np.sin(delta, dtype=dtype)
-                                  + np.cos(phi, dtype=dtype)*np.cos(delta, dtype=dtype)*np.sin(w_s, dtype=dtype))
-    R_so = (0.75 + 2e-5*elevation)*R_a
-    R_ns = (1.0 - alb)*R_s
-    R_nl = 4.903e-9*(((df['tmax (deg c)'] + 273.16)**4
-                      + (df['tmin (deg c)'] + 273.16)**4)*0.5)*(0.34 - 0.14*np.sqrt(df['vp (Pa)']))*((1.35*R_s/R_so) - 0.35)
+    jp = 2.0 * np.pi * jday / 365.0
+    d_r = 1.0 + 0.033 * np.cos(jp, dtype=dtype)
+    delta = 0.409 * np.sin(jp - 1.39, dtype=dtype)
+    phi = lat * np.pi / 180.0
+    w_s = np.arccos(-np.tan(phi, dtype=dtype) * np.tan(delta, dtype=dtype))
+    R_a = (
+        24.0
+        * 60.0
+        / np.pi
+        * 0.082
+        * d_r
+        * (
+            w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
+            + np.cos(phi, dtype=dtype)
+            * np.cos(delta, dtype=dtype)
+            * np.sin(w_s, dtype=dtype)
+        )
+    )
+    R_so = (0.75 + 2e-5 * elevation) * R_a
+    R_ns = (1.0 - alb) * R_s
+    R_nl = (
+        4.903e-9
+        * (
+            ((df["tmax (deg c)"] + 273.16) ** 4 + (df["tmin (deg c)"] + 273.16) ** 4)
+            * 0.5
+        )
+        * (0.34 - 0.14 * np.sqrt(df["vp (Pa)"]))
+        * ((1.35 * R_s / R_so) - 0.35)
+    )
     R_n = R_ns - R_nl
 
-    df['pet (mm/day)'] = (0.408*Delta*(R_n - G) + gamma*900.0/(df['tmean (deg c)'] + 273.0)*u_2*e_def) \
-                         / (Delta + gamma*(1 + 0.34*u_2))
-    df['vp (Pa)'] = df['vp (Pa)']*1.0e3
-    
+    df["pet (mm/day)"] = (
+        0.408 * Delta * (R_n - G)
+        + gamma * 900.0 / (df["tmean (deg c)"] + 273.0) * u_2 * e_def
+    ) / (Delta + gamma * (1 + 0.34 * u_2))
+    df["vp (Pa)"] = df["vp (Pa)"] * 1.0e3
+
     return df
 
 
@@ -425,11 +433,9 @@ def pet_fao_gridded(ds):
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
     """
-    import numpy as np
-    import pandas as pd
-    
+
     keys = [v for v in ds.keys()]
-    reqs = ['tmin', 'tmax', 'lat', 'lon', 'vp', 'srad', 'dayl']
+    reqs = ["tmin", "tmax", "lat", "lon", "vp", "srad", "dayl"]
 
     missing = [r for r in reqs if r not in keys]
     if len(missing) > 0:
@@ -437,64 +443,255 @@ def pet_fao_gridded(ds):
         msg += ", ".join(x for x in missing)
         msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
         raise KeyError(msg)
-    
+
     dtype = ds.tmin.dtype
-    dates = ds['time']
-    ds['tmean'] = 0.5*(ds['tmax'] + ds['tmin'])
-    ds['tmean'].attrs['units'] = 'degree C'
-    ds['delta'] = 4098*(0.6108*np.exp(17.27*ds['tmean']/(ds['tmean'] + 237.3), dtype=dtype))/((ds['tmean'] + 237.3)**2)
+    dates = ds["time"]
+    ds["tmean"] = 0.5 * (ds["tmax"] + ds["tmin"])
+    ds["tmean"].attrs["units"] = "degree C"
+    ds["delta"] = (
+        4098
+        * (0.6108 * np.exp(17.27 * ds["tmean"] / (ds["tmean"] + 237.3), dtype=dtype))
+        / ((ds["tmean"] + 237.3) ** 2)
+    )
 
-    if 'elevation' not in keys:
-        coords = [(i, j) for i, j in zip(ds.sel(time=ds['time'][0]).lon.values.flatten(),
-                                         ds.sel(time=ds['time'][0]).lat.values.flatten())]
+    if "elevation" not in keys:
+        coords = [
+            (i, j)
+            for i, j in zip(
+                ds.sel(time=ds["time"][0]).lon.values.flatten(),
+                ds.sel(time=ds["time"][0]).lat.values.flatten(),
+            )
+        ]
         margine = 0.05
-        bbox = [ds.lon.min().values - margine,
-                ds.lat.min().values - margine,
-                ds.lon.max().values + margine,
-                ds.lat.max().values + margine]
-        elevation = get_elevation_bybbox(bbox, coords).reshape(ds.dims['y'], ds.dims['x'])
-        ds['elevation'] = ({'y' : ds.dims['y'], 'x' : ds.dims['x']}, elevation)
-        ds['elevation'].attrs['units'] = 'm'
+        bbox = [
+            ds.lon.min().values - margine,
+            ds.lat.min().values - margine,
+            ds.lon.max().values + margine,
+            ds.lat.max().values + margine,
+        ]
+        elevation = get_elevation_bybbox(bbox, coords).reshape(
+            ds.dims["y"], ds.dims["x"]
+        )
+        ds["elevation"] = ({"y": ds.dims["y"], "x": ds.dims["x"]}, elevation)
+        ds["elevation"].attrs["units"] = "m"
 
-    P = 101.3*((293.0 - 0.0065*ds['elevation'])/293.0)**5.26
-    ds['gamma'] = P*0.665e-3
+    P = 101.3 * ((293.0 - 0.0065 * ds["elevation"]) / 293.0) ** 5.26
+    ds["gamma"] = P * 0.665e-3
 
     G = 0.0  # recommended for daily data
-    ds['vp'] *= 1e-3
+    ds["vp"] *= 1e-3
 
-    e_max = 0.6108*np.exp(17.27*ds['tmax']/(ds['tmax'] + 237.3), dtype=dtype)
-    e_min = 0.6108*np.exp(17.27*ds['tmin']/(ds['tmin'] + 237.3), dtype=dtype)
-    e_s = (e_max + e_min)*0.5
-    ds['e_def'] = e_s - ds['vp']
+    e_max = 0.6108 * np.exp(17.27 * ds["tmax"] / (ds["tmax"] + 237.3), dtype=dtype)
+    e_min = 0.6108 * np.exp(17.27 * ds["tmin"] / (ds["tmin"] + 237.3), dtype=dtype)
+    e_s = (e_max + e_min) * 0.5
+    ds["e_def"] = e_s - ds["vp"]
 
     u_2 = 2.0  # recommended when no data is available
 
-    lat = ds.sel(time=ds['time'][0]).lat
-    ds['time'] = pd.to_datetime(ds.time.values).dayofyear.astype(dtype)
-    R_s = ds['srad']*ds['dayl']*1e-6
+    lat = ds.sel(time=ds["time"][0]).lat
+    ds["time"] = pd.to_datetime(ds.time.values).dayofyear.astype(dtype)
+    R_s = ds["srad"] * ds["dayl"] * 1e-6
 
     alb = 0.23
 
-    jp = 2.0*np.pi*ds['time']/365.0
-    d_r = 1.0 + 0.033*np.cos(jp, dtype=dtype)
-    delta = 0.409*np.sin(jp - 1.39, dtype=dtype)
-    phi = lat*np.pi/180.0
-    w_s = np.arccos(-np.tan(phi, dtype=dtype)*np.tan(delta, dtype=dtype))
-    R_a = 24.0*60.0/np.pi*0.082*d_r*(w_s*np.sin(phi, dtype=dtype)*np.sin(delta, dtype=dtype)
-                                  + np.cos(phi, dtype=dtype)*np.cos(delta, dtype=dtype)*np.sin(w_s, dtype=dtype))
-    R_so = (0.75 + 2e-5*ds['elevation'])*R_a
-    R_ns = (1.0 - alb)*R_s
-    R_nl = 4.903e-9*(((ds['tmax'] + 273.16)**4
-                      + (ds['tmin'] + 273.16)**4)*0.5)*(0.34 - 0.14*np.sqrt(ds['vp']))*((1.35*R_s/R_so) - 0.35)
-    ds['R_n'] = R_ns - R_nl
+    jp = 2.0 * np.pi * ds["time"] / 365.0
+    d_r = 1.0 + 0.033 * np.cos(jp, dtype=dtype)
+    delta = 0.409 * np.sin(jp - 1.39, dtype=dtype)
+    phi = lat * np.pi / 180.0
+    w_s = np.arccos(-np.tan(phi, dtype=dtype) * np.tan(delta, dtype=dtype))
+    R_a = (
+        24.0
+        * 60.0
+        / np.pi
+        * 0.082
+        * d_r
+        * (
+            w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
+            + np.cos(phi, dtype=dtype)
+            * np.cos(delta, dtype=dtype)
+            * np.sin(w_s, dtype=dtype)
+        )
+    )
+    R_so = (0.75 + 2e-5 * ds["elevation"]) * R_a
+    R_ns = (1.0 - alb) * R_s
+    R_nl = (
+        4.903e-9
+        * (((ds["tmax"] + 273.16) ** 4 + (ds["tmin"] + 273.16) ** 4) * 0.5)
+        * (0.34 - 0.14 * np.sqrt(ds["vp"]))
+        * ((1.35 * R_s / R_so) - 0.35)
+    )
+    ds["R_n"] = R_ns - R_nl
 
-    ds['pet'] = (0.408*ds['delta']*(ds['R_n'] - G) + ds['gamma']*900.0/(ds['tmean'] + 273.0)*u_2*ds['e_def']) \
-                     / (ds['delta'] + ds['gamma']*(1 + 0.34*u_2))
-    ds['pet'].attrs['units'] = 'mm/day'
+    ds["pet"] = (
+        0.408 * ds["delta"] * (ds["R_n"] - G)
+        + ds["gamma"] * 900.0 / (ds["tmean"] + 273.0) * u_2 * ds["e_def"]
+    ) / (ds["delta"] + ds["gamma"] * (1 + 0.34 * u_2))
+    ds["pet"].attrs["units"] = "mm/day"
 
-    ds['time'] = dates
-    ds['vp'] *= 1.0e3
-    
-    ds = ds.drop_vars(['delta', 'gamma', 'e_def', 'R_n'])
-    
+    ds["time"] = dates
+    ds["vp"] *= 1.0e3
+
+    ds = ds.drop_vars(["delta", "gamma", "e_def", "R_n"])
+
     return ds
+
+
+def mean_monthly(daily):
+    """Compute monthly mean over the whole time series for the regime curve."""
+    import calendar
+
+    d = dict(enumerate(calendar.month_abbr))
+    mean_month = daily.groupby(daily.index.month).mean()
+    mean_month.index = mean_month.index.map(d)
+    return mean_month
+
+
+def exceedance(daily):
+    """Compute Flow duration (rank, sorted obs).
+
+    The zero discharges are handled by dropping since log 0 is undefined.
+    """
+
+    if not isinstance(daily, pd.Series):
+        msg = "The input should be of type pandas Series."
+        raise TypeError(msg)
+
+    rank = daily.rank(ascending=False, pct=True) * 100
+    fdc = pd.concat([daily, rank], axis=1)
+    fdc.columns = ["Q", "rank"]
+    fdc.sort_values(by=["rank"], inplace=True)
+    fdc.set_index("rank", inplace=True, drop=True)
+    return fdc
+
+
+def multi_curl(urls):
+    """Download multiple files with curl.
+    
+    Taken from here:
+    https://github.com/pycurl/pycurl/blob/master/examples/retriever-multi.py
+    """
+
+    import pycurl
+
+    # We should ignore SIGPIPE when using pycurl.NOSIGNAL - see
+    # the libcurl tutorial for more info.
+    try:
+        import signal
+        from signal import SIGPIPE, SIG_IGN
+    except ImportError:
+        pass
+    else:
+        signal.signal(SIGPIPE, SIG_IGN)
+
+    # Get args
+    num_conn = 10
+
+    # filenames
+    fnames = [Path(f"/tmp/{url.split('/')[-1]}") for url in urls]
+
+    # Make a queue with (url, filename) tuples
+    queue = [
+        (url, f"/tmp/{url.split('/')[-1]}")
+        for url in urls
+        if not Path(f"/tmp/{url.split('/')[-1]}").exists()
+    ]
+
+    num_skips = len(urls) - len(queue)
+    if num_skips > 0:
+        print(f"{num_skips} files have already been downloaded.")
+
+    num_urls = len(queue)
+    num_conn = min(num_conn, num_urls)
+
+    # Pre-allocate a list of curl objects
+    m = pycurl.CurlMulti()
+    m.handles = []
+    for i in range(num_conn):
+        c = pycurl.Curl()
+        c.fp = None
+        c.setopt(pycurl.FOLLOWLOCATION, 1)
+        c.setopt(pycurl.MAXREDIRS, 5)
+        c.setopt(pycurl.CONNECTTIMEOUT, 30)
+        c.setopt(pycurl.TIMEOUT, 300)
+        c.setopt(pycurl.NOSIGNAL, 1)
+        m.handles.append(c)
+
+    # Main loop
+    freelist = m.handles[:]
+    num_processed = 0
+    while num_processed < num_urls:
+        # If there is an url to process and a free curl object, add to multi stack
+        while queue and freelist:
+            url, filename = queue.pop(0)
+            c = freelist.pop()
+            c.fp = open(filename, "wb")
+            c.setopt(pycurl.URL, url)
+            c.setopt(pycurl.WRITEDATA, c.fp)
+            m.add_handle(c)
+            # store some info
+            c.filename = filename
+            c.url = url
+        # Run the internal curl state machine for the multi stack
+        while 1:
+            ret, num_handles = m.perform()
+            if ret != pycurl.E_CALL_MULTI_PERFORM:
+                break
+        # Check for curl objects which have terminated, and add them to the freelist
+        while 1:
+            num_q, ok_list, err_list = m.info_read()
+            for c in ok_list:
+                c.fp.close()
+                c.fp = None
+                m.remove_handle(c)
+                freelist.append(c)
+            for c, errno, errmsg in err_list:
+                c.fp.close()
+                c.fp = None
+                m.remove_handle(c)
+                print("Failed: ", c.url, errno, errmsg)
+                freelist.append(c)
+            num_processed = num_processed + len(ok_list) + len(err_list)
+            print(f"Files downloaded: {num_processed}/{num_urls}", end="\r")
+            if num_q == 0:
+                break
+        # Currently no more I/O is pending, could do something in the meantime
+        # (display a progress bar, etc.).
+        # We just call select() to sleep until some more data is available.
+        m.select(1.0)
+
+    # Cleanup
+    for c in m.handles:
+        if c.fp is not None:
+            c.fp.close()
+            c.fp = None
+        c.close()
+    m.close()
+
+    return fnames
+
+
+def stage_eta(start=None, end=None, years=None):
+    """Stage SSEBop data by downloading the required files."""
+    if years is None and start is not None and end is not None:
+        if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
+            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+        fname_list = [
+            f"det{d.strftime('%Y%j')}.modisSSEBopETactual"
+            for d in pd.date_range(start, end)
+        ]
+    elif years is not None and start is None and end is None:
+        years = years if isinstance(years, list) else [years]
+        dates = [pd.date_range(f"{year}0101", f"{year}1231") for year in years]
+        for d in dates:
+            if d[0] < pd.to_datetime("2000-01-01"):
+                raise ValueError("SSEBop database ranges from 2000 till 2018.")
+        fname_list = [
+            f"det{d.strftime('%Y%j')}.modisSSEBopETactual" for y in dates for d in y
+        ]
+    else:
+        raise ValueError("Either years or start and end arguments should be provided.")
+
+    base_url = "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared//uswem/web/conus/eta/modis_eta/daily/downloads"
+    urls = [f"{base_url}/{fname}.zip" for fname in fname_list]
+    fnames = multi_curl(urls)
+    return fnames
