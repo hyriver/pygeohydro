@@ -183,51 +183,6 @@ def open_workspace(data_dir):
         return stations
 
 
-def get_location(lon, lat, retry=3):
-    """Get the state code and county name from US Censue database.
-    
-    Parameters
-    ----------
-    lon : float
-        Longitude
-    lan : float
-        Latitude
-    retry : int
-        Number of retries if a request fails. The default is 3.
-        
-    Returns
-    -------
-    state : string
-        The state code
-    county : string
-        The county name
-    """
-
-    import time
-    import geocoder
-
-    retry = int(retry)
-
-    try:
-        g = geocoder.uscensus([lat, lon], method="reverse")
-        state = g.geojson["features"][0]["properties"]["raw"]["States"][0]["STUSAB"]
-        county = g.geojson["features"][0]["properties"]["county"]
-
-        if state is None or county is None and retry > 0:
-            time.sleep(0.5)
-            get_location(lon, lat, retry=retry - 1)
-        elif state is None or county is None and retry <= 0:
-            raise ConnectionError("UN Census service is not available at the moment.")
-        else:
-            return state, county
-    except KeyError:
-        if retry <= 0:
-            raise KeyError("The location should be inside the US.")
-        else:
-            time.sleep(0.5)
-            get_location(lon, lat, retry=retry - 1)
-
-
 def daymet_dates(start, end):
     """Correct dates for Daymet when leap years.
     
@@ -312,12 +267,10 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
     import rasterio
 
     lon, lat = (bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5
-    _, county = get_location(lon, lat)
-    output = county.replace(" ", "_") + ".tif"
 
     root = "." if data_dir is None else data_dir
 
-    output = Path(root, output).absolute()
+    output = Path(root, f"DEM_{lon}_{lat}.tif").absolute()
     if not output.exists():
         elevation.clip(bounds=bbox, output=str(output), product="SRTM1")
         elevation.clean()
