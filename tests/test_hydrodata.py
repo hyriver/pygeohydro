@@ -6,72 +6,52 @@ import pytest
 import shutil
 
 
-from hydrodata import Dataloader
+from hydrodata import Station
+from hydrodata.datasets import deymet_byloc, nwis
 
 
 @pytest.fixture
 def get_data():
     """Test all hydrodata functionalities."""
-    start, end = "2000-01-01", "2015-12-31"
-    station_id = "01467087"
-    gis_dir = "examples/gis_data"
-    data_dir = "examples/data"
+    from hydrodata import Station
+    import hydrodata.datasets as hds
+    from hydrodata import plot
 
-    shutil.rmtree(gis_dir, ignore_errors=True)
-    shutil.rmtree(data_dir, ignore_errors=True)
+    lon, lat = -69.32, 45.17
+    start, end = '2000-01-01', '2010-01-21'
+    wshed = Station(start, end, coords=(lon, lat))
 
-    frankford = Dataloader(
-        start, end, station_id=station_id, gis_dir=gis_dir, data_dir=data_dir,
-    )
+    clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
+    clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
 
-    frankford.get_climate()
-    years = {"impervious": 2011, "cover": 2011, "canopy": 2011}
-    frankford.get_nlcd(years=years)
+    variables = ["tmin", "tmax", "prcp"]
+    clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-5', variables=variables, pet=True)
+    eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-5')
 
-    fishing = Dataloader(
-        start,
-        end,
-        coords=(-76.43, 41.08),
-        gis_dir="examples/gis_data",
-        data_dir="examples/data",
-    )
-    fishing.get_climate()
+    stations = wshed.watershed.get_stations()
+    stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
 
     p = 0
-    frankford.plot()
-    p += 1
-    Q_dict = {
-        "Frankford1": frankford.climate["qobs (cms)"],
-        "Frankford2": frankford.climate["qobs (cms)"],
-    }
-    frankford.plot(Q_dict=Q_dict)
-    p += 1
-    Q_dict = {
-        "Frankford": frankford.climate["qobs (cms)"],
-        "Fishing": fishing.climate["qobs (cms)"],
-    }
-    frankford.plot_discharge(Q_dict=Q_dict)
-    p += 1
-
-    df = frankford.climate.copy()
-    df["pr (mm/day)"], df["ps (mm/day)"] = frankford.separate_snow(
-        df["prcp (mm/day)"].values, df["tmean (C)"].values, tcr=0.0
-    )
-
+    plot.signatures(clm_loc['Q (cms)'], wshed.drainage_area, prcp=clm_loc['prcp (mm/day)'], title=wshed.name, figsize=(12, 12), output='readme_Q.png')
+    p = 1
     return (
-        frankford.climate.loc["2010-01-01", "qobs (cms)"],
-        fishing.climate.loc["2010-01-01", "qobs (cms)"],
-        df.loc["2010-01-01", "pr (mm/day)"],
+        clm_loc.loc['2008-11-10', 'prcp (mm/day)'],
+        clm_loc.loc['2008-11-10', 'Q (cms)'],
+        clm_grd.isel(time=2, x=25, y=20).tmin.values,
+        eta_grd.isel(time=2, x=25, y=20).et.values,
+        stations.values[0][3],
         p,
     )
 
 
 def test_content(get_data):
     """Run the tests"""
-    q_id, q_co, pr, p = get_data
+    prcp, q, grd, eta, st, p = get_data
     assert (
-        abs(q_id - 1.4838) < 1e-5
-        and abs(q_co - 11.9214) < 1e-5
-        and abs(pr - 5.0) < 1e-2
-        and p == 3
+        abs(prcp - 2.0) < 1e-3
+        and abs(q - 54.368) < 1e-3
+        and abs(grd - (-11.5)) < 1e-3
+        and abs(eta - 0.575) < 1e-3
+        and st == 'USGS-01031300'
+        and p == 1
     )

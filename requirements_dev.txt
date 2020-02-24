@@ -3,13 +3,15 @@ bump2version
 wheel
 watchdog
 flake8
-tox
-coverage
 sphinx
 sphinx_rtd_theme
 sphinx-copybutton
 nbsphinx
 twine
+tox
+coverage
 pytest
 pytest-runner
+pytest-cov
+pytest-xdist
 codecov
