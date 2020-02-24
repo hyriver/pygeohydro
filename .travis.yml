@@ -17,7 +17,7 @@ install:
   - sed -i 's/python>=/python==/' ./environment.yml
   - conda env create -f environment.yml
   - conda activate hydrodata
-  - conda install -c conda-forge requirements_dev.txt
+  - conda install -c conda-forge --file requirements_dev.txt
   - python setup.py install
   - pip install -U tox-travis
 
