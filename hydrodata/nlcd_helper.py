@@ -3,16 +3,17 @@
 
 
 class NLCD:
-    """The following references are used.
+    """Helper containing NLCD information.
 
-    References:
-    https://github.com/jzmiller1/nlcd
-    https://geopython.github.io/OWSLib/
-    https://www.mrlc.gov/data-services-page
-    https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
-    https://github.com/ozak/georasters
-    https://automating-gis-processes.github.io/CSC18/index.html
-    https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
+    .. seealso::
+        The following references are used:
+            * https://github.com/jzmiller1/nlcd
+            * https://geopython.github.io/OWSLib/
+            * https://www.mrlc.gov/data-services-page
+            * https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
+            * https://github.com/ozak/georasters
+            * https://automating-gis-processes.github.io/CSC18/index.html
+            * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
     """
 
     def __init__(self):
