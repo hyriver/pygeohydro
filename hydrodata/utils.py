@@ -268,7 +268,7 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
 
     lon, lat = (bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5
 
-    root = "." if data_dir is None else data_dir
+    root = "/tmp" if data_dir is None else data_dir
 
     output = Path(root, f"DEM_{lon}_{lat}.tif").absolute()
     if not output.exists():
@@ -536,8 +536,7 @@ def multi_curl(urls):
     else:
         signal.signal(SIGPIPE, SIG_IGN)
 
-    # Get args
-    num_conn = 10
+    num_conn = 5
 
     # filenames
     fnames = [Path(f"/tmp/{url.split('/')[-1]}") for url in urls]

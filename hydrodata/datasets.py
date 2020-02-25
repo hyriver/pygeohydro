@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """Accessing data from the supported databases through their APIs."""
 
@@ -9,6 +10,8 @@ import json
 import xarray as xr
 from pathlib import Path
 from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+import rasterio
+import rasterio.mask
 
 
 MARGINE = 15
@@ -65,9 +68,21 @@ def nwis(station_id, start, end):
     except ConnectionError or Timeout or RequestException:
         raise
 
-    ts = r.json()["value"]["timeSeries"][0]["values"][0]["value"]
+    try:
+        ts = r.json()["value"]["timeSeries"][0]["values"][0]["value"]
+    except IndexError:
+        msg = (f"[ID: {station_id}] ".ljust(MARGINE)
+              + 'The requested data is not available in the station.'
+              + f'Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}')
+        raise IndexError(msg)
     df = pd.DataFrame.from_dict(ts, orient="columns")
-    df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
+    try:
+        df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
+    except KeyError:
+        msg = (f"[ID: {station_id}] ".ljust(MARGINE)
+              + 'The data is not available in the requested date range.'
+              + f'Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}')
+        raise KeyError('')
     df.set_index("dateTime", inplace=True)
     qobs = df.value.astype("float64") * 0.028316846592  # Convert cfs to cms
     print("finished.")
@@ -617,9 +632,6 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
         The actual ET for the requested region.
     """
 
-    import rasterio
-    import rasterio.mask
-
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
         + "Staging actual ET data from SSEBop:"
@@ -710,3 +722,225 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     data.columns = [["time", "et (mm/day)"]]
     data.set_index("time", inplace=True)
     return data
+
+
+def NLCD(geometry, years=None, data_dir=None, width=2000):
+    """Get data from NLCD 2016 database.
+    
+    Download land use, land cover data from NLCD2016 database within
+    a given geometry with epsg:4326 projection.
+
+    .. note::
+        NLCD data has a 30 m resolution.
+
+    .. seealso::
+        The following references are used:
+            * https://github.com/jzmiller1/nlcd
+            * https://geopython.github.io/OWSLib/
+            * https://www.mrlc.gov/data-services-page
+            * https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
+            * https://github.com/ozak/georasters
+            * https://automating-gis-processes.github.io/CSC18/index.html
+            * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
+
+    :param geometry: The geometry for extracting the data.
+    :type geometry: Shapely Polygon
+    :param years: The years for NLCD data as a dictionary, defaults to {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
+    :type years: dict, optional
+    :param data_dir: The directory for storing the output ``geotiff`` files.
+    :type data_dir: string or Path
+    :param width: Width of the output image in pixels.
+    :type width: int
+    :returns: Some statistics of the extracted data
+    :type: tuple of three dicts (imprevious, canopy, cover)
+    """
+    from owslib.wms import WebMapService
+    import rasterstats
+    from shapely.geometry import Polygon
+    import os
+
+    if not isinstance(geometry, Polygon):
+        raise TypeError("Geometry should be of type SHapely Polygon.")
+
+    data_dir = Path(data_dir)
+    if not data_dir.is_dir():
+        try:
+            os.makedirs(data_dir)
+        except OSError:
+            print(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                  + f"Input directory cannot be created: {d}")
+            
+    nlcd_meta = dict(
+        impervious_years=[2016, 2011, 2006, 2001],
+        canopy_years=[2016, 2011],
+        cover_years=[2016, 2013, 2011, 2008, 2006, 2004, 2001],
+        legends={
+            "0": "Unclassified",
+            "11": "Open Water",
+            "12": "Perennial Ice/Snow",
+            "21": "Developed, Open Space",
+            "22": "Developed, Low Intensity",
+            "23": "Developed, Medium Intensity",
+            "24": "Developed High Intensity",
+            "31": "Barren Land (Rock/Sand/Clay)",
+            "41": "Deciduous Forest",
+            "42": "Evergreen Forest",
+            "43": "Mixed Forest",
+            "51": "Dwarf Scrub",
+            "52": "Shrub/Scrub",
+            "71": "Grassland/Herbaceous",
+            "72": "Sedge/Herbaceous",
+            "73": "Lichens",
+            "74": "Moss",
+            "81": "Pasture/Hay",
+            "82": "Cultivated Crops",
+            "90": "Woody Wetlands",
+            "95": "Emergent Herbaceous Wetlands",
+        },
+        categories={
+            "Unclassified": ("0"),
+            "Water": ("11", "12"),
+            "Developed": ("21", "22", "23", "24"),
+            "Barren": ("31",),
+            "Forest": ("41", "42", "43"),
+            "Shrubland": ("51", "52"),
+            "Herbaceous": ("71", "72", "73", "74"),
+            "Planted/Cultivated": ("81", "82"),
+            "Wetlands": ("90", "95"),
+        },
+        roughness={
+            "11": 0.0250,
+            "12": 0.0220,
+            "21": 0.0400,
+            "22": 0.1000,
+            "23": 0.0800,
+            "24": 0.1500,
+            "31": 0.0275,
+            "41": 0.1600,
+            "42": 0.1800,
+            "43": 0.1700,
+            "52": 0.1000,
+            "71": 0.0350,
+            "81": 0.0325,
+            "82": 0.0375,
+            "90": 0.1200,
+            "95": 0.0700,
+        },
+    )
+
+    avail_years = {
+        "impervious": nlcd_meta["impervious_years"],
+        "cover": nlcd_meta["cover_years"],
+        "canopy": nlcd_meta["canopy_years"],
+    }
+
+    if years is None:
+        years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
+    if isinstance(years, dict):
+        years = years
+    else:
+        raise TypeError(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
+                        "Years should be of type dict.")
+
+    for service in list(years.keys()):
+        if years[service] not in avail_years[service]:
+            msg = (f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
+                f"{service.capitalize()} data for {years[service]} is not in the databse."
+                + "Avaible years are:"
+                + f"{' '.join(str(x) for x in avail_years[service])}"
+            )
+            raise ValueError(msg)
+
+    url = "https://www.mrlc.gov/geoserver/mrlc_download/wms?service=WMS,request=GetCapabilities"
+    fpaths = [Path(data_dir, f"{d}_{years[d]}.geotiff").exists() for d in list(years.keys())]
+    if not all(fpaths):
+        print(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
+             "Connecting to MRLC Web Map Service", end=" >>> ")
+        wms = WebMapService(url, version="1.3.0")
+        print("connected.")
+
+    layers = [("canopy", f'NLCD_{years["canopy"]}_Tree_Canopy_L48'),
+              ("cover", f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48'),
+              ("impervious", f'NLCD_{years["impervious"]}_Impervious_L48')]
+
+    params = {}
+    for data_type, layer in layers:
+        data_path = Path(
+            data_dir, f"{data_type}_{years[data_type]}.geotiff"
+        )
+        if Path(data_path).exists():
+            print(
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                + f"Using existing {data_type} data file: {data_path}"
+            )
+        else:
+            bbox = geometry.bounds
+            height = int(
+                np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width
+            )
+            print(
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                + f"Downloading {data_type} data from NLCD {years[data_type]} database",
+                end=" >>> "
+            )
+
+            try:
+                img = wms.getmap(
+                    layers=[layer],
+                    srs="epsg:4326",
+                    bbox=bbox,
+                    size=(width, height),
+                    format="image/geotiff"
+                )
+            except ConnectionError:
+                raise (f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                       + "Data could not be reached..")
+
+            with rasterio.MemoryFile() as memfile:
+                memfile.write(img.read())
+                with memfile.open() as src:
+                    out_image, out_transform = rasterio.mask.mask(
+                        src, [geometry], crop=True
+                    )
+                    out_meta = src.meta
+                    out_meta.update(
+                        {
+                            "driver": "GTiff",
+                            "height": out_image.shape[1],
+                            "width": out_image.shape[2],
+                            "transform": out_transform,
+                        }
+                    )
+            with rasterio.open(data_path, "w", **out_meta) as dest:
+                dest.write(out_image)
+
+            print("finished.")
+
+        categorical = True if data_type == "cover" else False
+        params[data_type] = rasterstats.zonal_stats(
+            geometry, data_path, categorical=categorical, category_map=nlcd_meta["legends"]
+        )[0]
+
+    cover = rasterio.open(Path(data_dir, f"cover_{years['cover']}.geotiff"))
+    total_pix = cover.shape[0] * cover.shape[1]
+    cover_arr = cover.read()
+    class_percentage = dict(
+        zip(
+            list(nlcd_meta["legends"].values()),
+            [
+                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
+                for cat in list(nlcd_meta["legends"].keys())
+            ],
+        )
+    )
+    masks = [
+        [leg in cat for leg in list(nlcd_meta["legends"].keys())]
+        for cat in list(nlcd_meta["categories"].values())
+    ]
+    cat_list = [np.array(list(class_percentage.values()))[msk].sum() for msk in masks]
+    category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
+    
+    stats = {"impervious": params["impervious"],
+             "canopy": params["canopy"],
+             "cover": {"classes": class_percentage, "categories": category_percentage}}
+    return stats

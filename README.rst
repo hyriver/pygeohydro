@@ -5,15 +5,17 @@ Hydrodata
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
         :target: https://pypi.python.org/pypi/hydrodata
 
+.. image:: https://codecov.io/gh/cheginit/hydrodata/branch/master/graph/badge.svg
+        :target: https://codecov.io/gh/cheginit/hydrodata
+
 .. image:: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
         :target: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
 
 .. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
         :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
-        :alt: Documentation Status
 
 .. image:: https://zenodo.org/badge/237573928.svg
-   :target: https://zenodo.org/badge/latestdoi/237573928
+        :target: https://zenodo.org/badge/latestdoi/237573928
 
 Hydrodata is a python library designed to aid in NHDPlus watershed analysis. Hydrodata is capable of downloading,
 preprocessing, and visualizing climatological, hydrological, and geographical datasets pertaining to a given watershed.
