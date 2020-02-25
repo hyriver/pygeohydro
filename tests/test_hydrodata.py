@@ -20,6 +20,8 @@ def get_data():
     lon, lat = -69.32, 45.17
     start, end = '2000-01-01', '2010-01-21'
     wshed = Station(start, end, coords=(lon, lat))
+    
+    dem = hds.dem_bygeom(wshed.geometry)
 
     clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
     clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
@@ -35,6 +37,7 @@ def get_data():
     plot.signatures(clm_loc['Q (cms)'], wshed.drainage_area, prcp=clm_loc['prcp (mm/day)'], title=wshed.name, figsize=(12, 12), output='readme_Q.png')
     p = 1
     return (
+        dem.isel(x=int(dem.x.shape[0]/2), y=int(dem.y.shape[0]/2)).values,
         clm_loc.loc['2008-11-10', 'prcp (mm/day)'],
         clm_loc.loc['2008-11-10', 'Q (cms)'],
         clm_grd.isel(time=2, x=25, y=20).tmin.values,
@@ -46,9 +49,10 @@ def get_data():
 
 def test_content(get_data):
     """Run the tests"""
-    prcp, q, grd, eta, st, p = get_data
+    elev, prcp, q, grd, eta, st, p = get_data
     assert (
-        abs(prcp - 2.0) < 1e-3
+        abs(elev - 297.0) < 1e-3
+        and abs(prcp - 2.0) < 1e-3
         and abs(q - 54.368) < 1e-3
         and abs(grd - (-11.5)) < 1e-3
         and abs(eta - 0.575) < 1e-3

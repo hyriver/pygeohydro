@@ -238,10 +238,10 @@ def get_elevation(lon, lat):
         return elevation
 
 
-def get_elevation_bybbox(bbox, coords, data_dir=None):
+def get_elevation_bybbox(bbox, coords):
     """Get elevation from DEM data for a list of coordinates.
     
-    The elevations are extracted from SRTM3 (90-m resolution) data.
+    The elevations are extracted from SRTM1 (30-m resolution) data.
     This function is intended for getting elevations for ds data.
     
     Parameters
@@ -250,39 +250,35 @@ def get_elevation_bybbox(bbox, coords, data_dir=None):
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
         A list of coordinates in (lon, lat) foramt to extract the elevation.
-    data_dir : string or Path
-        The path to the directory for saving the DEM file in `tif` format.
-        The file name is the name of the county where the center of the bbox
-        is located. If None the DEM file is not saved. The default is None.
         
     Returns
     -------
     elevations : array
         A numpy array of elevations in meter
-    output : Path
-        Path to the downloaded DEM file only if data_dir is not None.
     """
 
-    import elevation
     import rasterio
 
-    lon, lat = (bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5
-
-    root = "/tmp" if data_dir is None else data_dir
-
-    output = Path(root, f"DEM_{lon}_{lat}.tif").absolute()
-    if not output.exists():
-        elevation.clip(bounds=bbox, output=str(output), product="SRTM1")
-        elevation.clean()
-
-    with rasterio.open(output) as src:
-        elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
-
-    if data_dir is None:
-        output.unlink()
-        return elevations
-    else:
-        return elevations, output
+    west, south, east, north = bbox
+    url = "http://opentopo.sdsc.edu/otr/getdem?"
+    payload = dict(demtype="SRTMGL1",
+                   west=west,
+                   south=south,
+                   east=east,
+                   north=north,
+                   outputFormat="GTiff")
+    session = retry_requests()
+    try:
+        r = session.get(url, params=payload)
+    except ConnectionError or Timeout or RequestException:
+        raise
+    
+    with rasterio.MemoryFile() as memfile:
+        memfile.write(r.content)
+        with memfile.open() as src:
+            elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
+            
+    return elevations
 
 
 def pet_fao(df, lon, lat):
@@ -603,9 +599,10 @@ def multi_curl(urls):
                 print("Failed: ", c.url, errno, errmsg)
                 freelist.append(c)
             num_processed = num_processed + len(ok_list) + len(err_list)
-            print(f"Files downloaded: {num_processed}/{num_urls}", end="\r")
+            print(f"Downloaded files: {num_processed}/{num_urls}", end='\r')
             if num_q == 0:
                 break
+            
         # Currently no more I/O is pending, could do something in the meantime
         # (display a progress bar, etc.).
         # We just call select() to sleep until some more data is available.

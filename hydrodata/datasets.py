@@ -215,7 +215,7 @@ def daymet_bygeom(
     geometry : Geometry
         The geometry for downloading clipping the data. For a box geometry,
         the order should be as follows:
-        geom = box(minx, miny, maxx, maxy)
+        geom = box(west, southe, east, north)
     start : string or datetime
         Starting date
     end : string or datetime
@@ -631,6 +631,11 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     data : xarray dataset
         The actual ET for the requested region.
     """
+    
+    from shapely.geometry import Polygon
+
+    if not isinstance(geometry, Polygon):
+        raise TypeError("Geometry should be of type Shapely Polygon.")
 
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
@@ -646,7 +651,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
 
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + "Proccessing the data for the requested region",
+        + f"Proccessing the {len(fnames)} downloaded file for the requested region",
         end=" >>> ",
     )
 
@@ -654,26 +659,24 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     fname = f_list[0][0]
     with rasterio.open(f"zip://{fname}!{fname.stem}.tif") as src:
         ras_msk, _ = rasterio.mask.mask(src, [geometry])
-
-    with xr.open_rasterio(f"zip://{fname}!{fname.stem}.tif") as ds:
-        ds.data = ras_msk
-        msk = ds < 9999
-
-    ds = xr.open_rasterio(f"zip://{fname}!{fname.stem}.tif")
-    ds = ds.where(msk, drop=True)
-    ds = ds.expand_dims(dict(time=[f_list[0][1]]))
-    ds = ds.squeeze("band", drop=True)
-    ds.name = "et"
-    data = ds * 1e-3
+        nodata = src.nodata
+        with xr.open_rasterio(src) as ds:
+            ds.data = ras_msk
+            msk = ds < nodata if nodata > 0.0 else ds > nodata
+            ds = ds.where(msk, drop=True)
+            ds = ds.expand_dims(dict(time=[f_list[0][1]]))
+            ds = ds.squeeze("band", drop=True)
+            ds.name = "et"
+            data = ds * 1e-3
 
     # apply the mask to the rest of the data and merge
-    for fname, dt in f_list:
-        ds = xr.open_rasterio(f"zip://{fname}!{fname.stem}.tif")
-        ds = ds.where(msk, drop=True)
-        ds = ds.expand_dims(dict(time=[dt]))
-        ds = ds.squeeze("band", drop=True)
-        ds.name = "et"
-        data = xr.merge([data, ds * 1e-3])
+    for fname, dt in f_list[1:]:
+        with xr.open_rasterio(f"zip://{fname}!{fname.stem}.tif") as ds:
+            ds = ds.where(msk, drop=True)
+            ds = ds.expand_dims(dict(time=[dt]))
+            ds = ds.squeeze("band", drop=True)
+            ds.name = "et"
+            data = xr.merge([data, ds * 1e-3])
 
     data["et"].attrs["units"] = "mm/day"
 
@@ -724,7 +727,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     return data
 
 
-def NLCD(geometry, years=None, data_dir=None, width=2000):
+def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     """Get data from NLCD 2016 database.
     
     Download land use, land cover data from NLCD2016 database within
@@ -760,7 +763,7 @@ def NLCD(geometry, years=None, data_dir=None, width=2000):
     import os
 
     if not isinstance(geometry, Polygon):
-        raise TypeError("Geometry should be of type SHapely Polygon.")
+        raise TypeError("Geometry should be of type Shapely Polygon.")
 
     data_dir = Path(data_dir)
     if not data_dir.is_dir():
@@ -768,7 +771,7 @@ def NLCD(geometry, years=None, data_dir=None, width=2000):
             os.makedirs(data_dir)
         except OSError:
             print(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-                  + f"Input directory cannot be created: {d}")
+                  + f"Input directory cannot be created: {data_dir}")
             
     nlcd_meta = dict(
         impervious_years=[2016, 2011, 2006, 2001],
@@ -944,3 +947,56 @@ def NLCD(geometry, years=None, data_dir=None, width=2000):
              "canopy": params["canopy"],
              "cover": {"classes": class_percentage, "categories": category_percentage}}
     return stats
+
+
+
+
+def dem_bygeom(geometry):
+    """Get DEM data from OpenTopography service.
+    
+    The DEM is extracted from SRTM1 (30-m resolution) database.
+    
+    Parameters
+    ----------
+    geometry : Geometry
+        A shapely Polygon.
+        
+    Returns
+    -------
+    ds : xarray DataArray
+    """
+
+    import rasterio
+    import rasterio.mask
+    from shapely.geometry import Polygon
+
+    if not isinstance(geometry, Polygon):
+        raise TypeError("Geometry should be of type Shapely Polygon.")
+
+    west, south, east, north = geometry.bounds
+    url = "http://opentopo.sdsc.edu/otr/getdem?"
+    payload = dict(demtype="SRTMGL1",
+                   west=west,
+                   south=south,
+                   east=east,
+                   north=north,
+                   outputFormat="GTiff")
+    session = utils.retry_requests()
+    try:
+        r = session.get(url, params=payload)
+    except ConnectionError or Timeout or RequestException:
+        raise
+    
+    with rasterio.MemoryFile() as memfile:
+        memfile.write(r.content)
+        with memfile.open() as src:
+            ras_msk, _ = rasterio.mask.mask(src, [geometry])
+            nodata = src.nodata
+            with xr.open_rasterio(src) as ds:
+                ds.data = ras_msk
+                msk = ds < nodata if nodata > 0.0 else ds > nodata
+                ds = ds.where(msk, drop=True)
+                ds = ds.squeeze("band", drop=True)
+                ds.name = "elevation"
+                
+    return ds
