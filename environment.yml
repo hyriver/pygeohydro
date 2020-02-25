@@ -1,14 +1,12 @@
 name: hydrodata
 channels:
-  - conda-forge
+  - anaconda
 dependencies:
-  - python>=3.6
+  - python>=3.6.10
   - pip
   - numba
   - pandas
   - matplotlib
-  - geopandas
-  - geojson
   - descartes
   - xarray
   - cartopy
@@ -18,6 +16,7 @@ dependencies:
   - pycurl
   - lxml
   - pip:
+    - geopandas
+    - geojson
     - rasterstats
     - tables
-    - elevation
