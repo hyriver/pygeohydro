@@ -1,11 +1,28 @@
-name: hydrodata
+name: hydrodata3
 channels:
-  - anaconda
+  - conda-forge
 dependencies:
   - python=3.8
   - pip
+  - cartopy
   - pip:
+    - geopandas
+    - geojson
+    - rasterstats
+    - tables
     - sphinx
     - sphinx_rtd_theme
     - sphinx-copybutton
     - nbsphinx
+    - dask
+    - netCDF4
+    - bottleneck
+    - pycurl
+    - lxml
+    - numba
+    - owslib
+    - scipy
+    - pandas
+    - matplotlib
+    - descartes
+    - xarray

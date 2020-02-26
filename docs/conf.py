@@ -79,6 +79,8 @@ extensions = [
     "nbsphinx",
 ]
 
+autodoc_mock_imports = ["pycurl"]
+
 extlinks = {
     "issue": ("https://github.com/cheginit/hydrodata/issues/%s", "GH"),
     "pull": ("https://github.com/cheginit/hydrodata/pull/%s", "PR"),
