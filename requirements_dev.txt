@@ -1,4 +1,4 @@
-pip
+black
 bump2version
 wheel
 watchdog
@@ -10,7 +10,6 @@ nbsphinx
 twine
 tox
 coverage
-pytest
 pytest-runner
 pytest-cov
 pytest-xdist
