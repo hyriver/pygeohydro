@@ -1,10 +1,10 @@
 name: hydrodata-docs
 channels:
-  - conda-forge
+  - anaconda
 dependencies:
   - python=3.7
   - pip
-  - cartopy=0.17.0
+  - cartopy
   - pip:
       - geopandas
       - geojson
