@@ -1,10 +1,6 @@
 Hydrodata
 =========
 
-.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo.png
-    :target: https://hydrodata.readthedocs.io/en/latest
-
-
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata
 

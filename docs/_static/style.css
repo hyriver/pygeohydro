@@ -21,7 +21,14 @@ table.colwidths-given {
     table-layout: fixed;
     width: 100%;
 }
+
 table.docutils td {
     white-space: unset;
     word-wrap: break-word;
+}
+
+img.align-center {
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
 }
