@@ -14,7 +14,7 @@ install:
   - conda update -q conda
   - conda info -a
   - sed -i -E 's/(python>=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
-  - sed -i 's/python>=/python==/' ./environment.yml
+  - sed -i 's/python>=/python=/' ./environment.yml
   - conda env create -f environment.yml
   - conda activate hydrodata
   - conda install -c conda-forge --file requirements_dev.txt
