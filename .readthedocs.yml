@@ -7,9 +7,7 @@ conda:
     environment: docs/environment.yml
 
 python:
-    version: 3
-    install:
-      - method: pip
-        path: .
+    version: 3.7
+    install: []
 
 formats: []
