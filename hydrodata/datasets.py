@@ -71,18 +71,22 @@ def nwis(station_id, start, end):
     try:
         ts = r.json()["value"]["timeSeries"][0]["values"][0]["value"]
     except IndexError:
-        msg = (f"[ID: {station_id}] ".ljust(MARGINE)
-              + 'The requested data is not available in the station.'
-              + f'Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}')
+        msg = (
+            f"[ID: {station_id}] ".ljust(MARGINE)
+            + "The requested data is not available in the station."
+            + f"Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
+        )
         raise IndexError(msg)
     df = pd.DataFrame.from_dict(ts, orient="columns")
     try:
         df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
     except KeyError:
-        msg = (f"[ID: {station_id}] ".ljust(MARGINE)
-              + 'The data is not available in the requested date range.'
-              + f'Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}')
-        raise KeyError('')
+        msg = (
+            f"[ID: {station_id}] ".ljust(MARGINE)
+            + "The data is not available in the requested date range."
+            + f"Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
+        )
+        raise KeyError("")
     df.set_index("dateTime", inplace=True)
     qobs = df.value.astype("float64") * 0.028316846592  # Convert cfs to cms
     print("finished.")
@@ -631,7 +635,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     data : xarray dataset
         The actual ET for the requested region.
     """
-    
+
     from shapely.geometry import Polygon
 
     if not isinstance(geometry, Polygon):
@@ -770,9 +774,13 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
         try:
             os.makedirs(data_dir)
         except OSError:
-            print(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-                  + f"Input directory cannot be created: {data_dir}")
-            
+            print(
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                    MARGINE
+                )
+                + f"Input directory cannot be created: {data_dir}"
+            )
+
     nlcd_meta = dict(
         impervious_years=[2016, 2011, 2006, 2001],
         canopy_years=[2016, 2011],
@@ -842,49 +850,65 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     if isinstance(years, dict):
         years = years
     else:
-        raise TypeError(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
-                        "Years should be of type dict.")
+        raise TypeError(
+            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                MARGINE
+            )
+            + "Years should be of type dict."
+        )
 
     for service in list(years.keys()):
         if years[service] not in avail_years[service]:
-            msg = (f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
-                f"{service.capitalize()} data for {years[service]} is not in the databse."
+            msg = (
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                    MARGINE
+                )
+                + f"{service.capitalize()} data for {years[service]} is not in the databse."
                 + "Avaible years are:"
                 + f"{' '.join(str(x) for x in avail_years[service])}"
             )
             raise ValueError(msg)
 
     url = "https://www.mrlc.gov/geoserver/mrlc_download/wms?service=WMS,request=GetCapabilities"
-    fpaths = [Path(data_dir, f"{d}_{years[d]}.geotiff").exists() for d in list(years.keys())]
+    fpaths = [
+        Path(data_dir, f"{d}_{years[d]}.geotiff").exists() for d in list(years.keys())
+    ]
     if not all(fpaths):
-        print(f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE) +
-             "Connecting to MRLC Web Map Service", end=" >>> ")
+        print(
+            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                MARGINE
+            )
+            + "Connecting to MRLC Web Map Service",
+            end=" >>> ",
+        )
         wms = WebMapService(url, version="1.3.0")
         print("connected.")
 
-    layers = [("canopy", f'NLCD_{years["canopy"]}_Tree_Canopy_L48'),
-              ("cover", f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48'),
-              ("impervious", f'NLCD_{years["impervious"]}_Impervious_L48')]
+    layers = [
+        ("canopy", f'NLCD_{years["canopy"]}_Tree_Canopy_L48'),
+        ("cover", f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48'),
+        ("impervious", f'NLCD_{years["impervious"]}_Impervious_L48'),
+    ]
 
     params = {}
     for data_type, layer in layers:
-        data_path = Path(
-            data_dir, f"{data_type}_{years[data_type]}.geotiff"
-        )
+        data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
         if Path(data_path).exists():
             print(
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                    MARGINE
+                )
                 + f"Using existing {data_type} data file: {data_path}"
             )
         else:
             bbox = geometry.bounds
-            height = int(
-                np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width
-            )
+            height = int(np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width)
             print(
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                    MARGINE
+                )
                 + f"Downloading {data_type} data from NLCD {years[data_type]} database",
-                end=" >>> "
+                end=" >>> ",
             )
 
             try:
@@ -893,11 +917,15 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
                     srs="epsg:4326",
                     bbox=bbox,
                     size=(width, height),
-                    format="image/geotiff"
+                    format="image/geotiff",
                 )
             except ConnectionError:
-                raise (f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-                       + "Data could not be reached..")
+                raise (
+                    f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                        MARGINE
+                    )
+                    + "Data could not be reached.."
+                )
 
             with rasterio.MemoryFile() as memfile:
                 memfile.write(img.read())
@@ -921,7 +949,10 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
 
         categorical = True if data_type == "cover" else False
         params[data_type] = rasterstats.zonal_stats(
-            geometry, data_path, categorical=categorical, category_map=nlcd_meta["legends"]
+            geometry,
+            data_path,
+            categorical=categorical,
+            category_map=nlcd_meta["legends"],
         )[0]
 
     cover = rasterio.open(Path(data_dir, f"cover_{years['cover']}.geotiff"))
@@ -942,13 +973,13 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     ]
     cat_list = [np.array(list(class_percentage.values()))[msk].sum() for msk in masks]
     category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
-    
-    stats = {"impervious": params["impervious"],
-             "canopy": params["canopy"],
-             "cover": {"classes": class_percentage, "categories": category_percentage}}
+
+    stats = {
+        "impervious": params["impervious"],
+        "canopy": params["canopy"],
+        "cover": {"classes": class_percentage, "categories": category_percentage},
+    }
     return stats
-
-
 
 
 def dem_bygeom(geometry):
@@ -975,18 +1006,20 @@ def dem_bygeom(geometry):
 
     west, south, east, north = geometry.bounds
     url = "http://opentopo.sdsc.edu/otr/getdem?"
-    payload = dict(demtype="SRTMGL1",
-                   west=west,
-                   south=south,
-                   east=east,
-                   north=north,
-                   outputFormat="GTiff")
+    payload = dict(
+        demtype="SRTMGL1",
+        west=west,
+        south=south,
+        east=east,
+        north=north,
+        outputFormat="GTiff",
+    )
     session = utils.retry_requests()
     try:
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
         raise
-    
+
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
         with memfile.open() as src:
@@ -998,5 +1031,5 @@ def dem_bygeom(geometry):
                 ds = ds.where(msk, drop=True)
                 ds = ds.squeeze("band", drop=True)
                 ds.name = "elevation"
-                
+
     return ds

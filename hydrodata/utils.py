@@ -261,23 +261,25 @@ def get_elevation_bybbox(bbox, coords):
 
     west, south, east, north = bbox
     url = "http://opentopo.sdsc.edu/otr/getdem?"
-    payload = dict(demtype="SRTMGL1",
-                   west=west,
-                   south=south,
-                   east=east,
-                   north=north,
-                   outputFormat="GTiff")
+    payload = dict(
+        demtype="SRTMGL1",
+        west=west,
+        south=south,
+        east=east,
+        north=north,
+        outputFormat="GTiff",
+    )
     session = retry_requests()
     try:
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
         raise
-    
+
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
         with memfile.open() as src:
             elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
-            
+
     return elevations
 
 
@@ -599,10 +601,10 @@ def multi_curl(urls):
                 print("Failed: ", c.url, errno, errmsg)
                 freelist.append(c)
             num_processed = num_processed + len(ok_list) + len(err_list)
-            print(f"Downloaded files: {num_processed}/{num_urls}", end='\r')
+            print(f"Downloaded files: {num_processed}/{num_urls}", end="\r")
             if num_q == 0:
                 break
-            
+
         # Currently no more I/O is pending, could do something in the meantime
         # (display a progress bar, etc.).
         # We just call select() to sleep until some more data is available.
