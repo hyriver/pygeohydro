@@ -21,7 +21,7 @@ def retry_requests(
     codes and 30X redirections. The original code is taken from:
     https://github.com/bustawin/retry-requests
 
-    Paramters
+    Parameters
     ---------
     retries: int
         The number of maximum retries before raising an exception.
