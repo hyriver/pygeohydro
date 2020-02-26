@@ -1,6 +1,6 @@
-name: hydrodata
+name: hydrodata2
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python=3.8
   - pip
