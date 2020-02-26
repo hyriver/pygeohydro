@@ -1,28 +1,28 @@
-name: hydrodata3
+name: hydrodata-docs
 channels:
   - conda-forge
 dependencies:
   - python=3.8
   - pip
   - cartopy
+  - geopandas
+  - geojson
+  - rasterstats
+  - sphinx
+  - sphinx_rtd_theme
+  - sphinx-copybutton
+  - nbsphinx
+  - dask
+  - netCDF4
+  - bottleneck
+  - pycurl
+  - lxml
+  - numba
+  - owslib
+  - scipy
+  - pandas
+  - matplotlib
+  - descartes
+  - xarray
   - pip:
-    - geopandas
-    - geojson
-    - rasterstats
-    - tables
-    - sphinx
-    - sphinx_rtd_theme
-    - sphinx-copybutton
-    - nbsphinx
-    - dask
-    - netCDF4
-    - bottleneck
-    - pycurl
-    - lxml
-    - numba
-    - owslib
-    - scipy
-    - pandas
-    - matplotlib
-    - descartes
-    - xarray
+      - tables
