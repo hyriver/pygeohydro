@@ -19,18 +19,6 @@ import pathlib
 import subprocess
 import sys
 from contextlib import suppress
-from unittest.mock import MagicMock
-
-
-# address the RDT issue with pycurl
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return Mock()
-
-
-MOCK_MODULES = ["cjson", "pycurl"]
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # make sure the source version is preferred (#3567)
 root = pathlib.Path(__file__).absolute().parent.parent
