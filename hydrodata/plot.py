@@ -9,13 +9,7 @@ from hydrodata import utils
 
 
 def signatures(
-    daily_dict,
-    area,
-    prcp=None,
-    title=None,
-    figsize=(8, 10),
-    threshold=1e-3,
-    output=None,
+    Q_daily, prcp=None, title=None, figsize=(13, 13), threshold=1e-3, output=None,
 ):
     """Plot hydrological signatures with w/ and w/o precipitation.
 
@@ -26,12 +20,10 @@ def signatures(
 
     Parameters
     ----------
-    daily_dict : dict or dataframe
-        A series containing daily discharges in m$^3$/s.
-        A series or a dictionary of series can be passed where its keys
-        are the labels and its values are the series.
-    area : float
-        Watershed area in km$^2$ (for converting cms to mm/day)
+    Q_daily : dict of tuple
+        The first element is a series containing daily discharges in m$^3$/s
+        and the second element is the contributing drainage area in km$^2$.
+        The dict keys are the labels on the plot.
     prcp : series
         Daily precipitation time series in mm/day. If given, the data is
         plotted on the second x-axis at the top.
@@ -51,17 +43,21 @@ def signatures(
     pd.plotting.register_matplotlib_converters()
     mpl.rcParams["figure.dpi"] = 300
 
-    if isinstance(daily_dict, pd.Series):
-        daily_dict = {"Q": daily_dict}
-    elif not isinstance(daily_dict, dict):
-        raise TypeError(
-            "The daily_dict argument can be either a Pandas series "
-            + "or a dictionary of Pandas series."
-        )
+    if not isinstance(Q_daily, dict):
+        raise TypeError("The daily_dict argument should be a dictionary.")
+
+    for _, v in Q_daily.items():
+        if isinstance(v, tuple):
+            if not len(v) == 2:
+                raise ValueError(
+                    "The tuple should have exactly two elemenets, (Q, area)."
+                )
+        else:
+            raise TypeError("The values of the input dictionary should be tuples.")
 
     # convert cms to mm/day
     daily_dict = {
-        k: v * 1000.0 * 24.0 * 3600.0 / (area * 1.0e6) for k, v in daily_dict.items()
+        k: v[0] * 1000.0 * 24.0 * 3600.0 / (v[1] * 1.0e6) for k, v in Q_daily.items()
     }
 
     month_Q_dict, year_Q_dict, mean_month_Q_dict, Q_fdc_dict = {}, {}, {}, {}
@@ -71,9 +67,10 @@ def signatures(
         mean_month_Q_dict[label] = utils.mean_monthly(daily)
         Q_fdc_dict[label] = utils.exceedance(daily[daily > threshold])
 
-    month_P = prcp.groupby(pd.Grouper(freq="M")).sum()
-    year_P = prcp.groupby(pd.Grouper(freq="Y")).sum()
-    mean_month_P = utils.mean_monthly(prcp)
+    if prcp is not None:
+        month_P = prcp.groupby(pd.Grouper(freq="M")).sum()
+        year_P = prcp.groupby(pd.Grouper(freq="Y")).sum()
+        mean_month_P = utils.mean_monthly(prcp)
 
     plt.close("all")
     fig = plt.figure(1, figsize=figsize)

@@ -9,17 +9,13 @@ It can be used as follows:
 For more information refer to the Usage section of the document.
 """
 
-from pathlib import Path
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-from numba import njit, prange
-from hydrodata import utils
-import xarray as xr
-import json
 import os
-from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+from pathlib import Path
 
+import geopandas as gpd
+import pandas as pd
+from hydrodata import utils
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 MARGINE = 15
 
@@ -94,7 +90,7 @@ class Station:
             except OSError:
                 print(
                     f"[ID: {self.station_id}] ".ljust(MARGINE)
-                    + f"Input directory cannot be created: {d}"
+                    + f"Input directory cannot be created: {self.data_dir}"
                 )
 
         self.get_watershed()
@@ -145,8 +141,8 @@ class Station:
         payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
         try:
             r = self.session.get(url, params=payload)
-        except requests.HTTPError:
-            raise requests.HTTPError(
+        except HTTPError:
+            raise HTTPError(
                 f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
             )
 
@@ -159,6 +155,7 @@ class Station:
         df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
             ["dec_lat_va", "dec_long_va", "alt_va"]
         ].astype("float")
+        df = df[df.site_no.apply(len) == 8]
 
         point = geom.Point(self.coords)
         pts = dict(

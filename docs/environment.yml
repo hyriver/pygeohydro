@@ -1,0 +1,24 @@
+name: hydrodata
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - numba
+  - scipy
+  - pandas
+  - matplotlib
+  - descartes
+  - xarray
+  - cartopy
+  - dask
+  - netCDF4
+  - bottleneck
+  - pycurl
+  - mypy=0.761
+  - lxml
+  - pip:
+    - geopandas
+    - geojson
+    - rasterstats
+    - tables

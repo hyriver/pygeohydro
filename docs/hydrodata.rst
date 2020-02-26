@@ -20,14 +20,6 @@ hydrodata.hydrodata module
    :undoc-members:
    :show-inheritance:
 
-hydrodata.nlcd\_helper module
------------------------------
-
-.. automodule:: hydrodata.nlcd_helper
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 hydrodata.plot module
 ---------------------
 

@@ -3,11 +3,6 @@
 """Tests for `hydrodata` package."""
 
 import pytest
-import shutil
-
-
-from hydrodata import Station
-from hydrodata.datasets import deymet_byloc, nwis
 
 
 @pytest.fixture
@@ -19,7 +14,7 @@ def get_data():
 
     lon, lat = -69.32, 45.17
     start, end = "2000-01-01", "2010-01-21"
-    wshed = Station(start, end, coords=(lon, lat))
+    wshed = Station(start, end, coords=(lon, lat), data_dir="tests/data")
 
     dem = hds.dem_bygeom(wshed.geometry)
 
@@ -41,14 +36,13 @@ def get_data():
         navigation="upstreamMain", distance=150
     )
 
+    lulc = hds.NLCD(wshed.geometry)
+
     p = 0
     plot.signatures(
-        clm_loc["Q (cms)"],
-        wshed.drainage_area,
+        {"test": (clm_loc["Q (cms)"], wshed.drainage_area)},
         prcp=clm_loc["prcp (mm/day)"],
         title=wshed.name,
-        figsize=(12, 12),
-        output="readme_Q.png",
     )
     p = 1
     return (
@@ -58,13 +52,15 @@ def get_data():
         clm_grd.isel(time=2, x=25, y=20).tmin.values,
         eta_grd.isel(time=2, x=25, y=20).et.values,
         stations.values[0][3],
+        stations_upto_150.values[1][3],
+        lulc["cover"]["categories"]["Shrubland"],
         p,
     )
 
 
 def test_content(get_data):
     """Run the tests"""
-    elev, prcp, q, grd, eta, st, p = get_data
+    elev, prcp, q, grd, eta, st, st150, cov, p = get_data
     assert (
         abs(elev - 297.0) < 1e-3
         and abs(prcp - 2.0) < 1e-3
@@ -72,5 +68,7 @@ def test_content(get_data):
         and abs(grd - (-11.5)) < 1e-3
         and abs(eta - 0.575) < 1e-3
         and st == "USGS-01031300"
+        and st == "USGS-01031500"
+        and abs(cov - 0.142) < 1e-3
         and p == 1
     )

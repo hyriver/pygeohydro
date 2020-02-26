@@ -2,17 +2,17 @@
 # -*- coding: utf-8 -*-
 """Accessing data from the supported databases through their APIs."""
 
-from hydrodata import utils
-import pandas as pd
-import numpy as np
-import geopandas as gpd
-import json
-import xarray as xr
 from pathlib import Path
-from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 import rasterio
 import rasterio.mask
+from hydrodata import utils
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
+import xarray as xr
 
 MARGINE = 15
 
@@ -28,7 +28,7 @@ def nwis(station_id, start, end):
         Start date
     end : string or datetime
         End date
-        
+
     Returns
     -------
         qobs : dataframe
@@ -211,9 +211,9 @@ def daymet_bygeom(
     geometry, start=None, end=None, years=None, variables=None, pet=False
 ):
     """Gridded data from the Daymet database.
-    
+
     The data is clipped using netCDF Subset Service.
-    
+
     Parameters
     ----------
     geometry : Geometry
@@ -234,7 +234,7 @@ def daymet_bygeom(
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
-    
+
     Returns
     -------
     data : xarray dataset
@@ -365,7 +365,7 @@ class NLDI:
 
     def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
         """Intialize NLCD.
-        
+
         Parameters
         ----------
         station_id : string
@@ -614,9 +614,9 @@ class NLDI:
 
 def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     """Gridded data from the SSEBop database.
-    
+
     The data is clipped using netCDF Subset Service.
-    
+
     Parameters
     ----------
     geometry : Geometry
@@ -629,7 +629,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
         Ending date
     years : list
         List of years
-    
+
     Returns
     -------
     data : xarray dataset
@@ -690,9 +690,9 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
 
 def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     """Gridded data from the SSEBop database.
-    
+
     The data is clipped using netCDF Subset Service.
-    
+
     Parameters
     ----------
     geom : list
@@ -705,7 +705,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
         Ending date
     years : list
         List of years
-    
+
     Returns
     -------
     data : Pandas DataFrame
@@ -719,9 +719,9 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     geometry = box(lon - ext, lat - ext, lon + ext, lat + ext)
 
     if years is None and start is not None and end is not None:
-        ds = ssebopeta_bygeom(geom, start=start, end=end)
+        ds = ssebopeta_bygeom(geometry, start=start, end=end)
     elif years is not None and start is None and end is None:
-        ds = ssebopeta_bygeom(geom, years=years)
+        ds = ssebopeta_bygeom(geometry, years=years)
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
@@ -733,7 +733,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
 
 def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     """Get data from NLCD 2016 database.
-    
+
     Download land use, land cover data from NLCD2016 database within
     a given geometry with epsg:4326 projection.
 
@@ -984,14 +984,14 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
 
 def dem_bygeom(geometry):
     """Get DEM data from OpenTopography service.
-    
+
     The DEM is extracted from SRTM1 (30-m resolution) database.
-    
+
     Parameters
     ----------
     geometry : Geometry
         A shapely Polygon.
-        
+
     Returns
     -------
     ds : xarray DataArray

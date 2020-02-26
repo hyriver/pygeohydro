@@ -14,3 +14,5 @@ pytest-runner
 pytest-cov
 pytest-xdist
 codecov
+numpydoc
+pre-commit
