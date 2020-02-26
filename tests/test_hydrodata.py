@@ -68,7 +68,7 @@ def test_content(get_data):
         and abs(grd - (-11.5)) < 1e-3
         and abs(eta - 0.575) < 1e-3
         and st == "USGS-01031300"
-        and st == "USGS-01031500"
+        and st150 == "USGS-01031500"
         and abs(cov - 0.142) < 1e-3
         and p == 1
     )
