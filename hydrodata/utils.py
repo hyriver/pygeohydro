@@ -3,9 +3,10 @@
 """Some utilities for Hydrodata"""
 
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from requests.exceptions import HTTPError, ConnectionError, Timeout, RequestException
+from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 
 def retry_requests(
@@ -15,11 +16,11 @@ def retry_requests(
     prefixes=("http://", "https://"),
 ):
     """Configures the passed-in session to retry on failed requests.
-    
+
     The fails can be due to connection errors, specific HTTP response
     codes and 30X redirections. The original code is taken from:
     https://github.com/bustawin/retry-requests
-    
+
     Paramters
     ---------
     retries: int
@@ -106,7 +107,7 @@ def get_data(stations):
 
 def batch(stations):
     """Process queries in batch in parallel.
-    
+
     Parameters
     ----------
     stations : list of dict
@@ -137,7 +138,8 @@ def batch(stations):
 def open_workspace(data_dir):
     """Open a hydrodata workspace using the root of data directory."""
     import xarray as xr
-    from hydrodata import Station
+
+    # from hydrodata import Station
     import json
     import geopandas as gpd
 
@@ -185,7 +187,7 @@ def open_workspace(data_dir):
 
 def daymet_dates(start, end):
     """Correct dates for Daymet when leap years.
-    
+
     Daymet doesn't account for leap years and removes
     Dec 31 when it's leap year. This function returns all
     the dates in the Daymet database within the provided year.
@@ -203,14 +205,14 @@ def daymet_dates(start, end):
 
 def get_elevation(lon, lat):
     """Get elevation from USGS 3DEP service for a coordinate.
-    
+
     Parameters
     ----------
     lon : float
         Longitude
     lat : float
         Latitude
-        
+
     Returns
     -------
     elevation : float
@@ -219,13 +221,11 @@ def get_elevation(lon, lat):
 
     url = "https://nationalmap.gov/epqs/pqs.php?"
     session = retry_requests()
-    lon = lon if isinstance(lon, list) else [lon]
-    lat = lat if isinstance(lat, list) else [lat]
-    coords = [(i, j) for i, j in zip(lon, lat)]
+
     try:
         payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
         r = session.get(url, params=payload)
-    except ConnectionError or Timeout or RequestException:
+    except HTTPError or ConnectionError or Timeout or RequestException:
         raise
     elevation = r.json()["USGS_Elevation_Point_Query_Service"]["Elevation_Query"][
         "Elevation"
@@ -240,17 +240,17 @@ def get_elevation(lon, lat):
 
 def get_elevation_bybbox(bbox, coords):
     """Get elevation from DEM data for a list of coordinates.
-    
+
     The elevations are extracted from SRTM1 (30-m resolution) data.
     This function is intended for getting elevations for ds data.
-    
+
     Parameters
     ----------
     bbox : list
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
         A list of coordinates in (lon, lat) foramt to extract the elevation.
-        
+
     Returns
     -------
     elevations : array
@@ -272,7 +272,7 @@ def get_elevation_bybbox(bbox, coords):
     session = retry_requests()
     try:
         r = session.get(url, params=payload)
-    except ConnectionError or Timeout or RequestException:
+    except HTTPError or ConnectionError or Timeout or RequestException:
         raise
 
     with rasterio.MemoryFile() as memfile:
@@ -285,7 +285,7 @@ def get_elevation_bybbox(bbox, coords):
 
 def pet_fao(df, lon, lat):
     """Compute Potential EvapoTranspiration using Daymet dataset.
-    
+
     The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m^2), dayl (s)
@@ -379,7 +379,7 @@ def pet_fao(df, lon, lat):
 
 def pet_fao_gridded(ds):
     """Compute Potential EvapoTranspiration using Daymet dataset.
-    
+
     The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
@@ -517,7 +517,7 @@ def exceedance(daily):
 
 def multi_curl(urls):
     """Download multiple files with curl.
-    
+
     Taken from here:
     https://github.com/pycurl/pycurl/blob/master/examples/retriever-multi.py
     """

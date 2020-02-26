@@ -15,6 +15,7 @@ dependencies:
   - netCDF4
   - bottleneck
   - pycurl
+  - mypy=0.761
   - lxml
   - pip:
     - geopandas

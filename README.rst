@@ -1,22 +1,27 @@
 Hydrodata
 =========
 
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo.png
+    :target: https://hydrodata.readthedocs.io/en/latest
+
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
-        :target: https://pypi.python.org/pypi/hydrodata
+    :target: https://pypi.python.org/pypi/hydrodata
 
 .. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
-  :target: https://codecov.io/gh/cheginit/hydrodata
-
+    :target: https://codecov.io/gh/cheginit/hydrodata
 
 .. image:: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
-        :target: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
+    :target: https://travis-ci.com/cheginit/hydrodata
 
 .. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
-        :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
+    :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
 
 .. image:: https://zenodo.org/badge/237573928.svg
-        :target: https://zenodo.org/badge/latestdoi/237573928
+    :target: https://zenodo.org/badge/latestdoi/237573928
+        
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
 
 Hydrodata is a python library designed to aid in NHDPlus watershed analysis. Hydrodata is capable of downloading,
 preprocessing, and visualizing climatological, hydrological, and geographical datasets pertaining to a given watershed.
@@ -36,8 +41,8 @@ Features
 * Plot hydrological signature graphs.
 
 
-Usage
------
+Quick Start
+-----------
 
 With just a few lines of code Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site inforamtion such as name, contributing drainage area and upstream flowlines and watershed geometry.
 
