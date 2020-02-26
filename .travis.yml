@@ -24,7 +24,8 @@ install:
 
 script: tox
 
-after_success: coverage combine && codecov
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
 
 deploy:
   provider: pypi
