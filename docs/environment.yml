@@ -15,7 +15,6 @@ dependencies:
       - nbsphinx
       - netCDF4
       - bottleneck
-      - pycurl
       - lxml
       - owslib
       - scipy
