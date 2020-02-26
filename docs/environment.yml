@@ -1,4 +1,4 @@
-name: hydrodata2
+name: hydrodata
 channels:
   - conda-forge
 dependencies:
