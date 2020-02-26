@@ -4,4 +4,4 @@
 
 from setuptools import setup
 
-setup(use_scm_version=True)
+setup(version="0.3.0")
