@@ -1,4 +1,5 @@
 numba
+scipy
 pandas
 matplotlib
 geopandas
