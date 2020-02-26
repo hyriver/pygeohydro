@@ -5,8 +5,9 @@ Hydrodata
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
         :target: https://pypi.python.org/pypi/hydrodata
 
-.. image:: https://codecov.io/gh/cheginit/hydrodata/branch/master/graph/badge.svg
-        :target: https://codecov.io/gh/cheginit/hydrodata
+.. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
+  :target: https://codecov.io/gh/cheginit/hydrodata
+
 
 .. image:: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
         :target: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
