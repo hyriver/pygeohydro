@@ -4,25 +4,24 @@ channels:
 dependencies:
   - python=3.8
   - pip
-  - cartopy
-  - geopandas
-  - geojson
-  - rasterstats
-  - sphinx
-  - sphinx_rtd_theme
-  - sphinx-copybutton
-  - nbsphinx
-  - dask
-  - netCDF4
-  - bottleneck
-  - pycurl
-  - lxml
-  - numba
-  - owslib
-  - scipy
-  - pandas
-  - matplotlib
-  - descartes
-  - xarray
   - pip:
-      - tables
+      - geopandas
+      - geojson
+      - rasterstats
+      - sphinx
+      - sphinx_rtd_theme
+      - sphinx-copybutton
+      - nbsphinx
+      - netCDF4
+      - bottleneck
+      - pycurl
+      - lxml
+      - owslib
+      - scipy
+      - pandas
+      - matplotlib
+      - descartes
+      - xarray
+      - numpydoc
+      - ipykernel
+      - ipython

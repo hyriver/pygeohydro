@@ -89,7 +89,8 @@ extlinks = {
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
 nbsphinx_prolog = """
-test
+{% set docname = env.doc2path(env.docname, base=None) %}
+You can run download or view this notebook in `on Github <https://github.com/cheginit/hydrodata/blob/master/docs/{{ docname }}>`_.
 """
 
 autosummary_generate = True
@@ -348,8 +349,7 @@ texinfo_documents = [
 
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {
-    "python": ("https://docs.python.org/3/", None),
-    "xarray": ("https://github.com/pydata/xarray", None),
-    "nhdplusTools": ("https://github.com/USGS-R/nhdplusTools", None),
-    "geopandas": ("https://github.com/geopandas/geopandas", None),
+    "python": ("https://docs.python.org/3", None),
+    "xarray": ("https://xarray.pydata.org/en/stable", None),
+    "geopandas": ("https://geopandas.org", None),
 }
