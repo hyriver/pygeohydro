@@ -21,4 +21,4 @@ dependencies:
     - geojson
     - rasterstats
     - tables
-    - mypy=0.761
+    - mypy==0.761

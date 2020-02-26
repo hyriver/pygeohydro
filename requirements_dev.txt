@@ -15,4 +15,5 @@ pytest-cov
 pytest-xdist
 codecov
 numpydoc
+mypy
 pre-commit
