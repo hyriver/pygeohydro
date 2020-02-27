@@ -50,7 +50,7 @@ def get_data():
         clm_loc.loc["2008-11-10", "prcp (mm/day)"],
         clm_loc.loc["2008-11-10", "Q (cms)"],
         clm_grd.isel(time=2, x=25, y=20).tmin.values,
-        eta_grd.isel(time=2, x=25, y=20).et.values,
+        eta_grd.isel(time=2, x=25, y=20).eta.values,
         stations.values[0][3],
         stations_upto_150.values[1][3],
         lulc["cover"]["categories"]["Shrubland"],
