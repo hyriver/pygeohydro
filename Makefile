@@ -2,8 +2,10 @@
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
-import os, webbrowser, sys
-
+import os
+import re
+import sys
+import webbrowser
 from urllib.request import pathname2url
 
 webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
@@ -11,7 +13,6 @@ endef
 export BROWSER_PYSCRIPT
 
 define PRINT_HELP_PYSCRIPT
-import re, sys
 
 for line in sys.stdin:
 	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
@@ -67,8 +68,6 @@ docs: ## generate Sphinx HTML documentation, including API docs
 	rm -f docs/modules.rst
 	sphinx-apidoc -o docs/ hydrodata
 	sed -i '0,/hydrodata/{s/hydrodata/Modules/}' docs/modules.rst
-	cp requirements.txt docs/
-	printf '\n%s\n%s\n%s\n' "jupyter-sphinx" "sphinx-copybutton" "nbsphinx" >> docs/requirements.txt
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html
