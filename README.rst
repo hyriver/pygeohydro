@@ -24,7 +24,7 @@
 
 -----------------
 
-Hydrodata
+Features
 ---------
 
 Hydrodata is a python library designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
