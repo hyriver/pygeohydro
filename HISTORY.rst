@@ -2,7 +2,7 @@
 History
 =======
 
-0.4.1 (2020-02-26)
+0.4.2 (2020-02-26)
 ------------------
 
 * An almost complete refactoring of the code base
@@ -13,6 +13,7 @@ History
 * Not backward comparible
 * Added code style enforcement with isort, black, flake8 and pre-commit
 * Added a new shiny logo!
+* New installation method
 
 0.3.0 (2020-02-10)
 ------------------
