@@ -615,7 +615,12 @@ class NLDI:
 def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     """Gridded data from the SSEBop database.
 
-    The data is clipped using netCDF Subset Service.
+    Note
+    ----
+    Since there's still no web service available for subsetting, the data first
+    needs to be downloads for the requested period then the data is masked by the
+    region interest locally. Therefore, it's not as fast as other functions and
+    the bottleneck could be download speed.
 
     Parameters
     ----------
@@ -1030,15 +1035,17 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     return stats
 
 
-def dem_bygeom(geometry):
+def dem_bygeom(geometry, demtype="SRTMGL1"):
     """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
-
-    The DEM is extracted from SRTM1 (30-m resolution) database.
 
     Parameters
     ----------
     geometry : Geometry
         A shapely Polygon.
+    demtype : string
+        The type of DEM to be downloaded, default to SRTMGL1 for 30 m resolution.
+        Available options are 'SRTMGL3' for SRTM GL3 (90m) and 'SRTMGL1' for
+        SRTM GL1 (30m).
 
     Returns
     -------
@@ -1056,7 +1063,7 @@ def dem_bygeom(geometry):
     west, south, east, north = geometry.bounds
     url = "http://opentopo.sdsc.edu/otr/getdem?"
     payload = dict(
-        demtype="SRTMGL1",
+        demtype=demtype,
         west=west,
         south=south,
         east=east,
@@ -1064,6 +1071,13 @@ def dem_bygeom(geometry):
         outputFormat="GTiff",
     )
     session = utils.retry_requests()
+
+    print(
+        f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
+        + f"Downloading DEM data from OpenTopography",
+        end=" >>> ",
+    )
+
     try:
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
@@ -1080,5 +1094,7 @@ def dem_bygeom(geometry):
                 ds = ds.where(msk, drop=True)
                 ds = ds.squeeze("band", drop=True)
                 ds.name = "elevation"
+
+    print("finished.")
 
     return ds

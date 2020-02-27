@@ -13,14 +13,11 @@ install:
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - sed -i -E 's/(python>=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
-  - sed -i 's/python>=/python=/' ./environment.yml
-  - sed -i '/cartopy/d' environment.yml
-  - conda env create -f environment.yml
-  - conda activate hydrodata
-  - conda install -c conda-forge --file requirements_dev.txt
+  - sed -i -E 's/(python>=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment_ci.yml
+  - sed -i 's/python>=/python=/' ./environment_ci.yml
+  - conda env create -f environment_ci.yml
+  - conda activate hydrodata-ci
   - python setup.py install
-  - pip install -U tox-travis
 
 script: tox
 
@@ -40,4 +37,3 @@ deploy:
 
 notifications:
   email: false
-
