@@ -2,7 +2,7 @@
 History
 =======
 
-0.4.0 (2020-02-26)
+0.4.1 (2020-02-26)
 ------------------
 
 * An almost complete refactoring of the code base
