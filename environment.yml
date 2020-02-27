@@ -15,7 +15,6 @@ dependencies:
   - dask
   - netCDF4
   - bottleneck
-  - pycurl
   - lxml
   - pip:
     - geopandas

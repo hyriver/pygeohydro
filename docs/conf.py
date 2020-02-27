@@ -20,22 +20,6 @@ import subprocess
 import sys
 from contextlib import suppress
 
-from mock import Mock as MagicMock
-
-
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return Mock()
-
-    @classmethod
-    def __getitem__(cls, name):
-        return Mock()
-
-
-MOCK_MODULES = ["pycurl"]
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
-
 # make sure the source version is preferred (#3567)
 root = pathlib.Path(__file__).absolute().parent.parent
 os.environ["PYTHONPATH"] = str(root)
@@ -94,8 +78,6 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
 ]
-
-autodoc_mock_imports = ["pycurl"]
 
 extlinks = {
     "issue": ("https://github.com/cheginit/hydrodata/issues/%s", "GH"),

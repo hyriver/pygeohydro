@@ -1,6 +1,6 @@
 name: hydrodata-docs
 channels:
-  - anaconda
+  - defaults
 dependencies:
   - python=3.7
   - pip
@@ -25,5 +25,3 @@ dependencies:
       - numpydoc
       - ipykernel
       - ipython
-      - mock
-      - pycurl

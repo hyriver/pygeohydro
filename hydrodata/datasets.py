@@ -637,52 +637,95 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
     """
 
     from shapely.geometry import Polygon
+    import socket
+    from unittest.mock import patch
+    import zipfile
+    import io
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
 
-    print(
-        f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + "Staging actual ET data from SSEBop:"
-    )
+    if years is None and start is not None and end is not None:
+        if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
+            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+    elif years is not None and start is None and end is None:
+        years = years if isinstance(years, list) else [years]
+        dates = [pd.date_range(f"{year}0101", f"{year}1231") for year in years]
+        for d in dates:
+            if d[0] < pd.to_datetime("2000-01-01"):
+                raise ValueError("SSEBop database ranges from 2000 till 2018.")
+    else:
+        raise ValueError("Either years or start and end arguments should be provided.")
 
-    fnames = utils.stage_eta(start=start, end=end)
-
+    base_url = "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared//uswem/web/conus/eta/modis_eta/daily/downloads"
     f_list = [
-        (f, pd.to_datetime("".join(filter(str.isdigit, f.stem)), format="%Y%j"))
-        for f in fnames
+        (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
+        for d in pd.date_range(start, end)
     ]
 
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + f"Proccessing the {len(fnames)} downloaded file for the requested region",
+        + f"Downloading the data from SSEBop",
         end=" >>> ",
     )
 
-    # find the mask using the first dataset
-    fname = f_list[0][0]
-    with rasterio.open(f"zip://{fname}!{fname.stem}.tif") as src:
-        ras_msk, _ = rasterio.mask.mask(src, [geometry])
-        nodata = src.nodata
-        with xr.open_rasterio(src) as ds:
-            ds.data = ras_msk
-            msk = ds < nodata if nodata > 0.0 else ds > nodata
-            ds = ds.where(msk, drop=True)
-            ds = ds.expand_dims(dict(time=[f_list[0][1]]))
-            ds = ds.squeeze("band", drop=True)
-            ds.name = "et"
-            data = ds * 1e-3
+    orig_getaddrinfo = socket.getaddrinfo
+    session = utils.retry_requests()
 
-    # apply the mask to the rest of the data and merge
-    for fname, dt in f_list[1:]:
-        with xr.open_rasterio(f"zip://{fname}!{fname.stem}.tif") as ds:
-            ds = ds.where(msk, drop=True)
-            ds = ds.expand_dims(dict(time=[dt]))
-            ds = ds.squeeze("band", drop=True)
-            ds.name = "et"
-            data = xr.merge([data, ds * 1e-3])
+    def getaddrinfoIPv4(host, port, family=0, type=0, proto=0, flags=0):
+        return orig_getaddrinfo(
+            host=host,
+            port=port,
+            family=socket.AF_INET,
+            type=type,
+            proto=proto,
+            flags=flags,
+        )
 
-    data["et"].attrs["units"] = "mm/day"
+    # disable IPv6 to speedup the download
+    with patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4):
+        # find the mask using the first dataset
+        dt, url = f_list[0]
+
+        try:
+            r = session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+
+        z = zipfile.ZipFile(io.BytesIO(r.content))
+        with rasterio.MemoryFile() as memfile:
+            memfile.write(z.read(z.filelist[0].filename))
+            with memfile.open() as src:
+                ras_msk, _ = rasterio.mask.mask(src, [geometry])
+                nodata = src.nodata
+                with xr.open_rasterio(src) as ds:
+                    ds.data = ras_msk
+                    msk = ds < nodata if nodata > 0.0 else ds > nodata
+                    ds = ds.where(msk, drop=True)
+                    ds = ds.expand_dims(dict(time=[dt]))
+                    ds = ds.squeeze("band", drop=True)
+                    ds.name = "eta"
+                    data = ds * 1e-3
+
+        # apply the mask to the rest of the data and merge
+        for dt, url in f_list[1:]:
+            try:
+                r = session.get(url)
+            except HTTPError or ConnectionError or Timeout or RequestException:
+                raise
+
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            with rasterio.MemoryFile() as memfile:
+                memfile.write(z.read(z.filelist[0].filename))
+                with memfile.open() as src:
+                    with xr.open_rasterio(src) as ds:
+                        ds = ds.where(msk, drop=True)
+                        ds = ds.expand_dims(dict(time=[dt]))
+                        ds = ds.squeeze("band", drop=True)
+                        ds.name = "eta"
+                        data = xr.merge([data, ds * 1e-3])
+
+    data["eta"].attrs["units"] = "mm/day"
 
     print("finished.")
     return data
