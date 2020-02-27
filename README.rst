@@ -31,37 +31,31 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for getting watershed geometry and flowlines from NHDPlus V2
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded
-* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration
+* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use
-* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations
+* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for USGS stations' daily streamflow observations
 * `OpenTopography <https://opentopography.org/>`_ for Digital Elevation Model
 
-Support for additional databases can be requested via `issue <https://github.com/cheginit/hydrodata/issues>`_.
+Additionally, the function for getting Daymet data offers a flag for computing Potential Evapotranspiration (PET) using the retrieved climate data. PET is computed based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
+
+Requests for additional databases or functionalities can be submitted via `issues <https://github.com/cheginit/hydrodata/issues>`_.
 
 Documentation
 -------------
 
-Learn more about hydrodata in its official documentation at https://hydrodata.readthedocs.io.
+Learn more about Hydrodata in its official documentation at https://hydrodata.readthedocs.io.
 
 
 Installation
 ------------
 
-To install Hydrodata, run this command in your terminal:
+It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python package management tool so the dependencies can be installed easily. Hydrodata is pure Python but its dependencies are not. The dependecies can be installed using the ``environment.yml`` file provided in this repository. You can clone the repository or download the file from `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_.
 
 .. code-block:: console
 
-    $ pip install hydrodata
-
-Alternatively, it can be installed from source by cloning the repository.
-
-.. code-block:: console
-
-    $ git clone https://github.com/cheginit/hydrodata.git
-    $ cd hydrodata
     $ conda env create -f environment.yml
     $ conda activate hydrodata
-    $ python setup.py install
+    $ pip install hydrodata
 
 Quick Start
 -----------
@@ -83,14 +77,14 @@ DEM can be retrieved for the station's contributing watershed as follows:
 
     dem = hds.dem_bygeom(wshed.geometry)
 
-Then, we can get climate data and streamflow observation:
+Then, we can get climate data and streamflow observations:
 
 .. code-block:: python
 
     clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
     clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
 
-The watershed geometry can be used to clip the gridded data:
+The watershed geometry can be used to mask the gridded data:
 
 .. code-block:: python
 
