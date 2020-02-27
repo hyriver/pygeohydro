@@ -116,10 +116,10 @@ def batch(stations):
         "end" : 'YYYY-MM-DD', [Requaired]
         "station_id" : '<ID>', OR "coords" : (<lon>, <lat>), [Requaired]
         "data_dir" : '<path/to/store/data>',  [Optional] Default : ./data
+        "dem" : True or Flase, [Optional] Default : False
         "climate" : True or Flase, [Optional] Default : False
         "nlcd" : True or False, [Optional] Default : False
         "years" : {'impervious': <YYYY>, 'cover': <YYYY>, 'canopy': <YYYY>}, [Optional] Default is 2016
-        "rain_snow" : True or False, [Optional] Default : False
         "width" : 2000, [Optional] Default : 200
         },
         ...]

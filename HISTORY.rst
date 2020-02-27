@@ -2,18 +2,24 @@
 History
 =======
 
-0.3.1 (2020-02-15)
+0.4.0 (2020-02-26)
 ------------------
 
-* Removed dependencies on retry-requests and streamstats
-* Made download requests more robust
+* An almost complete refactoring of the code base
+* Added new databases: NLDI, NHDPLus V2, OpenTopography, gridded Daymet, and SSEBop
+* The gridded data are returned as xarray DataArrays
+* Removed dependecy on StreamStats and replaced it by NLDI
+* Improved overal robustness and efficiency of the code
+* Not backward comparible
+* Added code style enforcement with isort, black, flake8 and pre-commit
+* Added a new shiny logo!
 
 0.3.0 (2020-02-10)
 ------------------
 
 * Clipped the obtained NLCD data using the watershed geometry
 * Added support for specifying the year for getting NLCD
-* Cut NHDPlus dependency but using StreamStats and USGS APIs
+* Removed direct NHDPlus data download dependency buy using StreamStats and USGS APIs
 * Renamed get_lulc function to get_nlcd
 
 0.2.0 (2020-02-09)
@@ -22,17 +28,8 @@ History
 * Simplified import method
 * Changed usage from `rst` format to `ipynb`
 * Autoo-formatting with the black python package
-
-
-0.1.6 (2020-02-04)
-------------------
-
 * Change docstring format based on Sphinx
 * Fixed pytest warnings and changed its working directory
-
-0.1.5 (2020-02-02)
-------------------
-
 * Added an example notebook with datafiles
 * Added docstring for all the functions
 * Added Module section to the documentation
