@@ -49,12 +49,17 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python package management tool so the dependencies can be installed easily. Hydrodata is pure Python but its dependencies are not. The dependecies can be installed using the ``environment.yml`` file provided in this repository. You can clone the repository or download the file from `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_.
+It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python package management tool so the dependencies can be installed easily. Hydrodata is pure Python but its dependencies are not. Hydrodata and all its dependecies can be installed using the ``environment.yml`` file provided in this repository. You can clone the repository or download the file from `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_.
 
 .. code-block:: console
 
     $ conda env create -f environment.yml
     $ conda activate hydrodata
+
+Or you can install the dependencies manually, then install Hydrodata using ``pip``:
+
+.. code-block:: console
+
     $ pip install hydrodata
 
 Quick Start
