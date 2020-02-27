@@ -30,5 +30,6 @@ table.docutils td {
 img.align-center {
     margin-left: auto;
     margin-right: auto;
+    margin: 0 auto;
     display: block;
 }

@@ -8,13 +8,13 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    id="svg4542"
-   viewBox="0 0 181.93017 181.93015"
+   viewBox="0 0 200.00001 205.96428"
    version="1.1"
-   sodipodi:docname="hydrodata_logo.svg"
-   width="181.93016"
-   height="181.93016"
+   sodipodi:docname="hydrodata_logo_text.svg"
+   width="200"
+   height="205.96429"
    inkscape:version="0.92.3 (2405546, 2018-03-11)"
-   inkscape:export-filename="/home/taher/repos/hydrodata/docs/_static/hydrodata_logo.png"
+   inkscape:export-filename="/home/taher/repos/hydrodata/docs/_static/hydrodata_logo_text.png"
    inkscape:export-xdpi="13.765794"
    inkscape:export-ydpi="13.765794">
   <defs
@@ -71,15 +71,15 @@
      id="namedview3771"
      showgrid="false"
      inkscape:zoom="2.2584558"
-     inkscape:cx="57.177924"
-     inkscape:cy="71.537288"
+     inkscape:cx="57.177926"
+     inkscape:cy="71.537283"
      inkscape:window-x="0"
      inkscape:window-y="25"
      inkscape:window-maximized="0"
      inkscape:current-layer="g4417" />
   <g
      id="layer1"
-     transform="translate(-222.07272,-320.66951)">
+     transform="translate(-216.04528,-320.66951)">
     <g
        id="g4417"
        transform="matrix(4.0034,0,0,4.0034,2687.6,451.03)">
@@ -136,6 +136,18 @@
            inkscape:connector-curvature="0"
            sodipodi:nodetypes="cccc" />
       </g>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-weight:normal;font-size:18.17756462px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#4747a0;fill-opacity:1;stroke:#4747a0;stroke-width:0.51526958;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         x="-617.92108"
+         y="16.582287"
+         id="text849"><tspan
+           sodipodi:role="line"
+           id="tspan847"
+           x="-617.92108"
+           y="16.582287"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10.90653896px;font-family:Rachana;-inkscape-font-specification:Rachana;letter-spacing:1.04520988px;word-spacing:0px;fill:#4747a0;fill-opacity:1;stroke:#4747a0;stroke-width:0.51526958;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           dx="0">Hydrodata</tspan></text>
     </g>
   </g>
   <metadata
