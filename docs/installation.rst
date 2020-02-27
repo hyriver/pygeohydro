@@ -10,20 +10,20 @@ Required dependencies
 - Python (3.6 or later)
 - `numpy <http://www.numpy.org/>`_
 - `pandas <http://pandas.pydata.org/>`__
-    - `tables <https://www.pytables.org/usersguide/tutorials.html`_
+    - `tables <https://www.pytables.org/usersguide/tutorials.html>`_
 - `xarray <https://xarray.pydata.org/en/stable/>`_
-    - `dask <https://dask.org/`_
-    - `netCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html`_
-    - `bottleneck <https://pypi.org/project/Bottleneck/`_
-    - `scipy <https://www.scipy.org/`_
-    - `lxml <https://lxml.de/`_
+    - `dask <https://dask.org/>`_
+    - `netCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
+    - `bottleneck <https://pypi.org/project/Bottleneck/>`_
+    - `scipy <https://www.scipy.org/>`_
+    - `lxml <https://lxml.de/>`_
 - `requests <https://requests.readthedocs.io/en/master/>`_
 - `owslib <https://geopython.github.io/OWSLib/>`_
-- `geopandas <https://geopandas.org/`_
-    - `descartes <https://pypi.org/project/descartes/`_
-    - `geojson <https://pypi.org/project/geojson/`_
+- `geopandas <https://geopandas.org/>`_
+    - `descartes <https://pypi.org/project/descartes/>`_
+    - `geojson <https://pypi.org/project/geojson/>`_
 - `rasterio <https://github.com/mapbox/rasterio>`_
-- `rasterstats <https://pythonhosted.org/rasterstats/`_
+- `rasterstats <https://pythonhosted.org/rasterstats/>`_
 - `matplotlib <http://matplotlib.org/>`_
 - `shapely <https://shapely.readthedocs.io/en/latest/>`_
 
