@@ -29,42 +29,28 @@ class Station:
     """
 
     def __init__(
-        self,
-        start,
-        end,
-        station_id=None,
-        coords=None,
-        data_dir="data",
-        rain_snow=False,
-        tcr=0.0,
-        phenology=False,
-        width=2000,
+        self, start, end, station_id=None, coords=None, data_dir="data", width=2000,
     ):
         """Initialize the instance.
 
-        :param start: The starting date of the time period.
-        :type start: string or datetime
-        :param end: The end of the time period.
-        :type end: string or datetime
-        :param station_id: USGS station ID, defaults to None
-        :type station_id: string, optional
-        :param coords: Longitude and latitude of the point of interest, defaults to None
-        :type coords: tuple, optional
-        :param data_dir: Path to the location of climate data, defaults to 'data'
-        :type data_dir: string or Path, optional
-        :param rain_snow: Wethere to separate snow from precipitation, defaults to False.
-        :type rain_snow: bool, optional
-        :param tcr: Critical temperetature for separating snow from precipitation, defaults to 0 (deg C).
-        :type tcr: float, optional
-        :param width: Width of the geotiff image for LULC in pixels, defaults to 2000 px.
-        :type width: int
+        Parameters
+        ----------
+        start : string or datetime
+            The starting date of the time period.
+        end : string or datetime
+            The end of the time period.
+        station_id : string, optional
+            USGS station ID, defaults to None
+        coords : tuple, optional
+            Longitude and latitude of the point of interest, defaults to None
+        data_dir : string or Path, optional
+            Path to the location of climate data, defaults to 'data'
+        width : int, optional
+            Width of the geotiff image for LULC in pixels, defaults to 2000 px.
         """
 
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
-        self.rain_snow = rain_snow
-        self.tcr = tcr
-        self.phenology = phenology
         self.width = width
 
         self.session = utils.retry_requests()
@@ -98,6 +84,7 @@ class Station:
         print(self.__repr__())
 
     def __repr__(self):
+        """Print the characteristics of the watershed."""
         msg = f"[ID: {self.station_id}] ".ljust(MARGINE) + f"Watershed: {self.name}\n"
         msg += "".ljust(MARGINE) + f"Coordinates: ({self.lon:.3f}, {self.lat:.3f})\n"
         msg += (

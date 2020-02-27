@@ -119,7 +119,7 @@ def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
     Returns
     -------
-        df : Pandas DataFrame
+    Pandas DataFrame
         Climate data for the requested location and variables
     """
 
@@ -237,7 +237,7 @@ def daymet_bygeom(
 
     Returns
     -------
-    data : xarray dataset
+    xarray.DataArray
         The climate data within the requested geometery.
     """
 
@@ -632,7 +632,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
 
     Returns
     -------
-    data : xarray dataset
+    xarray.DataArray
         The actual ET for the requested region.
     """
 
@@ -708,7 +708,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
 
     Returns
     -------
-    data : Pandas DataFrame
+    xarray.DataArray
         The actual ET for the requested region.
     """
 
@@ -737,11 +737,11 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     Download land use, land cover data from NLCD2016 database within
     a given geometry with epsg:4326 projection.
 
-    .. note::
+    Note
+    ----
         NLCD data has a 30 m resolution.
 
-    .. seealso::
-        The following references are used:
+        The following references have been used:
             * https://github.com/jzmiller1/nlcd
             * https://geopython.github.io/OWSLib/
             * https://www.mrlc.gov/data-services-page
@@ -750,16 +750,21 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
             * https://automating-gis-processes.github.io/CSC18/index.html
             * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
 
-    :param geometry: The geometry for extracting the data.
-    :type geometry: Shapely Polygon
-    :param years: The years for NLCD data as a dictionary, defaults to {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
-    :type years: dict, optional
-    :param data_dir: The directory for storing the output ``geotiff`` files.
-    :type data_dir: string or Path
-    :param width: Width of the output image in pixels.
-    :type width: int
-    :returns: Some statistics of the extracted data
-    :type: tuple of three dicts (imprevious, canopy, cover)
+    Parameters
+    ----------
+    geometry : Shapely Polygon
+        The geometry for extracting the data.
+    years : dict, optional
+        The years for NLCD data as a dictionary, defaults to {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
+    data_dir : string or Path, optional
+        The directory for storing the output ``geotiff`` files, defaults to /tmp/
+    width : int, optional
+        Width of the output image in pixels, defaults to 2000 pixels.
+
+    Returns
+    -------
+     tuple of three :obj: `dict` (imprevious, canopy, cover)
+         Some statistics of the extracted data.
     """
     from owslib.wms import WebMapService
     import rasterstats
@@ -983,7 +988,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
 
 
 def dem_bygeom(geometry):
-    """Get DEM data from OpenTopography service.
+    """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
 
     The DEM is extracted from SRTM1 (30-m resolution) database.
 
@@ -994,7 +999,8 @@ def dem_bygeom(geometry):
 
     Returns
     -------
-    ds : xarray DataArray
+    xarray.DataArray
+        DEM in meters.
     """
 
     import rasterio

@@ -23,15 +23,16 @@ def retry_requests(
 
     Parameters
     ---------
-    retries: int
+    retries : int
         The number of maximum retries before raising an exception.
-    backoff_factor: float
+    backoff_factor : float
         A factor used to compute the waiting time between retries.
-    status_to_retry: tuple of ints
+    status_to_retry : tuple of ints
         A tuple of status codes that trigger the reply behaviour.
 
     Returns
     -------
+    session
         A session object with the retry setup.
     """
 
@@ -135,62 +136,12 @@ def batch(stations):
     return data_dirs
 
 
-def open_workspace(data_dir):
-    """Open a hydrodata workspace using the root of data directory."""
-    import xarray as xr
-
-    # from hydrodata import Station
-    import json
-    import geopandas as gpd
-
-    dirs = Path(data_dir).glob("*")
-    stations = {}
-    for d in dirs:
-        if d.is_dir() and d.name.isdigit():
-            wshed_file = d.joinpath("watershed.json")
-            try:
-                with open(wshed_file, "r") as fp:
-                    watershed = json.load(fp)
-                    gdf = None
-                    for dictionary in watershed["featurecollection"]:
-                        if dictionary.get("name", "") == "globalwatershed":
-                            gdf = gpd.GeoDataFrame.from_features(dictionary["feature"])
-
-                    if gdf is None:
-                        raise LookupError(
-                            f"Could not find 'globalwatershed' in the {wshed_file}."
-                        )
-
-                    wshed_params = watershed["parameters"]
-                    geometry = gdf.geometry.values[0]
-            except FileNotFoundError:
-                raise FileNotFoundError(f"{wshed_file} file cannot be found in {d}.")
-
-            climates = []
-            for clm in d.glob("*.nc"):
-                climates.append(xr.open_dataset(clm))
-
-            if len(climates) == 0:
-                raise FileNotFoundError(f"No climate data file (*.nc) exits in {d}.")
-
-            stations[d.name] = {
-                "wshed_params": wshed_params,
-                "geometry": geometry,
-                "climates": climates,
-            }
-    if len(stations) == 0:
-        print(f"No data was found in {data_dir}")
-        return
-    else:
-        return stations
-
-
 def daymet_dates(start, end):
     """Correct dates for Daymet when leap years.
 
     Daymet doesn't account for leap years and removes
     Dec 31 when it's leap year. This function returns all
-    the dates in the Daymet database within the provided year.
+    the dates in the Daymet database within the provided date range.
     """
 
     period = pd.date_range(start, end)
@@ -215,7 +166,7 @@ def get_elevation(lon, lat):
 
     Returns
     -------
-    elevation : float
+    float
         Elevation in meter
     """
 
@@ -253,8 +204,8 @@ def get_elevation_bybbox(bbox, coords):
 
     Returns
     -------
-    elevations : array
-        A numpy array of elevations in meter
+    array_like
+        A numpy array of elevations in meters
     """
 
     import rasterio
