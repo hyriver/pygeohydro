@@ -4,6 +4,14 @@ hydrodata package
 Submodules
 ----------
 
+hydrodata.datasets module
+-------------------------
+
+.. automodule:: hydrodata.datasets
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 hydrodata.hydrodata module
 --------------------------
 
@@ -12,26 +20,10 @@ hydrodata.hydrodata module
    :undoc-members:
    :show-inheritance:
 
-hydrodata.nlcd\_helper module
------------------------------
+hydrodata.plot module
+---------------------
 
-.. automodule:: hydrodata.nlcd_helper
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-hydrodata.plotter module
-------------------------
-
-.. automodule:: hydrodata.plotter
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-hydrodata.streamstats module
-----------------------------
-
-.. automodule:: hydrodata.streamstats
+.. automodule:: hydrodata.plot
    :members:
    :undoc-members:
    :show-inheritance:

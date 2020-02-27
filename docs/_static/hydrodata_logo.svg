@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="svg4542"
+   viewBox="0 0 181.93017 181.93015"
+   version="1.1"
+   sodipodi:docname="hydrodata_logo.svg"
+   width="181.93016"
+   height="181.93016"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)"
+   inkscape:export-filename="/home/taher/repos/hydrodata/docs/_static/hydrodata_logo.png"
+   inkscape:export-xdpi="13.765794"
+   inkscape:export-ydpi="13.765794">
+  <defs
+     id="defs3773">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath5591">
+      <rect
+         style="opacity:0.41199999;fill:#e2ddfb;fill-opacity:1;stroke-width:0.22883683"
+         id="rect5593"
+         width="25.730032"
+         height="60.141014"
+         x="-588.9776"
+         y="-44.976849" />
+    </clipPath>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter6688"
+       x="-0.102"
+       width="1.204"
+       y="-0.102"
+       height="1.204">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="1.9676752"
+         id="feGaussianBlur6690" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter7623"
+       x="-0.029949185"
+       width="1.0598984"
+       y="-0.012866499"
+       height="1.025733">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="1.082679"
+         id="feGaussianBlur7625" />
+    </filter>
+  </defs>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1055"
+     id="namedview3771"
+     showgrid="false"
+     inkscape:zoom="2.2584558"
+     inkscape:cx="57.177924"
+     inkscape:cy="71.537288"
+     inkscape:window-x="0"
+     inkscape:window-y="25"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="g4417" />
+  <g
+     id="layer1"
+     transform="translate(-222.07272,-320.66951)">
+    <g
+       id="g4417"
+       transform="matrix(4.0034,0,0,4.0034,2687.6,451.03)">
+      <g
+         id="g845"
+         transform="matrix(0.81523862,0,0,0.81523862,-113.23409,0.17593806)"
+         inkscape:export-xdpi="96"
+         inkscape:export-ydpi="96">
+        <circle
+           style="fill:#62a2fb;fill-opacity:1;stroke-width:0.24978767"
+           id="circle5788"
+           cx="-588.66473"
+           cy="-12.286409"
+           r="25.417204" />
+        <path
+           inkscape:connector-curvature="0"
+           id="path4588"
+           d="m -588.6646,-35.435617 a 23.149198,23.149198 0 0 0 -23.14934,23.149341 23.149198,23.149198 0 0 0 23.14934,23.148899 23.149198,23.149198 0 0 0 23.1489,-23.148899 23.149198,23.149198 0 0 0 -23.1489,-23.149341 z m 0,2.849068 a 20.300067,20.300067 0 0 1 20.29983,20.300273 20.300067,20.300067 0 0 1 -20.29983,20.2998303 20.300067,20.300067 0 0 1 -20.30028,-20.2998303 20.300067,20.300067 0 0 1 20.30028,-20.300273 z"
+           style="fill:#f4f8ff;fill-opacity:1;stroke-width:0.22749886;filter:url(#filter6688)" />
+        <path
+           inkscape:connector-curvature="0"
+           transform="matrix(0.24978768,0,0,0.24978768,-614.08194,-37.703614)"
+           id="path7210"
+           d="m 62.738281,-0.30859375 c 0,0 -7.398506,73.54221675 18.619141,100.97656375 -26.01767,27.43433 -18.619141,100.97656 -18.619141,100.97656 0,0 -1.649814,-90.43447 42.408199,-90.81836 44.05802,0.38389 42.40821,90.81836 42.40821,90.81836 0,0 7.3985,-73.54222 -18.61914,-100.97656 26.01762,-27.434363 18.61914,-100.97656375 18.61914,-100.97656375 0,0 1.64981,90.43642675 -42.40821,90.82031275 C 61.088467,90.127833 62.738281,-0.30859375 62.738281,-0.30859375 Z"
+           style="fill:none;fill-opacity:1;stroke:#b0d0fd;stroke-width:2;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;filter:url(#filter7623)" />
+        <path
+           style="fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.06161334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           d="m -598.41089,-37.780463 c 0,0 -2.79724,27.804869 10.59314,27.759668 0.0382,-1.691802 0,-2.386861 0,-5.074299 -11.00515,-0.09589 -10.59314,-22.685369 -10.59314,-22.685369 z"
+           id="path6724"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="cccc" />
+        <path
+           sodipodi:nodetypes="cccc"
+           inkscape:connector-curvature="0"
+           id="path6728"
+           d="m -598.41089,12.664574 c 0,0 -2.79724,-27.804869 10.59314,-27.759668 0.0382,1.691802 0,2.386861 0,5.074299 -11.00515,0.09589 -10.59314,22.685369 -10.59314,22.685369 z"
+           style="fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.06161334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+        <path
+           sodipodi:nodetypes="sssss"
+           d="m -598.21406,-24.860347 c -7.26989,0 19.30868,1.946631 19.30868,12.609931 0,10.6633004 -26.57867,12.53807015 -19.30868,12.53807015 7.2699,0 23.15063,-1.87406915 23.15063,-12.53807015 0,-10.663 -15.88062,-12.609931 -23.15063,-12.609931 z"
+           id="path4584"
+           inkscape:connector-curvature="0"
+           style="fill:#b8e092;fill-opacity:1" />
+        <path
+           sodipodi:nodetypes="cccc"
+           inkscape:connector-curvature="0"
+           id="path6722"
+           d="m -577.22461,-37.780463 c 0,0 2.79724,27.804869 -10.59314,27.759668 -0.0382,-1.691802 0,-2.386861 0,-5.074299 11.00515,-0.09589 10.59314,-22.685369 10.59314,-22.685369 z"
+           style="fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.06161334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+        <path
+           style="fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.06161334px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+           d="m -577.22461,12.664574 c 0,0 2.79724,-27.804869 -10.59314,-27.759668 -0.0382,1.691802 0,2.386861 0,5.074299 11.00515,0.09589 10.59314,22.685369 10.59314,22.685369 z"
+           id="path6726"
+           inkscape:connector-curvature="0"
+           sodipodi:nodetypes="cccc" />
+      </g>
+    </g>
+  </g>
+  <metadata
+     id="metadata3768">
+    <rdf:RDF>
+      <cc:Work>
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <cc:license
+           rdf:resource="http://creativecommons.org/publicdomain/zero/1.0/" />
+        <dc:publisher>
+          <cc:Agent
+             rdf:about="http://openclipart.org/">
+            <dc:title>Openclipart</dc:title>
+          </cc:Agent>
+        </dc:publisher>
+        <dc:title></dc:title>
+        <dc:date>2013-10-06T13:49:20</dc:date>
+        <dc:description>umbrella pictogram</dc:description>
+        <dc:source>https://openclipart.org/detail/184614/umbrella-by-harini-184614</dc:source>
+        <dc:creator>
+          <cc:Agent>
+            <dc:title>harini</dc:title>
+          </cc:Agent>
+        </dc:creator>
+        <dc:subject>
+          <rdf:Bag>
+            <rdf:li>Umbrella</rdf:li>
+          </rdf:Bag>
+        </dc:subject>
+      </cc:Work>
+      <cc:License
+         rdf:about="http://creativecommons.org/publicdomain/zero/1.0/">
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Reproduction" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#Distribution" />
+        <cc:permits
+           rdf:resource="http://creativecommons.org/ns#DerivativeWorks" />
+      </cc:License>
+    </rdf:RDF>
+  </metadata>
+</svg>
