@@ -11,7 +11,7 @@ from hydrodata import utils
 def signatures(
     Q_daily, prcp=None, title=None, figsize=(13, 13), threshold=1e-3, output=None,
 ):
-    """Plot hydrological signatures with w/ and w/o precipitation.
+    """Plot hydrological signatures with w/ or w/o precipitation.
 
     Plots includes daily, monthly and annual hydrograph as well as
     regime curve (mean monthly) and flow duration curve. The input
@@ -24,16 +24,18 @@ def signatures(
         The first element is a series containing daily discharges in m$^3$/s
         and the second element is the contributing drainage area in km$^2$.
         The dict keys are the labels on the plot.
-    prcp : series
+    prcp : series, optional
         Daily precipitation time series in mm/day. If given, the data is
         plotted on the second x-axis at the top.
-    figsize : tuple
-        Width and height of the plot in inches. The default is (8, 10)
-    threshold : float
+    title : str, optional
+        The plot supertitle.
+    figsize : tuple, optional
+        Width and height of the plot in inches, defaults to (13, 13) inches.
+    threshold : float, optional
         The threshold for cutting off the discharge for the flow duration
-        curve to deal with log 0 issue. The default is 1e-3.
-    output : string
-        Path to save the plot as png. The default is `None` which means
+        curve to deal with log 0 issue, defaults to 1e-3 mm/day.
+    output : string, optional
+        Path to save the plot as png, defaults to `None` which means
         the plot is not saved to a file.
     """
     import matplotlib.pyplot as plt
