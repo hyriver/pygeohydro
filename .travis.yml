@@ -1,27 +1,38 @@
-# Config file for automatic testing at travis-ci.org
-
 language: python
 python:
   - 3.8
   - 3.7
   - 3.6
 
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install -U tox-travis
+install:
+  - sudo apt-get update
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - sed -i -E 's/(python>=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment.yml
+  - sed -i 's/python>=/python=/' ./environment.yml
+  - sed -i '/cartopy/d' environment.yml
+  - conda env create -f environment.yml
+  - conda activate hydrodata
+  - conda install -c conda-forge --file requirements_dev.txt
+  - python setup.py install
+  - pip install -U tox-travis
 
-# Command to run tests, e.g. python setup.py test
 script: tox
 
-# Assuming you have installed the travis-ci CLI tool, after you
-# create the Github repo and add it to Travis, run the
-# following command to finish PyPI deployment setup:
-# $ travis encrypt --add deploy.password
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
+
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
   user: tchegini
   password:
-    secure: PLEASE_REPLACE_ME
+    secure: GbJxeo0+CGm1nE4p4vCU5jt8ZlFpNYhgt/iHA6bF1T0YOp5OqoQtPQ3HwObcMNOzXP3YsJW67hI4BHbK44D1M/EGOIxnGeAvPxsDALl7fEOD4cPVBFMG789FFJ+S5va0AC+L3vq/Xaa/jVRGLavp7pN3sx5KokgPE+BCSPrtGYBJcmXRbEPWABZtWEaCi6fuV2E4Kf3e1KXVKxOay44hneJ0C01LLZgIvMqyAmK/e4ObBL1kR7s9424ZTRmF8QpCRivSbSeAl07z66SFvHMNGB0dtXCNqXcTU27eXXHo4N1KOD5/lkbV/oaPoq2diEbO8ZK0LzMEBYlklRibmQGuX8oglgVQ0SErJjUZUNJMewOnu391mGJV4uMPikK6eTl6RG+wc8dO1rDC/O0xyqSO8/IRzFizWOZlcMVzSaFnFsDLlYN5PKTQ2IJtJCpDq110e5A6326+DOlbAcdeL2LgVPVZvQutJPTUoEwQ5UhBZC58VnjiStAxYDEAJy4RDeWdRP3NkHnUVB4gBIQWHVmQPgevVfs3f4hU8GX/o5AwDyvT073OXaSZy0fN1AQV1eieA7NmujVWAbfdwLraJ9ui/bBYc+uKoY2fKHHTERnh1p/fEnoFfaEmOSMBmseOg/3xUzpUdFe10qbalDQEcCRaUQx4IbkLWDYkAyD7wsvAQYQ=
   on:
     tags: true
     repo: cheginit/hydrodata
@@ -29,3 +40,4 @@ deploy:
 
 notifications:
   email: false
+
