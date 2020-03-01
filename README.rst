@@ -82,7 +82,7 @@ DEM can be retrieved for the station's contributing watershed as follows:
 
     dem = hds.dem_bygeom(wshed.geometry)
 
-Then, we can get climate data and streamflow observations:
+The climate data and streamflow observations for the location of interest can be retriived as well:
 
 .. code-block:: python
 
@@ -97,21 +97,20 @@ The watershed geometry can be used to mask the gridded data:
     clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31', variables=variables, pet=True)
     eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
 
-We can also easily find all or within certain distance USGS stations up- or downstream of the watershed outlet:
+We can also find all or within certain distance USGS stations up- or downstream of the watershed outlet:
 
 .. code-block:: python
 
     stations = wshed.watershed.get_stations()
     stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets with efficient data processing tools. Hydrodata also has a function called ``plot.signatures`` that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
 
 .. code-block:: python
 
     from hydrodata import plot
 
     plot.signatures(clm_loc['Q (cms)'], wshed.drainage_area, prcp=clm_loc['prcp (mm/day)'], title=wshed.name)
-    clm_grd.isel(time=1).tmin.plot(aspect=2, size=8)
     eta_grd.isel(time=4).eta.plot(size=8)
     
     ax = wshed.watershed.basin.plot(color='white', edgecolor='black', zorder=1, figsize = (10, 10))
