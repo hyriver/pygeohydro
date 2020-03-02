@@ -399,27 +399,115 @@ def daymet_bygeom(
     return data
 
 
+def nhdplus_bybox(bbox, layer="nhdflowline_network"):
+    """Get NHDPlus flowline database within a bounding box.
+
+    Parameters
+    ----------
+    bbox : list
+        The bounding box for the region of interest, defaults to None. The list
+        should provide the corners in this order:
+        [west, south, east, north]
+    layer : string, optional
+        The NHDPlus layer to be downloaded. Valid layers are:
+        nhdarea, nhdwaterbody, catchmentsp, and nhdflowline_network
+
+    Returns
+    -------
+    GeoDataFrame
+    """
+    valid_layers = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
+    if layer not in valid_layers:
+        msg = f"The provided layer, {layer}, is not valid."
+        msg += f"Valid layers are {', '.join(x for x in valid_layers)}"
+        raise ValueError(msg)
+
+    if not isinstance(bbox, list) and not isinstance(bbox, tuple):
+        raise TypeError(
+            "The bounding box should be a list or tuple. [west, south, east, north]"
+        )
+
+    if any((i > 180.0) or (i < -180.0) for i in bbox):
+        raise ValueError("bbox should be provided in lat/lon coordinates.")
+
+    cnt = ((bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5)
+    print(
+        f"[CNT: ({cnt[0]:.3f}, {cnt[1]:.3f})] ".ljust(MARGINE)
+        + f"Downloading NHDPlus flowlines by BBOX using NLDI",
+        end=" >>> ",
+    )
+
+    url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
+    filter_xml = "".join(
+        [
+            '<?xml version="1.0"?>',
+            '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
+            '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
+            layer,
+            '" srsName="EPSG:4326">',
+            '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
+            "<ogc:BBOX>",
+            "<ogc:PropertyName>the_geom</ogc:PropertyName>",
+            "<gml:Envelope>",
+            "<gml:lowerCorner>",
+            f"{bbox[1]:.6f}",
+            " ",
+            f"{bbox[0]:.6f}",
+            "</gml:lowerCorner>",
+            "<gml:upperCorner>",
+            f"{bbox[3]:.6f}",
+            " ",
+            f"{bbox[2]:.6f}",
+            "</gml:upperCorner>",
+            "</gml:Envelope>",
+            "</ogc:BBOX>",
+            "</ogc:Filter>",
+            "</wfs:Query>",
+            "</wfs:GetFeature>",
+        ]
+    )
+    session = utils.retry_requests()
+    try:
+        r = session.post(url, data=filter_xml)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+
+    gdf = gpd.GeoDataFrame.from_features(r.json())
+    try:
+        gdf.set_index("comid", inplace=True)
+    except KeyError:
+        raise KeyError(
+            f"No flowlines was found in the box ({', '.join(str(round(x, 3)) for x in bbox)})"
+        )
+    print("finished.")
+    return gdf
+
+
 class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
     def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
         """Intialize NLCD.
 
+        Note
+        ----
+        Either station ID or bbox should be provided.
+
         Parameters
         ----------
         station_id : string
-            USGS station ID
-        navigation : string
+            USGS station ID, defaults to None.
+        navigation : string, optional
             Navigation option for delineating the watershed. Options are:
             upstreamMain, upstreamTributaries, downstreamMain, downstreamDiversions
-            The default is upstreamTributaries.
-        distance : int
+            Defaults to upstreamTributaries.
+        distance : int, optional
             Distance in km for finding USGS stations along the flowlines
             based on the navigation option.
-            Default is None that finds all the stations.
+            Defaults to None that finds all the stations.
         """
 
-        self.station_id = station_id
+        self.station_id = str(station_id)
         self.distance = None if distance is None else str(int(distance))
 
         self.nav_options = {
@@ -581,65 +669,6 @@ class NLDI:
         )
 
         filter_xml = "".join([filter_1, filter_2.join(comids), filter_3])
-        try:
-            r = self.session.post(url, data=filter_xml)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.set_index("comid", inplace=True)
-        print("finished.")
-        return gdf
-
-    def get_nhdplus_bybox(self, geom=None, layer="nhdflowline_network"):
-        """Get NHDPlus flowline database within a bounding box."""
-        valid_layers = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
-        if layer not in valid_layers:
-            msg = f"The provided layer, {layer}, is not valid."
-            msg += f"Valid layers are {', '.join(x for x in valid_layers)}"
-            raise ValueError(msg)
-
-        if geom is None:
-            geom = self.basin.bounds.values[0]
-
-        if any((i > 180.0) or (i < -180.0) for i in geom):
-            raise ValueError("geom should be provided in lat/lon coordinates.")
-
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading flowlines by BBOX from NLDI",
-            end=" >>> ",
-        )
-
-        url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
-        filter_xml = "".join(
-            [
-                '<?xml version="1.0"?>',
-                '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
-                '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
-                layer,
-                '" srsName="EPSG:4326">',
-                '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
-                "<ogc:geom>",
-                "<ogc:PropertyName>the_geom</ogc:PropertyName>",
-                "<gml:Envelope>",
-                "<gml:lowerCorner>",
-                str(geom[1]),
-                " ",
-                str(geom[0]),
-                "</gml:lowerCorner>",
-                "<gml:upperCorner>",
-                str(geom[3]),
-                " ",
-                str(geom[2]),
-                "</gml:upperCorner>",
-                "</gml:Envelope>",
-                "</ogc:geom>",
-                "</ogc:Filter>",
-                "</wfs:Query>",
-                "</wfs:GetFeature>",
-            ]
-        )
         try:
             r = self.session.post(url, data=filter_xml)
         except HTTPError or ConnectionError or Timeout or RequestException:
