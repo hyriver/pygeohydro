@@ -1035,7 +1035,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     return stats
 
 
-def dem_bygeom(geometry, demtype="SRTMGL1"):
+def dem_bygeom(geometry, demtype="SRTMGL1", upscale_factor=None):
     """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
 
     Parameters
@@ -1046,6 +1046,10 @@ def dem_bygeom(geometry, demtype="SRTMGL1"):
         The type of DEM to be downloaded, default to SRTMGL1 for 30 m resolution.
         Available options are 'SRTMGL3' for SRTM GL3 (90m) and 'SRTMGL1' for
         SRTM GL1 (30m).
+    upscale_factor : float
+        The factor for resampling the data using bilinear method. More than 1
+        converts to coarser resolution and smaller than one to higher resolution,
+        defaults to no resampling.
 
     Returns
     -------
@@ -1056,11 +1060,17 @@ def dem_bygeom(geometry, demtype="SRTMGL1"):
     import rasterio
     import rasterio.mask
     from shapely.geometry import Polygon
+    from rasterio.enums import Resampling
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
 
+    # the extend should be square for resampling
     west, south, east, north = geometry.bounds
+    rad = max(abs(west - east), abs(north - south))
+    west, east = geometry.centroid.x - rad, geometry.centroid.x + rad
+    south, north = geometry.centroid.y - rad, geometry.centroid.y + rad
+
     url = "http://opentopo.sdsc.edu/otr/getdem?"
     payload = dict(
         demtype=demtype,
@@ -1086,9 +1096,39 @@ def dem_bygeom(geometry, demtype="SRTMGL1"):
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
         with memfile.open() as src:
-            ras_msk, _ = rasterio.mask.mask(src, [geometry])
-            nodata = src.nodata
-            with xr.open_rasterio(src) as ds:
+            if upscale_factor is not None:
+                out_shape = (
+                    int(src.height / upscale_factor),
+                    int(src.width / upscale_factor),
+                )
+                data = np.array(
+                    [src.read(1, out_shape=out_shape, resampling=Resampling.bilinear)]
+                )
+                transform = src.transform * src.transform.scale(
+                    (src.width / out_shape[1]), (src.height / out_shape[0])
+                )
+                out_meta = src.meta
+                out_meta.update(
+                    {
+                        "driver": "GTiff",
+                        "height": out_shape[1],
+                        "width": out_shape[0],
+                        "transform": transform,
+                    }
+                )
+
+                with rasterio.open("/tmp/resampled.tif", "w", **out_meta) as dest:
+                    dest.write(data)
+
+                with rasterio.open("/tmp/resampled.tif") as dest:
+                    ras_msk, _ = rasterio.mask.mask(dest, [geometry])
+                    nodata = dest.nodata
+                    dest = "/tmp/resampled.tif"
+            else:
+                ras_msk, _ = rasterio.mask.mask(src, [geometry])
+                nodata = src.nodata
+                dest = src
+            with xr.open_rasterio(dest) as ds:
                 ds.data = ras_msk
                 msk = ds < nodata if nodata > 0.0 else ds > nodata
                 ds = ds.where(msk, drop=True)
