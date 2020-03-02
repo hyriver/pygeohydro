@@ -40,4 +40,3 @@ dependencies:
   - pip:
     - rasterstats
     - tables
-    - hydrodata
