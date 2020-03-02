@@ -17,7 +17,7 @@ import xarray as xr
 MARGINE = 15
 
 
-def nwis(station_id, start, end):
+def nwis(station_id, start, end, raw=False):
     """Get daily streamflow observation data from USGS.
 
     Parameters
@@ -28,6 +28,10 @@ def nwis(station_id, start, end):
         Start date
     end : string or datetime
         End date
+    raw : bool
+        Whether to return the raw data without cleanup as a Dataframe or
+        remove all the columns except for ``qobs`` as a Series, default to
+        False.
 
     Returns
     -------
@@ -77,7 +81,12 @@ def nwis(station_id, start, end):
             + f"Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
         )
         raise IndexError(msg)
+
     df = pd.DataFrame.from_dict(ts, orient="columns")
+
+    if raw:
+        return df
+
     try:
         df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
     except KeyError:
