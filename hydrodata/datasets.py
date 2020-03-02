@@ -217,7 +217,13 @@ def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
 
 def daymet_bygeom(
-    geometry, start=None, end=None, years=None, variables=None, pet=False
+    geometry,
+    start=None,
+    end=None,
+    years=None,
+    variables=None,
+    pet=False,
+    upscale_factor=None,
 ):
     """Gridded data from the Daymet database.
 
@@ -243,6 +249,10 @@ def daymet_bygeom(
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
+    upscale_factor : float
+        The factor for resampling the data using bilinear method. More than 1
+        converts to coarser resolution and smaller than one to higher resolution,
+        defaults to no resampling.
 
     Returns
     -------
@@ -396,6 +406,12 @@ def daymet_bygeom(
         return xr.apply_ufunc(_within, da.lon, da.lat, kwargs={"g": shape})
 
     data = data.where(within(data, geometry), drop=True)
+
+    if upscale_factor is not None:
+        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // upscale_factor)
+        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // upscale_factor)
+        data = data.interp(x=new_x, y=new_y, method="linear")
+
     return data
 
 
