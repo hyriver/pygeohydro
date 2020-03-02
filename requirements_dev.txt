@@ -1,4 +1,5 @@
 black
+jupyterlab
 bump2version
 wheel
 watchdog
@@ -15,5 +16,5 @@ pytest-cov
 pytest-xdist
 codecov
 numpydoc
-mypy==0.761
+mypy
 pre-commit
