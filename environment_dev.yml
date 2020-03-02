@@ -1,6 +1,6 @@
 name: hydrodata
 channels:
-  - conda-forge
+  - defaults
 dependencies:
   - python>=3.6
   - pip
@@ -16,27 +16,28 @@ dependencies:
   - bottleneck
   - lxml
   - geopandas
-  - geojson
-  - black
   - jupyterlab
-  - bump2version
-  - wheel
-  - watchdog
-  - flake8
-  - sphinx
-  - sphinx_rtd_theme
-  - sphinx-copybutton
-  - nbsphinx
-  - twine
-  - tox
-  - coverage
-  - pytest-runner
-  - pytest-cov
-  - pytest-xdist
-  - codecov
-  - numpydoc
-  - mypy=0.761
-  - pre-commit
   - pip:
+    - pyproj
+    - bump2version
+    - wheel
+    - watchdog
+    - flake8
+    - sphinx
+    - sphinx_rtd_theme
+    - sphinx-copybutton
+    - nbsphinx
+    - twine
+    - tox
+    - coverage
+    - pytest-runner
+    - pytest-cov
+    - pytest-xdist
+    - codecov
+    - numpydoc
+    - mypy==0.761
+    - pre-commit
+    - geojson
+    - black
     - rasterstats
     - tables
