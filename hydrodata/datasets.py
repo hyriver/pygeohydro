@@ -331,18 +331,48 @@ def daymet_bygeom(
                 )
             )
     session = utils.retry_requests()
-    ds_list = []
-    for url in urls:
+
+    try:
+        r = session.get(urls[0])
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+    data = xr.open_dataset(r.content)
+
+    for url in urls[1:]:
         try:
             r = session.get(url)
         except HTTPError or ConnectionError or Timeout or RequestException:
             raise
-        ds_list.append(xr.open_dataset(r.content))
+        data = xr.merge([data, xr.open_dataset(r.content)])
 
-    data = xr.merge(ds_list)
     for k, v in units.items():
         if k in variables:
             data[k].attrs["units"] = v
+
+    data = data.drop_vars(["lambert_conformal_conic"])
+    data.attrs[
+        "crs"
+    ] = "+proj=lcc +lon_0=-100 +lat_0=42.5 +lat_1=25 +lat_2=60 +ellps=WGS84"
+
+    x_res, y_res = float(data.x.diff("x").min()), float(data.y.diff("y").min())
+    x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
+    y_origin = data.y.values[0] - y_res / 2.0  # PixelAsArea Convention
+
+    transform = (x_res, 0, x_origin, 0, y_res, y_origin)
+
+    x_end = x_origin + data.dims.get("x") * x_res
+    y_end = y_origin + data.dims.get("y") * y_res
+    x_options = np.array([x_origin, x_end])
+    y_options = np.array([y_origin, y_end])
+
+    data.attrs["transform"] = transform
+    data.attrs["res"] = (x_res, y_res)
+    data.attrs["bounds"] = (
+        x_options.min(),
+        y_options.min(),
+        x_options.max(),
+        y_options.max(),
+    )
 
     print("finished.")
 
