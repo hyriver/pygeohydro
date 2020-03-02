@@ -10,7 +10,6 @@ dependencies:
   - matplotlib
   - descartes
   - xarray
-  - cartopy
   - dask
   - netCDF4
   - bottleneck
