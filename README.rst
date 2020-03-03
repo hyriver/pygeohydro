@@ -36,7 +36,9 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for USGS stations' daily streamflow observations
 * `OpenTopography <https://opentopography.org/>`_ for Digital Elevation Model
 
-Additionally, the function for getting Daymet data offers a flag for computing Potential Evapotranspiration (PET) using the retrieved climate data. PET is computed based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
+The gridded data can be resampled to coarser or finer resolutions via the ``upscale_factor`` argument. The **resampling** is carried out using the **bilinear** method for continuous spatial data such as climate data and the **majority** method for discrete data such as land cover.
+
+Additionally, the function for getting Daymet data offers a flag for computing **Potential Evapotranspiration** (PET) using the retrieved climate data. PET is computed based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
 
 Requests for additional databases or functionalities can be submitted via `issues <https://github.com/cheginit/hydrodata/issues>`_.
 
@@ -75,6 +77,13 @@ With just a few lines of code, Hydrodata provides easy access to a handful of da
     lon, lat = -69.32, 45.17
     start, end = '2000-01-01', '2010-01-21'
     wshed = Station(start, end, coords=(lon, lat))
+
+Using the retrieved information such as the watershed geometry we can then use the `datasets` module to access other databases. For example, we can find the USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km. Also, all the USGS stations inside the watershed can be found:
+
+.. code-block:: python
+
+    stations = wshed.watershed.get_stations()
+    stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
     
 DEM can be retrieved for the station's contributing watershed as follows:
 
@@ -82,14 +91,14 @@ DEM can be retrieved for the station's contributing watershed as follows:
 
     dem = hds.dem_bygeom(wshed.geometry)
 
-Then, we can get climate data and streamflow observations:
+We can also get climate data and streamflow observations for the selected location:
 
 .. code-block:: python
 
     clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
     clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
 
-The watershed geometry can be used to mask the gridded data:
+Other than point-based data, gridded data can also be accessed. Furthermore, the watershed geometry can be used to mask the gridded data:
 
 .. code-block:: python
 
@@ -97,14 +106,7 @@ The watershed geometry can be used to mask the gridded data:
     clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31', variables=variables, pet=True)
     eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
 
-We can also easily find all or within certain distance USGS stations up- or downstream of the watershed outlet:
-
-.. code-block:: python
-
-    stations = wshed.watershed.get_stations()
-    stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
-
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets with efficient data processing tools. Hydrodata also has a function called ``plot.signatures`` that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that offers efficient data processing tools. Hydrodata also has a function called ``signatures`` that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
 
 .. code-block:: python
 
