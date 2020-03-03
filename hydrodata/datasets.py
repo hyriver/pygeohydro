@@ -863,7 +863,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     return data
 
 
-def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
+def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None):
     """Get data from NLCD 2016 database.
 
     Download land use, land cover data from NLCD2016 database within
@@ -892,6 +892,10 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
         The directory for storing the output ``geotiff`` files, defaults to /tmp/
     width : int, optional
         Width of the output image in pixels, defaults to 2000 pixels.
+    upscale_factor : float
+        The factor for resampling the data using bilinear method. More than 1
+        converts to coarser resolution and smaller than one to higher resolution,
+        defaults to no resampling.
 
     Returns
     -------
@@ -902,6 +906,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
     import rasterstats
     from shapely.geometry import Polygon
     import os
+    from rasterio.enums import Resampling
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
@@ -1067,18 +1072,61 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000):
             with rasterio.MemoryFile() as memfile:
                 memfile.write(img.read())
                 with memfile.open() as src:
-                    out_image, out_transform = rasterio.mask.mask(
-                        src, [geometry], crop=True
-                    )
-                    out_meta = src.meta
-                    out_meta.update(
-                        {
-                            "driver": "GTiff",
-                            "height": out_image.shape[1],
-                            "width": out_image.shape[2],
-                            "transform": out_transform,
-                        }
-                    )
+                    if upscale_factor is not None:
+                        out_shape = (
+                            int(src.height / upscale_factor),
+                            int(src.width / upscale_factor),
+                        )
+                        if data_type == "cover":
+                            resampling = Resampling.med
+                        else:
+                            resampling = Resampling.bilinear
+
+                        out_image = np.array(
+                            [src.read(1, out_shape=out_shape, resampling=resampling)]
+                        )
+                        out_transform = src.transform * src.transform.scale(
+                            (src.width / out_shape[1]), (src.height / out_shape[0])
+                        )
+                        out_meta = src.meta
+                        out_meta.update(
+                            {
+                                "driver": "GTiff",
+                                "height": out_shape[1],
+                                "width": out_shape[0],
+                                "transform": out_transform,
+                            }
+                        )
+
+                        with rasterio.open(data_path, "w", **out_meta) as dest:
+                            dest.write(out_image)
+
+                        with rasterio.open(data_path) as dest:
+                            out_image, out_transform = rasterio.mask.mask(
+                                dest, [geometry], crop=True
+                            )
+                            out_meta = dest.meta
+                            out_meta.update(
+                                {
+                                    "driver": "GTiff",
+                                    "height": out_image.shape[1],
+                                    "width": out_image.shape[2],
+                                    "transform": out_transform,
+                                }
+                            )
+                    else:
+                        out_image, out_transform = rasterio.mask.mask(
+                            src, [geometry], crop=True
+                        )
+                        out_meta = src.meta
+                        out_meta.update(
+                            {
+                                "driver": "GTiff",
+                                "height": out_image.shape[1],
+                                "width": out_image.shape[2],
+                                "transform": out_transform,
+                            }
+                        )
             with rasterio.open(data_path, "w", **out_meta) as dest:
                 dest.write(out_image)
 
