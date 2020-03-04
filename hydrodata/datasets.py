@@ -223,7 +223,7 @@ def daymet_bygeom(
     years=None,
     variables=None,
     pet=False,
-    upscale_factor=None,
+    resolution=None,
 ):
     """Gridded data from the Daymet database.
 
@@ -249,10 +249,9 @@ def daymet_bygeom(
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
-    upscale_factor : float
-        The factor for resampling the data using bilinear method. More than 1
-        converts to coarser resolution and smaller than one to higher resolution,
-        defaults to no resampling.
+    resolution : float
+        The desired output resolution for the output in decimal degree.,
+        defaults to no resampling. The resampling is done using bilinear method
 
     Returns
     -------
@@ -407,9 +406,10 @@ def daymet_bygeom(
 
     data = data.where(within(data, geometry), drop=True)
 
-    if upscale_factor is not None:
-        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // upscale_factor)
-        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // upscale_factor)
+    if resolution is not None:
+        fac = resolution * 3600.0 / 30.0  # from degree to 1 km.
+        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // fac)
+        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // fac)
         data = data.interp(x=new_x, y=new_y, method="linear")
 
     return data
@@ -863,7 +863,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     return data
 
 
-def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None):
+def NLCD(geometry, years=None, data_dir="/tmp", width=2000, resolution=None):
     """Get data from NLCD 2016 database.
 
     Download land use, land cover data from NLCD2016 database within
@@ -871,7 +871,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None)
 
     Note
     ----
-        NLCD data has a 30 m resolution.
+        NLCD data has a resolution of 1 arc-sec or ~30 m.
 
         The following references have been used:
             * https://github.com/jzmiller1/nlcd
@@ -892,10 +892,10 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None)
         The directory for storing the output ``geotiff`` files, defaults to /tmp/
     width : int, optional
         Width of the output image in pixels, defaults to 2000 pixels.
-    upscale_factor : float
-        The factor for resampling the data using bilinear method. More than 1
-        converts to coarser resolution and smaller than one to higher resolution,
-        defaults to no resampling.
+    resolution : float
+        The desired output resolution for the output in decimal degree.,
+        defaults to no resampling. The resampling is done using bilinear method
+        for impervious and canopy data, and majority for the cover.
 
     Returns
     -------
@@ -1072,10 +1072,11 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None)
             with rasterio.MemoryFile() as memfile:
                 memfile.write(img.read())
                 with memfile.open() as src:
-                    if upscale_factor is not None:
+                    if resolution is not None:
+                        fac = resolution * 3600
                         out_shape = (
-                            int(src.height / upscale_factor),
-                            int(src.width / upscale_factor),
+                            int(src.height / fac),
+                            int(src.width / fac),
                         )
                         if data_type == "cover":
                             resampling = Resampling.med
@@ -1167,7 +1168,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, upscale_factor=None)
     return stats
 
 
-def dem_bygeom(geometry, demtype="SRTMGL1", upscale_factor=None):
+def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
     """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
 
     Parameters
@@ -1176,12 +1177,11 @@ def dem_bygeom(geometry, demtype="SRTMGL1", upscale_factor=None):
         A shapely Polygon.
     demtype : string
         The type of DEM to be downloaded, default to SRTMGL1 for 30 m resolution.
-        Available options are 'SRTMGL3' for SRTM GL3 (90m) and 'SRTMGL1' for
-        SRTM GL1 (30m).
-    upscale_factor : float
-        The factor for resampling the data using bilinear method. More than 1
-        converts to coarser resolution and smaller than one to higher resolution,
-        defaults to no resampling.
+        Available options are 'SRTMGL3' for SRTM GL3 (3 arc-sec or ~90m) and 'SRTMGL1' for
+        SRTM GL1 (1 arc-sec or ~30m).
+    resolution : float
+        The desired output resolution for the output in decimal degree.,
+        defaults to no resampling. The resampling is done using cubic convolution method
 
     Returns
     -------
@@ -1228,13 +1228,14 @@ def dem_bygeom(geometry, demtype="SRTMGL1", upscale_factor=None):
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
         with memfile.open() as src:
-            if upscale_factor is not None:
+            if resolution is not None:
+                fac = resolution * 3600
                 out_shape = (
-                    int(src.height / upscale_factor),
-                    int(src.width / upscale_factor),
+                    int(src.height / fac),
+                    int(src.width / fac),
                 )
                 data = np.array(
-                    [src.read(1, out_shape=out_shape, resampling=Resampling.bilinear)]
+                    [src.read(1, out_shape=out_shape, resampling=Resampling.cubic)]
                 )
                 transform = src.transform * src.transform.scale(
                     (src.width / out_shape[1]), (src.height / out_shape[0])
