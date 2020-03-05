@@ -1,6 +1,6 @@
 name: hydrodata
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python>=3.6
   - pip
@@ -17,8 +17,10 @@ dependencies:
   - lxml
   - geopandas
   - jupyterlab
+  - pyproj
+  - proj
+  - gdal
   - pip:
-    - pyproj
     - bump2version
     - wheel
     - watchdog
