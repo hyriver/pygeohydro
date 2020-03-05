@@ -66,11 +66,10 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
 
 3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you set up your fork for local development::
 
-    $ conda create -n hydrodata python pip
     $ cd hydrodata/
-    $ pip install -r requirement.txt
-    $ pip install -r requirement_dev.txt
-    $ python setup.py develop
+    $ conda env create -f environment_dev.yml
+    $ conda activate hydrodata
+    $ python setup.py install
 
 4. Create a branch for local development::
 
@@ -84,13 +83,18 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ make install
     $ make test
 
-6. Commit your changes and push your branch to GitHub::
+6. Before you first commit, pre-commit needs to be setup::
+
+    $ pre-commit install
+    $ pre-commit run --all-files
+
+7. Commit your changes and push your branch to GitHub::
 
     $ git add .
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-7. Submit a pull request through the GitHub website.
+8. Submit a pull request through the GitHub website.
 
 Pull Request Guidelines
 -----------------------
@@ -110,8 +114,7 @@ Tips
 
 To run a subset of tests::
 
-$ pytest tests.test_hydrodata
-
+$ make test
 
 Deploying
 ---------
