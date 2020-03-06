@@ -407,7 +407,7 @@ def daymet_bygeom(
     data = data.where(within(data, geometry), drop=True)
 
     if resolution is not None:
-        fac = resolution * 3600.0 / 30.0  # from degree to 1 km.
+        fac = resolution * 3600.0 / 30.0  # from degree to 1 km
         new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // fac)
         new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // fac)
         data = data.interp(x=new_x, y=new_y, method="linear")
@@ -863,7 +863,15 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     return data
 
 
-def NLCD(geometry, years=None, data_dir="/tmp", width=2000, resolution=None):
+def NLCD(
+    geometry,
+    years=None,
+    data_dir="/tmp",
+    width=2000,
+    resolution=None,
+    array=True,
+    statistics=False,
+):
     """Get data from NLCD 2016 database.
 
     Download land use, land cover data from NLCD2016 database within
@@ -896,11 +904,17 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, resolution=None):
         The desired output resolution for the output in decimal degree.,
         defaults to no resampling. The resampling is done using bilinear method
         for impervious and canopy data, and majority for the cover.
+    array : bool
+        Whether to return the data as an ``xarray.DataArray``, defaults to True
+    statistics : bool
+        Whether to perform simple statistics on the data, default to False
 
     Returns
     -------
-     tuple of three :obj: `dict` (imprevious, canopy, cover)
-         Some statistics of the extracted data.
+     xarray.DataArray (optional), tuple (optional)
+         The data as a single DataArray and or the statistics in form of
+         three dicts (imprevious, canopy, cover) in a tuple
+
     """
     from owslib.wms import WebMapService
     import rasterstats
@@ -1033,6 +1047,7 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, resolution=None):
     ]
 
     params = {}
+    nodata = 199
     for data_type, layer in layers:
         data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
         if Path(data_path).exists():
@@ -1073,99 +1088,122 @@ def NLCD(geometry, years=None, data_dir="/tmp", width=2000, resolution=None):
                 memfile.write(img.read())
                 with memfile.open() as src:
                     if resolution is not None:
-                        fac = resolution * 3600
-                        out_shape = (
-                            int(src.height / fac),
-                            int(src.width / fac),
-                        )
+                        # degree to arc-sec since res is 1 arc-sec
                         if data_type == "cover":
-                            resampling = Resampling.med
+                            resampling = Resampling.mode
                         else:
                             resampling = Resampling.bilinear
-
-                        out_image = np.array(
-                            [src.read(1, out_shape=out_shape, resampling=resampling)]
+                        fac = resolution * 3600.0
+                        data = src.read(
+                            out_shape=(
+                                src.count,
+                                int(src.width / fac),
+                                int(src.height / fac),
+                            ),
+                            resampling=resampling,
                         )
-                        out_transform = src.transform * src.transform.scale(
-                            (src.width / out_shape[1]), (src.height / out_shape[0])
+                        transform = src.transform * src.transform.scale(
+                            (src.width / data.shape[1]), (src.height / data.shape[2])
                         )
-                        out_meta = src.meta
-                        out_meta.update(
+                        meta = src.meta
+                        meta.update(
                             {
                                 "driver": "GTiff",
-                                "height": out_shape[1],
-                                "width": out_shape[0],
-                                "transform": out_transform,
+                                "width": data.shape[1],
+                                "height": data.shape[2],
+                                "transform": transform,
                             }
                         )
 
-                        with rasterio.open(data_path, "w", **out_meta) as dest:
-                            dest.write(out_image)
+                        with rasterio.open("/tmp/resampled.tif", "w", **meta) as dest:
+                            dest.write(data)
 
-                        with rasterio.open(data_path) as dest:
-                            out_image, out_transform = rasterio.mask.mask(
-                                dest, [geometry], crop=True
+                        with rasterio.open("/tmp/resampled.tif", "r") as dest:
+                            ras_msk, transform = rasterio.mask.mask(
+                                dest, [geometry], nodata=nodata
                             )
-                            out_meta = dest.meta
-                            out_meta.update(
-                                {
-                                    "driver": "GTiff",
-                                    "height": out_image.shape[1],
-                                    "width": out_image.shape[2],
-                                    "transform": out_transform,
-                                }
-                            )
+                            meta = src.meta
                     else:
-                        out_image, out_transform = rasterio.mask.mask(
-                            src, [geometry], crop=True
+                        ras_msk, transform = rasterio.mask.mask(
+                            src, [geometry], nodata=nodata
                         )
-                        out_meta = src.meta
-                        out_meta.update(
-                            {
-                                "driver": "GTiff",
-                                "height": out_image.shape[1],
-                                "width": out_image.shape[2],
-                                "transform": out_transform,
-                            }
-                        )
-            with rasterio.open(data_path, "w", **out_meta) as dest:
-                dest.write(out_image)
+                        meta = src.meta
 
+                    meta.update(
+                        {
+                            "driver": "GTiff",
+                            "width": ras_msk.shape[1],
+                            "height": ras_msk.shape[2],
+                            "transform": transform,
+                            "nodata": nodata,
+                        }
+                    )
+
+                    with rasterio.open(data_path, "w", **meta) as dest:
+                        dest.write(ras_msk)
             print("finished.")
 
-        categorical = True if data_type == "cover" else False
-        params[data_type] = rasterstats.zonal_stats(
-            geometry,
-            data_path,
-            categorical=categorical,
-            category_map=nlcd_meta["legends"],
-        )[0]
+        if statistics and data_type != "cover":
+            params[data_type] = rasterstats.zonal_stats(
+                geometry, data_path, category_map=nlcd_meta["legends"],
+            )[0]
 
-    cover = rasterio.open(Path(data_dir, f"cover_{years['cover']}.geotiff"))
-    total_pix = cover.shape[0] * cover.shape[1]
-    cover_arr = cover.read()
-    class_percentage = dict(
-        zip(
-            list(nlcd_meta["legends"].values()),
-            [
-                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                for cat in list(nlcd_meta["legends"].keys())
-            ],
+    if array:
+        data_path = Path(data_dir, f"cover_{years['cover']}.geotiff")
+        with xr.open_rasterio(data_path) as ds:
+            ds = ds.squeeze("band", drop=True)
+            ds = ds.where((ds > 0) & (ds < nodata), drop=True)
+            ds.name = "cover"
+            attrs = ds.attrs
+            ds.attrs["units"] = "classes"
+
+        for data_type in ["canopy", "impervious"]:
+            data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
+            with xr.open_rasterio(data_path) as rs:
+                rs = rs.squeeze("band", drop=True)
+                rs = rs.where(rs < nodata, drop=True)
+                rs.name = data_type
+                rs.attrs["units"] = "%"
+                ds = xr.merge([ds, rs])
+
+        ds.attrs = attrs
+
+    if statistics:
+        cover = rasterio.open(Path(data_dir, f"cover_{years['cover']}.geotiff"))
+        total_pix = cover.shape[0] * cover.shape[1]
+        cover_arr = cover.read()
+        class_percentage = dict(
+            zip(
+                list(nlcd_meta["legends"].values()),
+                [
+                    cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
+                    for cat in list(nlcd_meta["legends"].keys())
+                ],
+            )
         )
-    )
-    masks = [
-        [leg in cat for leg in list(nlcd_meta["legends"].keys())]
-        for cat in list(nlcd_meta["categories"].values())
-    ]
-    cat_list = [np.array(list(class_percentage.values()))[msk].sum() for msk in masks]
-    category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
+        masks = [
+            [leg in cat for leg in list(nlcd_meta["legends"].keys())]
+            for cat in list(nlcd_meta["categories"].values())
+        ]
+        cat_list = [
+            np.array(list(class_percentage.values()))[msk].sum() for msk in masks
+        ]
+        category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
 
-    stats = {
-        "impervious": params["impervious"],
-        "canopy": params["canopy"],
-        "cover": {"classes": class_percentage, "categories": category_percentage},
-    }
-    return stats
+        stats = {
+            "impervious": params["impervious"],
+            "canopy": params["canopy"],
+            "cover": {"classes": class_percentage, "categories": category_percentage},
+        }
+
+    if array and statistics:
+        return ds, stats
+
+    if array:
+        return array
+
+    if statistics:
+        return stats
 
 
 def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
@@ -1197,11 +1235,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
 
-    # the extend should be square for resampling
     west, south, east, north = geometry.bounds
-    rad = max(abs(west - east), abs(north - south))
-    west, east = geometry.centroid.x - rad, geometry.centroid.x + rad
-    south, north = geometry.centroid.y - rad, geometry.centroid.y + rad
 
     url = "http://opentopo.sdsc.edu/otr/getdem?"
     payload = dict(
@@ -1212,7 +1246,6 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
         north=north,
         outputFormat="GTiff",
     )
-    session = utils.retry_requests()
 
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
@@ -1220,6 +1253,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
         end=" >>> ",
     )
 
+    session = utils.retry_requests()
     try:
         r = session.get(url, params=payload)
     except ConnectionError or Timeout or RequestException:
@@ -1229,31 +1263,28 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
         memfile.write(r.content)
         with memfile.open() as src:
             if resolution is not None:
-                fac = resolution * 3600
-                out_shape = (
-                    int(src.height / fac),
-                    int(src.width / fac),
-                )
-                data = np.array(
-                    [src.read(1, out_shape=out_shape, resampling=Resampling.cubic)]
+                fac = resolution * 3600.0  # degree to arc-sec since res is 1 arc-sec
+                data = src.read(
+                    out_shape=(src.count, int(src.width / fac), int(src.height / fac)),
+                    resampling=Resampling.bilinear,
                 )
                 transform = src.transform * src.transform.scale(
-                    (src.width / out_shape[1]), (src.height / out_shape[0])
+                    (src.width / data.shape[1]), (src.height / data.shape[2])
                 )
-                out_meta = src.meta
-                out_meta.update(
+                meta = src.meta
+                meta.update(
                     {
                         "driver": "GTiff",
-                        "height": out_shape[1],
-                        "width": out_shape[0],
+                        "width": data.shape[1],
+                        "height": data.shape[2],
                         "transform": transform,
                     }
                 )
 
-                with rasterio.open("/tmp/resampled.tif", "w", **out_meta) as dest:
+                with rasterio.open("/tmp/resampled.tif", "w", **meta) as dest:
                     dest.write(data)
 
-                with rasterio.open("/tmp/resampled.tif") as dest:
+                with rasterio.open("/tmp/resampled.tif", "r") as dest:
                     ras_msk, _ = rasterio.mask.mask(dest, [geometry])
                     nodata = dest.nodata
                     dest = "/tmp/resampled.tif"
@@ -1267,6 +1298,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
                 ds = ds.where(msk, drop=True)
                 ds = ds.squeeze("band", drop=True)
                 ds.name = "elevation"
+                ds.attrs["units"] = "meters"
 
     print("finished.")
 
