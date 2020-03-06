@@ -250,7 +250,7 @@ def daymet_bygeom(
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
     resolution : float
-        The desired output resolution for the output in decimal degree.,
+        The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using bilinear method
 
     Returns
@@ -696,7 +696,7 @@ class NLDI:
         return gdf
 
 
-def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
+def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None):
     """Gridded data from the SSEBop database.
 
     Note
@@ -718,6 +718,9 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
         Ending date
     years : list
         List of years
+    resolution : float
+        The desired output resolution for the output in decimal degree,
+        defaults to no resampling. The resampling is done using bilinear method
 
     Returns
     -------
@@ -816,6 +819,12 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None):
 
     data["eta"].attrs["units"] = "mm/day"
 
+    if resolution is not None:
+        fac = resolution * 3600.0 / 30.0  # from degree to 1 km
+        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // fac)
+        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // fac)
+        data = data.interp(x=new_x, y=new_y, method="linear")
+
     print("finished.")
     return data
 
@@ -901,7 +910,7 @@ def NLCD(
     width : int, optional
         Width of the output image in pixels, defaults to 2000 pixels.
     resolution : float
-        The desired output resolution for the output in decimal degree.,
+        The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using bilinear method
         for impervious and canopy data, and majority for the cover.
     array : bool
@@ -1218,7 +1227,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
         Available options are 'SRTMGL3' for SRTM GL3 (3 arc-sec or ~90m) and 'SRTMGL1' for
         SRTM GL1 (1 arc-sec or ~30m).
     resolution : float
-        The desired output resolution for the output in decimal degree.,
+        The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using cubic convolution method
 
     Returns
