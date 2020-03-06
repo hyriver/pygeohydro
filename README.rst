@@ -36,7 +36,7 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for USGS stations' daily streamflow observations
 * `OpenTopography <https://opentopography.org/>`_ for Digital Elevation Model
 
-The gridded data can be resampled to coarser or finer resolutions via the ``upscale_factor`` argument. The **resampling** is carried out using the **bilinear** method for continuous spatial data such as climate data and the **majority** method for discrete data such as land cover.
+The gridded data can be resampled to coarser or finer resolutions via the ``resolution`` argument (in decimal degree). The **resampling** is carried out using the **bilinear** method for continuous spatial data such as climate data and the **majority** method for discrete data such as land cover.
 
 Additionally, the function for getting Daymet data offers a flag for computing **Potential Evapotranspiration** (PET) using the retrieved climate data. PET is computed based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
 
@@ -51,14 +51,15 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python package management tool so the dependencies can be installed easily. Hydrodata is pure Python but its dependencies are not. Hydrodata and all its dependecies can be installed using the ``environment.yml`` file provided in this repository. You can clone the repository or download the file from `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_.
+It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python package management tool so the dependencies can be installed easily since Hydrodata is pure Python but its dependencies are not. This can be achieved using the ``environment.yml`` file provided in this repository. You can clone the repository or download the file from `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_.
 
 .. code-block:: console
 
     $ conda env create -f environment.yml
-    $ conda activate hydrodata
+    
+The environment can then be activate by issuing ``conda activate hydrodata``.
 
-Or you can install the dependencies manually, then install Hydrodata using ``pip``:
+Alternatively, you can install the dependencies manually, then install Hydrodata using ``pip``:
 
 .. code-block:: console
 
@@ -67,7 +68,7 @@ Or you can install the dependencies manually, then install Hydrodata using ``pip
 Quick Start
 -----------
 
-With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area and upstream flowlines and watershed geometry.
+With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area, upstream flowlines and watershed geometry.
 
 .. code-block:: python
 
@@ -85,11 +86,11 @@ Using the retrieved information such as the watershed geometry we can then use t
     stations = wshed.watershed.get_stations()
     stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
     
-DEM can be retrieved for the station's contributing watershed as follows:
+DEM can be retrieved for the station's contributing watershed and resampled from the original resolution of 1 arc-second (~30 m) to 30 arc-second (~1 km), as follows:
 
 .. code-block:: python
 
-    dem = hds.dem_bygeom(wshed.geometry)
+    dem = hds.dem_bygeom(wshed.geometry, resolution=30.0/3600.0)
 
 We can also get climate data and streamflow observations for the selected location:
 
@@ -98,13 +99,15 @@ We can also get climate data and streamflow observations for the selected locati
     clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
     clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
 
-Other than point-based data, gridded data can also be accessed. Furthermore, the watershed geometry can be used to mask the gridded data:
+Other than point-based data, gridded data can also be accessed at the desired resolution. Furthermore, the watershed geometry can be used to mask the gridded data:
 
 .. code-block:: python
 
     variables = ["tmin", "tmax", "prcp"]
-    clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31', variables=variables, pet=True)
-    eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
+    clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31',
+                                variables=variables, pet=True, resolution=30.0/3600.0)
+    eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31',
+                                   resolution=30.0/3600.0)
 
 All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that offers efficient data processing tools. Hydrodata also has a function called ``signatures`` that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
 
