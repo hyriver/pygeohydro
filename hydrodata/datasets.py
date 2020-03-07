@@ -383,6 +383,12 @@ def daymet_bygeom(
         y_options.max(),
     )
 
+    if resolution is not None:
+        fac = resolution * 3600.0 / 30.0  # from degree to km
+        new_x = np.arange(data.x[0], data.x[-1] + fac, fac)
+        new_y = np.arange(data.y[0], data.y[-1] + fac, fac)
+        data = data.interp(x=new_x, y=new_y, method="linear")
+
     print("finished.")
 
     if pet:
@@ -405,12 +411,6 @@ def daymet_bygeom(
         return xr.apply_ufunc(_within, da.lon, da.lat, kwargs={"g": shape})
 
     data = data.where(within(data, geometry), drop=True)
-
-    if resolution is not None:
-        fac = resolution * 3600.0 / 30.0  # from degree to 1 km
-        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // fac)
-        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // fac)
-        data = data.interp(x=new_x, y=new_y, method="linear")
 
     return data
 
