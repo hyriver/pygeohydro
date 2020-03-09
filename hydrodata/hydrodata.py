@@ -166,7 +166,7 @@ class Station:
 
     def get_watershed(self):
         """Download the watershed geometry from the NLDI service."""
-        from hydrodata.datasets import NLDI
+        from hydrodata.datasets import NLDI, nhdplus_byid
 
         geom_file = self.data_dir.joinpath("geometry.gpkg")
 
@@ -178,9 +178,15 @@ class Station:
         self.main_channel = self.watershed.get_river_network(navigation="upstreamMain")
 
         # drainage area in sq. km
-        self.flowlines = self.watershed.get_nhdplus_byid(
-            comids=self.tributaries.index.values
+        print(
+            f"[ID: {self.station_id}] ".ljust(MARGINE)
+            + f"Downloading tributaries' flowlines from NLDI",
+            end=" >>> ",
         )
+        self.flowlines = nhdplus_byid(
+            comids=self.tributaries.index.values.astype(str).tolist()
+        )
+        print("finished.")
         self.drainage_area = self.flowlines.areasqkm.sum()
 
         if geom_file.exists():
