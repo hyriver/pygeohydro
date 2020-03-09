@@ -92,11 +92,7 @@ DEM can be retrieved for the station's contributing watershed and resampled from
 
     dem = hds.dem_bygeom(wshed.geometry, resolution=30.0/3600.0)
 
-<<<<<<< HEAD
-We can also get climate data and streamflow observations for the selected location:
-=======
-The climate data and streamflow observations for the location of interest can be retriived as well:
->>>>>>> master
+The climate data and streamflow observations for the location of interest can be retrieved as well:
 
 .. code-block:: python
 
@@ -108,14 +104,6 @@ Other than point-based data, gridded data can also be accessed at the desired re
 .. code-block:: python
 
     variables = ["tmin", "tmax", "prcp"]
-<<<<<<< HEAD
-    clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31',
-                                variables=variables, pet=True, resolution=30.0/3600.0)
-    eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31',
-                                   resolution=30.0/3600.0)
-
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that offers efficient data processing tools. Hydrodata also has a function called ``signatures`` that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
-=======
     clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31', variables=variables, pet=True)
     eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
 
@@ -127,7 +115,6 @@ We can also find all or within certain distance USGS stations up- or downstream 
     stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
 
 All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
->>>>>>> master
 
 .. code-block:: python
 
