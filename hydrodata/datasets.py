@@ -250,7 +250,7 @@ def daymet_bygeom(
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
     resolution : float
-        The desired output resolution for the output in decimal degree,
+        The desired output resolution for the output in km,
         defaults to no resampling. The resampling is done using bilinear method
 
     Returns
@@ -383,12 +383,6 @@ def daymet_bygeom(
         y_options.max(),
     )
 
-    if resolution is not None:
-        fac = resolution * 3600.0 / 30.0  # from degree to km
-        new_x = np.arange(data.x[0], data.x[-1] + fac, fac)
-        new_y = np.arange(data.y[0], data.y[-1] + fac, fac)
-        data = data.interp(x=new_x, y=new_y, method="linear")
-
     print("finished.")
 
     if pet:
@@ -412,7 +406,194 @@ def daymet_bygeom(
 
     data = data.where(within(data, geometry), drop=True)
 
+    if resolution is not None:
+        res_x = resolution if data.x[0] < data.x[-1] else -resolution
+        new_x = np.arange(data.x[0], data.x[-1] + res_x, res_x)
+
+        res_y = resolution if data.y[0] < data.y[-1] else -resolution
+        new_y = np.arange(data.y[0], data.y[-1] + res_y, res_y)
+        data = data.interp(x=new_x, y=new_y, method="linear")
+
     return data
+
+
+class NLDI:
+    """Access to the Hydro Network-Linked Data Index (NLDI) service."""
+
+    def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
+        """Intialize NLCD.
+
+        Note
+        ----
+        Either station ID or bbox should be provided.
+
+        Parameters
+        ----------
+        station_id : string
+            USGS station ID, defaults to None.
+        navigation : string, optional
+            Navigation option for delineating the watershed. Options are:
+            upstreamMain, upstreamTributaries, downstreamMain, downstreamDiversions
+            Defaults to upstreamTributaries.
+        distance : int, optional
+            Distance in km for finding USGS stations along the flowlines
+            based on the navigation option.
+            Defaults to None that finds all the stations.
+        """
+
+        self.station_id = str(station_id)
+        self.distance = None if distance is None else str(int(distance))
+
+        self.nav_options = {
+            "upstreamMain": "UM",
+            "upstreamTributaries": "UT",
+            "downstreamMain": "DM",
+            "downstreamDiversions": "DD",
+        }
+        if navigation not in list(self.nav_options.keys()):
+            msg = "The acceptable navigation options are:"
+            msg += f"{', '.join(x for x in list(self.nav_options.keys()))}"
+            raise ValueError(msg)
+        else:
+            self.navigation = self.nav_options[navigation]
+
+        self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
+        self.session = utils.retry_requests()
+
+    @property
+    def comid(self):
+        """Find starting ComID based on the USGS station."""
+        url = self.base_url + f"/USGS-{self.station_id}"
+        try:
+            r = self.session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+
+        return gpd.GeoDataFrame.from_features(r.json()).comid.values[0]
+
+    @property
+    def basin(self):
+        """Delineate the basin."""
+        url = self.base_url + f"/USGS-{self.station_id}/basin"
+        try:
+            r = self.session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf.crs = "EPSG:4326"
+        return gdf.geometry
+
+    def get_river_network(self, navigation=None):
+        """Get the river network geometry from NHDPlus V2."""
+        navigation = (
+            self.navigation if navigation is None else self.nav_options[navigation]
+        )
+
+        rnav = [k for k, v in self.nav_options.items() if v == navigation]
+        rnav = "stream ".join(rnav[0].split("stream")).lower()
+        print(
+            f"[ID: {self.station_id}] ".ljust(MARGINE)
+            + f"Downloading {rnav} from NLDI",
+            end=" >>> ",
+        )
+        url = self.base_url + f"/USGS-{self.station_id}/navigate/{navigation}"
+        try:
+            r = self.session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf.columns = ["geometry", "comid"]
+        gdf.set_index("comid", inplace=True)
+        print("finished.")
+        return gdf
+
+    def get_stations(self, navigation=None, distance=None):
+        """Find the USGS stations along the river network."""
+        navigation = (
+            self.navigation if navigation is None else self.nav_options[navigation]
+        )
+        distance = self.distance if distance is None else str(int(distance))
+
+        rnav = [k for k, v in self.nav_options.items() if v == navigation]
+        rnav = "stream ".join(rnav[0].split("stream")).lower()
+        if distance is None:
+            st = "all the stations"
+        else:
+            st = f"stations within {distance} km of"
+        print(
+            f"[ID: {self.station_id}] ".ljust(MARGINE)
+            + f"Downloading {st} {rnav} from NLDI",
+            end=" >>> ",
+        )
+
+        dis = "" if distance is None else f"?distance={distance}"
+        url = (
+            self.base_url
+            + f"/USGS-{self.station_id}/navigate/{navigation}/nwissite"
+            + dis
+        )
+
+        try:
+            r = self.session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+
+        gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf.set_index("comid", inplace=True)
+        print("finsihed.")
+        return gdf
+
+
+def navigate_byid(comids, navigation="upstreamTributaries", distance=None):
+    """Get the river network geometry from NHDPlus V2."""
+
+    if not isinstance(comids, list):
+        comids = [comids]
+
+    if len(comids) == 0:
+        raise ValueError("The ComID list is empty!")
+
+    nav_options = {
+        "upstreamMain": "UM",
+        "upstreamTributaries": "UT",
+        "downstreamMain": "DM",
+        "downstreamDiversions": "DD",
+    }
+    if navigation not in list(nav_options.keys()):
+        msg = "The acceptable navigation options are:"
+        msg += f"{', '.join(x for x in list(nav_options.keys()))}"
+        raise ValueError(msg)
+    else:
+        navigation = nav_options[navigation]
+
+    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid"
+    session = utils.retry_requests()
+
+    dis = "" if distance is None else f"?distance={distance}"
+    url = base_url + f"/{comids[0]}/navigate/{navigation}" + dis
+    try:
+        r = session.get(url)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+
+    gdf = gpd.GeoDataFrame.from_features(r.json())
+
+    if len(comids) > 1:
+        for comid in comids[1:]:
+            url = base_url + f"/{comid}/navigate/{navigation}" + dis
+            try:
+                r = session.get(url)
+            except HTTPError or ConnectionError or Timeout or RequestException:
+                raise
+
+            gdf.merge(gpd.GeoDataFrame.from_features(r.json()), on="nhdplus_comid")
+
+    gdf.columns = ["geometry", "comid"]
+    gdf.set_index("comid", inplace=True)
+
+    return gdf
 
 
 def nhdplus_bybox(bbox, layer="nhdflowline_network"):
@@ -499,201 +680,93 @@ def nhdplus_bybox(bbox, layer="nhdflowline_network"):
     return gdf
 
 
-class NLDI:
-    """Access to the Hydro Network-Linked Data Index (NLDI) service."""
+def nhdplus_byid(comids, layer="nhdflowline_network"):
+    """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
 
-    def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
-        """Intialize NLCD.
+    Parameters
+    ----------
+    comids : list of strings
+        A list of ComIDs
+    layer : string
+        The desired feature; ``catchmentsp`` or ``nhdflowline_network``
 
-        Note
-        ----
-        Either station ID or bbox should be provided.
+    Returns
+    -------
+    GeoDataFrame
+        The index is ``comid``.
+    """
+    id_name = {"catchmentsp": "featureid", "nhdflowline_network": "comid"}
 
-        Parameters
-        ----------
-        station_id : string
-            USGS station ID, defaults to None.
-        navigation : string, optional
-            Navigation option for delineating the watershed. Options are:
-            upstreamMain, upstreamTributaries, downstreamMain, downstreamDiversions
-            Defaults to upstreamTributaries.
-        distance : int, optional
-            Distance in km for finding USGS stations along the flowlines
-            based on the navigation option.
-            Defaults to None that finds all the stations.
-        """
+    if not isinstance(comids, list):
+        comids = [comids]
 
-        self.station_id = str(station_id)
-        self.distance = None if distance is None else str(int(distance))
+    if len(comids) == 0:
+        raise ValueError("The ComID list is empty!")
 
-        self.nav_options = {
-            "upstreamMain": "UM",
-            "upstreamTributaries": "UT",
-            "downstreamMain": "DM",
-            "downstreamDiversions": "DD",
-        }
-        if navigation not in list(self.nav_options.keys()):
-            msg = "The acceptable navigation options are:"
-            msg += f"{', '.join(x for x in list(self.nav_options.keys()))}"
-            raise ValueError(f"The acceptable navigation options are:")
-        else:
-            self.navigation = self.nav_options[navigation]
-
-        self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
-        self.session = utils.retry_requests()
-
-    @property
-    def comid(self):
-        """Find starting ComID based on the USGS station."""
-        url = self.base_url + f"/USGS-{self.station_id}"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        return gpd.GeoDataFrame.from_features(r.json()).values[0]
-
-    @property
-    def basin(self):
-        """Delineate the basin."""
-        url = self.base_url + f"/USGS-{self.station_id}/basin"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.crs = "EPSG:4326"
-        return gdf.geometry
-
-    def get_river_network(self, navigation=None):
-        """Get the river network geometry from NHDPlus V2."""
-        navigation = (
-            self.navigation if navigation is None else self.nav_options[navigation]
+    if layer not in list(id_name.keys()):
+        raise ValueError(
+            f"Acceptable values for layer are {', '.join(x for x in list(id_name.keys()))}"
         )
 
-        rnav = [k for k, v in self.nav_options.items() if v == navigation]
-        rnav = "stream ".join(rnav[0].split("stream")).lower()
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading {rnav} from NLDI",
-            end=" >>> ",
-        )
-        url = self.base_url + f"/USGS-{self.station_id}/navigate/{navigation}"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+    url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
 
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.columns = ["geometry", "comid"]
+    filter_1 = "".join(
+        [
+            '<?xml version="1.0"?>',
+            '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
+            '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
+            layer,
+            '" srsName="EPSG:4326">',
+            '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
+            "<ogc:Or>",
+            "<ogc:PropertyIsEqualTo>",
+            "<ogc:PropertyName>",
+            id_name[layer],
+            "</ogc:PropertyName>",
+            "<ogc:Literal>",
+        ]
+    )
+
+    filter_2 = "".join(
+        [
+            "</ogc:Literal>",
+            "</ogc:PropertyIsEqualTo>",
+            "<ogc:PropertyIsEqualTo>",
+            "<ogc:PropertyName>",
+            id_name[layer],
+            "</ogc:PropertyName>",
+            "<ogc:Literal>",
+        ]
+    )
+
+    filter_3 = "".join(
+        [
+            "</ogc:Literal>",
+            "</ogc:PropertyIsEqualTo>",
+            "</ogc:Or>",
+            "</ogc:Filter>",
+            "</wfs:Query>",
+            "</wfs:GetFeature>",
+        ]
+    )
+
+    filter_xml = "".join([filter_1, filter_2.join(comids), filter_3])
+    session = utils.retry_requests()
+    try:
+        r = session.post(url, data=filter_xml)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+
+    gdf = gpd.GeoDataFrame.from_features(r.json())
+    try:
         gdf.set_index("comid", inplace=True)
-        print("finished.")
-        return gdf
-
-    def get_stations(self, navigation=None, distance=None):
-        """Find the USGS stations along the river network."""
-        navigation = (
-            self.navigation if navigation is None else self.nav_options[navigation]
-        )
-        distance = self.distance if distance is None else str(int(distance))
-
-        rnav = [k for k, v in self.nav_options.items() if v == navigation]
-        rnav = "stream ".join(rnav[0].split("stream")).lower()
-        if distance is None:
-            st = "all the stations"
-        else:
-            st = f"stations within {distance} km of"
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading {st} {rnav} from NLDI",
-            end=" >>> ",
-        )
-        if distance is None:
-            url = (
-                self.base_url
-                + f"/USGS-{self.station_id}/navigate/{navigation}/nwissite"
-            )
-        else:
-            url = (
-                self.base_url
-                + f"/USGS-{self.station_id}/navigate/{navigation}/nwissite?distance={distance}"
-            )
+    except KeyError:
         try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+            gdf.set_index("featureid", inplace=True)
+        except KeyError:
+            raise KeyError("The requested features are not in NHDPlus V2.")
 
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.set_index("comid", inplace=True)
-        print("finsihed.")
-        return gdf
-
-    def get_nhdplus_byid(self, comids, layer="nhdflowline_network"):
-        """Get NHDPlus flowline database based on ComIDs"""
-        id_name = dict(catchmentsp="featureid", nhdflowline_network="comid")
-        if layer not in list(id_name.keys()):
-            raise ValueError(
-                f"Acceptable values for layer are {', '.join(x for x in list(id_name.keys()))}"
-            )
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading flowlines by ComIDs from NLDI",
-            end=" >>> ",
-        )
-
-        url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
-
-        filter_1 = "".join(
-            [
-                '<?xml version="1.0"?>',
-                '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
-                '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
-                layer,
-                '" srsName="EPSG:4326">',
-                '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
-                "<ogc:Or>",
-                "<ogc:PropertyIsEqualTo>",
-                "<ogc:PropertyName>",
-                id_name[layer],
-                "</ogc:PropertyName>",
-                "<ogc:Literal>",
-            ]
-        )
-
-        filter_2 = "".join(
-            [
-                "</ogc:Literal>",
-                "</ogc:PropertyIsEqualTo>",
-                "<ogc:PropertyIsEqualTo>",
-                "<ogc:PropertyName>",
-                id_name[layer],
-                "</ogc:PropertyName>",
-                "<ogc:Literal>",
-            ]
-        )
-
-        filter_3 = "".join(
-            [
-                "</ogc:Literal>",
-                "</ogc:PropertyIsEqualTo>",
-                "</ogc:Or>",
-                "</ogc:Filter>",
-                "</wfs:Query>",
-                "</wfs:GetFeature>",
-            ]
-        )
-
-        filter_xml = "".join([filter_1, filter_2.join(comids), filter_3])
-        try:
-            r = self.session.post(url, data=filter_xml)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.set_index("comid", inplace=True)
-        print("finished.")
-        return gdf
+    return gdf
 
 
 def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None):
@@ -821,8 +894,8 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
 
     if resolution is not None:
         fac = resolution * 3600.0 / 30.0  # from degree to 1 km
-        new_x = np.linspace(data.x[0], data.x[-1], data.dims["x"] // fac)
-        new_y = np.linspace(data.y[0], data.y[-1], data.dims["y"] // fac)
+        new_x = np.linspace(data.x[0], data.x[-1], int(data.dims["x"] / fac))
+        new_y = np.linspace(data.y[0], data.y[-1], int(data.dims["y"] / fac))
         data = data.interp(x=new_x, y=new_y, method="linear")
 
     print("finished.")
@@ -1215,20 +1288,22 @@ def NLCD(
         return stats
 
 
-def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
+def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
     """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
 
     Parameters
     ----------
     geometry : Geometry
         A shapely Polygon.
-    demtype : string
+    demtype : string, optional
         The type of DEM to be downloaded, default to SRTMGL1 for 30 m resolution.
         Available options are 'SRTMGL3' for SRTM GL3 (3 arc-sec or ~90m) and 'SRTMGL1' for
         SRTM GL1 (1 arc-sec or ~30m).
-    resolution : float
+    resolution : float, optional
         The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using cubic convolution method
+    output : string or Path, optional
+        The path to save the data as raster, defaults to None.
 
     Returns
     -------
@@ -1240,6 +1315,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
     import rasterio.mask
     from shapely.geometry import Polygon
     from rasterio.enums import Resampling
+    import os
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
@@ -1290,17 +1366,51 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None):
                     }
                 )
 
-                with rasterio.open("/tmp/resampled.tif", "w", **meta) as dest:
-                    dest.write(data)
+                with rasterio.open("/tmp/resampled.tif", "w", **meta) as tmp:
+                    tmp.write(data)
 
-                with rasterio.open("/tmp/resampled.tif", "r") as dest:
-                    ras_msk, _ = rasterio.mask.mask(dest, [geometry])
-                    nodata = dest.nodata
+                with rasterio.open("/tmp/resampled.tif", "r") as tmp:
+                    ras_msk, transform = rasterio.mask.mask(tmp, [geometry])
+                    nodata = tmp.nodata
                     dest = "/tmp/resampled.tif"
+                    meta = tmp.meta
+                    meta.update(
+                        {
+                            "driver": "GTiff",
+                            "width": ras_msk.shape[1],
+                            "height": ras_msk.shape[2],
+                            "transform": transform,
+                        }
+                    )
             else:
-                ras_msk, _ = rasterio.mask.mask(src, [geometry])
+                ras_msk, transform = rasterio.mask.mask(src, [geometry])
                 nodata = src.nodata
                 dest = src
+                meta = src.meta
+                meta.update(
+                    {
+                        "driver": "GTiff",
+                        "width": ras_msk.shape[1],
+                        "height": ras_msk.shape[2],
+                        "transform": transform,
+                    }
+                )
+
+            if output is not None:
+                data_dir = Path(output).parent
+                if not data_dir.is_dir():
+                    try:
+                        os.makedirs(data_dir)
+                    except OSError:
+                        print(
+                            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
+                                MARGINE
+                            )
+                            + f"Input directory cannot be created: {data_dir}"
+                        )
+                with rasterio.open(output, "w", **meta) as f:
+                    f.write(ras_msk)
+
             with xr.open_rasterio(dest) as ds:
                 ds.data = ras_msk
                 msk = ds < nodata if nodata > 0.0 else ds > nodata
