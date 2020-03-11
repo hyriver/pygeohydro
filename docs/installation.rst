@@ -30,7 +30,8 @@ Required dependencies
 Optional dependencies
 ---------------------
 
-- `cartopy <http://scitools.org.uk/cartopy/>`_
+- `cartopy <http://scitools.org.uk/cartopy/>`_ for plotting
+- `richdem <http://richdem.com/>`_ for flow accumulation
 
 
 Stable release
