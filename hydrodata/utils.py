@@ -191,14 +191,14 @@ def get_elevation_bybbox(bbox, coords):
     """Get elevation from DEM data for a list of coordinates.
 
     The elevations are extracted from SRTM1 (30-m resolution) data.
-    This function is intended for getting elevations for ds data.
+    This function is intended for getting elevations for a gridded dataset.
 
     Parameters
     ----------
     bbox : list
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
-        A list of coordinates in (lon, lat) foramt to extract the elevation.
+        A list of coordinates in (lon, lat) format to extract the elevation.
 
     Returns
     -------
@@ -232,12 +232,25 @@ def get_elevation_bybbox(bbox, coords):
     return elevations
 
 
-def pet_fao(df, lon, lat):
-    """Compute Potential EvapoTranspiration using Daymet dataset.
+def pet_fao_byloc(df, lon, lat):
+    """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
-    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
-    The following variables are required:
-    tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m^2), dayl (s)
+    The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+
+    Parameters
+    ----------
+    df : DataFrame
+        A dataframe with columns named as follows:
+        ``tmin (deg c)``, ``tmax (deg c)``, ``vp (Pa)``, ``srad (W/m^2)``, ``dayl (s)``
+    lon : float
+        Longitude of the location of interest
+    lat : float
+        Latitude of the location of interest
+
+    Returns
+    -------
+    DataFrame
+        The input DataFrame with an additional column named ``pet (mm/day)``
     """
 
     keys = [v for v in df.columns]
@@ -332,6 +345,18 @@ def pet_fao_gridded(ds):
     The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
+    The computed PET's unit is mm/day.
+
+    Parameters
+    ----------
+    ds : xarray.DataArray
+        The dataset should include the following variables:
+        ``tmin``, ``tmax``, ``lat``, ``lon``, ``vp``, ``srad``, ``dayl``
+
+    Returns
+    -------
+    xarray.DataArray
+        The input dataset with an additional variable called ``pet``.
     """
 
     keys = [v for v in ds.keys()]
@@ -386,7 +411,7 @@ def pet_fao_gridded(ds):
     e_s = (e_max + e_min) * 0.5
     ds["e_def"] = e_s - ds["vp"]
 
-    u_2 = 2.0  # recommended when no data is available
+    u_2 = 2.0  # recommended when no wind data is available
 
     lat = ds.sel(time=ds["time"][0]).lat
     ds["time"] = pd.to_datetime(ds.time.values).dayofyear.astype(dtype)
