@@ -19,9 +19,11 @@ dependencies:
       - owslib
       - scipy
       - pandas
+      - numba
       - matplotlib
       - descartes
       - xarray
+      - richdem
       - numpydoc
       - ipykernel
       - ipython

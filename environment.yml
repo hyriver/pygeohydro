@@ -7,6 +7,7 @@ dependencies:
   - owslib
   - scipy
   - pandas
+  - numba
   - matplotlib
   - descartes
   - xarray
@@ -19,4 +20,5 @@ dependencies:
     - geojson
     - rasterstats
     - tables
+    - richdem
     - hydrodata
