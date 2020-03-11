@@ -8,6 +8,7 @@ dependencies:
   - scipy
   - pandas
   - matplotlib
+  - numba
   - descartes
   - xarray
   - dask
@@ -19,6 +20,7 @@ dependencies:
     - geojson
     - rasterstats
     - tables
+    - richdem
     - mypy==0.761
     - black
     - wheel

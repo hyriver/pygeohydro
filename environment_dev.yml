@@ -7,6 +7,7 @@ dependencies:
   - owslib
   - scipy
   - pandas
+  - numba
   - matplotlib
   - descartes
   - xarray
@@ -21,6 +22,7 @@ dependencies:
   - proj
   - gdal
   - pip:
+    - richdem
     - bump2version
     - wheel
     - watchdog
