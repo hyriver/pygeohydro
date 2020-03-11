@@ -505,7 +505,9 @@ class NLDI:
 
         gdf = gpd.GeoDataFrame.from_features(r.json())
         gdf.columns = ["geometry", "comid"]
+        gdf["comid"] = gdf.comid.astype("int64")
         gdf.set_index("comid", inplace=True)
+        gdf.crs = "EPSG:4326"
         print("finished.")
         return gdf
 
@@ -541,14 +543,31 @@ class NLDI:
             raise
 
         gdf = gpd.GeoDataFrame.from_features(r.json())
+        gdf["comid"] = gdf.comid.astype("int64")
         gdf.set_index("comid", inplace=True)
+        gdf.crs = "EPSG:4326"
         print("finsihed.")
         return gdf
 
 
 def navigate_byid(comids, navigation="upstreamTributaries", distance=None):
-    """Get the river network geometry from NHDPlus V2."""
+    """Get the river network geometry based on ComID(s) from NHDPlus V2.
 
+    Parameters
+    ----------
+    comids : string or list
+        The ComID(s).
+    navigation : string, optional
+        The direction for navigating the NHDPlus database. The valid options are:
+        ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``, ``downstreamDiversions``.
+        Defaults to upstreamTributaries.
+    distance : float, optional
+        The distance to limit the navigation in km. Defaults to None (limitless).
+
+    Returns
+    -------
+    GeoDataFrame
+    """
     if not isinstance(comids, list):
         comids = [comids]
 
@@ -591,8 +610,88 @@ def navigate_byid(comids, navigation="upstreamTributaries", distance=None):
             gdf.merge(gpd.GeoDataFrame.from_features(r.json()), on="nhdplus_comid")
 
     gdf.columns = ["geometry", "comid"]
+    gdf["comid"] = gdf.comid.astype("int64")
     gdf.set_index("comid", inplace=True)
+    gdf.crs = "EPSG:4326"
 
+    return gdf
+
+
+def huc12pp_byid(feature, featureids, navigation="upstreamTributaries", distance=None):
+    """Get HUC12 pour points based on NHDPlus V2.
+
+    The pour points can be downloaded based on USGS stations or ComIDs.
+
+    Parameters
+    ----------
+    feature : string
+        The requested feature. The valid features are ``nwissite`` and ``comid``.
+    featureids : string or list
+        The ID(s) of the requested feature.
+    navigation : string, optional
+        The direction for navigating the NHDPlus database. The valid options are:
+        ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``, ``downstreamDiversions``.
+        Defaults to upstreamTributaries.
+    distance : float, optional
+        The distance to limit the navigation in km. Defaults to None (limitless).
+
+    Returns
+    -------
+    GeoDataFrame
+    """
+    valid_features = ["comid", "nwissite"]
+    if feature not in valid_features:
+        msg = "The acceptable feature options are:"
+        msg += f"{', '.join(x for x in valid_features)}"
+        raise ValueError(msg)
+
+    if not isinstance(featureids, list):
+        featureids = [featureids]
+
+    if feature == "nwissite":
+        featureids = ["USGS-" + str(f) for f in featureids]
+
+    if len(featureids) == 0:
+        raise ValueError("The featureID list is empty!")
+
+    nav_options = {
+        "upstreamMain": "UM",
+        "upstreamTributaries": "UT",
+        "downstreamMain": "DM",
+        "downstreamDiversions": "DD",
+    }
+    if navigation not in list(nav_options.keys()):
+        msg = "The acceptable navigation options are:"
+        msg += f"{', '.join(x for x in list(nav_options.keys()))}"
+        raise ValueError(msg)
+    else:
+        navigation = nav_options[navigation]
+
+    base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
+    session = utils.retry_requests()
+
+    dis = "" if distance is None else f"?distance={distance}"
+    url = base_url + f"/{featureids[0]}/navigate/{navigation}" + dis + "/huc12pp"
+    try:
+        r = session.get(url)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+
+    gdf = gpd.GeoDataFrame.from_features(r.json())
+
+    if len(featureids) > 1:
+        for featureid in featureids[1:]:
+            url = base_url + f"/{featureid}/navigate/{navigation}" + dis + "/huc12pp"
+            try:
+                r = session.get(url)
+            except HTTPError or ConnectionError or Timeout or RequestException:
+                raise
+
+            gdf.merge(gpd.GeoDataFrame.from_features(r.json(), on="comid"))
+
+    gdf = gdf[["comid", "geometry"]]
+    gdf["comid"] = gdf.comid.astype("int64")
+    gdf.crs = "EPSG:4326"
     return gdf
 
 
@@ -671,12 +770,15 @@ def nhdplus_bybox(bbox, layer="nhdflowline_network"):
 
     gdf = gpd.GeoDataFrame.from_features(r.json())
     try:
+        gdf["comid"] = gdf.comid.astype("int64")
         gdf.set_index("comid", inplace=True)
     except KeyError:
         raise KeyError(
             f"No flowlines was found in the box ({', '.join(str(round(x, 3)) for x in bbox)})"
         )
+    gdf.crs = "EPSG:4326"
     print("finished.")
+
     return gdf
 
 
@@ -765,7 +867,7 @@ def nhdplus_byid(comids, layer="nhdflowline_network"):
             gdf.set_index("featureid", inplace=True)
         except KeyError:
             raise KeyError("The requested features are not in NHDPlus V2.")
-
+    gdf.crs = "EPSG:4326"
     return gdf
 
 
