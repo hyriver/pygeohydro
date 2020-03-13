@@ -8,15 +8,17 @@ import pytest
 @pytest.fixture
 def get_data():
     """Test all hydrodata functionalities."""
-    from hydrodata import Station
+    from hydrodata import Station, utils
     import hydrodata.datasets as hds
     from hydrodata import plot
 
-    lon, lat = -69.32, 45.17
+    station_id = "01031500"
     start, end = "2000-01-01", "2010-01-21"
-    wshed = Station(start, end, coords=(lon, lat), data_dir="tests/data")
+    wshed = Station(start, end, station_id=station_id, data_dir="tests/data")
 
     dem = hds.dem_bygeom(wshed.geometry, resolution=60.0 / 3600.0)
+
+    subbasins, pps = utils.subbasin_delineation(wshed.station_id)
 
     clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
     clm_loc["Q (cms)"] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
@@ -58,6 +60,7 @@ def get_data():
     plot.signatures(Q_daily=Q_daily, title="Streamflow data for two watersheds")
     return (
         dem.isel(x=int(dem.x.shape[0] / 2), y=int(dem.y.shape[0] / 2)).values,
+        len(subbasins),
         clm_loc.loc["2008-11-10", "prcp (mm/day)"],
         clm_loc.loc["2008-11-10", "Q (cms)"],
         clm_grd.isel(time=2, x=12, y=10).tmin.values,
@@ -70,14 +73,15 @@ def get_data():
 
 def test_content(get_data):
     """Run the tests"""
-    elev, prcp, q, tmin, eta, st, st150, cov = get_data
+    elev, nsub, prcp, q, tmin, eta, st, st150, cov = get_data
     assert (
         abs(elev - 264.0) < 1e-3
+        and nsub == 5
         and abs(prcp - 2.0) < 1e-3
         and abs(q - 54.368) < 1e-3
         and abs(tmin - (-11.5)) < 1e-3
         and abs(eta - 0.575) < 1e-3
         and st == "USGS-01031300"
         and st150 == "USGS-01031500"
-        and abs(cov - 47.69921436588103) < 1e-3
+        and abs(cov - 96.9565) < 1e-3
     )
