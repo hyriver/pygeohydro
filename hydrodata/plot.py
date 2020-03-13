@@ -205,7 +205,7 @@ def get_daterange(Q_dict):
     ).to_pydatetime()
 
 
-def cover_lenegeds():
+def cover_legends():
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     from matplotlib.colors import ListedColormap, BoundaryNorm
 
