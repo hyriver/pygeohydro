@@ -1,38 +1,47 @@
-name: hydrodata-ci
+name: hydrodata
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python>=3.6
   - pip
   - owslib
   - scipy
   - pandas
-  - matplotlib
   - numba
+  - matplotlib
   - descartes
   - xarray
+  - cartopy
   - dask
   - netCDF4
   - bottleneck
   - lxml
+  - geopandas
+  - jupyterlab
+  - pyproj
+  - proj
+  - gdal
   - pip:
-    - geopandas
-    - geojson
-    - rasterstats
-    - tables
     - richdem
-    - mypy==0.761
-    - black
+    - bump2version
     - wheel
     - watchdog
     - flake8
+    - sphinx
+    - sphinx_rtd_theme
+    - sphinx-copybutton
+    - nbsphinx
     - twine
     - tox
-    - tox-travis
     - coverage
     - pytest-runner
     - pytest-cov
     - pytest-xdist
     - codecov
     - numpydoc
+    - mypy==0.761
     - pre-commit
+    - geojson
+    - black
+    - rasterstats
+    - tables

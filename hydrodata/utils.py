@@ -191,14 +191,14 @@ def get_elevation_bybbox(bbox, coords):
     """Get elevation from DEM data for a list of coordinates.
 
     The elevations are extracted from SRTM1 (30-m resolution) data.
-    This function is intended for getting elevations for ds data.
+    This function is intended for getting elevations for a gridded dataset.
 
     Parameters
     ----------
     bbox : list
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
-        A list of coordinates in (lon, lat) foramt to extract the elevation.
+        A list of coordinates in (lon, lat) format to extract the elevation.
 
     Returns
     -------
@@ -209,15 +209,16 @@ def get_elevation_bybbox(bbox, coords):
     import rasterio
 
     west, south, east, north = bbox
-    url = "http://opentopo.sdsc.edu/otr/getdem?"
+    url = "https://portal.opentopography.org/otr/getdem"
     payload = dict(
         demtype="SRTMGL1",
-        west=west,
-        south=south,
-        east=east,
-        north=north,
+        west=round(west, 6),
+        south=round(south, 6),
+        east=round(east, 6),
+        north=round(north, 6),
         outputFormat="GTiff",
     )
+
     session = retry_requests()
     try:
         r = session.get(url, params=payload)
@@ -232,12 +233,25 @@ def get_elevation_bybbox(bbox, coords):
     return elevations
 
 
-def pet_fao(df, lon, lat):
-    """Compute Potential EvapoTranspiration using Daymet dataset.
+def pet_fao_byloc(df, lon, lat):
+    """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
-    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
-    The following variables are required:
-    tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m^2), dayl (s)
+    The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+
+    Parameters
+    ----------
+    df : DataFrame
+        A dataframe with columns named as follows:
+        ``tmin (deg c)``, ``tmax (deg c)``, ``vp (Pa)``, ``srad (W/m^2)``, ``dayl (s)``
+    lon : float
+        Longitude of the location of interest
+    lat : float
+        Latitude of the location of interest
+
+    Returns
+    -------
+    DataFrame
+        The input DataFrame with an additional column named ``pet (mm/day)``
     """
 
     keys = [v for v in df.columns]
@@ -332,6 +346,18 @@ def pet_fao_gridded(ds):
     The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
+    The computed PET's unit is mm/day.
+
+    Parameters
+    ----------
+    ds : xarray.DataArray
+        The dataset should include the following variables:
+        ``tmin``, ``tmax``, ``lat``, ``lon``, ``vp``, ``srad``, ``dayl``
+
+    Returns
+    -------
+    xarray.DataArray
+        The input dataset with an additional variable called ``pet``.
     """
 
     keys = [v for v in ds.keys()]
@@ -386,7 +412,7 @@ def pet_fao_gridded(ds):
     e_s = (e_max + e_min) * 0.5
     ds["e_def"] = e_s - ds["vp"]
 
-    u_2 = 2.0  # recommended when no data is available
+    u_2 = 2.0  # recommended when no wind data is available
 
     lat = ds.sel(time=ds["time"][0]).lat
     ds["time"] = pd.to_datetime(ds.time.values).dayofyear.astype(dtype)
@@ -462,3 +488,79 @@ def exceedance(daily):
     fdc.sort_values(by=["rank"], inplace=True)
     fdc.set_index("rank", inplace=True, drop=True)
     return fdc
+
+
+def subbasin_delineation(station_id):
+    """Delineate subbasins of a watershed based on HUC12 pour points."""
+
+    import hydrodata.datasets as hds
+    from shapely.geometry import mapping, Point
+    import geopandas as gpd
+
+    session = retry_requests()
+    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
+
+    comids = []
+    for nav in ["UM", "UT"]:
+        url = base_url + f"/USGS-{station_id}/navigate/{nav}"
+        try:
+            r = session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+        comids.append(
+            gpd.GeoDataFrame.from_features(r.json()).nhdplus_comid.astype(str).tolist()
+        )
+
+    main_ids, trib_ids = comids
+    main_fl = hds.nhdplus_byid(comids=main_ids, layer="nhdflowline_network")
+    trib_fl = hds.nhdplus_byid(comids=trib_ids, layer="nhdflowline_network")
+
+    main_ids = main_fl.sort_values(by="hydroseq").index.tolist()
+    len_cs = main_fl.sort_values(by="hydroseq").lengthkm.cumsum()
+
+    pp = hds.huc12pp_byid("nwissite", station_id, "upstreamMain")
+    station = Point(
+        mapping(main_fl.loc[main_ids[0]].geometry)["coordinates"][0][-1][:-1]
+    )
+    pp = pp.append([{"geometry": station, "comid": main_ids[0]}], ignore_index=True)
+    headwater = Point(
+        mapping(main_fl.loc[main_ids[-1]].geometry)["coordinates"][0][-1][:-1]
+    )
+    pp = pp.append([{"geometry": headwater, "comid": main_ids[-1]}], ignore_index=True)
+    pp = (
+        pp.set_index("comid")
+        .loc[[s for s in main_ids if s in pp.comid.tolist()]]
+        .reset_index()
+    )
+
+    pp_dist = len_cs.loc[pp.comid.astype(int).tolist()]
+    pp_dist = pp_dist.diff()
+
+    pp_idx = [main_ids[0]] + pp_dist[pp_dist > 1].index.tolist()
+
+    if len(pp_idx) < 2:
+        msg = "There are not enough pour points in the watershed for automatic delineation."
+        msg = " Try passing the desired number of subbasins."
+        raise ValueError(msg)
+
+    pour_points = pp[pp.comid.isin(pp_idx[1:-1])]
+
+    pp_idx = [main_ids.index(i) for i in pp_idx]
+    idx_subs = [main_ids[pp_idx[i - 1] : pp_idx[i]] for i in range(1, len(pp_idx))]
+
+    catchemnts = []
+    sub = [trib_fl]
+    fm = main_fl.copy()
+    for idx_max in idx_subs:
+        sub.append(hds.navigate_byid(idx_max[-1], "upstreamTributaries"))
+        idx_catch = (
+            sub[-2][~sub[-2].index.isin(sub[-1].index)].index.astype(str).tolist()
+        )
+        catchemnts.append(hds.nhdplus_byid(comids=idx_catch, layer="catchmentsp"))
+        fm = fm[~fm.index.isin(idx_max)].copy()
+
+    catchemnts[-1] = catchemnts[-1].append(
+        hds.nhdplus_byid(comids=sub[-1].index.astype(str).tolist(), layer="catchmentsp")
+    )
+
+    return catchemnts, pour_points
