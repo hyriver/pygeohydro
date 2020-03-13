@@ -2,7 +2,7 @@
 History
 =======
 
-0.4.2 (2020-02-26)
+0.4.3 (2020-03-12)
 ------------------
 
 * An almost complete refactoring of the code base
@@ -14,6 +14,7 @@ History
 * Added code style enforcement with isort, black, flake8 and pre-commit
 * Added a new shiny logo!
 * New installation method
+* Changed OpenTopography base url to their new server
 
 0.3.0 (2020-02-10)
 ------------------
