@@ -17,6 +17,7 @@ dependencies:
   - bottleneck
   - lxml
   - geopandas
+  - folium
   - jupyterlab
   - pyproj
   - proj

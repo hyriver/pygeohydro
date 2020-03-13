@@ -9,6 +9,7 @@ dependencies:
       - geopandas
       - geojson
       - rasterstats
+      - folium
       - sphinx
       - sphinx_rtd_theme
       - sphinx-copybutton
