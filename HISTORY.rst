@@ -2,7 +2,7 @@
 History
 =======
 
-0.4.3 (2020-03-12)
+0.4.4 (2020-03-12)
 ------------------
 
 * An almost complete refactoring of the code base
@@ -15,6 +15,7 @@ History
 * Added a new shiny logo!
 * New installation method
 * Changed OpenTopography base url to their new server
+* Fixed NLCD legend and statistics bug
 
 0.3.0 (2020-02-10)
 ------------------
