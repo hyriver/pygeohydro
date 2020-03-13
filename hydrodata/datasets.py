@@ -1051,7 +1051,6 @@ def NLCD(
     data_dir="/tmp",
     width=2000,
     resolution=None,
-    array=True,
     statistics=False,
 ):
     """Get data from NLCD 2016 database.
@@ -1086,8 +1085,6 @@ def NLCD(
         The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using bilinear method
         for impervious and canopy data, and majority for the cover.
-    array : bool
-        Whether to return the data as an ``xarray.DataArray``, defaults to True
     statistics : bool
         Whether to perform simple statistics on the data, default to False
 
@@ -1119,63 +1116,7 @@ def NLCD(
                 + f"Input directory cannot be created: {data_dir}"
             )
 
-    nlcd_meta = dict(
-        impervious_years=[2016, 2011, 2006, 2001],
-        canopy_years=[2016, 2011],
-        cover_years=[2016, 2013, 2011, 2008, 2006, 2004, 2001],
-        legends={
-            "0": "Unclassified",
-            "11": "Open Water",
-            "12": "Perennial Ice/Snow",
-            "21": "Developed, Open Space",
-            "22": "Developed, Low Intensity",
-            "23": "Developed, Medium Intensity",
-            "24": "Developed High Intensity",
-            "31": "Barren Land (Rock/Sand/Clay)",
-            "41": "Deciduous Forest",
-            "42": "Evergreen Forest",
-            "43": "Mixed Forest",
-            "51": "Dwarf Scrub",
-            "52": "Shrub/Scrub",
-            "71": "Grassland/Herbaceous",
-            "72": "Sedge/Herbaceous",
-            "73": "Lichens",
-            "74": "Moss",
-            "81": "Pasture/Hay",
-            "82": "Cultivated Crops",
-            "90": "Woody Wetlands",
-            "95": "Emergent Herbaceous Wetlands",
-        },
-        categories={
-            "Unclassified": ("0"),
-            "Water": ("11", "12"),
-            "Developed": ("21", "22", "23", "24"),
-            "Barren": ("31",),
-            "Forest": ("41", "42", "43"),
-            "Shrubland": ("51", "52"),
-            "Herbaceous": ("71", "72", "73", "74"),
-            "Planted/Cultivated": ("81", "82"),
-            "Wetlands": ("90", "95"),
-        },
-        roughness={
-            "11": 0.0250,
-            "12": 0.0220,
-            "21": 0.0400,
-            "22": 0.1000,
-            "23": 0.0800,
-            "24": 0.1500,
-            "31": 0.0275,
-            "41": 0.1600,
-            "42": 0.1800,
-            "43": 0.1700,
-            "52": 0.1000,
-            "71": 0.0350,
-            "81": 0.0325,
-            "82": 0.0375,
-            "90": 0.1200,
-            "95": 0.0700,
-        },
-    )
+    nlcd_meta = utils.nlcd_helper()
 
     avail_years = {
         "impervious": nlcd_meta["impervious_years"],
@@ -1211,7 +1152,7 @@ def NLCD(
     fpaths = [
         Path(data_dir, f"{d}_{years[d]}.geotiff").exists() for d in list(years.keys())
     ]
-    if not all(fpaths):
+    if not all(fpaths) or str(data_dir) == "/tmp":
         print(
             f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
                 MARGINE
@@ -1232,7 +1173,7 @@ def NLCD(
     nodata = 199
     for data_type, layer in layers:
         data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
-        if Path(data_path).exists() and data_dir != "/tmp":
+        if Path(data_path).exists() and str(data_dir) != "/tmp":
             print(
                 f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
                     MARGINE
@@ -1327,49 +1268,50 @@ def NLCD(
 
         if statistics and data_type != "cover":
             params[data_type] = rasterstats.zonal_stats(
-                geometry, data_path, category_map=nlcd_meta["legends"],
+                geometry, data_path, category_map=nlcd_meta["classes"],
             )[0]
 
-    if array:
-        data_path = Path(data_dir, f"cover_{years['cover']}.geotiff")
-        with xr.open_rasterio(data_path) as ds:
-            ds = ds.squeeze("band", drop=True)
-            ds = ds.where((ds > 0) & (ds < nodata), drop=True)
-            ds.name = "cover"
-            attrs = ds.attrs
-            ds.attrs["units"] = "classes"
+    data_path = Path(data_dir, f"cover_{years['cover']}.geotiff")
+    with xr.open_rasterio(data_path) as ds:
+        ds = ds.squeeze("band", drop=True)
+        ds = ds.where((ds > 0) & (ds < nodata), drop=True)
+        ds.name = "cover"
+        attrs = ds.attrs
+        ds.attrs["units"] = "classes"
 
-        for data_type in ["canopy", "impervious"]:
-            data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
-            with xr.open_rasterio(data_path) as rs:
-                rs = rs.squeeze("band", drop=True)
-                rs = rs.where(rs < nodata, drop=True)
-                rs.name = data_type
-                rs.attrs["units"] = "%"
-                ds = xr.merge([ds, rs])
+    for data_type in ["canopy", "impervious"]:
+        data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
+        with xr.open_rasterio(data_path) as rs:
+            rs = rs.squeeze("band", drop=True)
+            rs = rs.where(rs < nodata, drop=True)
+            rs.name = data_type
+            rs.attrs["units"] = "%"
+            ds = xr.merge([ds, rs])
 
-        ds.attrs = attrs
+    ds.attrs = attrs
 
     if statistics:
-        cover = rasterio.open(Path(data_dir, f"cover_{years['cover']}.geotiff"))
-        total_pix = cover.shape[0] * cover.shape[1]
-        cover_arr = cover.read()
+        cover_arr = ds.cover.values
+        total_pix = np.count_nonzero(~np.isnan(cover_arr))
+
         class_percentage = dict(
             zip(
-                list(nlcd_meta["legends"].values()),
+                list(nlcd_meta["classes"].values()),
                 [
                     cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                    for cat in list(nlcd_meta["legends"].keys())
+                    for cat in list(nlcd_meta["classes"].keys())
                 ],
             )
         )
-        masks = [
-            [leg in cat for leg in list(nlcd_meta["legends"].keys())]
-            for cat in list(nlcd_meta["categories"].values())
-        ]
-        cat_list = [
-            np.array(list(class_percentage.values()))[msk].sum() for msk in masks
-        ]
+
+        cat_list = (
+            np.array(
+                [np.count_nonzero(cover_arr // 10 == c) for c in range(10) if c != 6]
+            )
+            / total_pix
+            * 100.0
+        )
+
         category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
 
         stats = {
@@ -1378,14 +1320,10 @@ def NLCD(
             "cover": {"classes": class_percentage, "categories": category_percentage},
         }
 
-    if array and statistics:
-        return ds, stats
-
-    if array:
-        return array
-
     if statistics:
-        return stats
+        return ds, stats
+    else:
+        return ds
 
 
 def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
