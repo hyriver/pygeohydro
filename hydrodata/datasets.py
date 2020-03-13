@@ -73,12 +73,18 @@ def nwis(station_id, start, end, raw=False):
         raise
 
     try:
-        ts = r.json()["value"]["timeSeries"][0]["values"][0]["value"]
+        r_ts = r.json()["value"]["timeSeries"]
+        ts = None
+        for v in r_ts:
+            if v["variable"]["options"]["option"][0]["value"] == "Mean":
+                ts = v["values"][0]["value"]
+        if ts is None:
+            raise IndexError
     except IndexError:
         msg = (
             f"[ID: {station_id}] ".ljust(MARGINE)
-            + "The requested data is not available in the station."
-            + f"Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
+            + "Daily Mean data unavailable for the time period specified."
+            + f" Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
         )
         raise IndexError(msg)
 
@@ -93,9 +99,9 @@ def nwis(station_id, start, end, raw=False):
         msg = (
             f"[ID: {station_id}] ".ljust(MARGINE)
             + "The data is not available in the requested date range."
-            + f"Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
+            + f" Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
         )
-        raise KeyError("")
+        raise KeyError(msg)
     df.set_index("dateTime", inplace=True)
     qobs = df.value.astype("float64") * 0.028316846592  # Convert cfs to cms
     print("finished.")
@@ -1234,7 +1240,7 @@ def NLCD(
     nodata = 199
     for data_type, layer in layers:
         data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
-        if Path(data_path).exists():
+        if Path(data_path).exists() and data_dir != "/tmp":
             print(
                 f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
                     MARGINE
@@ -1424,13 +1430,13 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
 
     west, south, east, north = geometry.bounds
 
-    url = "http://opentopo.sdsc.edu/otr/getdem?"
+    url = "https://portal.opentopography.org/otr/getdem"
     payload = dict(
         demtype=demtype,
-        west=west,
-        south=south,
-        east=east,
-        north=north,
+        west=round(west, 6),
+        south=round(south, 6),
+        east=round(east, 6),
+        north=round(north, 6),
         outputFormat="GTiff",
     )
 

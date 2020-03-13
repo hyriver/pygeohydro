@@ -209,15 +209,16 @@ def get_elevation_bybbox(bbox, coords):
     import rasterio
 
     west, south, east, north = bbox
-    url = "http://opentopo.sdsc.edu/otr/getdem?"
+    url = "https://portal.opentopography.org/otr/getdem"
     payload = dict(
         demtype="SRTMGL1",
-        west=west,
-        south=south,
-        east=east,
-        north=north,
+        west=round(west, 6),
+        south=round(south, 6),
+        east=round(east, 6),
+        north=round(north, 6),
         outputFormat="GTiff",
     )
+
     session = retry_requests()
     try:
         r = session.get(url, params=payload)
@@ -487,3 +488,79 @@ def exceedance(daily):
     fdc.sort_values(by=["rank"], inplace=True)
     fdc.set_index("rank", inplace=True, drop=True)
     return fdc
+
+
+def subbasin_delineation(station_id):
+    """Delineate subbasins of a watershed based on HUC12 pour points."""
+
+    import hydrodata.datasets as hds
+    from shapely.geometry import mapping, Point
+    import geopandas as gpd
+
+    session = retry_requests()
+    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
+
+    comids = []
+    for nav in ["UM", "UT"]:
+        url = base_url + f"/USGS-{station_id}/navigate/{nav}"
+        try:
+            r = session.get(url)
+        except HTTPError or ConnectionError or Timeout or RequestException:
+            raise
+        comids.append(
+            gpd.GeoDataFrame.from_features(r.json()).nhdplus_comid.astype(str).tolist()
+        )
+
+    main_ids, trib_ids = comids
+    main_fl = hds.nhdplus_byid(comids=main_ids, layer="nhdflowline_network")
+    trib_fl = hds.nhdplus_byid(comids=trib_ids, layer="nhdflowline_network")
+
+    main_ids = main_fl.sort_values(by="hydroseq").index.tolist()
+    len_cs = main_fl.sort_values(by="hydroseq").lengthkm.cumsum()
+
+    pp = hds.huc12pp_byid("nwissite", station_id, "upstreamMain")
+    station = Point(
+        mapping(main_fl.loc[main_ids[0]].geometry)["coordinates"][0][-1][:-1]
+    )
+    pp = pp.append([{"geometry": station, "comid": main_ids[0]}], ignore_index=True)
+    headwater = Point(
+        mapping(main_fl.loc[main_ids[-1]].geometry)["coordinates"][0][-1][:-1]
+    )
+    pp = pp.append([{"geometry": headwater, "comid": main_ids[-1]}], ignore_index=True)
+    pp = (
+        pp.set_index("comid")
+        .loc[[s for s in main_ids if s in pp.comid.tolist()]]
+        .reset_index()
+    )
+
+    pp_dist = len_cs.loc[pp.comid.astype(int).tolist()]
+    pp_dist = pp_dist.diff()
+
+    pp_idx = [main_ids[0]] + pp_dist[pp_dist > 1].index.tolist()
+
+    if len(pp_idx) < 2:
+        msg = "There are not enough pour points in the watershed for automatic delineation."
+        msg = " Try passing the desired number of subbasins."
+        raise ValueError(msg)
+
+    pour_points = pp[pp.comid.isin(pp_idx[1:-1])]
+
+    pp_idx = [main_ids.index(i) for i in pp_idx]
+    idx_subs = [main_ids[pp_idx[i - 1] : pp_idx[i]] for i in range(1, len(pp_idx))]
+
+    catchemnts = []
+    sub = [trib_fl]
+    fm = main_fl.copy()
+    for idx_max in idx_subs:
+        sub.append(hds.navigate_byid(idx_max[-1], "upstreamTributaries"))
+        idx_catch = (
+            sub[-2][~sub[-2].index.isin(sub[-1].index)].index.astype(str).tolist()
+        )
+        catchemnts.append(hds.nhdplus_byid(comids=idx_catch, layer="catchmentsp"))
+        fm = fm[~fm.index.isin(idx_max)].copy()
+
+    catchemnts[-1] = catchemnts[-1].append(
+        hds.nhdplus_byid(comids=sub[-1].index.astype(str).tolist(), layer="catchmentsp")
+    )
+
+    return catchemnts, pour_points
