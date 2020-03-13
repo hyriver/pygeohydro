@@ -108,6 +108,90 @@ def nwis(station_id, start, end, raw=False):
     return qobs
 
 
+def stations_bybbox(bbox):
+    """Get NWIS stations within a bounding box.
+
+    Only stations that record(ed) daily streamflow data are returned.
+    The following columns are included in the dataframe:
+    site_no         -- Site identification number
+    station_nm      -- Site name
+    site_tp_cd      -- Site type
+    dec_lat_va      -- Decimal latitude
+    dec_long_va     -- Decimal longitude
+    coord_acy_cd    -- Latitude-longitude accuracy
+    dec_coord_datum_cd -- Decimal Latitude-longitude datum
+    alt_va          -- Altitude of Gage/land surface
+    alt_acy_va      -- Altitude accuracy
+    alt_datum_cd    -- Altitude datum
+    huc_cd          -- Hydrologic unit code
+    parm_cd         -- Parameter code
+    stat_cd         -- Statistical code
+    ts_id           -- Internal timeseries ID
+    loc_web_ds      -- Additional measurement description
+    medium_grp_cd   -- Medium group code
+    parm_grp_cd     -- Parameter group code
+    srs_id          -- SRS ID
+    access_cd       -- Access code
+    begin_date      -- Begin date
+    end_date        -- End date
+    count_nu        -- Record count
+
+    Parameters
+    ----------
+    bbox : list
+        List of corners in this order [west, south, east, north]
+
+    Returns
+    -------
+    pandas.DataFrame
+    """
+    if not isinstance(bbox, list):
+        raise ValueError("bbox should be a list: [west, south, east, north]")
+
+    url = "https://waterservices.usgs.gov/nwis/site/"
+    payload = {
+        "format": "rdb",
+        "bBox": ",".join(f"{b:.06f}" for b in bbox),
+        "outputDataTypeCd": "dv",
+        "parameterCd": "00060",
+        "siteStatus": "all",
+        "hasDataTypeCd": "dv",
+    }
+
+    session = utils.retry_requests()
+    try:
+        r = session.get(url, params=payload)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
+
+    r_text = r.text.split("\n")
+    r_list = [l.split("\t") for l in r_text if "#" not in l]
+    r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
+
+    df = pd.DataFrame.from_dict(r_dict).dropna()
+    df = df.drop(df[df.alt_va == ""].index)
+    df = df[df.parm_cd == "00060"]
+    df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
+        ["dec_lat_va", "dec_long_va", "alt_va"]
+    ].astype("float")
+    df["begin_date"] = pd.to_datetime(df["begin_date"])
+    df["end_date"] = pd.to_datetime(df["end_date"])
+    df = df[df.site_no.apply(len) == 8]
+    df = df.drop(
+        columns=[
+            "agency_cd",
+            "data_type_cd",
+            "ts_id",
+            "loc_web_ds",
+            "medium_grp_cd",
+            "parm_grp_cd",
+            "srs_id",
+            "access_cd",
+        ]
+    )
+    return df
+
+
 def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
     """Get daily climate data from Daymet for a single point.
 

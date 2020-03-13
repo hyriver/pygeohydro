@@ -650,3 +650,92 @@ def nlcd_helper():
     )
 
     return nlcd_meta
+
+
+def interactive_map(bbox):
+    """An interactive map including all USGS stations within a bounding box.
+
+    Only stations that record(ed) daily streamflow data are included.
+
+    Parameters
+    ----------
+    bbox : list
+        List of corners in this order [west, south, east, north]
+
+    Returns
+    -------
+    folium.Map
+    """
+    import folium
+    import hydrodata.datasets as hds
+
+    if not isinstance(bbox, list):
+        raise ValueError("bbox should be a list: [west, south, east, north]")
+
+    df = hds.stations_bybbox(bbox)
+    df = df[
+        [
+            "site_no",
+            "station_nm",
+            "dec_lat_va",
+            "dec_long_va",
+            "alt_va",
+            "alt_datum_cd",
+            "huc_cd",
+            "begin_date",
+            "end_date",
+        ]
+    ]
+    df["coords"] = [
+        (lat, lon)
+        for _, lat, lon in df[["dec_lat_va", "dec_long_va"]].itertuples(name=None)
+    ]
+    df["altitude"] = (
+        df["alt_va"].astype(str) + " ft above " + df["alt_datum_cd"].astype(str)
+    )
+    df = df.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
+    df = df[
+        [
+            "site_no",
+            "station_nm",
+            "coords",
+            "altitude",
+            "huc_cd",
+            "begin_date",
+            "end_date",
+        ]
+    ]
+    df.columns = [
+        "Site No.",
+        "Station Name",
+        "Coordinate",
+        "Altitude",
+        "HUC8",
+        "Begin date",
+        "End data",
+    ]
+
+    msgs = []
+    for row in df.itertuples(index=False):
+        msg = ""
+        for col in df.columns:
+            msg += "".join(
+                ["<strong>", col, "</strong> : ", f"{row[df.columns.get_loc(col)]}<br>"]
+            )
+        msgs.append(msg[:-4])
+
+    df["msg"] = msgs
+    df = df[["Coordinate", "msg"]]
+
+    west, south, east, north = bbox
+    lon = (west + east) * 0.5
+    lat = (south + north) * 0.5
+
+    m = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
+
+    for _, coords, msg in df.itertuples(name=None):
+        folium.Marker(
+            location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
+        ).add_to(m)
+
+    return m
