@@ -266,7 +266,7 @@ def daymet_bygeom(
     """
 
     from pandas.tseries.offsets import DateOffset
-    from shapely.geometry import Polygon, Point
+    from shapely.geometry import Polygon
 
     base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
 
@@ -402,15 +402,7 @@ def daymet_bygeom(
         data = utils.pet_fao_gridded(data)
         print("finished.")
 
-    def _within(x, y, g):
-        return np.array([Point(i, j).within(g) for i, j in np.nditer((x, y))]).reshape(
-            x.shape
-        )
-
-    def within(da, shape):
-        return xr.apply_ufunc(_within, da.lon, da.lat, kwargs={"g": shape})
-
-    data = data.where(within(data, geometry), drop=True)
+    data = utils.clip_daymet(data, geometry)
 
     if resolution is not None:
         res_x = resolution if data.x[0] < data.x[-1] else -resolution

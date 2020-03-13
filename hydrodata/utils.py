@@ -564,3 +564,23 @@ def subbasin_delineation(station_id):
     )
 
     return catchemnts, pour_points
+
+
+def clip_daymet(ds, geometry):
+    """Clip a xarray dataset by a geometry """
+
+    from xarray import apply_ufunc
+    from shapely.geometry import Polygon, Point
+
+    if not isinstance(geometry, Polygon):
+        raise TypeError("The geometry argument should be of Shapely's Polygon type.")
+
+    def _within(x, y, g):
+        return np.array([Point(i, j).within(g) for i, j in np.nditer((x, y))]).reshape(
+            x.shape
+        )
+
+    def within(da, shape):
+        return apply_ufunc(_within, da.lon, da.lat, kwargs={"g": shape})
+
+    return ds.where(within(ds, geometry), drop=True)
