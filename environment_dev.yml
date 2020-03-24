@@ -23,7 +23,7 @@ dependencies:
   - proj
   - gdal
   - pip:
-    - richdem
+    - networkx
     - bump2version
     - wheel
     - watchdog
