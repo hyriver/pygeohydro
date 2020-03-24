@@ -24,7 +24,7 @@ dependencies:
       - matplotlib
       - descartes
       - xarray
-      - richdem
+      - networkx
       - numpydoc
       - ipykernel
       - ipython

@@ -20,7 +20,7 @@ dependencies:
     - geojson
     - rasterstats
     - tables
-    - richdem
+    - networkx
     - mypy==0.761
     - black
     - wheel
