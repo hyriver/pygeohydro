@@ -13,9 +13,10 @@ import os
 from pathlib import Path
 
 import geopandas as gpd
+import hydrodata.datasets as hds
+import numpy as np
 import pandas as pd
 from hydrodata import utils
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 MARGINE = 15
 
@@ -95,21 +96,29 @@ class Station:
 
     def get_coords(self):
         """Get coordinates of the station from station ID."""
-        url = "https://waterservices.usgs.gov/nwis/site"
-        payload = {"format": "rdb", "sites": self.station_id, "hasDataTypeCd": "dv"}
-        try:
-            r = self.session.get(url, params=payload)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+        siteinfo = hds.nwis_siteinfo(ids=self.station_id)
+        st = siteinfo[siteinfo.stat_cd == "00003"]
+        st_begin = st.begin_date.values[0]
+        st_end = st.end_date.values[0]
+        if self.start < st_begin or self.end > st_end:
+            msg = (
+                f"[ID: {self.station_id}] ".ljust(MARGINE)
+                + "Daily Mean data unavailable for the specified time period."
+                + " The data is available from "
+                + f"{np.datetime_as_string(st_begin, 'D')} to "
+                + f"{np.datetime_as_string(st_end, 'D')}."
+            )
+            raise ValueError(msg)
 
-        r_text = r.text.split("\n")
-        r_list = [l.split("\t") for l in r_text if "#" not in l]
-        station = dict(zip(r_list[0], r_list[2]))
-
-        self.coords = (float(station["dec_long_va"]), float(station["dec_lat_va"]))
-        self.altitude = float(station["alt_va"]) * 0.3048  # convert ft to meter
-        self.datum = station["alt_datum_cd"]
-        self.name = station["station_nm"]
+        self.coords = (
+            st["dec_long_va"].astype("float64").values[0],
+            st["dec_lat_va"].astype("float64").values[0],
+        )
+        self.altitude = (
+            st["alt_va"].astype("float64").values[0] * 0.3048
+        )  # convert ft to meter
+        self.datum = st["alt_datum_cd"].values[0]
+        self.name = st.station_nm.values[0]
 
     def get_id(self):
         """Get station ID based on the specified coordinates."""
@@ -124,70 +133,61 @@ class Station:
                 f"{self.coords[1] + 0.5:.6f}",
             ]
         )
-        url = "https://waterservices.usgs.gov/nwis/site"
-        payload = {"format": "rdb", "bBox": bbox, "hasDataTypeCd": "dv"}
-        try:
-            r = self.session.get(url, params=payload)
-        except HTTPError:
-            raise HTTPError(
-                f"No USGS station found within a 50 km radius of ({self.coords[0]}, {self.coords[1]})."
+        df = hds.nwis_siteinfo(bbox=bbox)
+        df = df[df.state_cd == "0003"]
+        if len(df) < 1:
+            msg = (
+                f"[ID: {self.coords}] ".ljust(MARGINE)
+                + "No USGS station were found within a 50-km radius with daily mean streamflow."
             )
-
-        r_text = r.text.split("\n")
-        r_list = [l.split("\t") for l in r_text if "#" not in l]
-        r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
-
-        df = pd.DataFrame.from_dict(r_dict).dropna()
-        df = df.drop(df[df.alt_va == ""].index)
-        df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
-            ["dec_lat_va", "dec_long_va", "alt_va"]
-        ].astype("float")
-        df = df[df.site_no.apply(len) == 8]
+            raise ValueError(msg)
 
         point = geom.Point(self.coords)
         pts = dict(
             [
-                [row.site_no, geom.Point(row.dec_long_va, row.dec_lat_va)]
-                for row in df[["site_no", "dec_lat_va", "dec_long_va"]].itertuples()
+                [sid, geom.Point(lon, lat)]
+                for sid, lon, lat in df[
+                    ["site_no", "dec_lat_va", "dec_long_va"]
+                ].itertuples(name=None)
             ]
         )
         gdf = gpd.GeoSeries(pts)
         nearest = ops.nearest_points(point, gdf.unary_union)[1]
         idx = gdf[gdf.geom_equals(nearest)].index[0]
         station = df[df.site_no == idx]
+        st_begin = station.begin_date.values[0]
+        st_end = station.end_date.values[0]
+        if self.start < st_begin or self.end > st_end:
+            msg = (
+                f"[ID: {self.station_id}] ".ljust(MARGINE)
+                + "Daily Mean data unavailable for the specified time period."
+                + " The data is available from "
+                + f"{np.datetime_as_string(st_begin, 'D')} to "
+                + f"{np.datetime_as_string(st_end, 'D')}."
+            )
+            raise ValueError(msg)
 
         self.station_id = station.site_no.values[0]
-        self.coords = (station.dec_long_va.values[0], station.dec_lat_va.values[0])
+        self.coords = (
+            station.dec_long_va.astype("float64").values[0],
+            station.dec_lat_va.astype("float64").values[0],
+        )
         self.altitude = (
-            float(station["alt_va"].values[0]) * 0.3048
+            station["alt_va"].astype("float64").values[0] * 0.3048
         )  # convert ft to meter
         self.datum = station["alt_datum_cd"].values[0]
         self.name = station.station_nm.values[0]
 
     def get_watershed(self):
         """Download the watershed geometry from the NLDI service."""
-        from hydrodata.datasets import NLDI, nhdplus_byid
 
         geom_file = self.data_dir.joinpath("geometry.gpkg")
 
-        self.watershed = NLDI(station_id=self.station_id)
-        self.comid = self.watershed.comid
-        self.tributaries = self.watershed.get_river_network(
-            navigation="upstreamTributaries"
-        )
-        self.main_channel = self.watershed.get_river_network(navigation="upstreamMain")
+        self.watershed = hds.NLDI(station_id=self.station_id)
+        self.starting_comid = self.watershed.starting_comid
 
-        # drainage area in sq. km
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading tributaries' flowlines from NLDI",
-            end=" >>> ",
-        )
-        self.flowlines = nhdplus_byid(
-            comids=self.tributaries.index.values.astype(str).tolist()
-        )
-        print("finished.")
-        self.drainage_area = self.flowlines.areasqkm.sum()
+        catchments = hds.nhdplus_byid(self.watershed.comids, layer="catchmentsp")
+        self.drainage_area = catchments.areasqkm.sum()
 
         if geom_file.exists():
             gdf = gpd.read_file(geom_file)

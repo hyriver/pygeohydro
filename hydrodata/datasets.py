@@ -17,7 +17,7 @@ import xarray as xr
 MARGINE = 15
 
 
-def nwis(station_id, start, end, raw=False):
+def nwis_streamflow(station_id, start, end, raw=False):
     """Get daily streamflow observation data from USGS.
 
     Parameters
@@ -40,15 +40,26 @@ def nwis(station_id, start, end, raw=False):
     """
 
     station_id = str(station_id)
-    start = pd.to_datetime(start).strftime("%Y-%m-%d")
-    end = pd.to_datetime(end).strftime("%Y-%m-%d")
+    start = pd.to_datetime(start)
+    end = pd.to_datetime(end)
+
+    siteinfo = nwis_siteinfo(station_id)
+    st_begin = siteinfo[siteinfo.stat_cd == "00003"].begin_date.values[0]
+    st_end = siteinfo[siteinfo.stat_cd == "00003"].end_date.values[0]
+    if start < st_begin or end > st_end:
+        msg = (
+            f"[ID: {station_id}] ".ljust(MARGINE)
+            + "Daily Mean data unavailable for the specified time period."
+            + f" The data is available from {st_begin.strftime('%Y-%m-%d')} to {st_end.strftime('%Y-%m-%d')}."
+        )
+        raise ValueError(msg)
 
     url = "https://waterservices.usgs.gov/nwis/dv"
     payload = {
         "format": "json",
         "sites": station_id,
-        "startDT": start,
-        "endDT": end,
+        "startDT": start.strftime("%Y-%m-%d"),
+        "endDT": end.strftime("%Y-%m-%d"),
         "parameterCd": "00060",
         "siteStatus": "all",
     }
@@ -72,44 +83,25 @@ def nwis(station_id, start, end, raw=False):
     except ConnectionError or Timeout or RequestException:
         raise
 
-    try:
-        r_ts = r.json()["value"]["timeSeries"]
-        ts = None
-        for v in r_ts:
-            if v["variable"]["options"]["option"][0]["value"] == "Mean":
-                ts = v["values"][0]["value"]
-        if ts is None:
-            raise IndexError
-    except IndexError:
-        msg = (
-            f"[ID: {station_id}] ".ljust(MARGINE)
-            + "Daily Mean data unavailable for the time period specified."
-            + f" Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
-        )
-        raise IndexError(msg)
+    r_ts = r.json()["value"]["timeSeries"]
+    for v in r_ts:
+        if v["variable"]["options"]["option"][0]["value"] == "Mean":
+            ts = v["values"][0]["value"]
 
     df = pd.DataFrame.from_dict(ts, orient="columns")
 
     if raw:
         return df
 
-    try:
-        df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
-    except KeyError:
-        msg = (
-            f"[ID: {station_id}] ".ljust(MARGINE)
-            + "The data is not available in the requested date range."
-            + f" Check out https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no={station_id}"
-        )
-        raise KeyError(msg)
+    df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
     df.set_index("dateTime", inplace=True)
     qobs = df.value.astype("float64") * 0.028316846592  # Convert cfs to cms
     print("finished.")
     return qobs
 
 
-def stations_bybbox(bbox):
-    """Get NWIS stations within a bounding box.
+def nwis_siteinfo(ids=None, bbox=None, expanded=False):
+    """Get NWIS stations by a list of IDs or within a bounding box.
 
     Only stations that record(ed) daily streamflow data are returned.
     The following columns are included in the dataframe:
@@ -138,21 +130,55 @@ def stations_bybbox(bbox):
 
     Parameters
     ----------
+    ids : string or list of strings
+        Station ID(s)
     bbox : list
         List of corners in this order [west, south, east, north]
+    expanded : bool, optional
+        Wether to get expanded sit information for example drainage area.
 
     Returns
     -------
     pandas.DataFrame
     """
-    if not isinstance(bbox, list):
-        raise ValueError("bbox should be a list: [west, south, east, north]")
+    if bbox is not None and ids is None:
+        if (
+            not isinstance(bbox, list)
+            and not isinstance(bbox, tuple)
+            and len(bbox) != 4
+        ):
+            raise TypeError(
+                "The bounding box should be a list or tuple: [west, south, east, north]"
+            )
+        if any((i > 180.0) or (i < -180.0) for i in bbox):
+            raise ValueError(
+                "bbox should be provided in lat/lon coordinates: [west, south, east, north]"
+            )
+        query, values = "bBox", ",".join(f"{b:.06f}" for b in bbox)
 
-    url = "https://waterservices.usgs.gov/nwis/site/"
+    elif ids is not None and bbox is None:
+        if isinstance(ids, str):
+            query, values = "sites", ids
+        elif isinstance(ids, list):
+            query, values = "sites", ",".join(str(i) for i in ids)
+        else:
+            raise ValueError(
+                "the ids argument should be either a string or a list or strings"
+            )
+    else:
+        raise ValueError("Either ids or bbox argument should be provided.")
+
+    url = "https://waterservices.usgs.gov/nwis/site"
+
+    if expanded:
+        outputType, info = "siteOutput", "expanded"
+    else:
+        outputType, info = "outputDataTypeCd", "dv"
+
     payload = {
         "format": "rdb",
-        "bBox": ",".join(f"{b:.06f}" for b in bbox),
-        "outputDataTypeCd": "dv",
+        query: values,
+        outputType: info,
         "parameterCd": "00060",
         "siteStatus": "all",
         "hasDataTypeCd": "dv",
@@ -170,25 +196,19 @@ def stations_bybbox(bbox):
 
     df = pd.DataFrame.from_dict(r_dict).dropna()
     df = df.drop(df[df.alt_va == ""].index)
-    df = df[df.parm_cd == "00060"]
+    try:
+        df = df[df.parm_cd == "00060"]
+        df["begin_date"] = pd.to_datetime(df["begin_date"])
+        df["end_date"] = pd.to_datetime(df["end_date"])
+    except AttributeError:
+        pass
+
     df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
         ["dec_lat_va", "dec_long_va", "alt_va"]
-    ].astype("float")
-    df["begin_date"] = pd.to_datetime(df["begin_date"])
-    df["end_date"] = pd.to_datetime(df["end_date"])
+    ].astype("float64")
+
     df = df[df.site_no.apply(len) == 8]
-    df = df.drop(
-        columns=[
-            "agency_cd",
-            "data_type_cd",
-            "ts_id",
-            "loc_web_ds",
-            "medium_grp_cd",
-            "parm_grp_cd",
-            "srs_id",
-            "access_cd",
-        ]
-    )
+
     return df
 
 
@@ -505,10 +525,6 @@ class NLDI:
     def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
         """Intialize NLCD.
 
-        Note
-        ----
-        Either station ID or bbox should be provided.
-
         Parameters
         ----------
         station_id : string
@@ -524,185 +540,56 @@ class NLDI:
         """
 
         self.station_id = str(station_id)
-        self.distance = None if distance is None else str(int(distance))
-
-        self.nav_options = {
-            "upstreamMain": "UM",
-            "upstreamTributaries": "UT",
-            "downstreamMain": "DM",
-            "downstreamDiversions": "DD",
-        }
-        if navigation not in list(self.nav_options.keys()):
-            msg = "The acceptable navigation options are:"
-            msg += f"{', '.join(x for x in list(self.nav_options.keys()))}"
-            raise ValueError(msg)
-        else:
-            self.navigation = self.nav_options[navigation]
-
-        self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
         self.session = utils.retry_requests()
 
     @property
-    def comid(self):
+    def starting_comid(self):
         """Find starting ComID based on the USGS station."""
-        url = self.base_url + f"/USGS-{self.station_id}"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+        return nhdplus_navigate_byid(
+            "nwissite", self.station_id, navigation=None
+        ).comid.tolist()[0]
 
-        return gpd.GeoDataFrame.from_features(r.json()).comid.values[0]
+    @property
+    def tributaries(self):
+        """Get upstream tributaries of the watershed."""
+        return nhdplus_navigate_byid("nwissite", self.station_id)
+
+    @property
+    def main(self):
+        """Get upstream main channel of the watershed."""
+        return nhdplus_navigate_byid(
+            "nwissite", self.station_id, navigation="upstreamMain"
+        )
+
+    @property
+    def pour_points(self):
+        """Get upstream tributaries of the watershed."""
+        return nhdplus_navigate_byid("nwissite", self.station_id, dataSource="huc12pp")
+
+    @property
+    def comids(self):
+        """Find ComIDs of all the flowlines."""
+        return self.tributaries.comid.tolist()
 
     @property
     def basin(self):
         """Delineate the basin."""
-        url = self.base_url + f"/USGS-{self.station_id}/basin"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+        return nhdplus_byid(self.comids, layer="catchmentsp")
 
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.crs = "EPSG:4326"
-        return gdf.geometry
-
-    def get_river_network(self, navigation=None):
-        """Get the river network geometry from NHDPlus V2."""
-        navigation = (
-            self.navigation if navigation is None else self.nav_options[navigation]
-        )
-
-        rnav = [k for k, v in self.nav_options.items() if v == navigation]
-        rnav = "stream ".join(rnav[0].split("stream")).lower()
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading {rnav} from NLDI",
-            end=" >>> ",
-        )
-        url = self.base_url + f"/USGS-{self.station_id}/navigate/{navigation}"
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf.columns = ["geometry", "comid"]
-        gdf["comid"] = gdf.comid.astype("int64")
-        gdf.set_index("comid", inplace=True)
-        gdf.crs = "EPSG:4326"
-        print("finished.")
-        return gdf
-
-    def get_stations(self, navigation=None, distance=None):
-        """Find the USGS stations along the river network."""
-        navigation = (
-            self.navigation if navigation is None else self.nav_options[navigation]
-        )
-        distance = self.distance if distance is None else str(int(distance))
-
-        rnav = [k for k, v in self.nav_options.items() if v == navigation]
-        rnav = "stream ".join(rnav[0].split("stream")).lower()
-        if distance is None:
-            st = "all the stations"
-        else:
-            st = f"stations within {distance} km of"
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"Downloading {st} {rnav} from NLDI",
-            end=" >>> ",
-        )
-
-        dis = "" if distance is None else f"?distance={distance}"
-        url = (
-            self.base_url
-            + f"/USGS-{self.station_id}/navigate/{navigation}/nwissite"
-            + dis
-        )
-
-        try:
-            r = self.session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-
-        gdf = gpd.GeoDataFrame.from_features(r.json())
-        gdf["comid"] = gdf.comid.astype("int64")
-        gdf.set_index("comid", inplace=True)
-        gdf.crs = "EPSG:4326"
-        print("finsihed.")
-        return gdf
+    @property
+    def flowlines(self):
+        """Get NHDPlus V2 flowlines for the entire watershed"""
+        return nhdplus_byid(self.comids, layer="nhdflowline_network")
 
 
-def navigate_byid(comids, navigation="upstreamTributaries", distance=None):
-    """Get the river network geometry based on ComID(s) from NHDPlus V2.
-
-    Parameters
-    ----------
-    comids : string or list
-        The ComID(s).
-    navigation : string, optional
-        The direction for navigating the NHDPlus database. The valid options are:
-        ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``, ``downstreamDiversions``.
-        Defaults to upstreamTributaries.
-    distance : float, optional
-        The distance to limit the navigation in km. Defaults to None (limitless).
-
-    Returns
-    -------
-    GeoDataFrame
-    """
-    if not isinstance(comids, list):
-        comids = [comids]
-
-    if len(comids) == 0:
-        raise ValueError("The ComID list is empty!")
-
-    nav_options = {
-        "upstreamMain": "UM",
-        "upstreamTributaries": "UT",
-        "downstreamMain": "DM",
-        "downstreamDiversions": "DD",
-    }
-    if navigation not in list(nav_options.keys()):
-        msg = "The acceptable navigation options are:"
-        msg += f"{', '.join(x for x in list(nav_options.keys()))}"
-        raise ValueError(msg)
-    else:
-        navigation = nav_options[navigation]
-
-    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid"
-    session = utils.retry_requests()
-
-    dis = "" if distance is None else f"?distance={distance}"
-    url = base_url + f"/{comids[0]}/navigate/{navigation}" + dis
-    try:
-        r = session.get(url)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
-
-    gdf = gpd.GeoDataFrame.from_features(r.json())
-
-    if len(comids) > 1:
-        for comid in comids[1:]:
-            url = base_url + f"/{comid}/navigate/{navigation}" + dis
-            try:
-                r = session.get(url)
-            except HTTPError or ConnectionError or Timeout or RequestException:
-                raise
-
-            gdf.merge(gpd.GeoDataFrame.from_features(r.json()), on="nhdplus_comid")
-
-    gdf.columns = ["geometry", "comid"]
-    gdf["comid"] = gdf.comid.astype("int64")
-    gdf.set_index("comid", inplace=True)
-    gdf.crs = "EPSG:4326"
-
-    return gdf
-
-
-def huc12pp_byid(feature, featureids, navigation="upstreamTributaries", distance=None):
-    """Get HUC12 pour points based on NHDPlus V2.
-
-    The pour points can be downloaded based on USGS stations or ComIDs.
+def nhdplus_navigate_byid(
+    feature,
+    featureids,
+    navigation="upstreamTributaries",
+    distance=None,
+    dataSource="flowline",
+):
+    """Get flowlines or USGS stations based on ComID(s) from NHDPlus V2.
 
     Parameters
     ----------
@@ -712,10 +599,14 @@ def huc12pp_byid(feature, featureids, navigation="upstreamTributaries", distance
         The ID(s) of the requested feature.
     navigation : string, optional
         The direction for navigating the NHDPlus database. The valid options are:
-        ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``, ``downstreamDiversions``.
-        Defaults to upstreamTributaries.
+        None, ``upstreamMain``, ``upstreamTributaries``,``downstreamMain``,
+        ``downstreamDiversions``. Defaults to upstreamTributaries.
     distance : float, optional
         The distance to limit the navigation in km. Defaults to None (limitless).
+    dataSource : string, optional
+        The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
+        ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
+        Defaults to None.
 
     Returns
     -------
@@ -724,7 +615,13 @@ def huc12pp_byid(feature, featureids, navigation="upstreamTributaries", distance
     valid_features = ["comid", "nwissite"]
     if feature not in valid_features:
         msg = "The acceptable feature options are:"
-        msg += f"{', '.join(x for x in valid_features)}"
+        msg += f" {', '.join(x for x in valid_features)}"
+        raise ValueError(msg)
+
+    valid_dataSource = ["flowline", "nwissite", "huc12pp"]
+    if dataSource not in valid_dataSource:
+        msg = "The acceptable dataSource options are:"
+        msg += f"{', '.join(x for x in valid_dataSource)}"
         raise ValueError(msg)
 
     if not isinstance(featureids, list):
@@ -736,44 +633,53 @@ def huc12pp_byid(feature, featureids, navigation="upstreamTributaries", distance
     if len(featureids) == 0:
         raise ValueError("The featureID list is empty!")
 
+    ds = "" if dataSource == "flowline" else f"/{dataSource}"
+    dis = "" if distance is None else f"?distance={distance}"
+
     nav_options = {
         "upstreamMain": "UM",
         "upstreamTributaries": "UT",
         "downstreamMain": "DM",
         "downstreamDiversions": "DD",
     }
-    if navigation not in list(nav_options.keys()):
+    if navigation is not None and navigation not in list(nav_options.keys()):
         msg = "The acceptable navigation options are:"
-        msg += f"{', '.join(x for x in list(nav_options.keys()))}"
+        msg += f" {', '.join(x for x in list(nav_options.keys()))}"
         raise ValueError(msg)
+    elif navigation is None:
+        nav = ""
     else:
-        navigation = nav_options[navigation]
+        nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
 
     base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
     session = utils.retry_requests()
 
-    dis = "" if distance is None else f"?distance={distance}"
-    url = base_url + f"/{featureids[0]}/navigate/{navigation}" + dis + "/huc12pp"
+    def url(fid):
+        return f"{base_url}/{fid}/{nav}"
+
     try:
-        r = session.get(url)
+        r = session.get(url(featureids[0]))
     except HTTPError or ConnectionError or Timeout or RequestException:
         raise
 
-    gdf = gpd.GeoDataFrame.from_features(r.json())
+    crs = "epsg:4326"
+    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
 
+    merger = "nhdplus_comid" if dataSource == "flowline" else "comid"
     if len(featureids) > 1:
         for featureid in featureids[1:]:
-            url = base_url + f"/{featureid}/navigate/{navigation}" + dis + "/huc12pp"
             try:
-                r = session.get(url)
+                r = session.get(url(featureid))
             except HTTPError or ConnectionError or Timeout or RequestException:
                 raise
 
-            gdf.merge(gpd.GeoDataFrame.from_features(r.json(), on="comid"))
+            gdf.merge(gpd.GeoDataFrame.from_features(r.json(), crs=crs), on=merger)
 
+    gdf = gdf.rename(columns={merger: "comid"})
     gdf = gdf[["comid", "geometry"]]
     gdf["comid"] = gdf.comid.astype("int64")
-    gdf.crs = "EPSG:4326"
+    gdf.crs = crs
+
     return gdf
 
 
@@ -800,13 +706,15 @@ def nhdplus_bybox(bbox, layer="nhdflowline_network"):
         msg += f"Valid layers are {', '.join(x for x in valid_layers)}"
         raise ValueError(msg)
 
-    if not isinstance(bbox, list) and not isinstance(bbox, tuple):
+    if not isinstance(bbox, list) and not isinstance(bbox, tuple) and len(bbox) != 4:
         raise TypeError(
-            "The bounding box should be a list or tuple. [west, south, east, north]"
+            "The bounding box should be a list or tuple: [west, south, east, north]"
         )
 
     if any((i > 180.0) or (i < -180.0) for i in bbox):
-        raise ValueError("bbox should be provided in lat/lon coordinates.")
+        raise ValueError(
+            "bbox should be provided in lat/lon coordinates: [west, south, east, north]"
+        )
 
     cnt = ((bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5)
     print(
@@ -850,7 +758,8 @@ def nhdplus_bybox(bbox, layer="nhdflowline_network"):
     except HTTPError or ConnectionError or Timeout or RequestException:
         raise
 
-    gdf = gpd.GeoDataFrame.from_features(r.json())
+    crs = "epsg:4326"
+    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
     try:
         gdf["comid"] = gdf.comid.astype("int64")
         gdf.set_index("comid", inplace=True)
@@ -858,7 +767,7 @@ def nhdplus_bybox(bbox, layer="nhdflowline_network"):
         raise KeyError(
             f"No flowlines was found in the box ({', '.join(str(round(x, 3)) for x in bbox)})"
         )
-    gdf.crs = "EPSG:4326"
+    gdf.crs = crs
     print("finished.")
 
     return gdf
@@ -886,6 +795,8 @@ def nhdplus_byid(comids, layer="nhdflowline_network"):
 
     if len(comids) == 0:
         raise ValueError("The ComID list is empty!")
+
+    comids = [str(c) for c in comids]
 
     if layer not in list(id_name.keys()):
         raise ValueError(
@@ -941,7 +852,8 @@ def nhdplus_byid(comids, layer="nhdflowline_network"):
     except HTTPError or ConnectionError or Timeout or RequestException:
         raise
 
-    gdf = gpd.GeoDataFrame.from_features(r.json())
+    crs = "epsg:4326"
+    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
     try:
         gdf.set_index("comid", inplace=True)
     except KeyError:
@@ -949,7 +861,7 @@ def nhdplus_byid(comids, layer="nhdflowline_network"):
             gdf.set_index("featureid", inplace=True)
         except KeyError:
             raise KeyError("The requested features are not in NHDPlus V2.")
-    gdf.crs = "EPSG:4326"
+    gdf.crs = crs
     return gdf
 
 
