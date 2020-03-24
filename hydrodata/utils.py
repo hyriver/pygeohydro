@@ -198,7 +198,7 @@ def get_elevation_bybbox(bbox, coords):
     bbox : list
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
-        A list of coordinates in (lon, lat) format to extract the elevation.
+        A list of coordinates in (lon, lat) format to extract the elevations.
 
     Returns
     -------
@@ -540,7 +540,7 @@ def subbasin_delineation(station_id):
 
     if len(pp_idx) < 2:
         msg = "There are not enough pour points in the watershed for automatic delineation."
-        msg = " Try passing the desired number of subbasins."
+        msg += " Try passing the desired number of subbasins."
         raise ValueError(msg)
 
     pour_points = pp[pp.comid.isin(pp_idx[1:-1])]
@@ -694,6 +694,17 @@ def interactive_map(bbox):
         df["alt_va"].astype(str) + " ft above " + df["alt_datum_cd"].astype(str)
     )
     df = df.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
+
+    dr = hds.stations_bybbox(bbox, expanded=True)[
+        ["site_no", "drain_area_va", "contrib_drain_area_va"]
+    ]
+    df = df.merge(dr, on="site_no").dropna()
+
+    df["drain_area_va"] = df["drain_area_va"].astype(str) + " square miles"
+    df["contrib_drain_area_va"] = (
+        df["contrib_drain_area_va"].astype(str) + " square miles"
+    )
+
     df = df[
         [
             "site_no",
@@ -701,6 +712,8 @@ def interactive_map(bbox):
             "coords",
             "altitude",
             "huc_cd",
+            "drain_area_va",
+            "contrib_drain_area_va",
             "begin_date",
             "end_date",
         ]
@@ -711,6 +724,8 @@ def interactive_map(bbox):
         "Coordinate",
         "Altitude",
         "HUC8",
+        "Drainage Area",
+        "Contributing Drainga Area",
         "Begin date",
         "End data",
     ]
@@ -739,3 +754,179 @@ def interactive_map(bbox):
         ).add_to(m)
 
     return m
+
+
+def prepare_nhdplus(
+    fl, min_network_size, min_path_length, min_path_size=0, purge_non_dendritic=True
+):
+    """Cleaning up and fixing issue in NHDPlus flowline database.
+
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
+
+    Parameters
+    ----------
+    fl : (Geo)DataFrame
+        NHDPlus flowlines with at least the following columns:
+        COMID, LENGTHKM, FTYPE, TerminalFl, FromNode, ToNode, TotDASqKM,
+        StartFlag, StreamOrde, StreamCalc, TerminalPa, Pathlength,
+        Divergence, Hydroseq, LevelPathI
+    min_network_size : float
+        Minimum size of drainage network in sqkm
+    min_path_length : float
+        Minimum length of terminal level path of a network in km.
+    min_path_size : float
+        Minimum size of outlet level path of a drainage basin in km.
+        Drainage basins with an outlet drainage area smaller than
+        this value will be removed.
+    purge_non_dendritic : bool
+        whether to remove non dendritic paths.
+
+    Return
+    ------
+    (Geo)DataFrame
+        With an additional column named ``tocomid`` that represents downstream
+        comid of features.
+    """
+    req_cols = [
+        "lengthkm",
+        "ftype",
+        "terminalfl",
+        "fromnode",
+        "tonode",
+        "totdasqkm",
+        "startflag",
+        "streamorde",
+        "streamcalc",
+        "terminalpa",
+        "pathlength",
+        "divergence",
+        "hydroseq",
+        "levelpathi",
+    ]
+    fl.columns = map(str.lower, fl.columns)
+    if any(c not in fl.columns for c in req_cols):
+        msg = "The required columns are not in the provided flowline dataframe."
+        msg += f" The required columns are {', '.join(c for c in req_cols)}"
+        raise ValueError(msg)
+
+    extra_cols = [c for c in fl.columns if c not in req_cols]
+    int_cols = [
+        "terminalfl",
+        "fromnode",
+        "tonode",
+        "startflag",
+        "streamorde",
+        "streamcalc",
+        "terminalpa",
+        "divergence",
+        "hydroseq",
+        "levelpathi",
+    ]
+    for c in int_cols:
+        fl[c] = fl[c].astype("Int64")
+
+    fls = fl[req_cols].copy()
+    if not any(fls.terminalfl == 1):
+        if all(fls.terminalpa == fls.terminalpa.iloc[0]):
+            fls.loc[fls.hydroseq == fls.hydroseq.min(), "terminalfl"] = 1
+        else:
+            raise ValueError("No terminal flag were found in the dataframe.")
+
+    if purge_non_dendritic:
+        fls = fls[
+            ((fls.ftype != "Coastline") | (fls.ftype != 566))
+            & (fls.streamorde == fls.streamcalc)
+        ]
+    else:
+        fls = fls[(fls.ftype != "Coastline") | (fls.ftype != 566)]
+        fls.loc[fls.divergence == 2, "fromnode"] = pd.NA
+
+    if min_path_size > 0:
+        short_paths = fls.groupby("levelpathi").apply(
+            lambda x: (x.hydroseq == x.hydroseq.min())
+            & (x.totdasqkm < min_path_size)
+            & (x.totdasqkm >= 0)
+        )
+        short_paths = short_paths.index.get_level_values("levelpathi")[
+            short_paths
+        ].tolist()
+        fls = fls[~fls.levelpathi.isin(short_paths)]
+    terminal_filter = (fls.terminalfl == 1) & (fls.totdasqkm < min_network_size)
+    start_filter = (fls.startflag == 1) & (fls.pathlength < min_path_length)
+    if any(terminal_filter.dropna()) or any(start_filter.dropna()):
+        tiny_networks = fls[terminal_filter].append(fls[start_filter])
+        fls = fls[~fls.terminalpa.isin(tiny_networks.terminalpa.unique())]
+
+    n_rm = fl.shape[0] - fls.shape[0]
+    if n_rm > 0:
+        print(f"Removed {n_rm} rows from the flowlines database.")
+
+    if fls.shape[0] > 0:
+        fl_gr = fls.groupby("terminalpa")
+        fl_li = [fl_gr.get_group(g) for g in fl_gr.groups]
+
+        def tocomid(ft):
+            def toid(row):
+                try:
+                    return ft[ft.fromnode == row.tonode].index[0]
+                except IndexError:
+                    return pd.NA
+
+            return ft.apply(toid, axis=1)
+
+        fls["tocomid"] = pd.concat(map(tocomid, fl_li))
+
+    return pd.merge(
+        fls.reset_index(), fl[extra_cols].reset_index(), on="comid", how="left"
+    ).set_index("comid")
+
+
+def accumulate_attr(fl, attr, graph=False):
+    """Compute accumulation of an attribute in a river network
+
+    The paths for each node are determined using Breadth-First Search method.
+
+    Parameters
+    ----------
+    fl : DataFrame
+        A dataframe including ID, toID and the attribute columns.
+    attr : string
+        The column name of an atrribute
+    graph : bool
+        Whether to return the generated networkx graph object
+
+    Return
+    ------
+    DataFrame
+        The input data frame with an additional column named CumAttr
+    """
+    import networkx as nx
+
+    req_cols = ["ID", "toID", attr]
+    if any(c not in fl.columns for c in req_cols):
+        msg = "The required columns are not in the provided flowlines."
+        msg += f" The required columns are {', '.join(c for c in req_cols)}"
+        raise ValueError(msg)
+
+    G = nx.from_pandas_edgelist(
+        fl[req_cols],
+        source="ID",
+        target="toID",
+        edge_attr=attr,
+        create_using=nx.DiGraph,
+    )
+    fl["CumAttr"] = fl.apply(
+        lambda x: x[attr]
+        + sum(
+            [
+                G.get_edge_data(f, t)[attr]
+                for t, f in nx.bfs_edges(G, x.ID, reverse=True)
+            ]
+        ),
+        axis=1,
+    )
+
+    if graph:
+        return fl, G
+    else:
+        return fl
