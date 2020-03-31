@@ -19,6 +19,7 @@ dependencies:
   - folium
   - pip:
     - geojson
+    - pqdm
     - rasterstats
     - tables
     - networkx
