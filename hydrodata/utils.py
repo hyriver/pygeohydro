@@ -2,9 +2,19 @@
 # -*- coding: utf-8 -*-
 """Some utilities for Hydrodata"""
 
+import json
+import xml.etree.ElementTree as ET
+from itertools import zip_longest
+from warnings import warn
+
+import geopandas as gpd
 import numpy as np
 import pandas as pd
+from owslib.wfs import WebFeatureService
+from owslib.wms import WebMapService
+from pqdm.threads import pqdm
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
+from shapely.geometry import Point, Polygon, mapping
 
 
 def retry_requests(
@@ -56,82 +66,20 @@ def retry_requests(
     return session
 
 
-def get_data(stations):
-    """Instantiate Station class in batch."""
-    from hydrodata import Station
-
-    default = dict(
-        start=None,
-        end=None,
-        station_id=None,
-        coords=None,
-        data_dir="./data",
-        rain_snow=False,
-        phenology=False,
-        width=2000,
-        climate=False,
-        nlcd=False,
-        yreas={"impervious": 2016, "cover": 2016, "canopy": 2016},
-    )
-
-    params = list(stations.keys())
-
-    if "station_id" in params and "coords" in params:
-        if stations["station_id"] is not None and stations["coords"] is not None:
-            raise KeyError("Either coords or station_id should be provided.")
-
-    for k in list(default.keys()):
-        if k not in params:
-            stations[k] = default[k]
-
-    station = Station(
-        start=stations["start"],
-        end=stations["end"],
-        station_id=stations["station_id"],
-        coords=stations["coords"],
-        data_dir=stations["data_dir"],
-        rain_snow=stations["rain_snow"],
-        phenology=stations["phenology"],
-        width=stations["width"],
-    )
-
-    if stations["climate"]:
-        station.get_climate()
-
-    if stations["nlcd"]:
-        station.get_nlcd(stations["years"])
-
-    return station.data_dir
+def get_url(session, url, payload=None):
+    """Retrieve data from a url by GET using a requests session"""
+    try:
+        return session.get(url, params=payload)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
 
 
-def batch(stations):
-    """Process queries in batch in parallel.
-
-    Parameters
-    ----------
-    stations : list of dict
-        A list of dictionary containing the input variables:
-        [{
-        "start" : 'YYYY-MM-DD', [Requaired]
-        "end" : 'YYYY-MM-DD', [Requaired]
-        "station_id" : '<ID>', OR "coords" : (<lon>, <lat>), [Requaired]
-        "data_dir" : '<path/to/store/data>',  [Optional] Default : ./data
-        "dem" : True or Flase, [Optional] Default : False
-        "climate" : True or Flase, [Optional] Default : False
-        "nlcd" : True or False, [Optional] Default : False
-        "years" : {'impervious': <YYYY>, 'cover': <YYYY>, 'canopy': <YYYY>}, [Optional] Default is 2016
-        "width" : 2000, [Optional] Default : 200
-        },
-        ...]
-    """
-
-    from concurrent import futures
-
-    with futures.ThreadPoolExecutor() as executor:
-        data_dirs = list(executor.map(get_data, stations))
-
-    print("All the jobs finished successfully.")
-    return data_dirs
+def post_url(session, url, payload=None):
+    """Retrieve data from a url by POST using a requests session"""
+    try:
+        return session.post(url, data=payload)
+    except HTTPError or ConnectionError or Timeout or RequestException:
+        raise
 
 
 def daymet_dates(start, end):
@@ -168,17 +116,12 @@ def get_elevation(lon, lat):
         Elevation in meter
     """
 
-    url = "https://nationalmap.gov/epqs/pqs.php?"
+    url = "https://nationalmap.gov/epqs/pqs.php"
     session = retry_requests()
-
-    try:
-        payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
-        r = session.get(url, params=payload)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
-    elevation = r.json()["USGS_Elevation_Point_Query_Service"]["Elevation_Query"][
-        "Elevation"
-    ]
+    payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
+    r = get_url(session, url, payload)
+    root = r.json()["USGS_Elevation_Point_Query_Service"]
+    elevation = root["Elevation_Query"]["Elevation"]
     if elevation == -1000000:
         raise ValueError(
             f"The altitude of the requested coordinate ({lon}, {lat}) cannot be found."
@@ -195,7 +138,7 @@ def get_elevation_bybbox(bbox, coords):
 
     Parameters
     ----------
-    bbox : list
+    bbox : list or tuple
         Bounding box with coordinates in [west, south, east, north] format.
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
@@ -208,22 +151,24 @@ def get_elevation_bybbox(bbox, coords):
 
     import rasterio
 
-    west, south, east, north = bbox
+    if isinstance(bbox, list) or isinstance(bbox, tuple):
+        if len(bbox) == 4:
+            envelope = dict(zip(["west", "south", "east", "north"], bbox))
+        else:
+            raise TypeError(
+                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+            )
+    else:
+        raise TypeError(
+            "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+        )
+
     url = "https://portal.opentopography.org/otr/getdem"
-    payload = dict(
-        demtype="SRTMGL1",
-        west=round(west, 6),
-        south=round(south, 6),
-        east=round(east, 6),
-        north=round(north, 6),
-        outputFormat="GTiff",
-    )
+
+    payload = {"demtype": "SRTMGL1", "outputFormat": "GTiff", **envelope}
 
     session = retry_requests()
-    try:
-        r = session.get(url, params=payload)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    r = get_url(session, url, payload)
 
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
@@ -494,46 +439,33 @@ def subbasin_delineation(station_id):
     """Delineate subbasins of a watershed based on HUC12 pour points."""
 
     import hydrodata.datasets as hds
-    from shapely.geometry import mapping, Point
-    import geopandas as gpd
 
-    session = retry_requests()
-    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
+    trib_ids = hds.nhdplus_navigate_byid("nwissite", station_id).comid.tolist()
+    trib = hds.nhdplus_byid(trib_ids, layer="nhdflowline_network")
+    trib_fl = prepare_nhdplus(trib, 0, 0, purge_non_dendritic=True, warn=False)
 
-    comids = []
-    for nav in ["UM", "UT"]:
-        url = base_url + f"/USGS-{station_id}/navigate/{nav}"
-        try:
-            r = session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
-        comids.append(
-            gpd.GeoDataFrame.from_features(r.json()).nhdplus_comid.astype(str).tolist()
-        )
+    main_fl = trib_fl[trib_fl.streamleve == 1].copy()
 
-    main_ids, trib_ids = comids
-    main_fl = hds.nhdplus_byid(comids=main_ids, layer="nhdflowline_network")
-    trib_fl = hds.nhdplus_byid(comids=trib_ids, layer="nhdflowline_network")
+    main_ids = main_fl.sort_values(by="hydroseq").comid.tolist()
+    len_cs = main_fl.set_index("comid").sort_values(by="hydroseq").lengthkm.cumsum()
 
-    main_ids = main_fl.sort_values(by="hydroseq").index.tolist()
-    len_cs = main_fl.sort_values(by="hydroseq").lengthkm.cumsum()
-
-    pp = hds.huc12pp_byid("nwissite", station_id, "upstreamMain")
+    pp = hds.nhdplus_navigate_byid("nwissite", station_id, dataSource="huc12pp")
     station = Point(
-        mapping(main_fl.loc[main_ids[0]].geometry)["coordinates"][0][-1][:-1]
+        mapping(main_fl[main_fl.comid == main_ids[0]].geometry.values[0])[
+            "coordinates"
+        ][0][-1][:-1]
     )
     pp = pp.append([{"geometry": station, "comid": main_ids[0]}], ignore_index=True)
     headwater = Point(
-        mapping(main_fl.loc[main_ids[-1]].geometry)["coordinates"][0][-1][:-1]
+        mapping(main_fl[main_fl.comid == main_ids[-1]].geometry.values[0])[
+            "coordinates"
+        ][0][-1][:-1]
     )
     pp = pp.append([{"geometry": headwater, "comid": main_ids[-1]}], ignore_index=True)
-    pp = (
-        pp.set_index("comid")
-        .loc[[s for s in main_ids if s in pp.comid.tolist()]]
-        .reset_index()
-    )
+    pp_sorted = pp[pp.comid.isin(main_ids)].comid.tolist()
+    pp = pp.set_index("comid").loc[pp_sorted].reset_index()
 
-    pp_dist = len_cs.loc[pp.comid.astype(int).tolist()]
+    pp_dist = len_cs[len_cs.index.isin(pp_sorted)]
     pp_dist = pp_dist.diff()
 
     pp_idx = [main_ids[0]] + pp_dist[pp_dist > 1].index.tolist()
@@ -552,15 +484,15 @@ def subbasin_delineation(station_id):
     sub = [trib_fl]
     fm = main_fl.copy()
     for idx_max in idx_subs:
-        sub.append(hds.navigate_byid(idx_max[-1], "upstreamTributaries"))
-        idx_catch = (
-            sub[-2][~sub[-2].index.isin(sub[-1].index)].index.astype(str).tolist()
+        sub.append(
+            hds.nhdplus_navigate_byid("comid", idx_max[-1], "upstreamTributaries")
         )
-        catchemnts.append(hds.nhdplus_byid(comids=idx_catch, layer="catchmentsp"))
-        fm = fm[~fm.index.isin(idx_max)].copy()
+        idx_catch = sub[-2][~sub[-2].comid.isin(sub[-1].comid)].comid.tolist()
+        catchemnts.append(hds.nhdplus_byid(idx_catch, "catchmentsp"))
+        fm = fm[~fm.comid.isin(idx_max)]
 
     catchemnts[-1] = catchemnts[-1].append(
-        hds.nhdplus_byid(comids=sub[-1].index.astype(str).tolist(), layer="catchmentsp")
+        hds.nhdplus_byid(sub[-1].comid.tolist(), "catchmentsp")
     )
 
     return catchemnts, pour_points
@@ -570,7 +502,6 @@ def clip_daymet(ds, geometry):
     """Clip a xarray dataset by a geometry """
 
     from xarray import apply_ufunc
-    from shapely.geometry import Polygon, Point
 
     if not isinstance(geometry, Polygon):
         raise TypeError("The geometry argument should be of Shapely's Polygon type.")
@@ -592,10 +523,7 @@ def nlcd_helper():
 
     url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/NLCD_2016_Land_Cover_Science_product_L48.xml"
     session = retry_requests()
-    try:
-        r = session.get(url)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    r = get_url(session, url)
 
     root = ET.fromstring(r.content)
 
@@ -672,7 +600,7 @@ def interactive_map(bbox):
     if not isinstance(bbox, list):
         raise ValueError("bbox should be a list: [west, south, east, north]")
 
-    df = hds.stations_bybbox(bbox)
+    df = hds.nwis_siteinfo(bbox=bbox)
     df = df[
         [
             "site_no",
@@ -695,7 +623,7 @@ def interactive_map(bbox):
     )
     df = df.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
 
-    dr = hds.stations_bybbox(bbox, expanded=True)[
+    dr = hds.nwis_siteinfo(bbox=bbox, expanded=True)[
         ["site_no", "drain_area_va", "contrib_drain_area_va"]
     ]
     df = df.merge(dr, on="site_no").dropna()
@@ -757,7 +685,12 @@ def interactive_map(bbox):
 
 
 def prepare_nhdplus(
-    fl, min_network_size, min_path_length, min_path_size=0, purge_non_dendritic=True
+    fl,
+    min_network_size,
+    min_path_length,
+    min_path_size=0,
+    purge_non_dendritic=True,
+    warn=True,
 ):
     """Cleaning up and fixing issue in NHDPlus flowline database.
 
@@ -779,7 +712,9 @@ def prepare_nhdplus(
         Drainage basins with an outlet drainage area smaller than
         this value will be removed.
     purge_non_dendritic : bool
-        whether to remove non dendritic paths.
+        Whether to remove non dendritic paths.
+    warn : bool
+        Whether to show a message about the removed features, defaults to True.
 
     Return
     ------
@@ -788,6 +723,7 @@ def prepare_nhdplus(
         comid of features.
     """
     req_cols = [
+        "comid",
         "lengthkm",
         "ftype",
         "terminalfl",
@@ -809,8 +745,9 @@ def prepare_nhdplus(
         msg += f" The required columns are {', '.join(c for c in req_cols)}"
         raise ValueError(msg)
 
-    extra_cols = [c for c in fl.columns if c not in req_cols]
+    extra_cols = ["comid"] + [c for c in fl.columns if c not in req_cols]
     int_cols = [
+        "comid",
         "terminalfl",
         "fromnode",
         "tonode",
@@ -868,7 +805,7 @@ def prepare_nhdplus(
         def tocomid(ft):
             def toid(row):
                 try:
-                    return ft[ft.fromnode == row.tonode].index[0]
+                    return ft[ft.fromnode == row.tonode].comid.values[0]
                 except IndexError:
                     return pd.NA
 
@@ -876,9 +813,7 @@ def prepare_nhdplus(
 
         fls["tocomid"] = pd.concat(map(tocomid, fl_li))
 
-    return pd.merge(
-        fls.reset_index(), fl[extra_cols].reset_index(), on="comid", how="left"
-    ).set_index("comid")
+    return gpd.GeoDataFrame(pd.merge(fls, fl[extra_cols], on="comid", how="left"))
 
 
 def accumulate_attr(fl, attr, graph=False):
@@ -930,3 +865,474 @@ def accumulate_attr(fl, attr, graph=False):
         return fl, G
     else:
         return fl
+
+
+def get_nhdplus_fcodes():
+    """Get NHDPlus FCode lookup table"""
+    url = "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
+    return pd.concat(pd.read_html(url, header=0)).set_index("FCode")
+
+
+def get_nwis_errors():
+    """Get USGS daily values site web service's error code lookup table"""
+    return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
+
+
+def traverse_json(obj, path):
+    """Extracts an element from a JSON file along a specified path.
+
+    Note
+    ----
+    From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`_
+
+    Parameters
+    ----------
+    obj : dict
+        The input json dictionary
+    path : list of strings
+        The path to the requested element
+
+    Returns
+    -------
+    list
+    """
+
+    def extract(obj, path, ind, arr):
+        key = path[ind]
+        if ind + 1 < len(path):
+            if isinstance(obj, dict):
+                if key in obj.keys():
+                    extract(obj.get(key), path, ind + 1, arr)
+                else:
+                    arr.append(None)
+            elif isinstance(obj, list):
+                if not obj:
+                    arr.append(None)
+                else:
+                    for item in obj:
+                        extract(item, path, ind, arr)
+            else:
+                arr.append(None)
+        if ind + 1 == len(path):
+            if isinstance(obj, list):
+                if not obj:
+                    arr.append(None)
+                else:
+                    for item in obj:
+                        arr.append(item.get(key, None))
+            elif isinstance(obj, dict):
+                arr.append(obj.get(key, None))
+            else:
+                arr.append(None)
+        return arr
+
+    if isinstance(obj, dict):
+        return extract(obj, path, 0, [])
+    elif isinstance(obj, list):
+        outer_arr = []
+        for item in obj:
+            outer_arr.append(extract(item, path, 0, []))
+        return outer_arr
+
+
+class ArcGISREST:
+    """Base class for web services based on ArcGIS REST."""
+
+    def __init__(self, host, site, folder=None, serviceName=None, layer=None):
+        """Form the base url and get the service information.
+
+        The general url is in the following form:
+        https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/
+        or
+        https://<host>/<site>/rest/services/<serviceName>/<serviceType>/<layer>/
+        For more information visit:
+        https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm
+        """
+        self.root = f"https://{host}/{site}/rest/services"
+        self.folder = folder
+        self.serviceName = serviceName
+        self.layer = layer
+
+        self.session = retry_requests()
+
+        self.generate_url()
+
+    def get_layers(self, serviceName=None):
+        """Find the available sublayers and their parent layers
+
+        Parameter
+        ---------
+        serviceName : string, optional
+            The geoserver serviceName, defaults to the serviceName instance variable of the class
+
+        Returns
+        -------
+        dict
+            Two dictionaries sublayers and parent_layers
+        """
+        _, services = self.get_fs(self.folder)
+        serviceName = self.serviceName if serviceName is None else serviceName
+        if serviceName is None:
+            raise ValueError(
+                "serviceName should be either passed as an argument "
+                + "or be set as a class instance variable"
+            )
+        try:
+            if self.folder is None:
+                url = f"{self.root}/{serviceName}/{services[serviceName]}"
+            else:
+                url = f"{self.root}/{self.folder}/{serviceName}/{services[serviceName]}"
+        except KeyError:
+            raise KeyError(
+                "The serviceName was not found. Check if folder is set correctly."
+            )
+
+        info = get_url(self.session, url, {"f": "pjson"}).json()
+        try:
+            layers = {
+                i: n
+                for i, n in zip(
+                    traverse_json(info, ["layers", "id"]),
+                    traverse_json(info, ["layers", "name"]),
+                )
+            }
+            layers.update({-1: "HEAD LAYER"})
+        except TypeError:
+            raise TypeError(f"The url doesn't have layers.")
+
+        parent_layers = {
+            i: p
+            for i, p in zip(
+                traverse_json(info, ["layers", "id"]),
+                traverse_json(info, ["layers", "parentLayerId"]),
+            )
+        }
+
+        def get_parents(lid):
+            lid = [parent_layers[lid]]
+            while lid[-1] > -1:
+                lid.append(parent_layers[lid[-1]])
+            return lid
+
+        parent_layers = {
+            i: [layers[l] for l in get_parents(i)[:-1]]
+            for i in traverse_json(info, ["layers", "id"])
+        }
+        sublayers = [
+            i
+            for i, s in zip(
+                traverse_json(info, ["layers", "id"]),
+                traverse_json(info, ["layers", "subLayerIds"]),
+            )
+            if s is None
+        ]
+        sublayers = {i: layers[i] for i in sublayers}
+        return sublayers, parent_layers
+
+    def get_fs(self, folder=None):
+        """Get folders and services of the geoserver's (folder) root url"""
+        url = self.root if folder is None else f"{self.root}/{folder}"
+        info = get_url(self.session, url, {"f": "pjson"}).json()
+        try:
+            folders = info["folders"]
+            services = {
+                f"/{s}".split("/")[-1]: t
+                for s, t in zip(
+                    traverse_json(info, ["services", "name"]),
+                    traverse_json(info, ["services", "type"]),
+                )
+            }
+        except TypeError or KeyError:
+            raise KeyError(f"The url doesn not include folder and services : {url}")
+        return folders, services
+
+    def generate_url(self):
+        reqs = {"serviceName": self.serviceName, "layer": self.layer}
+        missing = [m for m, v in reqs.items() if v is None]
+        if len(missing) > 0:
+            self.base_url = None
+            msg = (
+                "The base_url set to None since the following variables are missing:\n"
+            )
+            msg += ", ".join(m for m in missing) + "\n"
+            msg += "URL's form is https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
+            msg += "Use get_info(<url>) or get_layers(<url>) to get the available options at each level."
+            warn(msg)
+        elif not isinstance(self.layer, int):
+            raise ValueError(
+                f"Layer should be an integer. Use self.get_layers('{self.serviceName}') to find the available options."
+            )
+        else:
+            _, services = self.get_fs(self.folder)
+            sublayers, _ = self.get_layers()
+            self.layer_name = sublayers[self.layer]
+            if self.folder is None:
+                try:
+                    self.base_url = f"{self.root}/{self.serviceName}/{services[self.serviceName]}/{self.layer}"
+                except KeyError:
+                    raise KeyError(
+                        f"The requetsed service is not available on the server: {self.serviceName}"
+                    )
+            else:
+                try:
+                    self.base_url = f"{self.root}/{self.folder}/{self.serviceName}/{services[self.serviceName]}/{self.layer}"
+                except KeyError:
+                    raise KeyError(
+                        f"The requetsed service is not available on the server: {self.serviceName}"
+                    )
+            try:
+                self.url_info = get_url(
+                    self.session, self.base_url, {"f": "pjson"}
+                ).json()
+                self.maxRecordCount = self.url_info["maxRecordCount"]
+            except KeyError:
+                raise KeyError(f"The requested url is not correct: {self.base_url}")
+
+
+class RESTByGeom(ArcGISREST):
+    """For getting data by geometry from an Arc GIS REST sercive."""
+
+    def __init__(
+        self, host, site, folder=None, serviceName=None, layer=None, n_threads=4
+    ):
+        super().__init__(host, site, folder, serviceName, layer)
+        self.n_threads = min(n_threads, 8)
+        if n_threads > 8:
+            warn("No. of threads was reduced to 8.")
+
+    def get_featureids(self, geom):
+        if self.base_url is None:
+            raise ValueError(
+                "The base_url is not set yet, use "
+                + "self.generate_url(<layer>) to form the url"
+            )
+
+        if isinstance(geom, list) or isinstance(geom, tuple):
+            if len(geom) != 4:
+                raise TypeError(
+                    "The bounding box should be a list or tuple of form [west, south, east, north]"
+                )
+            geometryType = "esriGeometryEnvelope"
+            bbox = dict(zip(["xmin", "ymin", "xmax", "ymax"], geom))
+            geom_json = {**bbox, "spatialReference": {"wkid": 4326}}
+            geometry = json.dumps(geom_json)
+        elif isinstance(geom, Polygon):
+            geometryType = "esriGeometryPolygon"
+            geom_json = {
+                "rings": [[[x, y] for x, y in zip(*geom.exterior.coords.xy)]],
+                "spatialReference": {"wkid": 4326},
+            }
+            geometry = json.dumps(geom_json)
+        else:
+            raise ValueError("The geometry should be either a bbox (list) or a Polygon")
+
+        payload = {
+            "geometryType": geometryType,
+            "geometry": geometry,
+            "intSR": "4326",
+            "spatialRel": "esriSpatialRelIntersects",
+            "returnGeometry": "false",
+            "returnIdsOnly": "true",
+            "f": "geojson",
+        }
+        r = post_url(self.session, f"{self.base_url}/query", payload)
+        try:
+            oids = r.json()["objectIds"]
+        except KeyError:
+            raise KeyError("No feature ID were found on the geoserver within the .")
+
+        oid_list = list(zip_longest(*[iter(oids)] * self.maxRecordCount))
+        oid_list[-1] = [i for i in oid_list[-1] if i is not None]
+        self.splitted_ids = oid_list
+
+    def get_features(self):
+        def _get_features(ids):
+            payload = {
+                "objectIds": ",".join(str(i) for i in ids),
+                "returnGeometry": "true",
+                "outSR": "4326",
+                "outFields": "*",
+                "f": "geojson",
+            }
+            r = post_url(self.session, f"{self.base_url}/query", payload)
+            try:
+                return gpd.GeoDataFrame.from_features(r.json(), crs="epsg:4326")
+            except TypeError:
+                return ids
+
+        feature_list = pqdm(
+            self.splitted_ids,
+            _get_features,
+            n_jobs=self.n_threads,
+            desc=f"{self.layer_name}",
+        )
+
+        # Find the failed batches and retry
+        fails = [ids for ids in feature_list if isinstance(ids, tuple)]
+        success = [ids for ids in feature_list if isinstance(ids, gpd.GeoDataFrame)]
+        if len(fails) > 0:
+            fails = ([x] for y in fails for x in y)
+            retry = pqdm(
+                fails,
+                _get_features,
+                n_jobs=min(self.n_threads * 2, 8),
+                desc="Retry failed batches",
+            )
+            success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
+        return gpd.GeoDataFrame(pd.concat(success))
+
+
+class Geoserver:
+    def __init__(self, root_url, owsType, feature=None, version=None, outFormat=None):
+        self.root_url = root_url
+
+        if owsType in ["wfs", "wms"]:
+            self.owsType = owsType
+            if self.owsType == "wms":
+                self.version = "1.1.1" if version is None else version
+                f_ows = WebMapService(
+                    url=f"{self.root_url}/{owsType}", version=self.version
+                )
+                self.outFormat = "image/geotiff" if outFormat is None else outFormat
+            else:
+                self.version = "1.1.0" if version is None else version
+                f_ows = WebFeatureService(
+                    url=f"{self.root_url}/{owsType}", version=self.version
+                )
+                self.outFormat = "application/json" if outFormat is None else outFormat
+            self.valid_features = {
+                k: v
+                for v, k in [c.split(":") for c in list(f_ows.contents) if ":" in c]
+            }
+        else:
+            raise ValueError("Acceptable value for owsType are wfs and wms.")
+
+        if feature not in list(self.valid_features.keys()):
+            msg = (
+                f"The given feature, {feature}, is not valid. The valid features are:\n"
+            )
+            msg += ", ".join(str(f) for f in list(self.valid_features.keys()))
+            raise ValueError(msg)
+        else:
+            self.feature = feature
+        self.base_url = (
+            f"{self.root_url}/{self.valid_features[self.feature]}/{self.owsType}"
+        )
+
+    def getfeature_byid(self, featurename, featureids, crs="epsg:4326"):
+        if self.owsType == "wms":
+            raise ValueError("For wms use getmap class function.")
+
+        if not isinstance(featureids, list):
+            featureids = [featureids]
+
+        if len(featureids) == 0:
+            raise ValueError("The feature ID list is empty!")
+
+        featureids = [str(i) for i in featureids]
+
+        def filter_xml(pname, pid):
+            fstart = '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc"><ogc:Or>'
+            fend = "</ogc:Or></ogc:Filter>"
+            return (
+                fstart
+                + "".join(
+                    [
+                        f"<ogc:PropertyIsEqualTo><ogc:PropertyName>{pname}"
+                        + f"</ogc:PropertyName><ogc:Literal>{p}"
+                        + "</ogc:Literal></ogc:PropertyIsEqualTo>"
+                        for p in pid
+                    ]
+                )
+                + fend
+            )
+
+        payload = {
+            "service": f"{self.owsType}",
+            "version": f"{self.version}",
+            "outputFormat": f"{self.outFormat}",
+            "request": "GetFeature",
+            "typeName": f"{self.valid_features[self.feature]}:{self.feature}",
+            "srsName": crs,
+            "filter": filter_xml(featurename, featureids),
+        }
+
+        session = retry_requests()
+        r = post_url(session, self.base_url, payload)
+        if r.headers["Content-Type"] == "application/xml":
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0][0].text.strip())
+
+        return r
+
+    def getfeature_bybox(self, bbox, crs="epsg:4326"):
+        if self.owsType == "wms":
+            raise ValueError("For WMS use getmap class function.")
+
+        if isinstance(bbox, list) or isinstance(bbox, tuple):
+            if len(bbox) == 4:
+                query = {"bbox": ",".join(f"{b:.06f}" for b in bbox) + f",{crs}"}
+            else:
+                raise TypeError(
+                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+                )
+        else:
+            raise TypeError(
+                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+            )
+
+        payload = {
+            "service": f"{self.owsType}",
+            "version": f"{self.version}",
+            "outputFormat": f"{self.outFormat}",
+            "request": "GetFeature",
+            "typeName": f"{self.valid_features[self.feature]}:{self.feature}",
+            **query,
+        }
+
+        session = retry_requests()
+        r = get_url(session, self.base_url, payload)
+        if r.headers["Content-Type"] == "application/xml":
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0][0].text.strip())
+
+        return r
+
+    def getmap(self, bbox, width, crs="epsg:4326"):
+        if self.owsType == "wfs":
+            raise ValueError(
+                "For WFS use getfeature_byid or getfeature_bybox class function."
+            )
+
+        if isinstance(bbox, list) or isinstance(bbox, tuple):
+            if len(bbox) == 4:
+                query = {"bbox": ",".join(f"{b:.06f}" for b in bbox)}
+            else:
+                raise TypeError(
+                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+                )
+        else:
+            raise TypeError(
+                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+            )
+
+        height = int(np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width)
+        payload = {
+            "service": f"{self.owsType}",
+            "version": f"{self.version}",
+            "format": f"{self.outFormat}",
+            "request": "GetMap",
+            "layers": f"{self.valid_features[self.feature]}:{self.feature}",
+            **query,
+            "width": width,
+            "height": height,
+            "srs": crs,
+        }
+
+        session = retry_requests()
+        r = get_url(session, self.base_url, payload)
+        if "xml" in r.headers["Content-Type"]:
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0].text.strip())
+
+        return r
