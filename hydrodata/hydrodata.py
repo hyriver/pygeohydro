@@ -82,6 +82,18 @@ class Station:
 
         self.get_watershed()
 
+        info = hds.nwis_siteinfo(ids=self.station_id, expanded=True)
+        try:
+            self.drainage_area = (
+                info["contrib_drain_area_va"].astype("float64").values[0] * 2.5899
+            )
+        except ValueError:
+            self.drainage_area = (
+                info["drain_area_va"].astype("float64").values[0] * 2.5899
+            )
+        except ValueError:
+            self.drainage_area = self.watershed.flowlines.areasqkm.sum()
+
         print(self.__repr__())
 
     def __repr__(self):
@@ -186,8 +198,7 @@ class Station:
         self.watershed = hds.NLDI(station_id=self.station_id)
         self.starting_comid = self.watershed.starting_comid
 
-        catchments = hds.nhdplus_byid(self.watershed.comids, layer="catchmentsp")
-        self.drainage_area = catchments.areasqkm.sum()
+        self.basin = self.watershed.basin
 
         if geom_file.exists():
             gdf = gpd.read_file(geom_file)
