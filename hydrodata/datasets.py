@@ -10,20 +10,19 @@ import pandas as pd
 import rasterio
 import rasterio.mask
 from hydrodata import utils
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
 import xarray as xr
 
 MARGINE = 15
 
 
-def nwis_streamflow(station_id, start, end, raw=False):
-    """Get daily streamflow observation data from USGS.
+def nwis_streamflow(station_ids, start, end, raw=False):
+    """Get daily streamflow observations from USGS.
 
     Parameters
     ----------
-    station_id : string
-        The gage ID  of the USGS station
+    station_ids : string, list
+        The gage ID(s)  of the USGS station
     start : string or datetime
         Start date
     end : string or datetime
@@ -39,64 +38,58 @@ def nwis_streamflow(station_id, start, end, raw=False):
         Streamflow data observations in cubic meter per second (cms)
     """
 
-    station_id = str(station_id)
+    if isinstance(station_ids, str):
+        station_ids = [station_ids]
+    elif isinstance(station_ids, list):
+        station_ids = [str(i) for i in station_ids]
+    else:
+        raise ValueError(
+            "the ids argument should be either a string or a list or strings"
+        )
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
 
-    siteinfo = nwis_siteinfo(station_id)
-    st_begin = siteinfo[siteinfo.stat_cd == "00003"].begin_date.values[0]
-    st_end = siteinfo[siteinfo.stat_cd == "00003"].end_date.values[0]
-    if start < st_begin or end > st_end:
-        msg = (
-            f"[ID: {station_id}] ".ljust(MARGINE)
-            + "Daily Mean data unavailable for the specified time period."
-            + f" The data is available from {st_begin.strftime('%Y-%m-%d')} to {st_end.strftime('%Y-%m-%d')}."
-        )
+    siteinfo = nwis_siteinfo(station_ids)
+    check_dates = siteinfo.loc[
+        (siteinfo.stat_cd == "00003")
+        & (start < siteinfo.begin_date)
+        & (end > siteinfo.end_date),
+        "site_no",
+    ].tolist()
+    nas = [s for s in station_ids if s in check_dates]
+    if len(nas) > 0:
+        msg = "Daily Mean data unavailable for the specified time period for the following stations:\n"
+        msg += ", ".join(str(s) for s in nas)
         raise ValueError(msg)
 
     url = "https://waterservices.usgs.gov/nwis/dv"
     payload = {
         "format": "json",
-        "sites": station_id,
+        "sites": ",".join(str(s) for s in station_ids),
         "startDT": start.strftime("%Y-%m-%d"),
         "endDT": end.strftime("%Y-%m-%d"),
         "parameterCd": "00060",
+        "statCd": "00003",
         "siteStatus": "all",
     }
-    err = pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
-
-    print(
-        f"[ID: {station_id}] ".ljust(MARGINE)
-        + "Downloading stream flow data from NWIS",
-        end=" >>> ",
-    )
 
     session = utils.retry_requests()
-    try:
-        r = session.get(url, params=payload)
-    except HTTPError:
-        print(
-            f"[ID: {station_id}] ".ljust(MARGINE)
-            + f"{err[err['HTTP Error Code'] == r.status_code].Explanation.values[0]}"
-        )
-        raise
-    except ConnectionError or Timeout or RequestException:
-        raise
+    r = utils.post_url(session, url, payload)
 
-    r_ts = r.json()["value"]["timeSeries"]
-    for v in r_ts:
-        if v["variable"]["options"]["option"][0]["value"] == "Mean":
-            ts = v["values"][0]["value"]
+    ts = r.json()["value"]["timeSeries"]
+    r_ts = {
+        t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
+        for t in ts["value"]["timeSeries"]
+    }
 
-    df = pd.DataFrame.from_dict(ts, orient="columns")
+    def to_df(col, dic):
+        q = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
+        q.index = pd.to_datetime(q.index)
+        q.columns = [col]
+        q[col] = q[col].astype("float64") * 0.028316846592  # Convert cfs to cms
+        return q
 
-    if raw:
-        return df
-
-    df["dateTime"] = pd.to_datetime(df["dateTime"], format="%Y-%m-%dT%H:%M:%S")
-    df.set_index("dateTime", inplace=True)
-    qobs = df.value.astype("float64") * 0.028316846592  # Convert cfs to cms
-    print("finished.")
+    qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
     return qobs
 
 
@@ -142,25 +135,23 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     pandas.DataFrame
     """
     if bbox is not None and ids is None:
-        if (
-            not isinstance(bbox, list)
-            and not isinstance(bbox, tuple)
-            and len(bbox) != 4
-        ):
+        if isinstance(bbox, list) or isinstance(bbox, tuple):
+            if len(bbox) == 4:
+                query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+            else:
+                raise TypeError(
+                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+                )
+        else:
             raise TypeError(
-                "The bounding box should be a list or tuple: [west, south, east, north]"
+                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
             )
-        if any((i > 180.0) or (i < -180.0) for i in bbox):
-            raise ValueError(
-                "bbox should be provided in lat/lon coordinates: [west, south, east, north]"
-            )
-        query, values = "bBox", ",".join(f"{b:.06f}" for b in bbox)
 
     elif ids is not None and bbox is None:
         if isinstance(ids, str):
-            query, values = "sites", ids
+            query = {"sites": ids}
         elif isinstance(ids, list):
-            query, values = "sites", ",".join(str(i) for i in ids)
+            query = {"sites": ",".join(str(i) for i in ids)}
         else:
             raise ValueError(
                 "the ids argument should be either a string or a list or strings"
@@ -171,24 +162,21 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     url = "https://waterservices.usgs.gov/nwis/site"
 
     if expanded:
-        outputType, info = "siteOutput", "expanded"
+        outputType = {"siteOutput": "expanded"}
     else:
-        outputType, info = "outputDataTypeCd", "dv"
+        outputType = {"outputDataTypeCd": "dv"}
 
     payload = {
+        **query,
+        **outputType,
         "format": "rdb",
-        query: values,
-        outputType: info,
         "parameterCd": "00060",
         "siteStatus": "all",
         "hasDataTypeCd": "dv",
     }
 
     session = utils.retry_requests()
-    try:
-        r = session.get(url, params=payload)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    r = utils.post_url(session, url, payload)
 
     r_text = r.text.split("\n")
     r_list = [l.split("\t") for l in r_text if "#" not in l]
@@ -210,6 +198,43 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     df = df[df.site_no.apply(len) == 8]
 
     return df
+
+
+def nwis_basin(station_ids):
+    """Get USGS stations basins using NLDI service.
+
+    Parameters
+    ----------
+    station_ids : string or list
+        The NWIS stations ID(s).
+
+    Returns
+    -------
+    GeoDataFrame
+    """
+    if not isinstance(station_ids, list):
+        station_ids = [station_ids]
+
+    station_ids = ["USGS-" + str(f) for f in station_ids]
+
+    if len(station_ids) == 0:
+        raise ValueError("The featureID list is empty!")
+
+    crs = "epsg:4326"
+    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
+    session = utils.retry_requests()
+
+    def get_url(sid):
+        url = f"{base_url}/{sid}/basin"
+        r = utils.get_url(session, url)
+        gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
+        gdf["site_no"] = sid
+        return gdf
+
+    gdf = gpd.GeoDataFrame(pd.concat([get_url(i) for i in station_ids]))
+    gdf.crs = crs
+
+    return gdf
 
 
 def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
@@ -284,28 +309,20 @@ def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
     url = "https://daymet.ornl.gov/single-pixel/api/data"
     if years is None:
-        payload = {
-            "lat": round(lat, 6),
-            "lon": round(lon, 6),
-            "start": start.strftime("%Y-%m-%d"),
-            "end": end.strftime("%Y-%m-%d"),
-            "vars": ",".join(x for x in variables),
-            "format": "json",
-        }
+        dates = {"start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")}
     else:
-        payload = {
-            "lat": round(lat, 6),
-            "lon": round(lon, 6),
-            "years": ",".join(str(x) for x in years),
-            "vars": ",".join(x for x in variables),
-            "format": "json",
-        }
+        dates = {"years": ",".join(str(x) for x in years)}
+
+    payload = {
+        "lat": round(lat, 6),
+        "lon": round(lon, 6),
+        "vars": ",".join(x for x in variables),
+        "format": "json",
+        **dates,
+    }
 
     session = utils.retry_requests()
-    try:
-        r = session.get(url, params=payload)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    r = utils.get_url(session, url, payload)
 
     df = pd.DataFrame(r.json()["data"])
     df.index = pd.to_datetime(df.year * 1000.0 + df.yday, format="%Y%j")
@@ -451,17 +468,11 @@ def daymet_bygeom(
             )
     session = utils.retry_requests()
 
-    try:
-        r = session.get(urls[0])
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    r = utils.get_url(session, urls[0])
     data = xr.open_dataset(r.content)
 
     for url in urls[1:]:
-        try:
-            r = session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+        r = utils.get_url(session, url)
         data = xr.merge([data, xr.open_dataset(r.content)])
 
     for k, v in units.items():
@@ -522,7 +533,7 @@ def daymet_bygeom(
 class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
-    def __init__(self, station_id, navigation="upstreamTributaries", distance=None):
+    def __init__(self, station_id):
         """Intialize NLCD.
 
         Parameters
@@ -545,26 +556,24 @@ class NLDI:
     @property
     def starting_comid(self):
         """Find starting ComID based on the USGS station."""
-        return nhdplus_navigate_byid(
+        return nhdplus_navigate(
             "nwissite", self.station_id, navigation=None
         ).comid.tolist()[0]
 
     @property
     def tributaries(self):
         """Get upstream tributaries of the watershed."""
-        return nhdplus_navigate_byid("nwissite", self.station_id)
+        return nhdplus_navigate("nwissite", self.station_id)
 
     @property
     def main(self):
         """Get upstream main channel of the watershed."""
-        return nhdplus_navigate_byid(
-            "nwissite", self.station_id, navigation="upstreamMain"
-        )
+        return nhdplus_navigate("nwissite", self.station_id, navigation="upstreamMain")
 
     @property
     def pour_points(self):
         """Get upstream tributaries of the watershed."""
-        return nhdplus_navigate_byid("nwissite", self.station_id, dataSource="huc12pp")
+        return nhdplus_navigate("nwissite", self.station_id, dataSource="huc12pp")
 
     @property
     def comids(self):
@@ -574,15 +583,15 @@ class NLDI:
     @property
     def basin(self):
         """Delineate the basin."""
-        return nhdplus_byid(self.comids, layer="catchmentsp")
+        return nwis_basin(self.station_id)
 
     @property
     def flowlines(self):
         """Get NHDPlus V2 flowlines for the entire watershed"""
-        return nhdplus_byid(self.comids, layer="nhdflowline_network")
+        return nhdplus_byid("nhdflowline_network", self.comids)
 
 
-def nhdplus_navigate_byid(
+def nhdplus_navigate(
     feature,
     featureids,
     navigation="upstreamTributaries",
@@ -652,30 +661,18 @@ def nhdplus_navigate_byid(
         nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
 
     base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
+    crs = "epsg:4326"
     session = utils.retry_requests()
 
-    def url(fid):
-        return f"{base_url}/{fid}/{nav}"
+    def get_url(fid):
+        url = f"{base_url}/{fid}/{nav}"
 
-    try:
-        r = session.get(url(featureids[0]))
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+        r = utils.get_url(session, url)
+        return gpd.GeoDataFrame.from_features(r.json(), crs=crs)
 
-    crs = "epsg:4326"
-    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-
-    merger = "nhdplus_comid" if dataSource == "flowline" else "comid"
-    if len(featureids) > 1:
-        for featureid in featureids[1:]:
-            try:
-                r = session.get(url(featureid))
-            except HTTPError or ConnectionError or Timeout or RequestException:
-                raise
-
-            gdf.merge(gpd.GeoDataFrame.from_features(r.json(), crs=crs), on=merger)
-
-    gdf = gdf.rename(columns={merger: "comid"})
+    gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
+    comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
+    gdf = gdf.rename(columns={comid: "comid"})
     gdf = gdf[["comid", "geometry"]]
     gdf["comid"] = gdf.comid.astype("int64")
     gdf.crs = crs
@@ -683,185 +680,74 @@ def nhdplus_navigate_byid(
     return gdf
 
 
-def nhdplus_bybox(bbox, layer="nhdflowline_network"):
+def nhdplus_bybox(feature, bbox):
     """Get NHDPlus flowline database within a bounding box.
 
     Parameters
     ----------
+    feature : string
+        The NHDPlus feature to be downloaded. Valid features are:
+        ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, and ``nhdflowline_network``
     bbox : list
         The bounding box for the region of interest, defaults to None. The list
         should provide the corners in this order:
         [west, south, east, north]
-    layer : string, optional
-        The NHDPlus layer to be downloaded. Valid layers are:
-        nhdarea, nhdwaterbody, catchmentsp, and nhdflowline_network
 
     Returns
     -------
     GeoDataFrame
     """
-    valid_layers = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
-    if layer not in valid_layers:
-        msg = f"The provided layer, {layer}, is not valid."
-        msg += f"Valid layers are {', '.join(x for x in valid_layers)}"
+
+    valid_features = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
+    if feature not in valid_features:
+        msg = f"The provided feature, {feature}, is not valid."
+        msg += f" Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    if not isinstance(bbox, list) and not isinstance(bbox, tuple) and len(bbox) != 4:
-        raise TypeError(
-            "The bounding box should be a list or tuple: [west, south, east, north]"
-        )
-
-    if any((i > 180.0) or (i < -180.0) for i in bbox):
-        raise ValueError(
-            "bbox should be provided in lat/lon coordinates: [west, south, east, north]"
-        )
-
-    cnt = ((bbox[0] + bbox[2]) * 0.5, (bbox[1] + bbox[3]) * 0.5)
-    print(
-        f"[CNT: ({cnt[0]:.3f}, {cnt[1]:.3f})] ".ljust(MARGINE)
-        + f"Downloading NHDPlus flowlines by BBOX using NLDI",
-        end=" >>> ",
-    )
-
-    url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
-    filter_xml = "".join(
-        [
-            '<?xml version="1.0"?>',
-            '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
-            '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
-            layer,
-            '" srsName="EPSG:4326">',
-            '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
-            "<ogc:BBOX>",
-            "<ogc:PropertyName>the_geom</ogc:PropertyName>",
-            "<gml:Envelope>",
-            "<gml:lowerCorner>",
-            f"{bbox[1]:.6f}",
-            " ",
-            f"{bbox[0]:.6f}",
-            "</gml:lowerCorner>",
-            "<gml:upperCorner>",
-            f"{bbox[3]:.6f}",
-            " ",
-            f"{bbox[2]:.6f}",
-            "</gml:upperCorner>",
-            "</gml:Envelope>",
-            "</ogc:BBOX>",
-            "</ogc:Filter>",
-            "</wfs:Query>",
-            "</wfs:GetFeature>",
-        ]
-    )
-    session = utils.retry_requests()
-    try:
-        r = session.post(url, data=filter_xml)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    service = utils.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
+    r = service.getfeature_bybox(bbox)
 
     crs = "epsg:4326"
     gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-    try:
-        gdf["comid"] = gdf.comid.astype("int64")
-        gdf.set_index("comid", inplace=True)
-    except KeyError:
-        raise KeyError(
-            f"No flowlines was found in the box ({', '.join(str(round(x, 3)) for x in bbox)})"
-        )
     gdf.crs = crs
-    print("finished.")
+    if gdf.shape[0] == 0:
+        raise KeyError(
+            f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
+        )
 
     return gdf
 
 
-def nhdplus_byid(comids, layer="nhdflowline_network"):
+def nhdplus_byid(feature, featureids):
     """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
 
     Parameters
     ----------
-    comids : list of strings
-        A list of ComIDs
-    layer : string
-        The desired feature; ``catchmentsp`` or ``nhdflowline_network``
+    feature : string
+        The requested feature. The valid features are:
+        ``catchmentsp`` and ``nhdflowline_network``
+    featureids : string or list
+        The ID(s) of the requested feature.
 
     Returns
     -------
     GeoDataFrame
-        The index is ``comid``.
     """
-    id_name = {"catchmentsp": "featureid", "nhdflowline_network": "comid"}
+    valid_features = ["catchmentsp", "nhdflowline_network"]
+    if feature not in valid_features:
+        msg = f"The provided feature, {feature}, is not valid."
+        msg += f"Valid features are {', '.join(x for x in valid_features)}"
+        raise ValueError(msg)
 
-    if not isinstance(comids, list):
-        comids = [comids]
-
-    if len(comids) == 0:
-        raise ValueError("The ComID list is empty!")
-
-    comids = [str(c) for c in comids]
-
-    if layer not in list(id_name.keys()):
-        raise ValueError(
-            f"Acceptable values for layer are {', '.join(x for x in list(id_name.keys()))}"
-        )
-
-    url = "https://cida.usgs.gov/nwc/geoserver/nhdplus/ows"
-
-    filter_1 = "".join(
-        [
-            '<?xml version="1.0"?>',
-            '<wfs:GetFeature xmlns:wfs="http://www.opengis.net/wfs" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:gml="http://www.opengis.net/gml" service="WFS" version="1.1.0" outputFormat="application/json" xsi:schemaLocation="http://www.opengis.net/wfs http://schemas.opengis.net/wfs/1.1.0/wfs.xsd">',
-            '<wfs:Query xmlns:feature="http://gov.usgs.cida/nhdplus" typeName="feature:',
-            layer,
-            '" srsName="EPSG:4326">',
-            '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc">',
-            "<ogc:Or>",
-            "<ogc:PropertyIsEqualTo>",
-            "<ogc:PropertyName>",
-            id_name[layer],
-            "</ogc:PropertyName>",
-            "<ogc:Literal>",
-        ]
-    )
-
-    filter_2 = "".join(
-        [
-            "</ogc:Literal>",
-            "</ogc:PropertyIsEqualTo>",
-            "<ogc:PropertyIsEqualTo>",
-            "<ogc:PropertyName>",
-            id_name[layer],
-            "</ogc:PropertyName>",
-            "<ogc:Literal>",
-        ]
-    )
-
-    filter_3 = "".join(
-        [
-            "</ogc:Literal>",
-            "</ogc:PropertyIsEqualTo>",
-            "</ogc:Or>",
-            "</ogc:Filter>",
-            "</wfs:Query>",
-            "</wfs:GetFeature>",
-        ]
-    )
-
-    filter_xml = "".join([filter_1, filter_2.join(comids), filter_3])
-    session = utils.retry_requests()
-    try:
-        r = session.post(url, data=filter_xml)
-    except HTTPError or ConnectionError or Timeout or RequestException:
-        raise
+    service = utils.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
+    propertyname = "featureid" if feature == "catchmentsp" else "comid"
+    r = service.getfeature_byid(propertyname, featureids)
 
     crs = "epsg:4326"
     gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-    try:
-        gdf.set_index("comid", inplace=True)
-    except KeyError:
-        try:
-            gdf.set_index("featureid", inplace=True)
-        except KeyError:
-            raise KeyError("The requested features are not in NHDPlus V2.")
     gdf.crs = crs
+    if gdf.shape[0] == 0:
+        raise KeyError("No feature was found with the provided IDs")
     return gdf
 
 
@@ -918,7 +804,10 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
-    base_url = "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared//uswem/web/conus/eta/modis_eta/daily/downloads"
+    base_url = (
+        "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
+        + "shared/uswem/web/conus/eta/modis_eta/daily/downloads"
+    )
     f_list = [
         (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
         for d in pd.date_range(start, end)
@@ -948,10 +837,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
         # find the mask using the first dataset
         dt, url = f_list[0]
 
-        try:
-            r = session.get(url)
-        except HTTPError or ConnectionError or Timeout or RequestException:
-            raise
+        r = utils.get_url(session, url)
 
         z = zipfile.ZipFile(io.BytesIO(r.content))
         with rasterio.MemoryFile() as memfile:
@@ -970,10 +856,7 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
 
         # apply the mask to the rest of the data and merge
         for dt, url in f_list[1:]:
-            try:
-                r = session.get(url)
-            except HTTPError or ConnectionError or Timeout or RequestException:
-                raise
+            r = utils.get_url(session, url)
 
             z = zipfile.ZipFile(io.BytesIO(r.content))
             with rasterio.MemoryFile() as memfile:
@@ -1024,7 +907,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
 
     from shapely.geometry import box
 
-    # form a geometry with a size less than a pixel (1 km)
+    # form a geometry with a size less than the grid size (1 km)
     ext = 0.0005
     geometry = box(lon - ext, lat - ext, lon + ext, lat + ext)
 
@@ -1052,11 +935,11 @@ def NLCD(
     """Get data from NLCD 2016 database.
 
     Download land use, land cover data from NLCD2016 database within
-    a given geometry with epsg:4326 projection.
+    a given geometry in epsg:4326.
 
     Note
     ----
-        NLCD data has a resolution of 1 arc-sec or ~30 m.
+        NLCD data has a resolution of 1 arc-sec (~30 m).
 
         The following references have been used:
             * https://github.com/jzmiller1/nlcd
@@ -1187,21 +1070,13 @@ def NLCD(
                 end=" >>> ",
             )
 
-            try:
-                img = wms.getmap(
-                    layers=[layer],
-                    srs="epsg:4326",
-                    bbox=bbox,
-                    size=(width, height),
-                    format="image/geotiff",
-                )
-            except ConnectionError:
-                raise (
-                    f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                        MARGINE
-                    )
-                    + "Data could not be reached.."
-                )
+            img = wms.getmap(
+                layers=[layer],
+                srs="epsg:4326",
+                bbox=bbox,
+                size=(width, height),
+                format="image/geotiff",
+            )
 
             with rasterio.MemoryFile() as memfile:
                 memfile.write(img.read())
@@ -1354,17 +1229,12 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
 
-    west, south, east, north = geometry.bounds
+    bbox = dict(
+        zip(["west", "south", "east", "north"], [round(i, 6) for i in geometry.bounds])
+    )
 
     url = "https://portal.opentopography.org/otr/getdem"
-    payload = dict(
-        demtype=demtype,
-        west=round(west, 6),
-        south=round(south, 6),
-        east=round(east, 6),
-        north=round(north, 6),
-        outputFormat="GTiff",
-    )
+    payload = {"demtype": demtype, "outputFormat": "GTiff", **bbox}
 
     print(
         f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
@@ -1373,10 +1243,7 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
     )
 
     session = utils.retry_requests()
-    try:
-        r = session.get(url, params=payload)
-    except ConnectionError or Timeout or RequestException:
-        raise
+    r = utils.get_url(session, url, payload)
 
     with rasterio.MemoryFile() as memfile:
         memfile.write(r.content)
