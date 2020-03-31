@@ -24,6 +24,7 @@ dependencies:
     - mypy==0.761
     - black
     - wheel
+    - pqdm
     - watchdog
     - flake8
     - twine

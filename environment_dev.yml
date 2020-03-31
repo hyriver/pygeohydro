@@ -46,3 +46,4 @@ dependencies:
     - black
     - rasterstats
     - tables
+    - pqdm

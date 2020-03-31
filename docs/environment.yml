@@ -25,6 +25,7 @@ dependencies:
       - descartes
       - xarray
       - networkx
+      - pqdm
       - numpydoc
       - ipykernel
       - ipython
