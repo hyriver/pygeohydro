@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Some utilities for Hydrodata"""
 
-import json
 import xml.etree.ElementTree as ET
 from itertools import zip_longest
 from warnings import warn
@@ -10,11 +9,24 @@ from warnings import warn
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyproj
+import rasterio
+import rasterio.mask
+import simplejson as json
+from bs4 import BeautifulSoup
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from pqdm.threads import pqdm
-from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
-from shapely.geometry import Point, Polygon, mapping
+from requests.exceptions import (
+    ConnectionError,
+    HTTPError,
+    RequestException,
+    RetryError,
+    Timeout,
+)
+from shapely.geometry import Point, Polygon, box, mapping
+
+import xarray as xr
 
 
 def retry_requests(
@@ -869,7 +881,10 @@ def accumulate_attr(fl, attr, graph=False):
 
 def get_nhdplus_fcodes():
     """Get NHDPlus FCode lookup table"""
-    url = "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
+    url = (
+        "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
+        + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
+    )
     return pd.concat(pd.read_html(url, header=0)).set_index("FCode")
 
 
@@ -938,7 +953,17 @@ def traverse_json(obj, path):
 class ArcGISREST:
     """Base class for web services based on ArcGIS REST."""
 
-    def __init__(self, host, site, folder=None, serviceName=None, layer=None):
+    def __init__(
+        self,
+        host,
+        site,
+        folder=None,
+        serviceName=None,
+        layer=None,
+        outFormat="geojson",
+        spatialRel="esrispatialRelIntersects",
+        verbose=False,
+    ):
         """Form the base url and get the service information.
 
         The general url is in the following form:
@@ -949,13 +974,118 @@ class ArcGISREST:
         https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm
         """
         self.root = f"https://{host}/{site}/rest/services"
-        self.folder = folder
-        self.serviceName = serviceName
-        self.layer = layer
 
+        self._folder = folder
+        self._serviceName = serviceName
+        self._layer = layer
+        self._outFormat = outFormat
+        self._spatialRel = spatialRel
         self.session = retry_requests()
 
-        self.generate_url()
+        self.generate_url(verbose)
+
+    @property
+    def folder(self):
+        return self._folder
+
+    @folder.setter
+    def folder(self, value):
+        if value is not None:
+            valids, _ = self.get_fs()
+            if value not in valids:
+                msg = f"The given folder, {value}, is not valid. "
+                msg += f"Valid folders are {', '.join(str(v) for v in valids)}"
+                raise ValueError(msg)
+        self._folder = value
+
+    @property
+    def serviceName(self):
+        return self._serviceName
+
+    @serviceName.setter
+    def serviceName(self, value):
+        if value is not None:
+            _, valids = self.get_fs(self.folder)
+            if value not in valids:
+                msg = f"The given serviceName, {value}, is not valid. "
+                msg += f"Valid serviceNames are {', '.join(str(v) for v in valids)}"
+                raise ValueError(msg)
+        self._serviceName = value
+
+    @property
+    def layer(self):
+        return self._layer
+
+    @layer.setter
+    def layer(self, value):
+        if value is not None:
+            v_dict, _ = self.get_layers(self.serviceName)
+            valids = list(v_dict.keys())
+            if value not in valids or not isinstance(value, int):
+                msg = f"The given layer, {value}, is not valid. "
+                msg += f"Valid layers are integers {', '.join(str(v) for v in valids)}"
+                raise ValueError(msg)
+        self._layer = value
+
+    @property
+    def outFormat(self):
+        return self._outFormat
+
+    @outFormat.setter
+    def outFormat(self, value):
+        if self.base_url is not None:
+            valids = self.queryFormats
+            if value not in valids:
+                msg = f"The given outFormat, {value}, is not valid. "
+                msg += f"Valid outFormats are {', '.join(str(v) for v in valids)}"
+                raise ValueError(msg)
+        self._outFormat = value
+
+    @property
+    def spatialRel(self):
+        return self._spatialRel
+
+    @spatialRel.setter
+    def spatialRel(self, value):
+        spatialRels = [
+            "esriSpatialRelIntersects",
+            "esriSpatialRelContains",
+            "esriSpatialRelCrosses",
+            "esriSpatialRelEnvelopeIntersects",
+            "esriSpatialRelIndexIntersects",
+            "esriSpatialRelOverlaps",
+            "esriSpatialRelTouches",
+            "esriSpatialRelWithin",
+            "esriSpatialRelRelation",
+        ]
+        if value is not None and value not in spatialRels:
+            msg = f"The given spatialRel, {value}, is not valid. "
+            msg += f"Valid spatialRels are {', '.join(str(v) for v in spatialRels)}"
+            raise ValueError(msg)
+        self._spatialRel = value
+
+    def get_fs(self, folder=None):
+        """Get folders and services of the geoserver's a folder/root url"""
+        url = self.root if folder is None else f"{self.root}/{folder}"
+        info = get_url(self.session, url, {"f": "json"}).json()
+        try:
+            folders = info["folders"]
+        except KeyError:
+            warn(f"The url doesn't have any folders: {url}")
+            folders = None
+
+        try:
+            services = {
+                f"/{s}".split("/")[-1]: t
+                for s, t in zip(
+                    traverse_json(info, ["services", "name"]),
+                    traverse_json(info, ["services", "type"]),
+                )
+            }
+        except KeyError:
+            warn(f"The url doesn'thave any services: {url}")
+            services = None
+        return folders, services
 
     def get_layers(self, serviceName=None):
         """Find the available sublayers and their parent layers
@@ -987,7 +1117,7 @@ class ArcGISREST:
                 "The serviceName was not found. Check if folder is set correctly."
             )
 
-        info = get_url(self.session, url, {"f": "pjson"}).json()
+        info = get_url(self.session, url, {"f": "json"}).json()
         try:
             layers = {
                 i: n
@@ -995,10 +1125,14 @@ class ArcGISREST:
                     traverse_json(info, ["layers", "id"]),
                     traverse_json(info, ["layers", "name"]),
                 )
+                if n is not None
             }
             layers.update({-1: "HEAD LAYER"})
         except TypeError:
-            raise TypeError(f"The url doesn't have layers.")
+            raise TypeError(f"The url doesn't have layers, {url}")
+
+        if len(layers) < 2:
+            raise ValueError(f"The url doesn't have layers, {url}")
 
         parent_layers = {
             i: p
@@ -1029,74 +1163,104 @@ class ArcGISREST:
         sublayers = {i: layers[i] for i in sublayers}
         return sublayers, parent_layers
 
-    def get_fs(self, folder=None):
-        """Get folders and services of the geoserver's (folder) root url"""
-        url = self.root if folder is None else f"{self.root}/{folder}"
-        info = get_url(self.session, url, {"f": "pjson"}).json()
-        try:
-            folders = info["folders"]
-            services = {
-                f"/{s}".split("/")[-1]: t
-                for s, t in zip(
-                    traverse_json(info, ["services", "name"]),
-                    traverse_json(info, ["services", "type"]),
-                )
-            }
-        except TypeError or KeyError:
-            raise KeyError(f"The url doesn not include folder and services : {url}")
-        return folders, services
-
-    def generate_url(self):
-        reqs = {"serviceName": self.serviceName, "layer": self.layer}
-        missing = [m for m, v in reqs.items() if v is None]
-        if len(missing) > 0:
-            self.base_url = None
-            msg = (
-                "The base_url set to None since the following variables are missing:\n"
-            )
-            msg += ", ".join(m for m in missing) + "\n"
-            msg += "URL's form is https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
-            msg += "Use get_info(<url>) or get_layers(<url>) to get the available options at each level."
+    def generate_url(self, verbose=False):
+        self.base_url = None
+        if self.serviceName is None:
+            msg = "The base_url set to None since serviceName is not set:\n"
+            msg += "URL's general form is https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
+            msg += "Use get_fs(<folder>) or get_layers(<serviceName>) to get the available folders, services and layers."
             warn(msg)
-        elif not isinstance(self.layer, int):
-            raise ValueError(
-                f"Layer should be an integer. Use self.get_layers('{self.serviceName}') to find the available options."
-            )
         else:
             _, services = self.get_fs(self.folder)
-            sublayers, _ = self.get_layers()
-            self.layer_name = sublayers[self.layer]
+            if self.layer is None:
+                layer_suffix = ""
+                self.layer_name = self.serviceName
+            else:
+                sublayers, _ = self.get_layers()
+                self.layer_name = sublayers[self.layer]
+                layer_suffix = f"/{self.layer}"
+
             if self.folder is None:
                 try:
-                    self.base_url = f"{self.root}/{self.serviceName}/{services[self.serviceName]}/{self.layer}"
+                    self.base_url = f"{self.root}/{self.serviceName}/{services[self.serviceName]}{layer_suffix}"
                 except KeyError:
                     raise KeyError(
                         f"The requetsed service is not available on the server: {self.serviceName}"
                     )
             else:
                 try:
-                    self.base_url = f"{self.root}/{self.folder}/{self.serviceName}/{services[self.serviceName]}/{self.layer}"
+                    self.base_url = f"{self.root}/{self.folder}/{self.serviceName}/{services[self.serviceName]}{layer_suffix}"
                 except KeyError:
                     raise KeyError(
                         f"The requetsed service is not available on the server: {self.serviceName}"
                     )
+
+            self.test_url()
+            if verbose:
+                print("The following url was generated successfully:")
+                print(self.base_url)
+                if self.units is not None:
+                    print(f"Units: {self.units}")
+                print(f"Max Record Count: {self.maxRecordCount}")
+                print(f"Supported Query Formats: {self.queryFormats}")
+
+    def test_url(self):
+        try:
+            r = get_url(self.session, self.base_url, {"f": "json"}).json()
             try:
-                self.url_info = get_url(
-                    self.session, self.base_url, {"f": "pjson"}
-                ).json()
-                self.maxRecordCount = self.url_info["maxRecordCount"]
+                self.units = r["units"].replace("esri", "").lower()
             except KeyError:
+                self.units = None
+            self.maxRecordCount = r["maxRecordCount"]
+            self.queryFormats = (
+                r["supportedQueryFormats"].replace(" ", "").lower().split(",")
+            )
+        except RetryError:
+            try:
+                r = get_url(self.session, self.base_url)
+                soup = BeautifulSoup(r.content, "html.parser")
+                info = soup.find("div", {"class": "rbody"}).text
+                info = [i.strip() for i in info.split("\n") if i.strip() != ""]
+                try:
+                    units = [i.split(":")[1] for i in info if "Units:" in i][0]
+                    self.units = units.replace("esri", "").lower().strip()
+                except ValueError:
+                    self.units = None
+                self.maxRecordCount = [
+                    int(i.split(":")[1]) for i in info if "MaxRecordCount" in i
+                ][0]
+                queryFormats = [
+                    i.replace(" ", "").lower().split(":")[1]
+                    for i in info
+                    if "Query Formats" in i
+                ][0]
+                self.queryFormats = queryFormats.split(",")
+            except ValueError:
                 raise KeyError(f"The requested url is not correct: {self.base_url}")
+        except KeyError:
+            raise KeyError(f"The requested url is not correct: {self.base_url}")
 
 
 class RESTByGeom(ArcGISREST):
     """For getting data by geometry from an Arc GIS REST sercive."""
 
     def __init__(
-        self, host, site, folder=None, serviceName=None, layer=None, n_threads=4
+        self,
+        host,
+        site,
+        folder=None,
+        serviceName=None,
+        layer=None,
+        n_threads=4,
+        outFormat="geojson",
+        spatialRel="esrispatialRelIntersects",
     ):
-        super().__init__(host, site, folder, serviceName, layer)
+        super().__init__(host, site, folder, serviceName, layer, outFormat, spatialRel)
         self.n_threads = min(n_threads, 8)
+
+        if self.outFormat not in ["json", "geojson"]:
+            raise ValueError("Only json and geojson are supported for outFormat.")
+
         if n_threads > 8:
             warn("No. of threads was reduced to 8.")
 
@@ -1114,13 +1278,13 @@ class RESTByGeom(ArcGISREST):
                 )
             geometryType = "esriGeometryEnvelope"
             bbox = dict(zip(["xmin", "ymin", "xmax", "ymax"], geom))
-            geom_json = {**bbox, "spatialReference": {"wkid": 4326}}
+            geom_json = {**bbox, "spatialRelference": {"wkid": 4326}}
             geometry = json.dumps(geom_json)
         elif isinstance(geom, Polygon):
             geometryType = "esriGeometryPolygon"
             geom_json = {
                 "rings": [[[x, y] for x, y in zip(*geom.exterior.coords.xy)]],
-                "spatialReference": {"wkid": 4326},
+                "spatialRelference": {"wkid": 4326},
             }
             geometry = json.dumps(geom_json)
         else:
@@ -1129,30 +1293,36 @@ class RESTByGeom(ArcGISREST):
         payload = {
             "geometryType": geometryType,
             "geometry": geometry,
-            "intSR": "4326",
-            "spatialRel": "esriSpatialRelIntersects",
+            "inSR": "4326",
+            "spatialRel": self.spatialRel,
             "returnGeometry": "false",
             "returnIdsOnly": "true",
-            "f": "geojson",
+            "f": self.outFormat,
         }
         r = post_url(self.session, f"{self.base_url}/query", payload)
         try:
             oids = r.json()["objectIds"]
-        except KeyError:
-            raise KeyError("No feature ID were found on the geoserver within the .")
+            oid_list = list(zip_longest(*[iter(oids)] * self.maxRecordCount))
+            oid_list[-1] = [i for i in oid_list[-1] if i is not None]
+        except (KeyError, TypeError, IndexError):
+            warn(
+                "No feature ID were found within the requested "
+                + f"region using the spatial relationship {self.spatialRel}."
+            )
+            raise
 
-        oid_list = list(zip_longest(*[iter(oids)] * self.maxRecordCount))
-        oid_list[-1] = [i for i in oid_list[-1] if i is not None]
         self.splitted_ids = oid_list
 
     def get_features(self):
-        def _get_features(ids):
+        from arcgis2geojson import arcgis2geojson
+
+        def get_geojson(ids):
             payload = {
                 "objectIds": ",".join(str(i) for i in ids),
                 "returnGeometry": "true",
                 "outSR": "4326",
                 "outFields": "*",
-                "f": "geojson",
+                "f": self.outFormat,
             }
             r = post_url(self.session, f"{self.base_url}/query", payload)
             try:
@@ -1160,25 +1330,51 @@ class RESTByGeom(ArcGISREST):
             except TypeError:
                 return ids
 
+        def get_json(ids):
+            payload = {
+                "objectIds": ",".join(str(i) for i in ids),
+                "returnGeometry": "true",
+                "outSR": "4326",
+                "outFields": "*",
+                "f": self.outFormat,
+            }
+            r = post_url(self.session, f"{self.base_url}/query", payload)
+            try:
+                return gpd.GeoDataFrame.from_features(
+                    arcgis2geojson(r.json()), crs="epsg:4326"
+                )
+            except TypeError:
+                return ids
+
+        if self.outFormat == "json":
+            getter = get_json
+        else:
+            getter = get_geojson
+
         feature_list = pqdm(
-            self.splitted_ids,
-            _get_features,
-            n_jobs=self.n_threads,
-            desc=f"{self.layer_name}",
+            self.splitted_ids, getter, n_jobs=self.n_threads, desc=f"{self.layer_name}",
         )
 
         # Find the failed batches and retry
-        fails = [ids for ids in feature_list if isinstance(ids, tuple)]
+        fails = [
+            ids
+            for ids in feature_list
+            if isinstance(ids, tuple) or isinstance(ids, list)
+        ]
         success = [ids for ids in feature_list if isinstance(ids, gpd.GeoDataFrame)]
+
         if len(fails) > 0:
             fails = ([x] for y in fails for x in y)
             retry = pqdm(
                 fails,
-                _get_features,
+                getter,
                 n_jobs=min(self.n_threads * 2, 8),
                 desc="Retry failed batches",
             )
             success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
+
+        if len(success) == 0:
+            raise ValueError("No valid feature were found.")
         return gpd.GeoDataFrame(pd.concat(success))
 
 
@@ -1188,22 +1384,32 @@ class Geoserver:
 
         if owsType in ["wfs", "wms"]:
             self.owsType = owsType
+            self.version = version
             if self.owsType == "wms":
-                self.version = "1.1.1" if version is None else version
-                f_ows = WebMapService(
+                wms_v = ["1.1.1", "1.3.0"]
+                if version not in wms_v:
+                    msg = "The given version, {version}, is not valid. "
+                    msg += f"Valid versions are {', '.join(str(v) for v in wms_v)}"
+                    raise ValueError(msg)
+                self.version = wms_v[-1] if version is None else version
+                self.ows = WebMapService(
                     url=f"{self.root_url}/{owsType}", version=self.version
                 )
                 self.outFormat = "image/geotiff" if outFormat is None else outFormat
             else:
-                self.version = "1.1.0" if version is None else version
-                f_ows = WebFeatureService(
+                wfs_v = ["1.0.0", "1.1.0", "2.0.0"]
+                if version not in wfs_v:
+                    msg = "The given version, {version}, is not valid. "
+                    msg += f"Valid versions are {', '.join(str(v) for v in wfs_v)}"
+                self.version = wfs_v[-1] if version is None else version
+                self.ows = WebFeatureService(
                     url=f"{self.root_url}/{owsType}", version=self.version
                 )
                 self.outFormat = "application/json" if outFormat is None else outFormat
-            self.valid_features = {
-                k: v
-                for v, k in [c.split(":") for c in list(f_ows.contents) if ":" in c]
-            }
+
+            vfs = [l for l in [f":{c}".split(":")[1:] for c in list(self.ows.contents)]]
+            self.valid_features = {c[1]: c[0] for c in vfs if len(c) == 2}
+            self.valid_features_list = [c[0] for c in vfs if len(c) == 1]
         else:
             raise ValueError("Acceptable value for owsType are wfs and wms.")
 
@@ -1220,6 +1426,21 @@ class Geoserver:
         )
 
     def getfeature_byid(self, featurename, featureids, crs="epsg:4326"):
+        """Get features based on feature IDs using WFS.
+
+        Parameters
+        ----------
+        featurename : string
+            The name of the column where feature IDs are
+        featureids : int, string, or list
+            The feature ID(s)
+        crs : string, optional
+            The coordinate reference of the output, defaults to ``epsg:4326``
+
+        Returns
+        -------
+        requests.Response
+        """
         if self.owsType == "wms":
             raise ValueError("For wms use getmap class function.")
 
@@ -1266,6 +1487,19 @@ class Geoserver:
         return r
 
     def getfeature_bybox(self, bbox, crs="epsg:4326"):
+        """Get feature within a bounding box using WFS.
+
+        Parameters
+        ----------
+        bbox : list, tuple
+            The bounding box as list: [west, south, east, north]
+        crs : string, optional
+            The coordinate reference of the output, defaults to ``epsg:4326``
+
+        Returns
+        -------
+        requests.Response
+        """
         if self.owsType == "wms":
             raise ValueError("For WMS use getmap class function.")
 
@@ -1299,6 +1533,22 @@ class Geoserver:
         return r
 
     def getmap(self, bbox, width, crs="epsg:4326"):
+        """Get data within a bounding box using WMS.
+
+        Parameters
+        ----------
+        bbox : list, tuple
+            The bounding box as list: [west, south, east, north]
+        width : int
+            The width of the returned map in pixels. Height is computed
+            based the bbox aspect ration.
+        crs : string, optional
+            The coordinate reference of the output, defaults to ``epsg:4326``
+
+        Returns
+        -------
+        requests.Response
+        """
         if self.owsType == "wfs":
             raise ValueError(
                 "For WFS use getfeature_byid or getfeature_bybox class function."
@@ -1316,7 +1566,11 @@ class Geoserver:
                 "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
             )
 
-        height = int(np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width)
+        geod = pyproj.Geod(ellps="WGS84")
+        west, south, east, north = bbox
+        _, _, bbox_w = abs(geod.inv(west, south, east, south))
+        _, _, bbox_h = abs(geod.inv(west, south, west, north))
+        height = int(bbox_h / bbox_w * width)
         payload = {
             "service": f"{self.owsType}",
             "version": f"{self.version}",
@@ -1336,3 +1590,168 @@ class Geoserver:
             raise ValueError(root[0].text.strip())
 
         return r
+
+
+def get_wms(
+    url,
+    geometry,
+    width,
+    layers=None,
+    outFormat=None,
+    nodata=None,
+    file_path=None,
+    version="1.3.0",
+    crs="epsg:4326",
+):
+    """Data from any WMS service within a geometry
+
+    Parameters
+    ----------
+    url : string
+        The base url for the WMS service. Some example:
+        https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
+        https://www.mrlc.gov/geoserver/mrlc_download/wms
+    geometry : Polygon, box
+        A shapely Polygon or box for getting the data
+    width : int
+        The width of the output image in pixels. The height is computed
+        automatically from the geometry's bounding box aspect ratio.
+    layers : dict
+        The layer from the service to be downloaded, defaults to None which throws
+        an error and includes all the avialable layers offered by the service. The
+        argument should be a dict with keys as the variable name in the output
+        dataframe and values as the complete name of the layer in the service.
+    outFormat : string
+        The data format to request for data from the service, defaults to None which
+         throws an error and includes all the avialable format offered by the service.
+    nodata : dict
+        The value to be set as nodata in the returned dataset, defaults to None which
+        uses the source nodata value or if not available, automatically sets NAN for
+        float datasets and maximum value in the data type range. For example, if the
+        source data has ``uint8`` type nodata is set to 255. The argument should be
+        a dict with keys as the variable name in the output dataframe and values as
+        the nodata for that layer.
+    file_path : string or Path
+        The path to save the downloaded images, defaults to None which will only return
+        the data as ``xarray.Dataset`` and doesn't save the file.
+    version : string
+        The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
+    crs : string
+        The spatial reference system to be used for the requesting the data, defaults to
+        epsg:4326.
+
+    Returns
+    -------
+    xarray.Dataset
+    """
+    wms = WebMapService(url, version=version)
+
+    valid_layers = list(wms.contents)
+    if layers is None:
+        raise ValueError(
+            "The layers argument is missing."
+            + " The following layers are available:\n"
+            + ", ".join(l for l in valid_layers)
+        )
+    elif not isinstance(layers, dict):
+        raise ValueError(
+            "The layers argument should be of type dict: " + "{var_name : layer_name}"
+        )
+    elif any(l not in valid_layers for l in layers.values()):
+        raise ValueError(
+            "The layers argument is invalid."
+            + " Valid layers are:\n"
+            + ", ".join(l for l in valid_layers)
+        )
+
+    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
+    if outFormat is None:
+        raise ValueError(
+            "The outFormat argument is missing."
+            + " The following output formats are available:\n"
+            + ", ".join(l for l in valid_outFormats)
+        )
+    elif outFormat not in valid_outFormats:
+        raise ValueError(
+            "The outFormat argument is invalid."
+            + " Valid output formats are:\n"
+            + ", ".join(l for l in valid_outFormats)
+        )
+
+    valid_crss = {l: [s.lower() for s in wms[l].crsOptions] for l in layers.values()}
+    if any(crs not in valid_crss[l] for l in layers.values()):
+        raise ValueError(
+            "The crs argument is invalid."
+            + "\n".join(
+                [
+                    f" Valid CRSs for {layer} layer are:\n" + ", ".join(c for c in crss)
+                    for layer, crss in valid_crss.items()
+                ]
+            )
+        )
+
+    if not isinstance(geometry, Polygon) and not isinstance(geometry, box):
+        raise ValueError("Geometry should be of type shapley's Polygon or box")
+
+    west, south, east, north = geometry.bounds
+    height = int(abs(north - south) / abs(east - west) * width)
+
+    if file_path is None:
+        file_path = {k: f"/tmp/{k}.tiff" for k in layers.keys()}
+    elif file_path is not None and not isinstance(file_path, dict):
+        raise ValueError(
+            "The file_path argument should be of type dict: " + "{var_name : path}"
+        )
+
+    if nodata is None:
+        nodata = {k: None for k in layers.keys()}
+    elif nodata is not None and not isinstance(nodata, dict):
+        raise ValueError(
+            "The nodata argument should be of type dict: " + "{var_name : nodata}"
+        )
+    datasets = []
+    for name, layer in layers.items():
+        img = wms.getmap(
+            layers=[layer],
+            srs=crs,
+            bbox=geometry.bounds,
+            size=(width, height),
+            format=outFormat,
+        )
+
+        with rasterio.MemoryFile() as memfile:
+            memfile.write(img.read())
+            with memfile.open() as src:
+                if nodata[name] is None:
+                    if src.nodata is None:
+                        try:
+                            nodata[name] = np.iinfo(src.dtypes[0]).max
+                        except ValueError:
+                            nodata[name] = np.nan
+                    else:
+                        nodata[name] = np.dtype(src.dtypes[0]).type(src.nodata)
+
+                ras_msk, transform = rasterio.mask.mask(
+                    src, [geometry], nodata=nodata[name]
+                )
+                meta = src.meta
+                meta.update(
+                    {
+                        "width": ras_msk.shape[1],
+                        "height": ras_msk.shape[2],
+                        "transform": transform,
+                        "nodata": nodata[name],
+                    }
+                )
+
+                with rasterio.open(file_path[name], "w", **meta) as dest:
+                    dest.write(ras_msk)
+
+        with xr.open_rasterio(file_path[name]) as ds:
+            ds = ds.squeeze("band", drop=True)
+            if not np.isnan(nodata[name]):
+                msk = ds < nodata[name] if nodata[name] > 0 else ds > nodata[name]
+                ds = ds.where(msk, drop=True)
+            ds.name = name
+            datasets.append(ds)
+    return xr.merge(datasets)

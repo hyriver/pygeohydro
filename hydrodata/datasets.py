@@ -7,6 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyproj
 import rasterio
 import rasterio.mask
 from hydrodata import utils
@@ -1061,7 +1062,13 @@ def NLCD(
             )
         else:
             bbox = geometry.bounds
-            height = int(np.abs(bbox[1] - bbox[3]) / np.abs(bbox[0] - bbox[2]) * width)
+
+            geod = pyproj.Geod(ellps="WGS84")
+            west, south, east, north = bbox
+            _, _, bbox_w = geod.inv(west, south, east, south)
+            _, _, bbox_h = geod.inv(west, south, west, north)
+            height = int(abs(bbox_h) / abs(bbox_w) * width)
+
             print(
                 f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
                     MARGINE
