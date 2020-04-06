@@ -195,25 +195,22 @@ class Station:
 
         geom_file = self.data_dir.joinpath("geometry.gpkg")
 
-        self.watershed = hds.NLDI(station_id=self.station_id)
-        self.starting_comid = self.watershed.starting_comid
-
-        self.basin = self.watershed.basin
-
         if geom_file.exists():
-            gdf = gpd.read_file(geom_file)
-            self.geometry = gdf.geometry.values[0]
-            return
+            print(
+                f"[ID: {self.station_id}] ".ljust(MARGINE)
+                + f"Using existing watershed geometry: {geom_file}"
+            )
+            self.basin = gpd.read_file(geom_file)
+        else:
+            print(
+                f"[ID: {self.station_id}] ".ljust(MARGINE)
+                + "Downloading watershed geometry using NLDI service >>>"
+            )
+            self.basin = hds.NLDI.basin(self.station_id)
+            self.basin.to_file(geom_file)
+            print(
+                f"[ID: {self.station_id}] ".ljust(MARGINE)
+                + f"The watershed geometry saved to {geom_file}."
+            )
 
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + "Downloading watershed geometry using NLDI service >>>"
-        )
-        geom = self.watershed.basin
-        self.geometry = geom.values[0]
-        geom.to_file(geom_file)
-
-        print(
-            f"[ID: {self.station_id}] ".ljust(MARGINE)
-            + f"The watershed geometry saved to {geom_file}."
-        )
+        self.geometry = self.basin.geometry.values[0]
