@@ -24,6 +24,7 @@ dependencies:
   - gdal
   - pip:
     - networkx
+    - pqdm
     - bump2version
     - wheel
     - watchdog
