@@ -21,6 +21,7 @@ dependencies:
     - rasterstats
     - tables
     - networkx
+    - pqdm
     - mypy==0.761
     - black
     - wheel
