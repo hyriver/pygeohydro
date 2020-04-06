@@ -5,7 +5,7 @@
 Plots includes  daily, monthly and annual hydrograph as well as
 regime curve (monthly mean) and flow duration curve.
 """
-from hydrodata import utils
+from hydrodata import helpers, utils
 
 
 def signatures(
@@ -209,7 +209,7 @@ def cover_legends():
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     from matplotlib.colors import ListedColormap, BoundaryNorm
 
-    nlcd_meta = utils.nlcd_helper()
+    nlcd_meta = helpers.nlcd_helper()
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
     norm = BoundaryNorm(list(nlcd_meta["colors"].keys()), cmap.N)
     return cmap, norm

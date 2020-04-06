@@ -2,19 +2,14 @@
 # -*- coding: utf-8 -*-
 """Accessing data from the supported databases through their APIs."""
 
-from pathlib import Path
-
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pyproj
 import rasterio
 import rasterio.mask
-from hydrodata import utils
+from hydrodata import helpers, services, utils
 
 import xarray as xr
-
-MARGINE = 15
 
 
 def nwis_streamflow(station_ids, start, end, raw=False):
@@ -201,44 +196,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     return df
 
 
-def nwis_basin(station_ids):
-    """Get USGS stations basins using NLDI service.
-
-    Parameters
-    ----------
-    station_ids : string or list
-        The NWIS stations ID(s).
-
-    Returns
-    -------
-    GeoDataFrame
-    """
-    if not isinstance(station_ids, list):
-        station_ids = [station_ids]
-
-    station_ids = ["USGS-" + str(f) for f in station_ids]
-
-    if len(station_ids) == 0:
-        raise ValueError("The featureID list is empty!")
-
-    crs = "epsg:4326"
-    base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data/nwissite"
-    session = utils.retry_requests()
-
-    def get_url(sid):
-        url = f"{base_url}/{sid}/basin"
-        r = utils.get_url(session, url)
-        gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-        gdf["site_no"] = sid
-        return gdf
-
-    gdf = gpd.GeoDataFrame(pd.concat([get_url(i) for i in station_ids]))
-    gdf.crs = crs
-
-    return gdf
-
-
-def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
+def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
     """Get daily climate data from Daymet for a single point.
 
     Parameters
@@ -302,12 +260,6 @@ def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     else:
         variables = valid_variables
 
-    print(
-        f"[LOC: ({lon:.2f}, {lat:.2f})] ".ljust(MARGINE)
-        + "Downloading climate data from Daymet",
-        end=" >>> ",
-    )
-
     url = "https://daymet.ornl.gov/single-pixel/api/data"
     if years is None:
         dates = {"start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")}
@@ -329,18 +281,8 @@ def deymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     df.index = pd.to_datetime(df.year * 1000.0 + df.yday, format="%Y%j")
     df.drop(["year", "yday"], axis=1, inplace=True)
 
-    print("finished.")
-
     if pet:
-        print(
-            f"[LOC: ({lon:.2f}, {lat:.2f})] ".ljust(MARGINE) + "Computing PET",
-            end=" >>> ",
-        )
-
         df = utils.pet_fao(df, lon, lat)
-
-        print("finished.")
-
     return df
 
 
@@ -352,6 +294,7 @@ def daymet_bygeom(
     variables=None,
     pet=False,
     resolution=None,
+    fill_holes=False,
 ):
     """Gridded data from the Daymet database.
 
@@ -380,6 +323,8 @@ def daymet_bygeom(
     resolution : float
         The desired output resolution for the output in km,
         defaults to no resampling. The resampling is done using bilinear method
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
@@ -436,12 +381,8 @@ def daymet_bygeom(
 
     if not isinstance(geometry, Polygon):
         raise TypeError("The geometry argument should be of Shapely's Polygon type.")
-
-    print(
-        f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + "Downloading climate data from Daymet",
-        end=" >>> ",
-    )
+    elif fill_holes:
+        geometry = Polygon(geometry.exterior)
 
     west, south, east, north = np.round(geometry.bounds, 6)
     urls = []
@@ -469,12 +410,9 @@ def daymet_bygeom(
             )
     session = utils.retry_requests()
 
-    r = utils.get_url(session, urls[0])
-    data = xr.open_dataset(r.content)
-
-    for url in urls[1:]:
-        r = utils.get_url(session, url)
-        data = xr.merge([data, xr.open_dataset(r.content)])
+    data = xr.merge(
+        [xr.open_dataset(utils.get_url(session, url).content) for url in urls]
+    )
 
     for k, v in units.items():
         if k in variables:
@@ -505,18 +443,8 @@ def daymet_bygeom(
         y_options.max(),
     )
 
-    print("finished.")
-
     if pet:
-        print(
-            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                MARGINE
-            )
-            + "Computing PET",
-            end=" >>> ",
-        )
         data = utils.pet_fao_gridded(data)
-        print("finished.")
 
     data = utils.clip_daymet(data, geometry)
 
@@ -534,151 +462,164 @@ def daymet_bygeom(
 class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
-    def __init__(self, station_id):
-        """Intialize NLCD.
+    @classmethod
+    def starting_comid(cls, station_id):
+        """Find starting ComID based on the USGS station."""
+        return cls.navigate("nwissite", station_id, navigation=None).comid.tolist()[0]
+
+    @classmethod
+    def comids(cls, station_id):
+        """Find ComIDs of all the flowlines."""
+        return cls.navigate("nwissite", station_id).comid.tolist()
+
+    @classmethod
+    def tributaries(cls, station_id):
+        """Get upstream tributaries of the watershed."""
+        return cls.navigate("nwissite", station_id)
+
+    @classmethod
+    def main(cls, station_id):
+        """Get upstream main channel of the watershed."""
+        return cls.navigate("nwissite", station_id, "upstreamMain")
+
+    @classmethod
+    def stations(cls, station_id, navigation="upstreamTributaries", distance=None):
+        """Get USGS stations up/downstream of a station.
 
         Parameters
         ----------
         station_id : string
-            USGS station ID, defaults to None.
+            The USGS station ID.
         navigation : string, optional
-            Navigation option for delineating the watershed. Options are:
-            upstreamMain, upstreamTributaries, downstreamMain, downstreamDiversions
-            Defaults to upstreamTributaries.
-        distance : int, optional
-            Distance in km for finding USGS stations along the flowlines
-            based on the navigation option.
-            Defaults to None that finds all the stations.
+            The direction for navigating the NHDPlus database. The valid options are:
+            None, ``upstreamMain``, ``upstreamTributaries``,``downstreamMain``,
+            ``downstreamDiversions``. Defaults to upstreamTributaries.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (all stations).
+
+        Returns
+        -------
+        GeoDataFrame
         """
+        return cls.navigate("nwissite", station_id, navigation, "nwissite", distance)
 
-        self.station_id = str(station_id)
-        self.session = utils.retry_requests()
-
-    @property
-    def starting_comid(self):
-        """Find starting ComID based on the USGS station."""
-        return nhdplus_navigate(
-            "nwissite", self.station_id, navigation=None
-        ).comid.tolist()[0]
-
-    @property
-    def tributaries(self):
+    @classmethod
+    def pour_points(cls, station_id):
         """Get upstream tributaries of the watershed."""
-        return nhdplus_navigate("nwissite", self.station_id)
+        return cls.navigate("nwissite", station_id, "huc12pp")
 
-    @property
-    def main(self):
-        """Get upstream main channel of the watershed."""
-        return nhdplus_navigate("nwissite", self.station_id, navigation="upstreamMain")
+    @classmethod
+    def flowlines(cls, station_id):
+        """Get flowlines for the entire watershed from NHDPlus V2"""
+        return nhdplus_byid("nhdflowline_network", cls.comids(station_id))
 
-    @property
-    def pour_points(self):
-        """Get upstream tributaries of the watershed."""
-        return nhdplus_navigate("nwissite", self.station_id, dataSource="huc12pp")
+    @classmethod
+    def catchments(cls, station_id):
+        """Get chatchments for the entire watershed from NHDPlus V2"""
+        return nhdplus_byid("catchmentsp", cls.comids(station_id))
 
-    @property
-    def comids(self):
-        """Find ComIDs of all the flowlines."""
-        return self.tributaries.comid.tolist()
+    @staticmethod
+    def basin(station_id):
+        """Get USGS stations basins using NLDI service."""
+        crs = "epsg:4326"
+        url = (
+            "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+            + f"/nwissite/USGS-{station_id}/basin"
+        )
+        r = utils.get_url(utils.retry_requests(), url)
+        gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
+        gdf.crs = crs
 
-    @property
-    def basin(self):
-        """Delineate the basin."""
-        return nwis_basin(self.station_id)
+        return gdf
 
-    @property
-    def flowlines(self):
-        """Get NHDPlus V2 flowlines for the entire watershed"""
-        return nhdplus_byid("nhdflowline_network", self.comids)
+    @staticmethod
+    def navigate(
+        feature,
+        featureids,
+        navigation="upstreamTributaries",
+        dataSource="flowline",
+        distance=None,
+    ):
+        """Navigate NHDPlus V2 based on ComID(s).
 
+        Parameters
+        ----------
+        feature : string
+            The requested feature. The valid features are ``nwissite`` and ``comid``.
+        featureids : string or list
+            The ID(s) of the requested feature.
+        navigation : string, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            None, ``upstreamMain``, ``upstreamTributaries``,``downstreamMain``,
+            ``downstreamDiversions``. Defaults to upstreamTributaries.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (limitless).
+        dataSource : string, optional
+            The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
+            ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
+            Defaults to None.
 
-def nhdplus_navigate(
-    feature,
-    featureids,
-    navigation="upstreamTributaries",
-    distance=None,
-    dataSource="flowline",
-):
-    """Get flowlines or USGS stations based on ComID(s) from NHDPlus V2.
+        Returns
+        -------
+        GeoDataFrame
+        """
+        valid_features = ["comid", "nwissite"]
+        if feature not in valid_features:
+            msg = "The acceptable feature options are:"
+            msg += f" {', '.join(x for x in valid_features)}"
+            raise ValueError(msg)
 
-    Parameters
-    ----------
-    feature : string
-        The requested feature. The valid features are ``nwissite`` and ``comid``.
-    featureids : string or list
-        The ID(s) of the requested feature.
-    navigation : string, optional
-        The direction for navigating the NHDPlus database. The valid options are:
-        None, ``upstreamMain``, ``upstreamTributaries``,``downstreamMain``,
-        ``downstreamDiversions``. Defaults to upstreamTributaries.
-    distance : float, optional
-        The distance to limit the navigation in km. Defaults to None (limitless).
-    dataSource : string, optional
-        The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
-        ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
-        Defaults to None.
+        valid_dataSource = ["flowline", "nwissite", "huc12pp"]
+        if dataSource not in valid_dataSource:
+            msg = "The acceptable dataSource options are:"
+            msg += f"{', '.join(x for x in valid_dataSource)}"
+            raise ValueError(msg)
 
-    Returns
-    -------
-    GeoDataFrame
-    """
-    valid_features = ["comid", "nwissite"]
-    if feature not in valid_features:
-        msg = "The acceptable feature options are:"
-        msg += f" {', '.join(x for x in valid_features)}"
-        raise ValueError(msg)
+        if not isinstance(featureids, list):
+            featureids = [featureids]
 
-    valid_dataSource = ["flowline", "nwissite", "huc12pp"]
-    if dataSource not in valid_dataSource:
-        msg = "The acceptable dataSource options are:"
-        msg += f"{', '.join(x for x in valid_dataSource)}"
-        raise ValueError(msg)
+        if feature == "nwissite":
+            featureids = ["USGS-" + str(f) for f in featureids]
 
-    if not isinstance(featureids, list):
-        featureids = [featureids]
+        if len(featureids) == 0:
+            raise ValueError("The featureID list is empty!")
 
-    if feature == "nwissite":
-        featureids = ["USGS-" + str(f) for f in featureids]
+        ds = "" if dataSource == "flowline" else f"/{dataSource}"
+        dis = "" if distance is None else f"?distance={distance}"
 
-    if len(featureids) == 0:
-        raise ValueError("The featureID list is empty!")
+        nav_options = {
+            "upstreamMain": "UM",
+            "upstreamTributaries": "UT",
+            "downstreamMain": "DM",
+            "downstreamDiversions": "DD",
+        }
+        if navigation is not None and navigation not in list(nav_options.keys()):
+            msg = "The acceptable navigation options are:"
+            msg += f" {', '.join(x for x in list(nav_options.keys()))}"
+            raise ValueError(msg)
+        elif navigation is None:
+            nav = ""
+        else:
+            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
 
-    ds = "" if dataSource == "flowline" else f"/{dataSource}"
-    dis = "" if distance is None else f"?distance={distance}"
+        base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
+        crs = "epsg:4326"
+        session = utils.retry_requests()
 
-    nav_options = {
-        "upstreamMain": "UM",
-        "upstreamTributaries": "UT",
-        "downstreamMain": "DM",
-        "downstreamDiversions": "DD",
-    }
-    if navigation is not None and navigation not in list(nav_options.keys()):
-        msg = "The acceptable navigation options are:"
-        msg += f" {', '.join(x for x in list(nav_options.keys()))}"
-        raise ValueError(msg)
-    elif navigation is None:
-        nav = ""
-    else:
-        nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
+        def get_url(fid):
+            url = f"{base_url}/{fid}/{nav}"
 
-    base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
-    crs = "epsg:4326"
-    session = utils.retry_requests()
+            r = utils.get_url(session, url)
+            return gpd.GeoDataFrame.from_features(r.json(), crs=crs)
 
-    def get_url(fid):
-        url = f"{base_url}/{fid}/{nav}"
+        gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
+        comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
+        gdf = gdf.rename(columns={comid: "comid"})
+        gdf = gdf[["comid", "geometry"]]
+        gdf["comid"] = gdf.comid.astype("int64")
+        gdf.crs = crs
 
-        r = utils.get_url(session, url)
-        return gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-
-    gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
-    comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
-    gdf = gdf.rename(columns={comid: "comid"})
-    gdf = gdf[["comid", "geometry"]]
-    gdf["comid"] = gdf.comid.astype("int64")
-    gdf.crs = crs
-
-    return gdf
+        return gdf
 
 
 def nhdplus_bybox(feature, bbox):
@@ -705,7 +646,7 @@ def nhdplus_bybox(feature, bbox):
         msg += f" Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    service = utils.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
+    service = services.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
     r = service.getfeature_bybox(bbox)
 
     crs = "epsg:4326"
@@ -740,7 +681,7 @@ def nhdplus_byid(feature, featureids):
         msg += f"Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    service = utils.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
+    service = services.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
     propertyname = "featureid" if feature == "catchmentsp" else "comid"
     r = service.getfeature_byid(propertyname, featureids)
 
@@ -752,7 +693,9 @@ def nhdplus_byid(feature, featureids):
     return gdf
 
 
-def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None):
+def ssebopeta_bygeom(
+    geometry, start=None, end=None, years=None, resolution=None, fill_holes=False
+):
     """Gridded data from the SSEBop database.
 
     Note
@@ -777,6 +720,8 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
     resolution : float
         The desired output resolution for the output in decimal degree,
         defaults to no resampling. The resampling is done using bilinear method
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
@@ -792,6 +737,8 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
+    elif fill_holes:
+        geometry = Polygon(geometry.exterior)
 
     if years is None and start is not None and end is not None:
         if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
@@ -813,12 +760,6 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
         (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
         for d in pd.date_range(start, end)
     ]
-
-    print(
-        f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + f"Downloading the data from SSEBop",
-        end=" >>> ",
-    )
 
     orig_getaddrinfo = socket.getaddrinfo
     session = utils.retry_requests()
@@ -877,8 +818,6 @@ def ssebopeta_bygeom(geometry, start=None, end=None, years=None, resolution=None
         new_x = np.linspace(data.x[0], data.x[-1], int(data.dims["x"] / fac))
         new_y = np.linspace(data.y[0], data.y[-1], int(data.dims["y"] / fac))
         data = data.interp(x=new_x, y=new_y, method="linear")
-
-    print("finished.")
     return data
 
 
@@ -925,15 +864,10 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     return data
 
 
-def NLCD(
-    geometry,
-    years=None,
-    data_dir="/tmp",
-    width=2000,
-    resolution=None,
-    statistics=False,
+def nlcd(
+    geometry, years=None, width=None, resolution=None, file_path=None, fill_holes=False
 ):
-    """Get data from NLCD 2016 database.
+    """Get data from NLCD database (2016).
 
     Download land use, land cover data from NLCD2016 database within
     a given geometry in epsg:4326.
@@ -942,269 +876,80 @@ def NLCD(
     ----
         NLCD data has a resolution of 1 arc-sec (~30 m).
 
-        The following references have been used:
-            * https://github.com/jzmiller1/nlcd
-            * https://geopython.github.io/OWSLib/
-            * https://www.mrlc.gov/data-services-page
-            * https://www.arcgis.com/home/item.html?id=624863a9c2484741a9e2cc1ec9c95bce
-            * https://github.com/ozak/georasters
-            * https://automating-gis-processes.github.io/CSC18/index.html
-            * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
-
     Parameters
     ----------
     geometry : Shapely Polygon
         The geometry for extracting the data.
     years : dict, optional
-        The years for NLCD data as a dictionary, defaults to {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
-    data_dir : string or Path, optional
-        The directory for storing the output ``geotiff`` files, defaults to /tmp/
-    width : int, optional
-        Width of the output image in pixels, defaults to 2000 pixels.
+        The years for NLCD data as a dictionary, defaults to
+        {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
+    width : int
+        The width of the output image in pixels. The height is computed
+        automatically from the geometry's bounding box aspect ratio. Either width
+        or resolution should be provided.
     resolution : float
-        The desired output resolution for the output in decimal degree,
-        defaults to no resampling. The resampling is done using bilinear method
-        for impervious and canopy data, and majority for the cover.
-    statistics : bool
-        Whether to perform simple statistics on the data, default to False
+        The data resolution in arc-seconds. The width and height are computed in pixel
+        based on the geometry bounds and the given resolution. Either width or
+        resolution should be provided.
+    file_path : dict, optional
+        The path to save the downloaded images, defaults to None which will only return
+        the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
+        a dict with keys as the variable name in the output dataframe and values as
+        the path to save to the file.
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
      xarray.DataArray (optional), tuple (optional)
          The data as a single DataArray and or the statistics in form of
          three dicts (imprevious, canopy, cover) in a tuple
-
     """
-    from owslib.wms import WebMapService
-    import rasterstats
-    from shapely.geometry import Polygon
-    import os
-    from rasterio.enums import Resampling
+    nlcd_meta = helpers.nlcd_helper()
 
-    if not isinstance(geometry, Polygon):
-        raise TypeError("Geometry should be of type Shapely Polygon.")
-
-    data_dir = Path(data_dir)
-    if not data_dir.is_dir():
-        try:
-            os.makedirs(data_dir)
-        except OSError:
-            print(
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                    MARGINE
-                )
-                + f"Input directory cannot be created: {data_dir}"
-            )
-
-    nlcd_meta = utils.nlcd_helper()
-
-    avail_years = {
-        "impervious": nlcd_meta["impervious_years"],
-        "cover": nlcd_meta["cover_years"],
-        "canopy": nlcd_meta["canopy_years"],
-    }
+    names = ["impervious", "cover", "canopy"]
+    avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
 
     if years is None:
         years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
     if isinstance(years, dict):
-        years = years
+        for service in list(years.keys()):
+            if years[service] not in avail_years[service]:
+                msg = (
+                    f"{service.capitalize()} data for {years[service]} is not in the databse."
+                    + "Avaible years are:"
+                    + f"{' '.join(str(x) for x in avail_years[service])}"
+                )
+                raise ValueError(msg)
     else:
-        raise TypeError(
-            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                MARGINE
-            )
-            + "Years should be of type dict."
-        )
+        raise TypeError("Years should be of type dict.")
 
-    for service in list(years.keys()):
-        if years[service] not in avail_years[service]:
-            msg = (
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                    MARGINE
-                )
-                + f"{service.capitalize()} data for {years[service]} is not in the databse."
-                + "Avaible years are:"
-                + f"{' '.join(str(x) for x in avail_years[service])}"
-            )
-            raise ValueError(msg)
+    url = "https://www.mrlc.gov/geoserver/mrlc_download/wms"
 
-    url = "https://www.mrlc.gov/geoserver/mrlc_download/wms?service=WMS,request=GetCapabilities"
-    fpaths = [
-        Path(data_dir, f"{d}_{years[d]}.geotiff").exists() for d in list(years.keys())
-    ]
-    if not all(fpaths) or str(data_dir) == "/tmp":
-        print(
-            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                MARGINE
-            )
-            + "Connecting to MRLC Web Map Service",
-            end=" >>> ",
-        )
-        wms = WebMapService(url, version="1.3.0")
-        print("connected.")
+    layers = {
+        "canopy": f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
+        "cover": f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
+        "impervious": f'NLCD_{years["impervious"]}_Impervious_L48',
+    }
 
-    layers = [
-        ("canopy", f'NLCD_{years["canopy"]}_Tree_Canopy_L48'),
-        ("cover", f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48'),
-        ("impervious", f'NLCD_{years["impervious"]}_Impervious_L48'),
-    ]
-
-    params = {}
-    nodata = 199
-    for data_type, layer in layers:
-        data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
-        if Path(data_path).exists() and str(data_dir) != "/tmp":
-            print(
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                    MARGINE
-                )
-                + f"Using existing {data_type} data file: {data_path}"
-            )
-        else:
-            bbox = geometry.bounds
-
-            geod = pyproj.Geod(ellps="WGS84")
-            west, south, east, north = bbox
-            _, _, bbox_w = geod.inv(west, south, east, south)
-            _, _, bbox_h = geod.inv(west, south, west, north)
-            height = int(abs(bbox_h) / abs(bbox_w) * width)
-
-            print(
-                f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                    MARGINE
-                )
-                + f"Downloading {data_type} data from NLCD {years[data_type]} database",
-                end=" >>> ",
-            )
-
-            img = wms.getmap(
-                layers=[layer],
-                srs="epsg:4326",
-                bbox=bbox,
-                size=(width, height),
-                format="image/geotiff",
-            )
-
-            with rasterio.MemoryFile() as memfile:
-                memfile.write(img.read())
-                with memfile.open() as src:
-                    if resolution is not None:
-                        # degree to arc-sec since res is 1 arc-sec
-                        if data_type == "cover":
-                            resampling = Resampling.mode
-                        else:
-                            resampling = Resampling.bilinear
-                        fac = resolution * 3600.0
-                        data = src.read(
-                            out_shape=(
-                                src.count,
-                                int(src.width / fac),
-                                int(src.height / fac),
-                            ),
-                            resampling=resampling,
-                        )
-                        transform = src.transform * src.transform.scale(
-                            (src.width / data.shape[1]), (src.height / data.shape[2])
-                        )
-                        meta = src.meta
-                        meta.update(
-                            {
-                                "driver": "GTiff",
-                                "width": data.shape[1],
-                                "height": data.shape[2],
-                                "transform": transform,
-                            }
-                        )
-
-                        with rasterio.open("/tmp/resampled.tif", "w", **meta) as dest:
-                            dest.write(data)
-
-                        with rasterio.open("/tmp/resampled.tif", "r") as dest:
-                            ras_msk, transform = rasterio.mask.mask(
-                                dest, [geometry], nodata=nodata
-                            )
-                            meta = src.meta
-                    else:
-                        ras_msk, transform = rasterio.mask.mask(
-                            src, [geometry], nodata=nodata
-                        )
-                        meta = src.meta
-
-                    meta.update(
-                        {
-                            "driver": "GTiff",
-                            "width": ras_msk.shape[1],
-                            "height": ras_msk.shape[2],
-                            "transform": transform,
-                            "nodata": nodata,
-                        }
-                    )
-
-                    with rasterio.open(data_path, "w", **meta) as dest:
-                        dest.write(ras_msk)
-            print("finished.")
-
-        if statistics and data_type != "cover":
-            params[data_type] = rasterstats.zonal_stats(
-                geometry, data_path, category_map=nlcd_meta["classes"],
-            )[0]
-
-    data_path = Path(data_dir, f"cover_{years['cover']}.geotiff")
-    with xr.open_rasterio(data_path) as ds:
-        ds = ds.squeeze("band", drop=True)
-        ds = ds.where((ds > 0) & (ds < nodata), drop=True)
-        ds.name = "cover"
-        attrs = ds.attrs
-        ds.attrs["units"] = "classes"
-
-    for data_type in ["canopy", "impervious"]:
-        data_path = Path(data_dir, f"{data_type}_{years[data_type]}.geotiff")
-        with xr.open_rasterio(data_path) as rs:
-            rs = rs.squeeze("band", drop=True)
-            rs = rs.where(rs < nodata, drop=True)
-            rs.name = data_type
-            rs.attrs["units"] = "%"
-            ds = xr.merge([ds, rs])
-
-    ds.attrs = attrs
-
-    if statistics:
-        cover_arr = ds.cover.values
-        total_pix = np.count_nonzero(~np.isnan(cover_arr))
-
-        class_percentage = dict(
-            zip(
-                list(nlcd_meta["classes"].values()),
-                [
-                    cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                    for cat in list(nlcd_meta["classes"].keys())
-                ],
-            )
-        )
-
-        cat_list = (
-            np.array(
-                [np.count_nonzero(cover_arr // 10 == c) for c in range(10) if c != 6]
-            )
-            / total_pix
-            * 100.0
-        )
-
-        category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
-
-        stats = {
-            "impervious": params["impervious"],
-            "canopy": params["canopy"],
-            "cover": {"classes": class_percentage, "categories": category_percentage},
-        }
-
-    if statistics:
-        return ds, stats
-    else:
-        return ds
+    ds = services.wms_bygeom(
+        url,
+        geometry,
+        width=width,
+        resolution=resolution,
+        layers=layers,
+        outFormat="image/geotiff",
+        fill_holes=fill_holes,
+    )
+    ds.cover.attrs["units"] = "classes"
+    ds.canopy.attrs["units"] = "%"
+    ds.impervious.attrs["units"] = "%"
+    return ds
 
 
-def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
+def opentopography(
+    geometry, demtype="SRTMGL1", resolution=None, output=None, fill_holes=False
+):
     """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
 
     Parameters
@@ -1220,21 +965,22 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
         defaults to no resampling. The resampling is done using cubic convolution method
     output : string or Path, optional
         The path to save the data as raster, defaults to None.
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
     xarray.DataArray
         DEM in meters.
     """
-
-    import rasterio
-    import rasterio.mask
     from shapely.geometry import Polygon
-    from rasterio.enums import Resampling
-    import os
 
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
+    elif fill_holes:
+        geometry = Polygon(geometry.exterior)
+
+    utils.check_dir(output)
 
     bbox = dict(
         zip(["west", "south", "east", "north"], [round(i, 6) for i in geometry.bounds])
@@ -1243,90 +989,60 @@ def dem_bygeom(geometry, demtype="SRTMGL1", resolution=None, output=None):
     url = "https://portal.opentopography.org/otr/getdem"
     payload = {"demtype": demtype, "outputFormat": "GTiff", **bbox}
 
-    print(
-        f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(MARGINE)
-        + f"Downloading DEM data from OpenTopography",
-        end=" >>> ",
-    )
-
     session = utils.retry_requests()
     r = utils.get_url(session, url, payload)
-
-    with rasterio.MemoryFile() as memfile:
-        memfile.write(r.content)
-        with memfile.open() as src:
-            if resolution is not None:
-                fac = resolution * 3600.0  # degree to arc-sec since res is 1 arc-sec
-                data = src.read(
-                    out_shape=(src.count, int(src.width / fac), int(src.height / fac)),
-                    resampling=Resampling.bilinear,
-                )
-                transform = src.transform * src.transform.scale(
-                    (src.width / data.shape[1]), (src.height / data.shape[2])
-                )
-                meta = src.meta
-                meta.update(
-                    {
-                        "driver": "GTiff",
-                        "width": data.shape[1],
-                        "height": data.shape[2],
-                        "transform": transform,
-                    }
-                )
-
-                with rasterio.open("/tmp/resampled.tif", "w", **meta) as tmp:
-                    tmp.write(data)
-
-                with rasterio.open("/tmp/resampled.tif", "r") as tmp:
-                    ras_msk, transform = rasterio.mask.mask(tmp, [geometry])
-                    nodata = tmp.nodata
-                    dest = "/tmp/resampled.tif"
-                    meta = tmp.meta
-                    meta.update(
-                        {
-                            "driver": "GTiff",
-                            "width": ras_msk.shape[1],
-                            "height": ras_msk.shape[2],
-                            "transform": transform,
-                        }
-                    )
-            else:
-                ras_msk, transform = rasterio.mask.mask(src, [geometry])
-                nodata = src.nodata
-                dest = src
-                meta = src.meta
-                meta.update(
-                    {
-                        "driver": "GTiff",
-                        "width": ras_msk.shape[1],
-                        "height": ras_msk.shape[2],
-                        "transform": transform,
-                    }
-                )
-
-            if output is not None:
-                data_dir = Path(output).parent
-                if not data_dir.is_dir():
-                    try:
-                        os.makedirs(data_dir)
-                    except OSError:
-                        print(
-                            f"[CNT: ({geometry.centroid.x:.2f}, {geometry.centroid.y:.2f})] ".ljust(
-                                MARGINE
-                            )
-                            + f"Input directory cannot be created: {data_dir}"
-                        )
-                with rasterio.open(output, "w", **meta) as f:
-                    f.write(ras_msk)
-
-            with xr.open_rasterio(dest) as ds:
-                ds.data = ras_msk
-                msk = ds < nodata if nodata > 0.0 else ds > nodata
-                ds = ds.where(msk, drop=True)
-                ds = ds.squeeze("band", drop=True)
-                ds.name = "elevation"
-                ds.attrs["units"] = "meters"
-
-    print("finished.")
+    ds = utils.create_dataset(r.content, geometry, "elevation", None, output)
+    ds.attrs["units"] = "meters"
 
     return ds
+
+
+def nationalmap_dem(
+    geometry, width=None, resolution=None, crs="epsg:4326", fill_holes=False
+):
+    """Get elevation DEM from `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
+
+    The 3DEP service has multi-resolution sources so depeneding on the user
+    provided resolution (or width) the data is resampled on server-side based
+    on all the available data sources.
+
+    Parameters
+    ----------
+    geometry : Geometry
+        A shapely Polygon.
+    width : int
+        The width of the output image in pixels. The height is computed
+        automatically from the geometry's bounding box aspect ratio. Either width
+        or resolution should be provided.
+    resolution : float
+        The data resolution in arc-seconds. The width and height are computed in pixel
+        based on the geometry bounds and the given resolution. Either width or
+        resolution should be provided.
+    crs : string, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
+
+    Returns
+    -------
+    xarray.DataArray
+        DEM in meters.
+    """
+    url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+
+    layers = {"elevation": "3DEPElevation:None"}
+
+    ds = services.wms_bygeom(
+        url,
+        geometry,
+        width=width,
+        resolution=resolution,
+        layers=layers,
+        outFormat="image/tiff",
+        crs=crs,
+        fill_holes=fill_holes,
+    )
+    dem = ds.elevation.copy()
+    dem.attrs["units"] = "meters"
+    return dem
