@@ -8,9 +8,11 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import rasterio
-import rasterio.mask
+import rasterio as rio
+import rasterio.features as rio_features
+import rasterio.warp as rio_warp
 from hydrodata import helpers
+from owslib.wms import WebMapService
 from requests.exceptions import (
     ConnectionError,
     HTTPError,
@@ -18,7 +20,7 @@ from requests.exceptions import (
     RetryError,
     Timeout,
 )
-from shapely.geometry import Point, Polygon, mapping
+from shapely.geometry import Point, mapping
 
 
 def retry_requests(
@@ -45,7 +47,7 @@ def retry_requests(
     Returns
     -------
     session
-        A session object with the retry setup.
+        A session object with retry configurations.
     """
 
     import requests
@@ -144,28 +146,27 @@ def elevation_byloc(lon, lat):
         return elevation
 
 
-def elevation_bybbox(bbox, coords):
+def elevation_bybbox(bbox, resolution, coords, crs="4326"):
     """Get elevation from DEM data for a list of coordinates.
 
-    The elevations are extracted from SRTM1 (30-m resolution) data.
     This function is intended for getting elevations for a gridded dataset.
 
     Parameters
     ----------
     bbox : list or tuple
         Bounding box with coordinates in [west, south, east, north] format.
+    resolution : float
+        Gridded data resolution
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
 
     Returns
     -------
-    array_like
-        A numpy array of elevations in meters
+    numpy.array
+        An array of elevations in meters
     """
     if isinstance(bbox, list) or isinstance(bbox, tuple):
-        if len(bbox) == 4:
-            envelope = dict(zip(["west", "south", "east", "north"], bbox))
-        else:
+        if len(bbox) != 4:
             raise TypeError(
                 "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
             )
@@ -174,15 +175,21 @@ def elevation_bybbox(bbox, coords):
             "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
         )
 
-    url = "https://portal.opentopography.org/otr/getdem"
+    url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    layers = ["3DEPElevation:None"]
+    version = "1.3.0"
 
-    payload = {"demtype": "SRTMGL1", "outputFormat": "GTiff", **envelope}
+    west, south, east, north = bbox
+    width = int((east - west) * 3600 / resolution)
+    height = int(abs(north - south) / abs(east - west) * width)
 
-    session = retry_requests()
-    r = get_url(session, url, payload)
+    wms = WebMapService(url, version=version)
+    img = wms.getmap(
+        layers=layers, srs=crs, bbox=bbox, size=(width, height), format="image/geotiff",
+    )
 
-    with rasterio.MemoryFile() as memfile:
-        memfile.write(r.content)
+    with rio.MemoryFile() as memfile:
+        memfile.write(img.read())
         with memfile.open() as src:
             elevations = np.array([e[0] for e in src.sample(coords)], dtype=np.float32)
 
@@ -351,7 +358,10 @@ def pet_fao_gridded(ds):
             ds.lon.max().values + margine,
             ds.lat.max().values + margine,
         ]
-        elevation = elevation_bybbox(bbox, coords).reshape(ds.dims["y"], ds.dims["x"])
+        resolution = (3600.0 * 180.0) / (6371000.0 * np.pi) * ds.res[0] * 1e3
+        elevation = elevation_bybbox(bbox, resolution, coords).reshape(
+            ds.dims["y"], ds.dims["x"]
+        )
         ds["elevation"] = ({"y": ds.dims["y"], "x": ds.dims["x"]}, elevation)
         ds["elevation"].attrs["units"] = "m"
 
@@ -417,7 +427,7 @@ def pet_fao_gridded(ds):
 
 
 def mean_monthly(daily):
-    """Compute monthly mean over the whole time series for the regime curve."""
+    """Compute monthly mean for the regime curve."""
     import calendar
 
     d = dict(enumerate(calendar.month_abbr))
@@ -505,27 +515,6 @@ def subbasin_delineation(station_id):
     )
 
     return catchemnts, pour_points
-
-
-def clip_daymet(ds, geometry, fill_holes=False):
-    """Clip a xarray dataset by a geometry """
-
-    from xarray import apply_ufunc
-
-    if not isinstance(geometry, Polygon):
-        raise TypeError("The geometry argument should be of Shapely's Polygon type.")
-    elif fill_holes:
-        geometry = Polygon(geometry.exterior)
-
-    def _within(x, y, g):
-        return np.array([Point(i, j).within(g) for i, j in np.nditer((x, y))]).reshape(
-            x.shape
-        )
-
-    def within(da, shape):
-        return apply_ufunc(_within, da.lon, da.lat, kwargs={"g": shape})
-
-    return ds.where(within(ds, geometry), drop=True)
 
 
 def interactive_map(bbox):
@@ -909,7 +898,7 @@ def cover_statistics(ds):
     return {"classes": class_percentage, "categories": category_percentage}
 
 
-def create_dataset(content, geometry, name, nodata, fpath):
+def create_dataset(content, mask, transform, width, height, name, fpath):
     """Create dataset from a response clipped by a geometry
 
     Parameter
@@ -934,45 +923,86 @@ def create_dataset(content, geometry, name, nodata, fpath):
     """
     import xarray as xr
 
-    with rasterio.MemoryFile() as memfile:
+    with rio.MemoryFile() as memfile:
         memfile.write(content)
         with memfile.open() as src:
-            if nodata is None:
-                if src.nodata is None:
-                    try:
-                        nodata = np.iinfo(src.dtypes[0]).max
-                    except ValueError:
-                        nodata = np.nan
-                else:
-                    nodata = np.dtype(src.dtypes[0]).type(src.nodata)
+            if src.nodata is None:
+                try:
+                    nodata = np.iinfo(src.dtypes[0]).max
+                except ValueError:
+                    nodata = np.nan
+            else:
+                nodata = np.dtype(src.dtypes[0]).type(src.nodata)
 
-            ras_msk, transform = rasterio.mask.mask(src, [geometry], nodata=nodata)
             meta = src.meta
             meta.update(
                 {
-                    "width": ras_msk.shape[1],
-                    "height": ras_msk.shape[2],
+                    "width": width,
+                    "height": height,
                     "transform": transform,
                     "nodata": nodata,
                 }
             )
-            crs = src.crs
 
-            with rasterio.open(fpath, "w", **meta) as dest:
-                dest.write(ras_msk)
+            if fpath is not None:
+                with rio.open(fpath, "w", **meta) as dest:
+                    dest.write_mask(~mask)
+                    dest.write(src.read())
 
-    with xr.open_rasterio(fpath) as ds:
-        try:
-            ds = ds.squeeze("band", drop=True)
-        except ValueError:
-            pass
-        if not np.isnan(nodata):
-            msk = ds < nodata if nodata > 0 else ds > nodata
-            ds = ds.where(msk, drop=True)
-        ds.name = name
+            with rio.vrt.WarpedVRT(src, **meta) as vrt:
+                ds = xr.open_rasterio(vrt)
+                try:
+                    ds = ds.squeeze("band", drop=True)
+                except ValueError:
+                    pass
+                ds = ds.where(~mask, other=vrt.nodata)
+                ds.name = name
 
-        ds.attrs["transform"] = transform
-        ds.attrs["res"] = (transform[0], transform[4])
-        ds.attrs["bounds"] = geometry.bounds
-        ds.attrs["crs"] = crs
+                ds.attrs["transform"] = transform
+                ds.attrs["res"] = (transform[0], transform[4])
+                ds.attrs["bounds"] = tuple(vrt.bounds)
+                ds.attrs["nodatavals"] = vrt.nodatavals
+                ds.attrs["crs"] = vrt.crs
     return ds
+
+
+def geom_mask(
+    geometry, width, height, geo_crs="epsg:4326", ds_crs="epsg:4326", all_touched=True
+):
+    """Create a mask array and transform for a given geometry.
+
+    Params
+    ------
+    geometry : Polygon
+        A shapely Polygon geometry
+    width : int
+        x-dimension of the data
+    heigth : int
+        y-dimension of the data
+    geo_crs : string, CRS
+        CRS of the geometry, defaults to epsg:4326
+    ds_crs : string, CRS
+        CRS of the dataset to be masked, defaults to epsg:4326
+    all_touched : bool
+        Wether to include all the elements where the geometry touchs
+        rather than only the element center, defaults to True
+
+    Returns
+    -------
+    (numpy.ndarray, tuple)
+        mask, transform
+    """
+    if geo_crs != ds_crs:
+        geom = rio_warp.transform_geom(geo_crs, ds_crs, mapping(geometry))
+        bnds = rio_warp.transform_bounds(geo_crs, ds_crs, *geometry.bounds)
+    else:
+        geom = geometry
+        bnds = geometry.bounds
+
+    transform, _, _ = rio_warp.calculate_default_transform(
+        ds_crs, ds_crs, width, height, *bnds
+    )
+    mask = rio_features.geometry_mask(
+        [geom], (height, width), transform, all_touched=all_touched
+    )
+    return mask, transform
