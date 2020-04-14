@@ -22,6 +22,7 @@ dependencies:
     - tables
     - networkx
     - pqdm
+    - arcgis2geojson
     - mypy==0.761
     - black
     - wheel

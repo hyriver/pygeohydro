@@ -25,6 +25,7 @@ dependencies:
   - pip:
     - networkx
     - pqdm
+    - arcgis2geojson
     - bump2version
     - wheel
     - watchdog

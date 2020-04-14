@@ -10,6 +10,7 @@ dependencies:
       - geojson
       - rasterstats
       - pqdm
+      - arcgis2geojson
       - folium
       - sphinx
       - sphinx_rtd_theme
