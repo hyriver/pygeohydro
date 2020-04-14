@@ -29,18 +29,20 @@ Features
 
 Hydrodata is a python library designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
 
-* `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for getting watershed geometry and flowlines from NHDPlus V2
+* `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for accessing NHDPlus V2 database
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use
+* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data)
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for USGS stations' daily streamflow observations
-* `OpenTopography <https://opentopography.org/>`_ for Digital Elevation Model
+* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ for Digital Elevation Model
 
-The gridded data can be resampled to coarser or finer resolutions via the ``resolution`` argument (in decimal degree). The **resampling** is carried out using the **bilinear** method for continuous spatial data such as climate data and the **majority** method for discrete data such as land cover.
+Additionally, the following functionalities are offered:
+* Efficient vector-based **flow accumulation** in a stream network
+* Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
+* **Interactive map** for exploring USGS stations within a bounding box
+* High level APIs for easy access to all ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services.
 
-Additionally, the function for getting Daymet data offers a flag for computing **Potential Evapotranspiration** (PET) using the retrieved climate data. PET is computed based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
-
-Requests for additional databases or functionalities can be submitted via `issues <https://github.com/cheginit/hydrodata/issues>`_.
+Requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
 
 Documentation
 -------------
@@ -59,7 +61,7 @@ It's recommended to use `Conda <https://conda.io/en/latest/>`_ as the Python pac
 
 The environment can then be activate by issuing ``conda activate hydrodata``.
 
-Alternatively, you can install the dependencies manually, then install Hydrodata using ``pip``:
+Alternatively, you can install the `dependencies <https://hydrodata.readthedocs.io/en/latest/installation.html>`_ manually, then install Hydrodata using ``pip``:
 
 .. code-block:: console
 
@@ -114,24 +116,53 @@ We can also find all or within certain distance USGS stations up- or downstream 
     stations = wshed.watershed.get_stations()
     stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that can plot five hydrologic signatures graphs in one plot. Some example plots are shown below that are produced with the following codes:
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that can plot five hydrologic signatures graphs in one plot.
 
 .. code-block:: python
 
     from hydrodata import plot
 
     plot.signatures(clm_loc['Q (cms)'], wshed.drainage_area, prcp=clm_loc['prcp (mm/day)'], title=wshed.name)
-    eta_grd.isel(time=4).eta.plot(size=8)
 
-    ax = wshed.watershed.basin.plot(color='white', edgecolor='black', zorder=1, figsize = (10, 10))
-    wshed.tributaries.plot(ax=ax, label='Tributaries', zorder=2)
-    wshed.main_channel.plot(ax=ax, color='green', lw=3, label='Main', zorder=3)
-    stations.plot(ax=ax, color='black', label='All stations', marker='s', zorder=4)
-    stations_upto_150.plot(ax=ax, color='red', label='Stations up to 150 km upstream of main', marker='*', zorder=5)
-    ax.legend(loc='best')
+Some example plots are shown below:
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
         :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+
+The ``services`` module can be used for accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and ` FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl> via WFS as follows:
+
+.. code-block:: python
+
+    from hydrodata import services
+    from arcgis2geojson import arcgis2geojson
+    import geopandas as gpd
+
+    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer"
+    s = services.ArcGISREST(f"{url_rest}/10", outFormat="json")
+    s.get_featureids(wshed.geometry)
+    storm_pipes = s.get_features()
+
+    url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    slope = services.wms_bygeom(
+                      url_wms,
+                      geometry=wshed.geometry,
+                      version="1.3.0",
+                      layers={"slope": "3DEPElevation:Slope Degrees"},
+                      outFormat="image/tiff",
+                      resolution=1)
+
+    url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+    r = services.wfs_bybox(
+                       url_wfs,
+                       bbox=wshed.geometry.bounds,
+                       version="2.0.0",
+                       layer="public_NFHL:Base_Flood_Elevations",
+                       outFormat="esrigeojson",
+                       in_crs="epsg:4326",
+                       out_crs="epsg:4269")
+    flood = gpd.GeoDataFrame.from_features(arcgis2geojson(r.json()),
+                                           crs="epsg:4269").to_crs("epsg:4326")
+
 
 Contributing
 ------------
