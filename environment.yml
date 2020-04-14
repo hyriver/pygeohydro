@@ -23,4 +23,5 @@ dependencies:
     - rasterstats
     - tables
     - networkx
+    - arcgis2geojson
     - hydrodata
