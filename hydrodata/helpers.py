@@ -82,7 +82,11 @@ def nhdplus_fcodes():
         "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
         + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
     )
-    return pd.concat(pd.read_html(url, header=0)).set_index("FCode")
+    return (
+        pd.concat(pd.read_html(url, header=0))
+        .drop_duplicates("FCode")
+        .set_index("FCode")
+    )
 
 
 def nwis_errors():
