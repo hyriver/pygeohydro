@@ -5,9 +5,9 @@
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import rasterio
-import rasterio.mask
+import rasterio as rio
 from hydrodata import helpers, services, utils
+from pqdm.threads import pqdm
 
 import xarray as xr
 
@@ -295,6 +295,7 @@ def daymet_bygeom(
     pet=False,
     resolution=None,
     fill_holes=False,
+    n_threads=4,
 ):
     """Gridded data from the Daymet database.
 
@@ -302,10 +303,8 @@ def daymet_bygeom(
 
     Parameters
     ----------
-    geometry : Geometry
-        The geometry for downloading clipping the data. For a box geometry,
-        the order should be as follows:
-        geom = box(west, southe, east, north)
+    geometry : Polygon, box
+        The geometry of the region of interest
     start : string or datetime
         Starting date
     end : string or datetime
@@ -325,6 +324,8 @@ def daymet_bygeom(
         defaults to no resampling. The resampling is done using bilinear method
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    n_threads : int, optional
+        Number of threads for simultanious download, defaults to 4 and max is 8.
 
     Returns
     -------
@@ -341,7 +342,7 @@ def daymet_bygeom(
         start = pd.to_datetime(start) + DateOffset(hour=12)
         end = pd.to_datetime(end) + DateOffset(hour=12)
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 till 2018.")
+            raise ValueError("Daymet database ranges from 1980 till 2019.")
         dates = utils.daymet_dates(start, end)
     elif years is not None and start is None and end is None:
         years = years if isinstance(years, list) else [years]
@@ -356,8 +357,6 @@ def daymet_bygeom(
         dates = [(s, e) for s, e in zip(start_list, end_list)]
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
-
-    variables = variables if isinstance(variables, list) else [variables]
 
     vars_table = pd.read_html("https://daymet.ornl.gov/overview")[1]
     units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
@@ -377,12 +376,17 @@ def daymet_bygeom(
             reqs = ["tmin", "tmax", "vp", "srad", "dayl"]
             variables = list(set(reqs) | set(variables))
     else:
-        variables = valid_variables
+        if pet:
+            variables = ["tmin", "tmax", "vp", "srad", "dayl"]
+        else:
+            variables = valid_variables
 
     if not isinstance(geometry, Polygon):
         raise TypeError("The geometry argument should be of Shapely's Polygon type.")
     elif fill_holes:
         geometry = Polygon(geometry.exterior)
+
+    n_threads = min(n_threads, 8)
 
     west, south, east, north = np.round(geometry.bounds, 6)
     urls = []
@@ -410,9 +414,10 @@ def daymet_bygeom(
             )
     session = utils.retry_requests()
 
-    data = xr.merge(
-        [xr.open_dataset(utils.get_url(session, url).content) for url in urls]
-    )
+    def getter(url):
+        return xr.open_dataset(utils.get_url(session, url).content)
+
+    data = xr.merge(pqdm(urls, getter, n_jobs=n_threads, desc=f"Gridded Daymet"))
 
     for k, v in units.items():
         if k in variables:
@@ -446,16 +451,10 @@ def daymet_bygeom(
     if pet:
         data = utils.pet_fao_gridded(data)
 
-    data = utils.clip_daymet(data, geometry)
-
-    if resolution is not None:
-        res_x = resolution if data.x[0] < data.x[-1] else -resolution
-        new_x = np.arange(data.x[0], data.x[-1] + res_x, res_x)
-
-        res_y = resolution if data.y[0] < data.y[-1] else -resolution
-        new_y = np.arange(data.y[0], data.y[-1] + res_y, res_y)
-        data = data.interp(x=new_x, y=new_y, method="linear")
-
+    mask, transform = utils.geom_mask(
+        geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs
+    )
+    data = data.where(~xr.DataArray(mask, dims=("y", "x")), drop=True)
     return data
 
 
@@ -631,8 +630,8 @@ def nhdplus_bybox(feature, bbox):
         The NHDPlus feature to be downloaded. Valid features are:
         ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, and ``nhdflowline_network``
     bbox : list
-        The bounding box for the region of interest, defaults to None. The list
-        should provide the corners in this order:
+        The bounding box for the region of interest in WGS 83, defaults to None.
+        The list should provide the corners in this order:
         [west, south, east, north]
 
     Returns
@@ -646,8 +645,8 @@ def nhdplus_bybox(feature, bbox):
         msg += f" Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    service = services.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
-    r = service.getfeature_bybox(bbox)
+    wfs = services.USGSGeoserver("wfs", feature)
+    r = wfs.getfeature_bybox(bbox)
 
     crs = "epsg:4326"
     gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
@@ -681,9 +680,9 @@ def nhdplus_byid(feature, featureids):
         msg += f"Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    service = services.Geoserver("https://cida.usgs.gov/nwc/geoserver", "wfs", feature)
+    wfs = services.USGSGeoserver("wfs", feature)
     propertyname = "featureid" if feature == "catchmentsp" else "comid"
-    r = service.getfeature_byid(propertyname, featureids)
+    r = wfs.getfeature_byid(propertyname, featureids)
 
     crs = "epsg:4326"
     gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
@@ -703,7 +702,7 @@ def ssebopeta_bygeom(
     Since there's still no web service available for subsetting, the data first
     needs to be downloads for the requested period then the data is masked by the
     region interest locally. Therefore, it's not as fast as other functions and
-    the bottleneck could be download speed.
+    the bottleneck could be the download speed.
 
     Parameters
     ----------
@@ -717,9 +716,6 @@ def ssebopeta_bygeom(
         Ending date
     years : list
         List of years
-    resolution : float
-        The desired output resolution for the output in decimal degree,
-        defaults to no resampling. The resampling is done using bilinear method
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
 
@@ -782,10 +778,10 @@ def ssebopeta_bygeom(
         r = utils.get_url(session, url)
 
         z = zipfile.ZipFile(io.BytesIO(r.content))
-        with rasterio.MemoryFile() as memfile:
+        with rio.MemoryFile() as memfile:
             memfile.write(z.read(z.filelist[0].filename))
             with memfile.open() as src:
-                ras_msk, _ = rasterio.mask.mask(src, [geometry])
+                ras_msk, _ = rio.mask.mask(src, [geometry])
                 nodata = src.nodata
                 with xr.open_rasterio(src) as ds:
                     ds.data = ras_msk
@@ -801,7 +797,7 @@ def ssebopeta_bygeom(
             r = utils.get_url(session, url)
 
             z = zipfile.ZipFile(io.BytesIO(r.content))
-            with rasterio.MemoryFile() as memfile:
+            with rio.MemoryFile() as memfile:
                 memfile.write(z.read(z.filelist[0].filename))
                 with memfile.open() as src:
                     with xr.open_rasterio(src) as ds:
@@ -812,12 +808,6 @@ def ssebopeta_bygeom(
                         data = xr.merge([data, ds * 1e-3])
 
     data["eta"].attrs["units"] = "mm/day"
-
-    if resolution is not None:
-        fac = resolution * 3600.0 / 30.0  # from degree to 1 km
-        new_x = np.linspace(data.x[0], data.x[-1], int(data.dims["x"] / fac))
-        new_y = np.linspace(data.y[0], data.y[-1], int(data.dims["y"] / fac))
-        data = data.interp(x=new_x, y=new_y, method="linear")
     return data
 
 
@@ -858,8 +848,8 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
-    data = ds.to_dataframe().reset_index()[["time", "et"]]
-    data.columns = [["time", "et (mm/day)"]]
+    data = ds.to_dataframe().reset_index()[["time", "eta"]]
+    data.columns = [["time", "eta (mm/day)"]]
     data.set_index("time", inplace=True)
     return data
 
@@ -947,58 +937,8 @@ def nlcd(
     return ds
 
 
-def opentopography(
-    geometry, demtype="SRTMGL1", resolution=None, output=None, fill_holes=False
-):
-    """Get DEM data from `OpenTopography <https://opentopography.org/>`_ service.
-
-    Parameters
-    ----------
-    geometry : Geometry
-        A shapely Polygon.
-    demtype : string, optional
-        The type of DEM to be downloaded, default to SRTMGL1 for 30 m resolution.
-        Available options are 'SRTMGL3' for SRTM GL3 (3 arc-sec or ~90m) and 'SRTMGL1' for
-        SRTM GL1 (1 arc-sec or ~30m).
-    resolution : float, optional
-        The desired output resolution for the output in decimal degree,
-        defaults to no resampling. The resampling is done using cubic convolution method
-    output : string or Path, optional
-        The path to save the data as raster, defaults to None.
-    fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
-
-    Returns
-    -------
-    xarray.DataArray
-        DEM in meters.
-    """
-    from shapely.geometry import Polygon
-
-    if not isinstance(geometry, Polygon):
-        raise TypeError("Geometry should be of type Shapely Polygon.")
-    elif fill_holes:
-        geometry = Polygon(geometry.exterior)
-
-    utils.check_dir(output)
-
-    bbox = dict(
-        zip(["west", "south", "east", "north"], [round(i, 6) for i in geometry.bounds])
-    )
-
-    url = "https://portal.opentopography.org/otr/getdem"
-    payload = {"demtype": demtype, "outputFormat": "GTiff", **bbox}
-
-    session = utils.retry_requests()
-    r = utils.get_url(session, url, payload)
-    ds = utils.create_dataset(r.content, geometry, "elevation", None, output)
-    ds.attrs["units"] = "meters"
-
-    return ds
-
-
 def nationalmap_dem(
-    geometry, width=None, resolution=None, crs="epsg:4326", fill_holes=False
+    geometry, width=None, resolution=None, crs="epsg:4326", fill_holes=False, fpath=None
 ):
     """Get elevation DEM from `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
 
@@ -1009,7 +949,7 @@ def nationalmap_dem(
     Parameters
     ----------
     geometry : Geometry
-        A shapely Polygon.
+        A shapely Polygon in WGS 84 (epsg:4326).
     width : int
         The width of the output image in pixels. The height is computed
         automatically from the geometry's bounding box aspect ratio. Either width
@@ -1023,6 +963,8 @@ def nationalmap_dem(
         epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    fpath : string or Path
+        Path to save the output as a ``tiff`` file, defaults to None.
 
     Returns
     -------
@@ -1032,6 +974,8 @@ def nationalmap_dem(
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
 
     layers = {"elevation": "3DEPElevation:None"}
+    if fpath is not None:
+        fpath = {"elevation": fpath}
 
     ds = services.wms_bygeom(
         url,
@@ -1042,6 +986,7 @@ def nationalmap_dem(
         outFormat="image/tiff",
         crs=crs,
         fill_holes=fill_holes,
+        fpath=fpath,
     )
     dem = ds.elevation.copy()
     dem.attrs["units"] = "meters"
