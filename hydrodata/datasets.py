@@ -855,7 +855,14 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
 
 
 def nlcd(
-    geometry, years=None, width=None, resolution=None, file_path=None, fill_holes=False
+    geometry,
+    years=None,
+    width=None,
+    resolution=None,
+    file_path=None,
+    fill_holes=False,
+    in_crs="epsg:4326",
+    out_crs="epsg:4326",
 ):
     """Get data from NLCD database (2016).
 
@@ -888,6 +895,12 @@ def nlcd(
         the path to save to the file.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    in_crs : string, optional
+        The spatial reference system of the input geometry, defaults to
+        epsg:4326.
+    out_crs : string, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
 
     Returns
     -------
@@ -930,6 +943,8 @@ def nlcd(
         layers=layers,
         outFormat="image/geotiff",
         fill_holes=fill_holes,
+        in_crs=in_crs,
+        out_crs=out_crs,
     )
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -938,7 +953,13 @@ def nlcd(
 
 
 def nationalmap_dem(
-    geometry, width=None, resolution=None, crs="epsg:4326", fill_holes=False, fpath=None
+    geometry,
+    width=None,
+    resolution=None,
+    fill_holes=False,
+    in_crs="epsg:4326",
+    out_crs="epsg:4326",
+    fpath=None,
 ):
     """Get elevation DEM from `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
 
@@ -958,11 +979,14 @@ def nationalmap_dem(
         The data resolution in arc-seconds. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
-    crs : string, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    in_crs : string, optional
+        The spatial reference system of the input geometry, defaults to
+        epsg:4326.
+    out_crs : string, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
     fpath : string or Path
         Path to save the output as a ``tiff`` file, defaults to None.
 
@@ -984,9 +1008,10 @@ def nationalmap_dem(
         resolution=resolution,
         layers=layers,
         outFormat="image/tiff",
-        crs=crs,
         fill_holes=fill_holes,
         fpath=fpath,
+        in_crs=in_crs,
+        out_crs=out_crs,
     )
     dem = ds.elevation.copy()
     dem.attrs["units"] = "meters"
