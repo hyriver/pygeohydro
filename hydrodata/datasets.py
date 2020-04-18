@@ -30,7 +30,7 @@ def nwis_streamflow(station_ids, start, end, raw=False):
 
     Returns
     -------
-        qobs : dataframe
+    pandas.DataFrame
         Streamflow data observations in cubic meter per second (cms)
     """
 
@@ -74,8 +74,7 @@ def nwis_streamflow(station_ids, start, end, raw=False):
 
     ts = r.json()["value"]["timeSeries"]
     r_ts = {
-        t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
-        for t in ts["value"]["timeSeries"]
+        t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in ts
     }
 
     def to_df(col, dic):
