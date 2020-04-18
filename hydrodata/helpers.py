@@ -4,6 +4,7 @@
 
 import xml.etree.cElementTree as ET
 
+import numpy as np
 import pandas as pd
 from hydrodata import utils
 
@@ -49,26 +50,26 @@ def nlcd_helper():
             "Wetlands": ("90", "95"),
         },
         roughness={
-            "11": 0.0250,
-            "12": 0.0220,
-            "21": 0.0400,
-            "22": 0.1000,
-            "23": 0.0800,
-            "24": 0.1500,
-            "31": 0.0275,
-            "41": 0.1600,
-            "42": 0.1800,
-            "43": 0.1700,
-            "45": 0.1000,
-            "46": 0.0350,
-            "51": 0.1600,
-            "52": 0.1000,
-            "71": 0.0350,
-            "72": 0.0350,
-            "81": 0.0325,
-            "82": 0.0375,
-            "90": 0.1200,
-            "95": 0.0700,
+            "11": 0.001,
+            "12": 0.022,
+            "21": 0.0404,
+            "22": 0.0678,
+            "23": 0.0678,
+            "24": 0.0404,
+            "31": 0.0113,
+            "41": 0.36,
+            "42": 0.32,
+            "43": 0.4,
+            "45": 0.4,
+            "46": 0.24,
+            "51": 0.24,
+            "52": 0.4,
+            "71": 0.368,
+            "72": np.nan,
+            "81": 0.325,
+            "82": 0.16,
+            "90": 0.086,
+            "95": 0.1825,
         },
         colors=colors,
     )
@@ -90,5 +91,5 @@ def nhdplus_fcodes():
 
 
 def nwis_errors():
-    """Get USGS daily values site web service's error code lookup table"""
+    """Get error code lookup table for USGS sites that have daily values"""
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
