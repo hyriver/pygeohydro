@@ -220,12 +220,7 @@ def pet_fao_byloc(df, lon, lat):
     keys = [v for v in df.columns]
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
-    missing = [r for r in reqs if r not in keys]
-    if len(missing) > 0:
-        msg = "These required variables are not in the dataset: "
-        msg += ", ".join(x for x in missing)
-        msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
-        raise KeyError(msg)
+    check_requirements(reqs, keys)
 
     dtype = df.dtypes[0]
     df["tmean (deg c)"] = 0.5 * (df["tmax (deg c)"] + df["tmin (deg c)"])
@@ -326,12 +321,7 @@ def pet_fao_gridded(ds):
     keys = [v for v in ds.keys()]
     reqs = ["tmin", "tmax", "lat", "lon", "vp", "srad", "dayl"]
 
-    missing = [r for r in reqs if r not in keys]
-    if len(missing) > 0:
-        msg = "These required variables are not in the dataset: "
-        msg += ", ".join(x for x in missing)
-        msg += f'\nRequired variables are {", ".join(x for x in reqs)}'
-        raise KeyError(msg)
+    check_requirements(reqs, keys)
 
     dtype = ds.tmin.dtype
     dates = ds["time"]
@@ -962,7 +952,7 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
                 ds.attrs["res"] = (transform[0], transform[4])
                 ds.attrs["bounds"] = tuple(vrt.bounds)
                 ds.attrs["nodatavals"] = vrt.nodatavals
-                ds.attrs["crs"] = vrt.crs
+                ds.attrs["crs"] = vrt.crs.to_string()
     return ds
 
 
@@ -1006,3 +996,52 @@ def geom_mask(
         [geom], (height, width), transform, all_touched=all_touched
     )
     return mask, transform
+
+
+def check_requirements(reqs, cols):
+    """Check for all the required data.
+
+    Parameters
+    ----------
+    reqs : list
+        A list of required data names as strings
+    cols : list
+        A list of data names as strings
+    """
+    if not isinstance(reqs, list) or not isinstance(cols, list):
+        raise ValueError("Inputs should be list of strings")
+
+    missing = [r for r in reqs if r not in cols]
+    if len(missing) > 1:
+        msg = "The following required data are missing:\n"
+        msg += ", ".join(m for m in missing)
+        raise ValueError(msg)
+
+
+def topoogical_sort(network):
+    """Topological sorting of a network.
+
+    Parameters
+    ----------
+    network : pandas.DataFrame
+        A dataframe with columns ID and toID
+
+    Returns
+    -------
+    (list, dict)
+        A list of topologically sorted IDs and a dictionary
+        with keys as IDs and values as its upstream nodes.
+        Note that the terminal node ID is set to pd.NA.
+    """
+    import networkx as nx
+
+    upstream_nodes = {
+        i: network[network.toID == i].ID.tolist() for i in network.ID.tolist()
+    }
+    upstream_nodes[pd.NA] = network[network.toID.isna()].ID.tolist()
+
+    G = nx.from_pandas_edgelist(
+        network[["ID", "toID"]], source="ID", target="toID", create_using=nx.DiGraph,
+    )
+    topo_sorted = list(nx.topological_sort(G))
+    return topo_sorted, upstream_nodes
