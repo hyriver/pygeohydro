@@ -743,57 +743,6 @@ def prepare_nhdplus(
     return gpd.GeoDataFrame(pd.merge(fls, fl[extra_cols], on="comid", how="left"))
 
 
-def accumulate_attr(fl, attr, graph=False):
-    """Compute accumulation of an attribute in a river network
-
-    The paths for each node are determined using Breadth-First Search method.
-
-    Parameters
-    ----------
-    fl : DataFrame
-        A dataframe including ID, toID and the attribute columns.
-    attr : string
-        The column name of an atrribute
-    graph : bool
-        Whether to return the generated networkx graph object
-
-    Return
-    ------
-    DataFrame
-        The input data frame with an additional column named CumAttr
-    """
-    import networkx as nx
-
-    req_cols = ["ID", "toID", attr]
-    if any(c not in fl.columns for c in req_cols):
-        msg = "The required columns are not in the provided flowlines."
-        msg += f" The required columns are {', '.join(c for c in req_cols)}"
-        raise ValueError(msg)
-
-    G = nx.from_pandas_edgelist(
-        fl[req_cols],
-        source="ID",
-        target="toID",
-        edge_attr=attr,
-        create_using=nx.DiGraph,
-    )
-    fl["CumAttr"] = fl.apply(
-        lambda x: x[attr]
-        + sum(
-            [
-                G.get_edge_data(f, t)[attr]
-                for t, f in nx.bfs_edges(G, x.ID, reverse=True)
-            ]
-        ),
-        axis=1,
-    )
-
-    if graph:
-        return fl, G
-    else:
-        return fl
-
-
 def traverse_json(obj, path):
     """Extracts an element from a JSON file along a specified path.
 
@@ -1045,3 +994,57 @@ def topoogical_sort(network):
     )
     topo_sorted = list(nx.topological_sort(G))
     return topo_sorted, upstream_nodes
+
+
+def vector_accumulation(
+    flowlines, func, col_names, nt, id_name="comid", toid_name="tocomid"
+):
+    """Flow accumulation using vector river network.
+
+    Paramters
+    ---------
+    flowlines : pandas.DataFrame
+        A dataframe containing comid, tocomid, and all the columns
+        that ara required for passing to ``func``.
+    func : function
+        The function that routes the flow in a signle river segment
+    col_names : list of strings
+        List of the flowlines columns that contain all the required
+        data for a routing a single river segment such as slope, length,
+        lateral flow, etc.
+    nt : int
+        Total number of time steps
+    id_name : string, optional
+        Name of the flowlines column containing IDs, defaults to comid
+    toid_name : string, optional
+        Name of the flowlines column containing toIDs, defaults to tocomid
+
+    Returns
+    -------
+    dict
+        Accumulated flow at all the nodes. The keys are the IDs and the values
+        are the time series as `numpy.array`s. The outlet node is called `out`.
+    """
+    topo_sorted, upstream_nodes = topoogical_sort(
+        flowlines[[id_name, toid_name]].rename(
+            columns={id_name: "ID", toid_name: "toID"}
+        )
+    )
+
+    zero_arr = np.zeros(nt)
+
+    upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
+    q = {i: zero_arr for i in flowlines.comid.to_list()}
+    q[0] = zero_arr
+
+    for i in topo_sorted[:-1]:
+        q[i] = func(
+            np.sum([q[u] for u in upstream_nodes[i]], axis=0),
+            *flowlines.loc[flowlines[id_name] == i, col_names].values[0],
+        )
+
+    q["out"] = func(
+        np.sum([q[u] for u in upstream_nodes[pd.NA]], axis=0),
+        *flowlines.loc[flowlines[toid_name].isna(), col_names].values[0],
+    )
+    return q

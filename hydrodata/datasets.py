@@ -123,7 +123,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     bbox : list
         List of corners in this order [west, south, east, north]
     expanded : bool, optional
-        Wether to get expanded sit information for example drainage area.
+        Whether to get expanded sit information for example drainage area.
 
     Returns
     -------
@@ -322,7 +322,7 @@ def daymet_bygeom(
         The desired output resolution for the output in km,
         defaults to no resampling. The resampling is done using bilinear method
     fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+        Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
         Number of threads for simultanious download, defaults to 4 and max is 8.
 
@@ -699,7 +699,7 @@ def ssebopeta_bygeom(
     Note
     ----
     Since there's still no web service available for subsetting, the data first
-    needs to be downloads for the requested period then the data is masked by the
+    needs to be downloaded for the requested period then the data is masked by the
     region interest locally. Therefore, it's not as fast as other functions and
     the bottleneck could be the download speed.
 
@@ -716,7 +716,7 @@ def ssebopeta_bygeom(
     years : list
         List of years
     fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+        Whether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
@@ -893,7 +893,7 @@ def nlcd(
         a dict with keys as the variable name in the output dataframe and values as
         the path to save to the file.
     fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+        Whether to fill the holes in the geometry's interior, defaults to False.
     in_crs : string, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
@@ -915,7 +915,7 @@ def nlcd(
     if years is None:
         years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
     if isinstance(years, dict):
-        for service in list(years.keys()):
+        for service in years.keys():
             if years[service] not in avail_years[service]:
                 msg = (
                     f"{service.capitalize()} data for {years[service]} is not in the databse."
@@ -979,7 +979,7 @@ def nationalmap_dem(
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
     fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+        Whether to fill the holes in the geometry's interior, defaults to False.
     in_crs : string, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
