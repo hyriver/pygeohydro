@@ -36,7 +36,7 @@ def retry_requests(
     https://github.com/bustawin/retry-requests
 
     Parameters
-    ---------
+    ----------
     retries : int
         The number of maximum retries before raising an exception.
     backoff_factor : float
@@ -643,8 +643,8 @@ def prepare_nhdplus(
     warn : bool
         Whether to show a message about the removed features, defaults to True.
 
-    Return
-    ------
+    Returns
+    -------
     (Geo)DataFrame
         With an additional column named ``tocomid`` that represents downstream
         comid of features.
@@ -746,7 +746,7 @@ def prepare_nhdplus(
 def traverse_json(obj, path):
     """Extracts an element from a JSON file along a specified path.
 
-    Note
+    Notes
     ----
     From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`_
 
@@ -807,8 +807,8 @@ def cover_statistics(ds):
     ----------
     ds : xarray.Dataset
 
-    Return
-    ------
+    Returns
+    -------
     dict
         Percentages of classes and categories
     """
@@ -840,7 +840,7 @@ def cover_statistics(ds):
 def create_dataset(content, mask, transform, width, height, name, fpath):
     """Create dataset from a response clipped by a geometry
 
-    Parameter
+    Parameters
     ---------
     content : requests.Response
         The response to be processed
@@ -910,8 +910,8 @@ def geom_mask(
 ):
     """Create a mask array and transform for a given geometry.
 
-    Params
-    ------
+    Parameters
+    ----------
     geometry : Polygon
         A shapely Polygon geometry
     width : int
@@ -1001,8 +1001,8 @@ def vector_accumulation(
 ):
     """Flow accumulation using vector river network.
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     flowlines : pandas.DataFrame
         A dataframe containing comid, tocomid, and all the columns
         that ara required for passing to ``func``.

@@ -37,12 +37,13 @@ class ArcGISServer:
     ):
         """Form the base url and get the service information.
 
-        The general url is in the following form:
-        REST:
-            https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/
-            https://<host>/<site>/rest/services/<serviceName>/<serviceType>/<layer>/
-        OGC:
-            https://<host>/<site>/services/<serviceName>/<serviceType>/<OGCType>/
+        Notes
+        -----
+        The general url is in the following form ofr RESTful services:
+        https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/
+        https://<host>/<site>/rest/services/<serviceName>/<serviceType>/<layer>/
+        and for OGC interfaces:
+        https://<host>/<site>/services/<serviceName>/<serviceType>/<OGCType>/
         For more information visit: `ArcGIS <https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm>`_
         """
         if host is not None and site is not None:
@@ -163,8 +164,8 @@ class ArcGISServer:
     def get_layers(self, url=None, serviceName=None):
         """Find the available sublayers and their parent layers
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         url : string, optional
             The url that contains the layers
         serviceName : string, optional
