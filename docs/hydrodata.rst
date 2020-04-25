@@ -12,6 +12,14 @@ hydrodata.datasets module
    :undoc-members:
    :show-inheritance:
 
+hydrodata.helpers module
+------------------------
+
+.. automodule:: hydrodata.helpers
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 hydrodata.hydrodata module
 --------------------------
 
@@ -24,6 +32,14 @@ hydrodata.plot module
 ---------------------
 
 .. automodule:: hydrodata.plot
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+hydrodata.services module
+-------------------------
+
+.. automodule:: hydrodata.services
    :members:
    :undoc-members:
    :show-inheritance:

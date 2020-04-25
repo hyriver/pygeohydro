@@ -13,7 +13,7 @@ dependencies:
       - arcgis2geojson
       - folium
       - sphinx
-      - sphinx_rtd_theme
+      - sphinx-material
       - sphinx-copybutton
       - nbsphinx
       - netCDF4
