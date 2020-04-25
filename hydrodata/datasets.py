@@ -6,6 +6,7 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
+import rasterio.mask as rio_mask
 from hydrodata import helpers, services, utils
 from pqdm.threads import pqdm
 
@@ -696,7 +697,7 @@ def ssebopeta_bygeom(
 ):
     """Gridded data from the SSEBop database.
 
-    Note
+    Notes
     ----
     Since there's still no web service available for subsetting, the data first
     needs to be downloaded for the requested period then the data is masked by the
@@ -780,7 +781,7 @@ def ssebopeta_bygeom(
         with rio.MemoryFile() as memfile:
             memfile.write(z.read(z.filelist[0].filename))
             with memfile.open() as src:
-                ras_msk, _ = rio.mask.mask(src, [geometry])
+                ras_msk, _ = rio_mask.mask(src, [geometry])
                 nodata = src.nodata
                 with xr.open_rasterio(src) as ds:
                     ds.data = ras_msk
@@ -868,7 +869,7 @@ def nlcd(
     Download land use, land cover data from NLCD2016 database within
     a given geometry in epsg:4326.
 
-    Note
+    Notes
     ----
         NLCD data has a resolution of 1 arc-sec (~30 m).
 
@@ -1000,7 +1001,7 @@ def nationalmap_dem(
     if fpath is not None:
         fpath = {"elevation": fpath}
 
-    ds = services.wms_bygeom(
+    dem = services.wms_bygeom(
         url,
         geometry,
         width=width,
@@ -1012,6 +1013,5 @@ def nationalmap_dem(
         in_crs=in_crs,
         out_crs=out_crs,
     )
-    dem = ds.elevation.copy()
     dem.attrs["units"] = "meters"
     return dem
