@@ -31,7 +31,7 @@ dependencies:
     - watchdog
     - flake8
     - sphinx
-    - sphinx_rtd_theme
+    - sphinx-material
     - sphinx-copybutton
     - nbsphinx
     - twine
