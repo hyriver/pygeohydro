@@ -37,6 +37,7 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 * `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ for Digital Elevation Model
 
 Additionally, the following functionalities are offered:
+
 * Efficient vector-based **flow accumulation** in a stream network
 * Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
 * **Interactive map** for exploring USGS stations within a bounding box
@@ -129,7 +130,7 @@ Some example plots are shown below:
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
         :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
-The ``services`` module can be used for accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and ` FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl> via WFS as follows:
+The ``services`` module can be used for accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
 .. code-block:: python
 
