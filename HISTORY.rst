@@ -2,10 +2,21 @@
 History
 =======
 
+0.4.5 (2020-04-25)
+------------------
+
+* An almost complete re-writing of the code base so not backward-compatible
+* New website
+* Added vector accumulation
+* Added base classes and function accesing any REST, WMS, WMS service
+* Standalone functions for creating datasets from responses and masking the data
+* Added threading using pqdm to speed up the downloads
+* Interactive map for exploring USGS stations
+* Replaced OpenTopography with 3DEP
+
 0.4.4 (2020-03-12)
 ------------------
 
-* An almost complete refactoring of the code base
 * Added new databases: NLDI, NHDPLus V2, OpenTopography, gridded Daymet, and SSEBop
 * The gridded data are returned as xarray DataArrays
 * Removed dependecy on StreamStats and replaced it by NLDI
