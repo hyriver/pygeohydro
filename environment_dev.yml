@@ -48,6 +48,7 @@ dependencies:
     - black
     - rasterstats
     - tables
+    - xlrd
     - pqdm
     - recommonmark
     -sphinx-markdown-tables

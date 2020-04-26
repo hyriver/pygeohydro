@@ -21,6 +21,7 @@ dependencies:
     - geojson
     - rasterstats
     - tables
+    - xlrd
     - networkx
     - pqdm
     - arcgis2geojson

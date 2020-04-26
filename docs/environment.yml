@@ -17,6 +17,8 @@ dependencies:
       - netCDF4
       - bottleneck
       - lxml
+      - xlrd
+      - tables
       - owslib
       - scipy
       - pandas
