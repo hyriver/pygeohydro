@@ -25,7 +25,7 @@
 -----------------
 
 Features
----------
+--------
 
 Hydrodata is a python library designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
 
@@ -38,10 +38,12 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 
 Additionally, the following functionalities are offered:
 
-* Efficient vector-based **flow accumulation** in a stream network
-* Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_.
-* **Interactive map** for exploring USGS stations within a bounding box
-* High level APIs for easy access to all ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services.
+* **Interactive map** for exploring USGS stations within a bounding box,
+* Efficient vector-based **flow accumulation** in a stream network,
+* Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
+* High level APIs for easy access to all ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
+* Helpers for plotting land cover data based on **official colors and categories**,
+* A lookup table of **roughness coefficients** for each land cover which can be used for overland flow routing.
 
 Requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
 
@@ -71,53 +73,50 @@ Alternatively, you can install the `dependencies <https://hydrodata.readthedocs.
 Quick Start
 -----------
 
-With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area, upstream flowlines and watershed geometry.
+With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area, and watershed geometry.
 
 .. code-block:: python
 
     from hydrodata import Station
     import hydrodata.datasets as hds
 
-    lon, lat = -69.32, 45.17
-    start, end = '2000-01-01', '2010-01-21'
-    wshed = Station(start, end, coords=(lon, lat))
+    wshed = Station(start='2000-01-01', end='2010-01-21', coords=(-69.32, 45.17))
 
-Using the retrieved information such as the watershed geometry we can then use the `datasets` module to access other databases. For example, we can find the USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km. Also, all the USGS stations inside the watershed can be found:
+Using the retrieved information such as the watershed geometry we can then use the `datasets` module to access the databases. For example, we can get main river channel and tributaries, USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
 
 .. code-block:: python
 
-    stations = wshed.watershed.get_stations()
-    stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
+    tributaries = hds.NLDI.tributaries(wshed.station_id)
+    main = hds.NLDI.main(wshed.station_id)
+    stations = hds.NLDI.stations(wshed.station_id)
+    stations_m150 = hds.NLDI.stations(wshed.station_id, navigation="upstreamMain", distance=150)
 
-DEM can be retrieved for the station's contributing watershed and resampled from the original resolution of 1 arc-second (~30 m) to 30 arc-second (~1 km), as follows:
-
-.. code-block:: python
-
-    dem = hds.dem_bygeom(wshed.geometry, resolution=30.0/3600.0)
-
-The climate data and streamflow observations for the location of interest can be retrieved as well:
+DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution, as follows:
 
 .. code-block:: python
 
-    clm_loc = hds.deymet_byloc(wshed.lon, wshed.lat, start=wshed.start, end=wshed.end)
-    clm_loc['Q (cms)'] = hds.nwis(wshed.station_id, wshed.start, wshed.end)
+    dem = hds.nationalmap_dem(wshed.geometry, resolution=30)
 
-Other than point-based data, gridded data can also be accessed at the desired resolution. Furthermore, the watershed geometry can be used to mask the gridded data:
+The climate data and streamflow observations for a location of interest can be retrieved as well:
 
 .. code-block:: python
 
     variables = ["tmin", "tmax", "prcp"]
-    clm_grd = hds.daymet_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31', variables=variables, pet=True)
-    eta_grd = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
+    clm_p = hds.daymet_byloc(wshed.lon, wshed.lat,
+                             start=wshed.start, end=wshed.end,
+                             variables=variables, pet=True)
+    clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, wshed.start, wshed.end)
 
-We can also find all or within certain distance USGS stations up- or downstream of the watershed outlet:
+Other than point-based data, gridded databases can also be accessed. Furthermore, the watershed geometry may be used to mask the gridded data:
 
 .. code-block:: python
 
-    stations = wshed.watershed.get_stations()
-    stations_upto_150 = wshed.watershed.get_stations(navigation="upstreamMain", distance=150)
+    clm_g = hds.daymet_bygeom(wshed.geometry,
+                              start='2005-01-01', end='2005-01-31',
+                              variables=variables, pet=True)
+    eta_g = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that can plot five hydrologic signatures graphs in one plot.
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that plots five hydrologic signatures graphs in one plot.
 
 .. code-block:: python
 
@@ -130,7 +129,7 @@ Some example plots are shown below:
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
         :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
-The ``services`` module can be used for accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
+The ``services`` module can be used to access some other web services as well. For example, we can accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
 .. code-block:: python
 
@@ -138,15 +137,18 @@ The ``services`` module can be used for accessing `Los Angeles GeoHub <http://ge
     from arcgis2geojson import arcgis2geojson
     import geopandas as gpd
 
-    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer"
-    s = services.ArcGISREST(f"{url_rest}/10", outFormat="json")
-    s.get_featureids(wshed.geometry)
+    la_wshed = Station('2005-01-01', '2005-01-31', '11092450')
+
+    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
+    s = services.ArcGISREST(url_rest, outFormat="json")
+    s.get_featureids(la_wshed.geometry)
     storm_pipes = s.get_features()
 
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     slope = services.wms_bygeom(
                       url_wms,
-                      geometry=wshed.geometry,
+                      "3DEP",
+                      geometry=la_wshed.geometry,
                       version="1.3.0",
                       layers={"slope": "3DEPElevation:Slope Degrees"},
                       outFormat="image/tiff",
@@ -155,7 +157,7 @@ The ``services`` module can be used for accessing `Los Angeles GeoHub <http://ge
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     r = services.wfs_bybox(
                        url_wfs,
-                       bbox=wshed.geometry.bounds,
+                       bbox=la_wshed.geometry.bounds,
                        version="2.0.0",
                        layer="public_NFHL:Base_Flood_Elevations",
                        outFormat="esrigeojson",
