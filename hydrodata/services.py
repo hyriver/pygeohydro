@@ -461,7 +461,11 @@ class ArcGISREST(ArcGISServer):
             getter = get_geojson
 
         feature_list = pqdm(
-            self.splitted_ids, getter, n_jobs=self.n_threads, desc=f"{self.layer_name}",
+            self.splitted_ids,
+            getter,
+            n_jobs=self.n_threads,
+            desc=f"{self.layer_name}",
+            disable=not self.verbose,
         )
 
         # Find the failed batches and retry
@@ -479,6 +483,7 @@ class ArcGISREST(ArcGISServer):
                 getter,
                 n_jobs=min(self.n_threads * 2, 8),
                 desc="Retry failed batches",
+                disable=not self.verbose,
             )
             success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
 
@@ -698,6 +703,7 @@ class USGSGeoserver:
 
 def wms_bygeom(
     url,
+    service_name,
     geometry,
     width=None,
     resolution=None,
@@ -709,6 +715,7 @@ def wms_bygeom(
     in_crs="epsg:4326",
     out_crs="epsg:4326",
     fill_holes=False,
+    verbose=False,
 ):
     """Data from a WMS service within a geometry
 
@@ -718,6 +725,8 @@ def wms_bygeom(
         The base url for the WMS service. Some examples:
         https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
         https://www.mrlc.gov/geoserver/mrlc_download/wms
+    service_name : string
+        Name of the service to appear in the progress bar
     geometry : Polygon
         A shapely Polygon for getting the data
     width : int
@@ -751,6 +760,8 @@ def wms_bygeom(
         epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -832,29 +843,33 @@ def wms_bygeom(
     name_list = list(layers.keys())
     layer_list = list(layers.values())
 
-    img = wms.getmap(
-        layers=[layer_list[0]],
-        srs=out_crs,
-        bbox=geometry.bounds,
-        size=(width, height),
-        format=outFormat,
+    def _wms(inp):
+        name, layer = inp
+        img = wms.getmap(
+            layers=[layer],
+            srs=out_crs,
+            bbox=geometry.bounds,
+            size=(width, height),
+            format=outFormat,
+        )
+        return (name, img.read())
+
+    resp = pqdm(
+        zip(name_list, layer_list),
+        _wms,
+        n_jobs=4,
+        desc=f"{service_name}",
+        disable=not verbose,
     )
 
     data = utils.create_dataset(
-        img.read(), mask, transform, width, height, name_list[0], fpath[name_list[0]]
+        resp[0][1], mask, transform, width, height, resp[0][0], fpath[resp[0][0]]
     )
 
-    if len(layers) > 1:
-        for name, layer in zip(name_list[1:], layer_list[1:]):
-            img = wms.getmap(
-                layers=[layer],
-                srs=out_crs,
-                bbox=geometry.bounds,
-                size=(width, height),
-                format=outFormat,
-            )
+    if len(resp) > 1:
+        for name, r in resp:
             ds = utils.create_dataset(
-                img.read(), mask, transform, width, height, name, fpath[name]
+                r, mask, transform, width, height, name, fpath[name]
             )
             data = xr.merge([data, ds])
     return data

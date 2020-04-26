@@ -30,7 +30,7 @@ class Station:
     """
 
     def __init__(
-        self, start, end, station_id=None, coords=None, data_dir="data", width=2000,
+        self, start, end, station_id=None, coords=None, data_dir="data", verbose=False,
     ):
         """Initialize the instance.
 
@@ -46,13 +46,13 @@ class Station:
             Longitude and latitude of the point of interest, defaults to None
         data_dir : string or Path, optional
             Path to the location of climate data, defaults to 'data'
-        width : int, optional
-            Width of the geotiff image for LULC in pixels, defaults to 2000 px.
+        verbose : bool
+            Whether to show messages
         """
 
         self.start = pd.to_datetime(start)
         self.end = pd.to_datetime(end)
-        self.width = width
+        self.verbose = verbose
 
         self.session = utils.retry_requests()
 
@@ -94,7 +94,8 @@ class Station:
         except ValueError:
             self.drainage_area = self.watershed.flowlines.areasqkm.sum()
 
-        print(self.__repr__())
+        if self.verbose:
+            print(self.__repr__())
 
     def __repr__(self):
         """Print the characteristics of the watershed."""
@@ -196,21 +197,25 @@ class Station:
         geom_file = self.data_dir.joinpath("geometry.gpkg")
 
         if geom_file.exists():
-            print(
-                f"[ID: {self.station_id}] ".ljust(MARGINE)
-                + f"Using existing watershed geometry: {geom_file}"
-            )
+            if self.verbose:
+                print(
+                    f"[ID: {self.station_id}] ".ljust(MARGINE)
+                    + f"Using existing watershed geometry: {geom_file}"
+                )
             self.basin = gpd.read_file(geom_file)
         else:
-            print(
-                f"[ID: {self.station_id}] ".ljust(MARGINE)
-                + "Downloading watershed geometry using NLDI service >>>"
-            )
+            if self.verbose:
+                print(
+                    f"[ID: {self.station_id}] ".ljust(MARGINE)
+                    + "Downloading watershed geometry using NLDI service >>>"
+                )
             self.basin = hds.NLDI.basin(self.station_id)
             self.basin.to_file(geom_file)
-            print(
-                f"[ID: {self.station_id}] ".ljust(MARGINE)
-                + f"The watershed geometry saved to {geom_file}."
-            )
+
+            if self.verbose:
+                print(
+                    f"[ID: {self.station_id}] ".ljust(MARGINE)
+                    + f"The watershed geometry saved to {geom_file}."
+                )
 
         self.geometry = self.basin.geometry.values[0]

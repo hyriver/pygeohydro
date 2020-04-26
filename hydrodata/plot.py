@@ -5,7 +5,11 @@
 Plots includes  daily, monthly and annual hydrograph as well as
 regime curve (monthly mean) and flow duration curve.
 """
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import pandas as pd
 from hydrodata import helpers, utils
+from matplotlib.colors import BoundaryNorm, ListedColormap
 
 
 def signatures(
@@ -38,10 +42,6 @@ def signatures(
         Path to save the plot as png, defaults to `None` which means
         the plot is not saved to a file.
     """
-    import matplotlib.pyplot as plt
-    import pandas as pd
-    import matplotlib as mpl
-
     pd.plotting.register_matplotlib_converters()
     mpl.rcParams["figure.dpi"] = 300
 
@@ -197,8 +197,6 @@ def signatures(
 
 def get_daterange(Q_dict):
     """Find data range of several data series."""
-    import pandas as pd
-
     return pd.date_range(
         min([q.index[0] for q in list(Q_dict.values())]),
         max([q.index[-1] for q in list(Q_dict.values())]),
@@ -207,9 +205,10 @@ def get_daterange(Q_dict):
 
 def cover_legends():
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
-    from matplotlib.colors import ListedColormap, BoundaryNorm
-
     nlcd_meta = helpers.nlcd_helper()
+    bounds = list(nlcd_meta["colors"].keys())
+
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
-    norm = BoundaryNorm(list(nlcd_meta["colors"].keys()), cmap.N)
-    return cmap, norm
+    norm = BoundaryNorm(bounds, cmap.N)
+    levels = bounds + [100]
+    return cmap, norm, levels
