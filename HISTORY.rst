@@ -5,14 +5,15 @@ History
 0.4.5 (2020-04-25)
 ------------------
 
-* An almost complete re-writing of the code base so not backward-compatible
-* New website
+* An almost complete re-writing of the code base and not backward-compatible
+* New website design
 * Added vector accumulation
-* Added base classes and function accesing any REST, WMS, WMS service
+* Added base classes and function accesing any ArcGIS REST, WMS, WMS service
 * Standalone functions for creating datasets from responses and masking the data
 * Added threading using pqdm to speed up the downloads
 * Interactive map for exploring USGS stations
 * Replaced OpenTopography with 3DEP
+* Added HCDN database for identifying natural watersheds
 
 0.4.4 (2020-03-12)
 ------------------
