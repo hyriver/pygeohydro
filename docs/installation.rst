@@ -7,29 +7,38 @@ Installation
 
 Dependencies
 ------------
-+===================================================+==========================================================================+=============================================+
-|                    Dependencies                   |                             Sub-dependencies                             |                   Optional                  |
-+===================================================+==========================================================================+=============================================+
-| `Python 3.6+ <https://www.python.org/downloads>`_ |      `Tables <https://www.pytables.org/usersguide/tutorials.html>`_      | `CartoPy <http://scitools.org.uk/cartopy>`_ |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|          `NumPy <http://www.numpy.org/>`_         |                        `Dask <https://dask.org/>`_                       |   `NetworkX <https://networkx.github.io>`_  |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|        `Pandas <http://pandas.pydata.org>`_       | `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_ |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|   `Xarra <https://xarray.pydata.org/en/stable>`_  |            `Bottleneck <https://pypi.org/project/Bottleneck>`_           |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|   `Requests <https://requests.readthedocs.io>`_   |                     `SciPy <https://www.scipy.org>`_                     |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|   `OWSLib <https://geopython.github.io/OWSLib>`_  |                         `Lxml <https://lxml.de>`_                        |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|        `GeoPandas <https://geopandas.org>`_       |             `Descartes <https://pypi.org/project/descartes>`_            |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|  `RasterIO <https://github.com/mapbox/rasterio>`_ |               `GeoJSON <https://pypi.org/project/geojson>`_              |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|       `Matplotlib <http://matplotlib.org>`_       |                                                                          |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
-|    `Shapely <https://shapely.readthedocs.io>`_    |                                                                          |                                             |
-+---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+
+- `Python 3.6+ <https://www.python.org/downloads>`_ 
+- `NumPy <http://www.numpy.org>`_ 
+- `Pandas <http://pandas.pydata.org>`_
+- `Xarray <https://xarray.pydata.org>`_
+- `Requests <https://requests.readthedocs.io>`_
+- `OWSLib <https://geopython.github.io/OWSLib>`_
+- `GeoPandas <https://geopandas.org>`_
+- `RasterIO <https://github.com/mapbox/rasterio>`_
+- `Matplotlib <http://matplotlib.org>`_
+- `Shapely <https://shapely.readthedocs.io>`_
+- `PQDM <https://pqdm.readthedocs.io>`_
+- `SimpleJSON <https://simplejson.readthedocs.io>`_
+
+Sub-dependencies
+----------------
+
+- `Tables <https://www.pytables.org/usersguide/tutorials.html>`_
+- `Dask <https://dask.org>`_
+- `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
+- `Bottleneck <https://pypi.org/project/Bottleneck>`_
+- `SciPy <https://www.scipy.org>`_
+- `Lxml <https://lxml.de>`_
+- `Descartes <https://pypi.org/project/descartes>`_
+- `GeoJSON <https://pypi.org/project/geojson>`_
+- `ArcGIS2GeoJSON <https://github.com/chris48s/arcgis2geojson>`_
+
+Optional
+--------
+
+- `NetworkX <https://networkx.github.io>`_ for flow accumulation
+- `CartoPy <http://scitools.org.uk/cartopy>`_ for plotting
 
 Stable release
 --------------

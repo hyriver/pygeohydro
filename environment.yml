@@ -20,7 +20,6 @@ dependencies:
   - pip:
     - geojson
     - pqdm
-    - rasterstats
     - tables
     - xlrd
     - networkx

@@ -9,7 +9,6 @@ dependencies:
   - pip:
       - geopandas
       - geojson
-      - rasterstats
       - pqdm
       - arcgis2geojson
       - folium

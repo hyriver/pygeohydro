@@ -46,9 +46,8 @@ dependencies:
     - pre-commit
     - geojson
     - black
-    - rasterstats
     - tables
     - xlrd
     - pqdm
     - recommonmark
-    -sphinx-markdown-tables
+    - sphinx-markdown-tables
