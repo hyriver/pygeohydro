@@ -22,6 +22,7 @@ dependencies:
     - pqdm
     - rasterstats
     - tables
+    - xlrd
     - networkx
     - arcgis2geojson
     - hydrodata
