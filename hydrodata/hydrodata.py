@@ -11,6 +11,7 @@ For more information refer to the Usage section of the document.
 
 import os
 from pathlib import Path
+from warnings import warn
 
 import geopandas as gpd
 import hydrodata.datasets as hds
@@ -63,9 +64,11 @@ class Station:
             self.station_id = str(station_id)
             self.get_coords()
         else:
-            raise RuntimeError(
-                "Either coordinates or station ID" + " should be specified."
+            msg = (
+                f"[ID: {self.coords}] ".ljust(MARGINE)
+                + "Either coordinates or station ID should be specified."
             )
+            raise ValueError(msg)
 
         self.lon, self.lat = self.coords
 
@@ -99,13 +102,16 @@ class Station:
 
     def __repr__(self):
         """Print the characteristics of the watershed."""
-        msg = f"[ID: {self.station_id}] ".ljust(MARGINE) + f"Watershed: {self.name}\n"
-        msg += "".ljust(MARGINE) + f"Coordinates: ({self.lon:.3f}, {self.lat:.3f})\n"
-        msg += (
-            "".ljust(MARGINE) + f"Altitude: {self.altitude:.0f} m above {self.datum}\n"
+        return (
+            f"[ID: {self.station_id}] ".ljust(MARGINE)
+            + f"Watershed: {self.name}\n"
+            + "".ljust(MARGINE)
+            + f"Coordinates: ({self.lon:.3f}, {self.lat:.3f})\n"
+            + "".ljust(MARGINE)
+            + f"Altitude: {self.altitude:.0f} m above {self.datum}\n"
+            + "".ljust(MARGINE)
+            + f"Drainage area: {self.drainage_area:.0f} sqkm."
         )
-        msg += "".ljust(MARGINE) + f"Drainage area: {self.drainage_area:.0f} sqkm."
-        return msg
 
     def get_coords(self):
         """Get coordinates of the station from station ID."""
@@ -114,14 +120,13 @@ class Station:
         st_begin = st.begin_date.values[0]
         st_end = st.end_date.values[0]
         if self.start < st_begin or self.end > st_end:
-            msg = (
+            warn(
                 f"[ID: {self.station_id}] ".ljust(MARGINE)
                 + "Daily Mean data unavailable for the specified time period."
                 + " The data is available from "
                 + f"{np.datetime_as_string(st_begin, 'D')} to "
                 + f"{np.datetime_as_string(st_end, 'D')}."
             )
-            raise ValueError(msg)
 
         self.coords = (
             st["dec_long_va"].astype("float64").values[0],
@@ -171,14 +176,13 @@ class Station:
         st_begin = station.begin_date.values[0]
         st_end = station.end_date.values[0]
         if self.start < st_begin or self.end > st_end:
-            msg = (
+            warn(
                 f"[ID: {self.station_id}] ".ljust(MARGINE)
                 + "Daily Mean data unavailable for the specified time period."
                 + " The data is available from "
                 + f"{np.datetime_as_string(st_begin, 'D')} to "
                 + f"{np.datetime_as_string(st_end, 'D')}."
             )
-            raise ValueError(msg)
 
         self.station_id = station.site_no.values[0]
         self.coords = (
