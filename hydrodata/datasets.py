@@ -116,6 +116,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     begin_date      -- Begin date
     end_date        -- End date
     count_nu        -- Record count
+    hcdn_2009       -- Whether is in HCDN-2009 stations
 
     Parameters
     ----------
@@ -192,6 +193,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     ].astype("float64")
 
     df = df[df.site_no.apply(len) == 8]
+    df["hcdn_2009"] = df.site_no.isin(helpers.hcdn_stations())
 
     return df
 

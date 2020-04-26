@@ -598,11 +598,14 @@ def interactive_map(bbox):
             "huc_cd",
             "begin_date",
             "end_date",
+            "hcdn_2009",
         ]
     ]
     df["coords"] = [
         (lat, lon)
-        for _, lat, lon in df[["dec_lat_va", "dec_long_va"]].itertuples(name=None)
+        for lat, lon in df[["dec_lat_va", "dec_long_va"]].itertuples(
+            name=None, index=False
+        )
     ]
     df["altitude"] = (
         df["alt_va"].astype(str) + " ft above " + df["alt_datum_cd"].astype(str)
@@ -630,6 +633,7 @@ def interactive_map(bbox):
             "contrib_drain_area_va",
             "begin_date",
             "end_date",
+            "hcdn_2009",
         ]
     ]
     df.columns = [
@@ -642,6 +646,7 @@ def interactive_map(bbox):
         "Contributing Drainga Area",
         "Begin date",
         "End data",
+        "HCDN 2009",
     ]
 
     msgs = []
@@ -662,7 +667,7 @@ def interactive_map(bbox):
 
     m = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
 
-    for _, coords, msg in df.itertuples(name=None):
+    for coords, msg in df.itertuples(name=None, index=False):
         folium.Marker(
             location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
         ).add_to(m)
