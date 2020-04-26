@@ -33,7 +33,8 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data)
-* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for USGS stations' daily streamflow observations
+* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations
+* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse
 * `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ for Digital Elevation Model
 
 Additionally, the following functionalities are offered:
@@ -42,8 +43,8 @@ Additionally, the following functionalities are offered:
 * Efficient vector-based **flow accumulation** in a stream network,
 * Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
 * High level APIs for easy access to all ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
-* Helpers for plotting land cover data based on **official colors and categories**,
-* A lookup table of **roughness coefficients** for each land cover which can be used for overland flow routing.
+* Helpers for plotting land cover data based on **official NLCD cover legends**,
+* A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing.
 
 Requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
 
@@ -70,8 +71,8 @@ Alternatively, you can install the `dependencies <https://hydrodata.readthedocs.
 
     $ pip install hydrodata
 
-Quick Start
------------
+Quickstart
+----------
 
 With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area, and watershed geometry.
 
@@ -82,7 +83,7 @@ With just a few lines of code, Hydrodata provides easy access to a handful of da
 
     wshed = Station(start='2000-01-01', end='2010-01-21', coords=(-69.32, 45.17))
 
-Using the retrieved information such as the watershed geometry we can then use the `datasets` module to access the databases. For example, we can get main river channel and tributaries, USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
+The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., it's a natural watershed or affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, Using the retrieved information such as the watershed geometry we can then use the ``datasets`` module to access the databases. For example, we can get main river channel and tributaries, USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
 
 .. code-block:: python
 
@@ -107,7 +108,7 @@ The climate data and streamflow observations for a location of interest can be r
                              variables=variables, pet=True)
     clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, wshed.start, wshed.end)
 
-Other than point-based data, gridded databases can also be accessed. Furthermore, the watershed geometry may be used to mask the gridded data:
+Other than point-based data, we can get gridded databases that are masked with the watershed geometry. Note the use of ``pet`` flag for computing PET:
 
 .. code-block:: python
 
