@@ -1,4 +1,4 @@
-.. image:: _static/hydrodata_logo_text.svg
+.. image:: _static/hydrodata_logo_text.png
    :width: 50%
    :alt: hydrodata
    :align: left

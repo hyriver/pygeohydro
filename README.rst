@@ -2,7 +2,7 @@
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo_text.png
     :align: center
 
-|
+| 
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata

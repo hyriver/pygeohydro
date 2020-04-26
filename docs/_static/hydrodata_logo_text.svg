@@ -8,10 +8,10 @@
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    id="svg4542"
-   viewBox="0 0 410.60936 92.524443"
+   viewBox="0 0 402.79048 92.524443"
    version="1.1"
    sodipodi:docname="hydrodata_logo_text.svg"
-   width="410.60934"
+   width="402.79047"
    height="92.524452"
    inkscape:version="0.92.5 (0.92.5+68)"
    inkscape:export-filename="/home/taher/repos/hydrodata/docs/_static/hydrodata_logo_text.png"
@@ -70,9 +70,9 @@
      inkscape:window-height="1055"
      id="namedview3771"
      showgrid="false"
-     inkscape:zoom="0.79848471"
-     inkscape:cx="49.895333"
-     inkscape:cy="189.32783"
+     inkscape:zoom="3.1939388"
+     inkscape:cx="201.17584"
+     inkscape:cy="42.752337"
      inkscape:window-x="0"
      inkscape:window-y="25"
      inkscape:window-maximized="0"
@@ -81,13 +81,13 @@
      inkscape:guide-bbox="true" />
   <g
      id="layer1"
-     transform="translate(41.809305,-320.66951)">
+     transform="translate(39.809315,-328.24575)">
     <g
        id="g4417"
        transform="matrix(4.0034,0,0,4.0034,2687.6,451.03)">
       <g
          id="g845"
-         transform="matrix(0.41460695,0,0,0.41460695,-387.4422,-15.912643)"
+         transform="matrix(0.41460695,0,0,0.41460695,-387.4422,-14.020191)"
          inkscape:export-xdpi="96"
          inkscape:export-ydpi="96">
         <circle
@@ -140,31 +140,31 @@
       </g>
       <text
          xml:space="preserve"
-         style="font-style:normal;font-weight:normal;font-size:18.17756462px;line-height:0.5;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#4747a0;fill-opacity:1;stroke:#4747a0;stroke-width:0.51526958;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-         x="-619.49976"
+         style="font-style:normal;font-weight:normal;font-size:18.17756462px;line-height:0.5;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.9440794;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
+         x="-620.4989"
          y="-14.545535"
          id="text849"
          inkscape:export-xdpi="96"
          inkscape:export-ydpi="96"><tspan
            sodipodi:role="line"
-           x="-619.49976"
+           x="-620.4989"
            y="-14.545535"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16.6525116px;line-height:1;font-family:Comfortaa;-inkscape-font-specification:'Comfortaa, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#4747a0;fill-opacity:1;stroke:#4747a0;stroke-width:0.51526958;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:16.6525116px;line-height:1;font-family:Comfortaa;-inkscape-font-specification:'Comfortaa, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.9440794;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke markers fill"
            dx="0 0 0 0 0"
            id="tspan936">data</tspan></text>
       <text
          xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16.6525116px;line-height:1.25;font-family:Comfortaa;-inkscape-font-specification:'Comfortaa, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.24978767"
-         x="-683.27155"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:16.6525116px;line-height:1.25;font-family:Comfortaa;-inkscape-font-specification:'Comfortaa, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.9440794;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+         x="-682.77197"
          y="-14.290183"
          id="text847"
          inkscape:export-xdpi="96"
          inkscape:export-ydpi="96"><tspan
            sodipodi:role="line"
            id="tspan845"
-           x="-683.27155"
+           x="-682.77197"
            y="-14.290183"
-           style="font-weight:bold;fill:#4747a0;fill-opacity:1;stroke-width:0.24978767">hydr</tspan></text>
+           style="font-weight:bold;fill:#4747a0;fill-opacity:1;stroke:none;stroke-width:0.9440794;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers">hydr</tspan></text>
     </g>
   </g>
   <metadata
