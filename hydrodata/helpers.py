@@ -93,3 +93,16 @@ def nhdplus_fcodes():
 def nwis_errors():
     """Get error code lookup table for USGS sites that have daily values"""
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
+
+
+def hcdn_stations():
+    """Get USGS Hydro-Climatic Data Network 2009 (HCDN-2009)"""
+    hcdn = pd.read_excel(
+        "https://water.usgs.gov/osw/hcdn-2009/HCDN-2009_Station_Info.xlsx"
+    )
+    return (
+        hcdn["STATION ID"]
+        .astype("str")
+        .str.pad(width=8, side="left", fillchar="0")
+        .tolist()
+    )

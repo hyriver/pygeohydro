@@ -31,7 +31,14 @@ class Station:
     """
 
     def __init__(
-        self, start, end, station_id=None, coords=None, data_dir="data", verbose=False,
+        self,
+        start,
+        end,
+        station_id=None,
+        coords=None,
+        srad=0.5,
+        data_dir="data",
+        verbose=False,
     ):
         """Initialize the instance.
 
@@ -45,6 +52,9 @@ class Station:
             USGS station ID, defaults to None
         coords : tuple, optional
             Longitude and latitude of the point of interest, defaults to None
+        srad : float, optional
+            Search radius in degrees for finding the closest station
+            when coords is given, default to 0.5 degrees
         data_dir : string or Path, optional
             Path to the location of climate data, defaults to 'data'
         verbose : bool
@@ -59,6 +69,7 @@ class Station:
 
         if station_id is None and coords is not None:
             self.coords = coords
+            self.srad = srad
             self.get_id()
         elif coords is None and station_id is not None:
             self.station_id = str(station_id)
@@ -97,6 +108,7 @@ class Station:
         except ValueError:
             self.drainage_area = self.watershed.flowlines.areasqkm.sum()
 
+        self.hcdn = info.hcdn_2009.values[0]
         if self.verbose:
             print(self.__repr__())
 
@@ -110,7 +122,9 @@ class Station:
             + "".ljust(MARGINE)
             + f"Altitude: {self.altitude:.0f} m above {self.datum}\n"
             + "".ljust(MARGINE)
-            + f"Drainage area: {self.drainage_area:.0f} sqkm."
+            + f"Drainage area: {self.drainage_area:.0f} sqkm\n"
+            + "".ljust(MARGINE)
+            + f"HCDN 2009: {self.hcdn}."
         )
 
     def get_coords(self):
@@ -143,20 +157,21 @@ class Station:
         import shapely.ops as ops
         import shapely.geometry as geom
 
-        bbox = "".join(
-            [
-                f"{self.coords[0] - 0.5:.6f},",
-                f"{self.coords[1] - 0.5:.6f},",
-                f"{self.coords[0] + 0.5:.6f},",
-                f"{self.coords[1] + 0.5:.6f}",
-            ]
-        )
+        bbox = [
+            self.coords[0] - self.srad,
+            self.coords[1] - self.srad,
+            self.coords[0] + self.srad,
+            self.coords[1] + self.srad,
+        ]
+
         df = hds.nwis_siteinfo(bbox=bbox)
-        df = df[df.state_cd == "0003"]
+        df = df[df.stat_cd == "00003"]
         if len(df) < 1:
             msg = (
                 f"[ID: {self.coords}] ".ljust(MARGINE)
-                + "No USGS station were found within a 50-km radius with daily mean streamflow."
+                + "No USGS station were found within a "
+                + f"{int(self.srad * 111 / 10) * 10}-km radius "
+                + f"of ({self.coords[0]}, {self.coords[1]}) with daily mean streamflow."
             )
             raise ValueError(msg)
 
@@ -165,8 +180,8 @@ class Station:
             [
                 [sid, geom.Point(lon, lat)]
                 for sid, lon, lat in df[
-                    ["site_no", "dec_lat_va", "dec_long_va"]
-                ].itertuples(name=None)
+                    ["site_no", "dec_long_va", "dec_lat_va"]
+                ].itertuples(name=None, index=False)
             ]
         )
         gdf = gpd.GeoSeries(pts)
