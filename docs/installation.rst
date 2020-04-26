@@ -4,6 +4,7 @@
 Installation
 ============
 
+The following dependencies must be eirther installed manually or using the provided YAML file `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_:
 
 Dependencies
 ------------

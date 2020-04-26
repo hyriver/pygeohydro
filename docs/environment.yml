@@ -8,6 +8,7 @@ dependencies:
   - sphinx
   - pip:
       - geopandas
+      - rasterio
       - geojson
       - pqdm
       - arcgis2geojson
