@@ -31,3 +31,5 @@ dependencies:
       - numpydoc
       - ipykernel
       - ipython
+      - recommonmark
+      - sphinx-markdown-tables
