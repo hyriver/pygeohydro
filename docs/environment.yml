@@ -6,8 +6,6 @@ dependencies:
   - pip
   - cartopy
   - sphinx
-  - sphinx-copybutton
-  - recommonmark
   - pip:
       - geopandas
       - geojson
@@ -33,3 +31,5 @@ dependencies:
       - ipython
       - sphinx-markdown-tables
       - sphinx-material
+      - sphinx-copybutton
+      - recommonmark
