@@ -20,7 +20,7 @@ from requests.exceptions import (
     RetryError,
     Timeout,
 )
-from shapely.geometry import Point, mapping
+from shapely.geometry import Point, box, mapping
 
 
 def retry_requests(
@@ -88,6 +88,26 @@ def post_url(session, url, payload=None):
         raise
 
 
+def onlyIPv4():
+    """disable IPv6 and only use IPv4"""
+    import socket
+    from unittest.mock import patch
+
+    orig_getaddrinfo = socket.getaddrinfo
+
+    def getaddrinfoIPv4(host, port, family=0, type=0, proto=0, flags=0):
+        return orig_getaddrinfo(
+            host=host,
+            port=port,
+            family=socket.AF_INET,
+            type=type,
+            proto=proto,
+            flags=flags,
+        )
+
+    return patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4)
+
+
 def check_dir(fpath):
     """Create parent directory for a file if doesn't exist"""
     parent = Path(fpath).parent
@@ -114,6 +134,32 @@ def daymet_dates(start, end):
     period = period[(period.isin(nl)) | (period.isin(lp))]
     years = [period[period.year == y] for y in period.year.unique()]
     return [(y[0], y[-1]) for y in years]
+
+
+def get_ssebopeta_urls(start=None, end=None, years=None):
+    """Get list of URLs for SSEBop dataset within a period"""
+    if years is None and start is not None and end is not None:
+        if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
+            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+    elif years is not None and start is None and end is None:
+        years = years if isinstance(years, list) else [years]
+        dates = [pd.date_range(f"{year}0101", f"{year}1231") for year in years]
+        for d in dates:
+            if d[0] < pd.to_datetime("2000-01-01"):
+                raise ValueError("SSEBop database ranges from 2000 till 2018.")
+    else:
+        raise ValueError("Either years or start and end arguments should be provided.")
+
+    base_url = (
+        "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
+        + "shared/uswem/web/conus/eta/modis_eta/daily/downloads"
+    )
+    f_list = [
+        (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
+        for d in pd.date_range(start, end)
+    ]
+
+    return f_list
 
 
 def elevation_byloc(lon, lat):
@@ -146,7 +192,7 @@ def elevation_byloc(lon, lat):
         return elevation
 
 
-def elevation_bybbox(bbox, resolution, coords, crs="4326"):
+def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     """Get elevation from DEM data for a list of coordinates.
 
     This function is intended for getting elevations for a gridded dataset.
@@ -156,15 +202,21 @@ def elevation_bybbox(bbox, resolution, coords, crs="4326"):
     bbox : list or tuple
         Bounding box with coordinates in [west, south, east, north] format.
     resolution : float
-        Gridded data resolution
+        Gridded data resolution in arc-second
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
+    crs : string, optional
+        The spatial reference system of the input region, defaults to
+        epsg:4326.
 
     Returns
     -------
-    numpy.array
+    numpy.ndarray
         An array of elevations in meters
     """
+    import pyproj
+    import shapely.ops as ops
+
     if isinstance(bbox, list) or isinstance(bbox, tuple):
         if len(bbox) != 4:
             raise TypeError(
@@ -179,7 +231,14 @@ def elevation_bybbox(bbox, resolution, coords, crs="4326"):
     layers = ["3DEPElevation:None"]
     version = "1.3.0"
 
-    west, south, east, north = bbox
+    if crs != "epsg:4326":
+        prj = pyproj.Transformer.from_crs(crs, "epsg:4326", always_xy=True)
+        _bbox = ops.transform(prj.transform, box(*bbox))
+        res_bbox = _bbox.bounds
+    else:
+        res_bbox = bbox
+
+    west, south, east, north = res_bbox
     width = int((east - west) * 3600 / resolution)
     height = int(abs(north - south) / abs(east - west) * width)
 
@@ -844,15 +903,16 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
     ---------
     content : requests.Response
         The response to be processed
-    geometry : Polygon
-        The geometry to clip the data
+    mask : numpy.ndarray
+        The mask to clip the data
+    transform : tuple
+        Transform of the mask
+    width : int
+        x-dimension of the data
+    heigth : int
+        y-dimension of the data
     name : string
         Variable name in the dataset
-    nodata : int or float
-        The value to be set for nodata. If set to None, uses the source
-        nodata value or if not available, automatically sets NAN for float
-        datasets and maximum value in the data type range. For example, if the
-        source data has ``uint8`` type nodata is set to 255.
     fpath : string or Path
         The path save the file
 
@@ -1023,7 +1083,7 @@ def vector_accumulation(
     -------
     dict
         Accumulated flow at all the nodes. The keys are the IDs and the values
-        are the time series as `numpy.array`s. The outlet node is called `out`.
+        are the time series as `numpy.ndarray`s. The outlet node is called `out`.
     """
     topo_sorted, upstream_nodes = topoogical_sort(
         flowlines[[id_name, toid_name]].rename(

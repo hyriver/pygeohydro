@@ -6,9 +6,9 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
-import rasterio.mask as rio_mask
 from hydrodata import helpers, services, utils
 from pqdm.threads import pqdm
+from shapely.geometry import Polygon
 
 import xarray as xr
 
@@ -282,7 +282,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     df.drop(["year", "yday"], axis=1, inplace=True)
 
     if pet:
-        df = utils.pet_fao(df, lon, lat)
+        df = utils.pet_fao_byloc(df, lon, lat)
     return df
 
 
@@ -296,6 +296,7 @@ def daymet_bygeom(
     resolution=None,
     fill_holes=False,
     n_threads=4,
+    verbose=False,
 ):
     """Gridded data from the Daymet database.
 
@@ -326,6 +327,8 @@ def daymet_bygeom(
         Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
         Number of threads for simultanious download, defaults to 4 and max is 8.
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -334,7 +337,6 @@ def daymet_bygeom(
     """
 
     from pandas.tseries.offsets import DateOffset
-    from shapely.geometry import Polygon
 
     base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
 
@@ -417,7 +419,11 @@ def daymet_bygeom(
     def getter(url):
         return xr.open_dataset(utils.get_url(session, url).content)
 
-    data = xr.merge(pqdm(urls, getter, n_jobs=n_threads, desc=f"Gridded Daymet"))
+    data = xr.merge(
+        pqdm(
+            urls, getter, n_jobs=n_threads, desc=f"Gridded Daymet", disable=not verbose
+        )
+    )
 
     for k, v in units.items():
         if k in variables:
@@ -693,7 +699,13 @@ def nhdplus_byid(feature, featureids):
 
 
 def ssebopeta_bygeom(
-    geometry, start=None, end=None, years=None, resolution=None, fill_holes=False
+    geometry,
+    start=None,
+    end=None,
+    years=None,
+    resolution=None,
+    fill_holes=False,
+    verbose=False,
 ):
     """Gridded data from the SSEBop database.
 
@@ -718,16 +730,15 @@ def ssebopeta_bygeom(
         List of years
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
     xarray.DataArray
-        The actual ET for the requested region.
+        The actual ET for the requested region at 1 km resolution.
     """
 
-    from shapely.geometry import Polygon
-    import socket
-    from unittest.mock import patch
     import zipfile
     import io
 
@@ -736,82 +747,50 @@ def ssebopeta_bygeom(
     elif fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    if years is None and start is not None and end is not None:
-        if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
-            raise ValueError("SSEBop database ranges from 2000 till 2018.")
-    elif years is not None and start is None and end is None:
-        years = years if isinstance(years, list) else [years]
-        dates = [pd.date_range(f"{year}0101", f"{year}1231") for year in years]
-        for d in dates:
-            if d[0] < pd.to_datetime("2000-01-01"):
-                raise ValueError("SSEBop database ranges from 2000 till 2018.")
-    else:
-        raise ValueError("Either years or start and end arguments should be provided.")
+    resolution = 1.0e3 / 6371000.0 * 3600.0 / np.pi * 180.0
+    west, south, east, north = geometry.bounds
 
-    base_url = (
-        "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
-        + "shared/uswem/web/conus/eta/modis_eta/daily/downloads"
-    )
-    f_list = [
-        (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
-        for d in pd.date_range(start, end)
-    ]
+    width = int((east - west) * 3600 / resolution)
+    height = int(abs(north - south) / abs(east - west) * width)
 
-    orig_getaddrinfo = socket.getaddrinfo
+    mask, transform = utils.geom_mask(geometry, width, height)
+    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
+
     session = utils.retry_requests()
 
-    def getaddrinfoIPv4(host, port, family=0, type=0, proto=0, flags=0):
-        return orig_getaddrinfo(
-            host=host,
-            port=port,
-            family=socket.AF_INET,
-            type=type,
-            proto=proto,
-            flags=flags,
+    with utils.onlyIPv4():
+
+        def _ssebop(url_stamped):
+            dt, url = url_stamped
+            r = utils.get_url(session, url)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            return (dt, z.read(z.filelist[0].filename))
+
+        resp = pqdm(
+            f_list, _ssebop, n_jobs=4, desc=f"Gridded SSEBop", disable=not verbose
         )
 
-    # disable IPv6 to speedup the download
-    with patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4):
-        # find the mask using the first dataset
-        dt, url = f_list[0]
+        data = utils.create_dataset(
+            resp[0][1], mask, transform, width, height, "eta", None
+        )
+        data = data.expand_dims(dict(time=[resp[0][0]]))
 
-        r = utils.get_url(session, url)
+        if len(resp) > 1:
+            for dt, r in resp:
+                ds = utils.create_dataset(
+                    r, mask, transform, width, height, "eta", None
+                )
+                ds = ds.expand_dims(dict(time=[dt]))
+                data = xr.merge([data, ds])
 
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        with rio.MemoryFile() as memfile:
-            memfile.write(z.read(z.filelist[0].filename))
-            with memfile.open() as src:
-                ras_msk, _ = rio_mask.mask(src, [geometry])
-                nodata = src.nodata
-                with xr.open_rasterio(src) as ds:
-                    ds.data = ras_msk
-                    msk = ds < nodata if nodata > 0.0 else ds > nodata
-                    ds = ds.where(msk, drop=True)
-                    ds = ds.expand_dims(dict(time=[dt]))
-                    ds = ds.squeeze("band", drop=True)
-                    ds.name = "eta"
-                    data = ds * 1e-3
-
-        # apply the mask to the rest of the data and merge
-        for dt, url in f_list[1:]:
-            r = utils.get_url(session, url)
-
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-            with rio.MemoryFile() as memfile:
-                memfile.write(z.read(z.filelist[0].filename))
-                with memfile.open() as src:
-                    with xr.open_rasterio(src) as ds:
-                        ds = ds.where(msk, drop=True)
-                        ds = ds.expand_dims(dict(time=[dt]))
-                        ds = ds.squeeze("band", drop=True)
-                        ds.name = "eta"
-                        data = xr.merge([data, ds * 1e-3])
-
-    data["eta"].attrs["units"] = "mm/day"
-    return data
+    eta = data.eta.copy()
+    eta = eta.where(eta < eta.nodatavals[0], drop=True)
+    eta *= 1e-3
+    eta.attrs.update({"units": "mm/day", "nodatavals": (np.nan,)})
+    return eta
 
 
-def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
+def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
     """Gridded data from the SSEBop database.
 
     The data is clipped using netCDF Subset Service.
@@ -828,6 +807,8 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
         Ending date
     years : list
         List of years
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -835,23 +816,35 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
         The actual ET for the requested region.
     """
 
-    from shapely.geometry import box
+    import zipfile
+    import io
 
-    # form a geometry with a size less than the grid size (1 km)
-    ext = 0.0005
-    geometry = box(lon - ext, lat - ext, lon + ext, lat + ext)
+    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
+    session = utils.retry_requests()
 
-    if years is None and start is not None and end is not None:
-        ds = ssebopeta_bygeom(geometry, start=start, end=end)
-    elif years is not None and start is None and end is None:
-        ds = ssebopeta_bygeom(geometry, years=years)
-    else:
-        raise ValueError("Either years or start and end arguments should be provided.")
+    elevations = {}
+    with utils.onlyIPv4():
 
-    data = ds.to_dataframe().reset_index()[["time", "eta"]]
-    data.columns = [["time", "eta (mm/day)"]]
-    data.set_index("time", inplace=True)
-    return data
+        def ssebop(urls):
+            dt, url = urls
+            r = utils.get_url(session, url)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+
+            with rio.MemoryFile() as memfile:
+                memfile.write(z.read(z.filelist[0].filename))
+                with memfile.open() as src:
+                    return {
+                        "dt": dt,
+                        "eta": [e[0] for e in src.sample([(lon, lat)])][0],
+                    }
+
+        elevations = pqdm(
+            f_list, ssebop, n_jobs=4, desc="Single pixel SSEBop", disable=not verbose
+        )
+    data = pd.DataFrame.from_records(elevations)
+    data.columns = ["datetime", "eta (mm/day)"]
+    data.set_index("datetime", inplace=True)
+    return data * 1e-3
 
 
 def nlcd(
@@ -937,6 +930,7 @@ def nlcd(
 
     ds = services.wms_bygeom(
         url,
+        "NLCD",
         geometry,
         width=width,
         resolution=resolution,
@@ -1003,6 +997,7 @@ def nationalmap_dem(
 
     dem = services.wms_bygeom(
         url,
+        "DEM",
         geometry,
         width=width,
         resolution=resolution,
