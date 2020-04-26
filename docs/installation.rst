@@ -4,39 +4,37 @@
 Installation
 ============
 
-Required dependencies
----------------------
 
-- Python (3.6 or later)
-- `NumPy <http://www.numpy.org/>`_
-- `Pandas <http://pandas.pydata.org/>`__
-    - `Tables <https://www.pytables.org/usersguide/tutorials.html>`_
-- `Xarray <https://xarray.pydata.org/en/stable/>`_
-    - `Dask <https://dask.org/>`_
-    - `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
-    - `Bottleneck <https://pypi.org/project/Bottleneck/>`_
-    - `Scipy <https://www.scipy.org/>`_
-    - `Lxml <https://lxml.de/>`_
-- `Requests <https://requests.readthedocs.io/en/master/>`_
-- `OWSLib <https://geopython.github.io/OWSLib/>`_
-- `GeoPandas <https://geopandas.org/>`_
-    - `Descartes <https://pypi.org/project/descartes/>`_
-    - `GeoJSON <https://pypi.org/project/geojson/>`_
-- `Rasterio <https://github.com/mapbox/rasterio>`_
-- `Matplotlib <http://matplotlib.org/>`_
-- `Shapely <https://shapely.readthedocs.io/en/latest/>`_
-
-Optional dependencies
----------------------
-
-- `CartoPy <http://scitools.org.uk/cartopy/>`_ for plotting
-- `NetworkX <https://networkx.github.io/>`_ for flow accumulation
-
+Dependencies
+------------
++===================================================+==========================================================================+=============================================+
+|                    Dependencies                   |                             Sub-dependencies                             |                   Optional                  |
++===================================================+==========================================================================+=============================================+
+| `Python 3.6+ <https://www.python.org/downloads>`_ |      `Tables <https://www.pytables.org/usersguide/tutorials.html>`_      | `CartoPy <http://scitools.org.uk/cartopy>`_ |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|          `NumPy <http://www.numpy.org/>`_         |                        `Dask <https://dask.org/>`_                       |   `NetworkX <https://networkx.github.io>`_  |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|        `Pandas <http://pandas.pydata.org>`_       | `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_ |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|   `Xarra <https://xarray.pydata.org/en/stable>`_  |            `Bottleneck <https://pypi.org/project/Bottleneck>`_           |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|   `Requests <https://requests.readthedocs.io>`_   |                     `SciPy <https://www.scipy.org>`_                     |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|   `OWSLib <https://geopython.github.io/OWSLib>`_  |                         `Lxml <https://lxml.de>`_                        |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|        `GeoPandas <https://geopandas.org>`_       |             `Descartes <https://pypi.org/project/descartes>`_            |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|  `RasterIO <https://github.com/mapbox/rasterio>`_ |               `GeoJSON <https://pypi.org/project/geojson>`_              |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|       `Matplotlib <http://matplotlib.org>`_       |                                                                          |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
+|    `Shapely <https://shapely.readthedocs.io>`_    |                                                                          |                                             |
++---------------------------------------------------+--------------------------------------------------------------------------+---------------------------------------------+
 
 Stable release
 --------------
 
-After installing dependecies, to install Hydrodata, run this command in your terminal:
+After installing dependencies, to install Hydrodata, run this command in your terminal:
 
 .. code-block:: console
 
@@ -44,7 +42,7 @@ After installing dependecies, to install Hydrodata, run this command in your ter
 
 This is the preferred method to install Hydrodata, as it will always install the most recent stable release.
 
-Alternatively, Hydrodata and all it's dependencies can be installed using `Conda <https://conda.io/en/latest/>`_ as follows:
+Alternatively, Hydrodata and all its dependencies can be installed using `Conda <https://conda.io/en/latest/>`_ as follows:
 
 .. code-block:: console
 
