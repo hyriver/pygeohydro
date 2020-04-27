@@ -16,9 +16,10 @@ dependencies:
   - bottleneck
   - lxml
   - geopandas
-  - folium
   - pip:
     - geojson
+    - folium
+    - rasterio
     - pqdm
     - tables
     - xlrd

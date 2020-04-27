@@ -19,6 +19,7 @@ dependencies:
     - geopandas
     - geojson
     - folium
+    - rasterio
     - tables
     - xlrd
     - networkx
