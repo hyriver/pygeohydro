@@ -205,6 +205,8 @@ class Station:
                 + "No USGS station were found within a "
                 + f"{int(self.srad * 111 / 10) * 10}-km radius "
                 + f"with daily mean streamflow from {self.start} to {self.end}"
+                + ".\nUse utils.interactive_map(bbox) function to explore "
+                + "the available stations in the area."
             )
             raise ValueError(msg)
         else:
