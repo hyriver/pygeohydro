@@ -20,7 +20,7 @@ from requests.exceptions import (
     RetryError,
     Timeout,
 )
-from shapely.geometry import Point, box, mapping
+from shapely.geometry import box, mapping
 
 
 def retry_requests(
@@ -139,14 +139,20 @@ def daymet_dates(start, end):
 def get_ssebopeta_urls(start=None, end=None, years=None):
     """Get list of URLs for SSEBop dataset within a period"""
     if years is None and start is not None and end is not None:
-        if pd.to_datetime(start) < pd.to_datetime("2000-01-01"):
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
             raise ValueError("SSEBop database ranges from 2000 till 2018.")
+        dates = pd.date_range(start, end)
     elif years is not None and start is None and end is None:
         years = years if isinstance(years, list) else [years]
-        dates = [pd.date_range(f"{year}0101", f"{year}1231") for year in years]
-        for d in dates:
-            if d[0] < pd.to_datetime("2000-01-01"):
-                raise ValueError("SSEBop database ranges from 2000 till 2018.")
+        seebop_yrs = np.arange(2000, 2019)
+
+        if any(y not in seebop_yrs for y in years):
+            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+
+        d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
+        dates = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
@@ -156,7 +162,7 @@ def get_ssebopeta_urls(start=None, end=None, years=None):
     )
     f_list = [
         (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
-        for d in pd.date_range(start, end)
+        for d in dates
     ]
 
     return f_list
@@ -501,69 +507,6 @@ def exceedance(daily):
     fdc.sort_values(by=["rank"], inplace=True)
     fdc.set_index("rank", inplace=True, drop=True)
     return fdc
-
-
-def subbasin_delineation(station_id):
-    """Delineate subbasins of a watershed based on HUC12 pour points."""
-
-    import hydrodata.datasets as hds
-
-    trib_ids = hds.nhdplus_navigate_byid("nwissite", station_id).comid.tolist()
-    trib = hds.nhdplus_byid(trib_ids, layer="nhdflowline_network")
-    trib_fl = prepare_nhdplus(trib, 0, 0, purge_non_dendritic=True, warn=False)
-
-    main_fl = trib_fl[trib_fl.streamleve == 1].copy()
-
-    main_ids = main_fl.sort_values(by="hydroseq").comid.tolist()
-    len_cs = main_fl.set_index("comid").sort_values(by="hydroseq").lengthkm.cumsum()
-
-    pp = hds.nhdplus_navigate_byid("nwissite", station_id, dataSource="huc12pp")
-    station = Point(
-        mapping(main_fl[main_fl.comid == main_ids[0]].geometry.values[0])[
-            "coordinates"
-        ][0][-1][:-1]
-    )
-    pp = pp.append([{"geometry": station, "comid": main_ids[0]}], ignore_index=True)
-    headwater = Point(
-        mapping(main_fl[main_fl.comid == main_ids[-1]].geometry.values[0])[
-            "coordinates"
-        ][0][-1][:-1]
-    )
-    pp = pp.append([{"geometry": headwater, "comid": main_ids[-1]}], ignore_index=True)
-    pp_sorted = pp[pp.comid.isin(main_ids)].comid.tolist()
-    pp = pp.set_index("comid").loc[pp_sorted].reset_index()
-
-    pp_dist = len_cs[len_cs.index.isin(pp_sorted)]
-    pp_dist = pp_dist.diff()
-
-    pp_idx = [main_ids[0]] + pp_dist[pp_dist > 1].index.tolist()
-
-    if len(pp_idx) < 2:
-        msg = "There are not enough pour points in the watershed for automatic delineation."
-        msg += " Try passing the desired number of subbasins."
-        raise ValueError(msg)
-
-    pour_points = pp[pp.comid.isin(pp_idx[1:-1])]
-
-    pp_idx = [main_ids.index(i) for i in pp_idx]
-    idx_subs = [main_ids[pp_idx[i - 1] : pp_idx[i]] for i in range(1, len(pp_idx))]
-
-    catchemnts = []
-    sub = [trib_fl]
-    fm = main_fl.copy()
-    for idx_max in idx_subs:
-        sub.append(
-            hds.nhdplus_navigate_byid("comid", idx_max[-1], "upstreamTributaries")
-        )
-        idx_catch = sub[-2][~sub[-2].comid.isin(sub[-1].comid)].comid.tolist()
-        catchemnts.append(hds.nhdplus_byid(idx_catch, "catchmentsp"))
-        fm = fm[~fm.comid.isin(idx_max)]
-
-    catchemnts[-1] = catchemnts[-1].append(
-        hds.nhdplus_byid(sub[-1].comid.tolist(), "catchmentsp")
-    )
-
-    return catchemnts, pour_points
 
 
 def interactive_map(bbox):
@@ -1108,8 +1051,6 @@ def vector_accumulation(
             *flowlines.loc[flowlines[id_name] == i, col_names].values[0],
         )
 
-    q["out"] = func(
-        np.sum([q[u] for u in upstream_nodes[pd.NA]], axis=0),
-        *flowlines.loc[flowlines[toid_name].isna(), col_names].values[0],
-    )
+    q["out"] = q[topo_sorted[-2]]
+    q.pop(0)
     return q
