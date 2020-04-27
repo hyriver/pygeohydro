@@ -18,6 +18,7 @@ dependencies:
   - lxml
   - geopandas
   - folium
+  - rasterio
   - jupyterlab
   - pyproj
   - proj
