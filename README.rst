@@ -92,7 +92,21 @@ The generated ``wshed`` object has a property that shows whether the station is 
     stations = hds.NLDI.stations(wshed.station_id)
     stations_m150 = hds.NLDI.stations(wshed.station_id, navigation="upstreamMain", distance=150)
 
-DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution, as follows:
+For demonstrating the flow accumulation function, lets assum the flow in each river segment is equal to the length of the river segment. Therefore, theoretically the accumulated flow at the outlet should be equall to the total length of the river network.
+
+.. code-block:: python
+
+    from hydrodata import utils
+
+    flw = utils.prepare_nhdplus(hds.NLDI.flowlines('01031500'), 0, 0, purge_non_dendritic=False)
+    segments = flw[["comid", "tocomid", "lengthkm"]].copy()
+
+    def routing(qin, q):
+        return qin.item() + q
+
+    qsim = utils.vector_accumulation(segments, routing, ["lengthkm"], 1)["out"]
+
+We can check using ``abs(qsim - segments.lengthkm.sum()) = 1e-13``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution, as follows:
 
 .. code-block:: python
 
