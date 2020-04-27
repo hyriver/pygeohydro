@@ -513,7 +513,7 @@ class NLDI:
     @classmethod
     def pour_points(cls, station_id):
         """Get upstream tributaries of the watershed."""
-        return cls.navigate("nwissite", station_id, "huc12pp")
+        return cls.navigate("nwissite", station_id, dataSource="huc12pp")
 
     @classmethod
     def flowlines(cls, station_id):
@@ -700,6 +700,63 @@ def nhdplus_byid(feature, featureids):
     return gdf
 
 
+def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
+    """Gridded data from the SSEBop database.
+
+    The data is clipped using netCDF Subset Service.
+
+    Parameters
+    ----------
+    geom : list
+        The bounding box for downloading the data. The order should be
+        as follows:
+        geom = [west, south, east, north]
+    start : string or datetime
+        Starting date
+    end : string or datetime
+        Ending date
+    years : list
+        List of years
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
+
+    Returns
+    -------
+    xarray.DataArray
+        The actual ET for the requested region.
+    """
+
+    import zipfile
+    import io
+
+    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
+    session = utils.retry_requests()
+
+    elevations = {}
+    with utils.onlyIPv4():
+
+        def _ssebop(urls):
+            dt, url = urls
+            r = utils.get_url(session, url)
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+
+            with rio.MemoryFile() as memfile:
+                memfile.write(z.read(z.filelist[0].filename))
+                with memfile.open() as src:
+                    return {
+                        "dt": dt,
+                        "eta": [e[0] for e in src.sample([(lon, lat)])][0],
+                    }
+
+        elevations = pqdm(
+            f_list, _ssebop, n_jobs=4, desc="Single pixel SSEBop", disable=not verbose
+        )
+    data = pd.DataFrame.from_records(elevations)
+    data.columns = ["datetime", "eta (mm/day)"]
+    data.set_index("datetime", inplace=True)
+    return data * 1e-3
+
+
 def ssebopeta_bygeom(
     geometry,
     start=None,
@@ -790,63 +847,6 @@ def ssebopeta_bygeom(
     eta *= 1e-3
     eta.attrs.update({"units": "mm/day", "nodatavals": (np.nan,)})
     return eta
-
-
-def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
-    """Gridded data from the SSEBop database.
-
-    The data is clipped using netCDF Subset Service.
-
-    Parameters
-    ----------
-    geom : list
-        The bounding box for downloading the data. The order should be
-        as follows:
-        geom = [west, south, east, north]
-    start : string or datetime
-        Starting date
-    end : string or datetime
-        Ending date
-    years : list
-        List of years
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
-
-    Returns
-    -------
-    xarray.DataArray
-        The actual ET for the requested region.
-    """
-
-    import zipfile
-    import io
-
-    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
-    session = utils.retry_requests()
-
-    elevations = {}
-    with utils.onlyIPv4():
-
-        def ssebop(urls):
-            dt, url = urls
-            r = utils.get_url(session, url)
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-
-            with rio.MemoryFile() as memfile:
-                memfile.write(z.read(z.filelist[0].filename))
-                with memfile.open() as src:
-                    return {
-                        "dt": dt,
-                        "eta": [e[0] for e in src.sample([(lon, lat)])][0],
-                    }
-
-        elevations = pqdm(
-            f_list, ssebop, n_jobs=4, desc="Single pixel SSEBop", disable=not verbose
-        )
-    data = pd.DataFrame.from_records(elevations)
-    data.columns = ["datetime", "eta (mm/day)"]
-    data.set_index("datetime", inplace=True)
-    return data * 1e-3
 
 
 def nlcd(
