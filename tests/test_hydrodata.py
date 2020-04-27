@@ -7,9 +7,9 @@ from hydrodata import Station, plot, services, utils
 
 
 def test_station():
-    natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
+    natural = Station("2000-01-01", "2010-01-21", station_id="01031500")
     urban = Station(start="2000-01-01", end="2010-01-21", coords=(-118.47, 34.16))
-    assert natural.hcdn is True and urban.hcdn is False
+    assert natural.hcdn and not urban.hcdn
 
 
 def test_nwis():
