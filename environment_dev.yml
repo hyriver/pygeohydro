@@ -46,6 +46,7 @@ dependencies:
     - mypy==0.761
     - pre-commit
     - geojson
+    - simplejson
     - black
     - tables
     - xlrd

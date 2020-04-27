@@ -18,6 +18,7 @@ dependencies:
   - geopandas
   - pip:
     - geojson
+    - simplejson
     - folium
     - rasterio
     - pqdm
