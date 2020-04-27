@@ -154,7 +154,6 @@ class Station:
 
     def get_id(self):
         """Get station ID based on the specified coordinates."""
-        import shapely.ops as ops
         import shapely.geometry as geom
 
         bbox = [
@@ -184,22 +183,33 @@ class Station:
                 ].itertuples(name=None, index=False)
             ]
         )
-        gdf = gpd.GeoSeries(pts)
-        nearest = ops.nearest_points(point, gdf.unary_union)[1]
-        idx = gdf[gdf.geom_equals(nearest)].index[0]
-        station = df[df.site_no == idx]
-        st_begin = station.begin_date.values[0]
-        st_end = station.end_date.values[0]
-        if self.start < st_begin or self.end > st_end:
-            warn(
-                f"[ID: {self.station_id}] ".ljust(MARGINE)
-                + "Daily Mean data unavailable for the specified time period."
-                + " The data is available from "
-                + f"{np.datetime_as_string(st_begin, 'D')} to "
-                + f"{np.datetime_as_string(st_end, 'D')}."
-            )
 
-        self.station_id = station.site_no.values[0]
+        gdf = gpd.GeoSeries(pts)
+        distance = gdf.apply(lambda x: x.distance(point)).sort_values()
+
+        station_id = None
+        for sid, dis in distance.iteritems():
+            station = df[df.site_no == sid]
+            st_begin = station.begin_date.values[0]
+            st_end = station.end_date.values[0]
+
+            if self.start < st_begin or self.end > st_end:
+                continue
+            else:
+                station_id = sid
+                break
+
+        if station_id is None:
+            msg = (
+                f"[ID: {self.coords}] ".ljust(MARGINE)
+                + "No USGS station were found within a "
+                + f"{int(self.srad * 111 / 10) * 10}-km radius "
+                + f"with daily mean streamflow from {self.start} to {self.end}"
+            )
+            raise ValueError(msg)
+        else:
+            self.station_id = station_id
+
         self.coords = (
             station.dec_long_va.astype("float64").values[0],
             station.dec_lat_va.astype("float64").values[0],
