@@ -27,7 +27,7 @@
 Features
 --------
 
-Hydrodata is a python library designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
+Hydrodata is a python library designed to aid in watershed analysis. It provides easy and consistent access to a handful of hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
 
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ and `NHDPlus V2 <https://www.usgs.gov/core-science-systems/ngp/national-hydrography/national-hydrography-dataset?qt-science_support_page_related_con=0#qt-science_support_page_related_con>`_ for vector river network, catchments, and other NHDPlus data.
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded
@@ -83,16 +83,18 @@ With just a few lines of code, Hydrodata provides easy access to a handful of da
 
     wshed = Station(start='2000-01-01', end='2010-01-21', coords=(-69.32, 45.17))
 
-The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., it's a natural watershed or affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, Using the retrieved information such as the watershed geometry we can then use the ``datasets`` module to access the databases. For example, we can get main river channel and tributaries, USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
+The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases. For example, we can get the main river channel and the tributaries of the watershed, the USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
 
 .. code-block:: python
 
-    tributaries = hds.NLDI.tributaries(wshed.station_id)
-    main = hds.NLDI.main(wshed.station_id)
-    stations = hds.NLDI.stations(wshed.station_id)
-    stations_m150 = hds.NLDI.stations(wshed.station_id, navigation="upstreamMain", distance=150)
+    nldi, sid = hds.NLDI, wshed.station_id
 
-For demonstrating the flow accumulation function, lets assum the flow in each river segment is equal to the length of the river segment. Therefore, theoretically the accumulated flow at the outlet should be equall to the total length of the river network.
+    tributaries = nldi.tributaries(sid)
+    main = nldi.main(sid)
+    stations = nldi.stations(sid)
+    stations_m150 = nldi.stations(sid, navigation="upstreamMain", distance=150)
+
+For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, theoretically the accumulated flow at the outlet should be equall to the total length of the river network.
 
 .. code-block:: python
 
@@ -106,13 +108,13 @@ For demonstrating the flow accumulation function, lets assum the flow in each ri
 
     qsim = utils.vector_accumulation(segments, routing, ["lengthkm"], 1)["out"]
 
-We can check using ``abs(qsim - segments.lengthkm.sum()) = 1e-13``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution, as follows:
+We can check the validity of the results using ``abs(qsim - segments.lengthkm.sum()) = 1e-13``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
 
 .. code-block:: python
 
     dem = hds.nationalmap_dem(wshed.geometry, resolution=30)
 
-The climate data and streamflow observations for a location of interest can be retrieved as well:
+The climate data and streamflow observations for a location of interest can be retrieved as well. Note the use of ``pet`` flag for computing PET:
 
 .. code-block:: python
 
@@ -122,7 +124,7 @@ The climate data and streamflow observations for a location of interest can be r
                              variables=variables, pet=True)
     clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, wshed.start, wshed.end)
 
-Other than point-based data, we can get gridded databases that are masked with the watershed geometry. Note the use of ``pet`` flag for computing PET:
+Other than point-based data, we can get data from gridded databases. The retrieved data are masked with the watershed geometry:
 
 .. code-block:: python
 
@@ -131,7 +133,7 @@ Other than point-based data, we can get gridded databases that are masked with t
                               variables=variables, pet=True)
     eta_g = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Hydrodata also has a ``plot`` module that plots five hydrologic signatures graphs in one plot.
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures graphs in one plot:
 
 .. code-block:: python
 
@@ -144,7 +146,7 @@ Some example plots are shown below:
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
         :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
-The ``services`` module can be used to access some other web services as well. For example, we can accessing `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
+The ``services`` module can be used to access some other web services as well. For example, we can access `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
 .. code-block:: python
 
