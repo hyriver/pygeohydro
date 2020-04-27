@@ -2,7 +2,7 @@
 History
 =======
 
-0.4.5 (2020-04-25)
+0.5.0 (2020-04-25)
 ------------------
 
 * An almost complete re-writing of the code base and not backward-compatible
