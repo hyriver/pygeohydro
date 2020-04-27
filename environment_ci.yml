@@ -15,11 +15,10 @@ dependencies:
   - netCDF4
   - bottleneck
   - lxml
-  - folium
   - pip:
     - geopandas
     - geojson
-    - rasterstats
+    - folium
     - tables
     - xlrd
     - networkx
