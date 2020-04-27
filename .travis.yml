@@ -1,22 +1,47 @@
+os:
+  - linux
+
 language: python
 python:
   - 3.8
   - 3.7
   - 3.6
 
-install:
-  - sudo apt-get update
-  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+jobs:
+  include:
+    - os: osx
+      language: generic
+      env: TOXENV=py36
+    - os: osx
+      language: generic
+      env: TOXENV=py37
+    - os: osx
+      language: generic
+      env: TOXENV=py38
+
+before_install:
+  - >-
+    if [ $(uname) = "Darwin" ];
+    then
+    export TRAVIS_PYTHON_VERSION="`sed 's/^..//; s/./&./' <(echo $TOXENV)`";
+    brew update > /dev/null 2>&1;
+    brew install gnu-sed > /dev/null 2>&1;
+    gsed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml;
+    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+    else
+    sed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml;
+    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
   - bash miniconda.sh -b -p $HOME/miniconda
   - source "$HOME/miniconda/etc/profile.d/conda.sh"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
   - conda info -a
-  - sed -i -E 's/(python>=)(.*)/\1'$TRAVIS_PYTHON_VERSION'/' ./environment_ci.yml
-  - sed -i 's/python>=/python=/' ./environment_ci.yml
   - conda env create -f environment_ci.yml
   - conda activate hydrodata-ci
+
+install:
   - python setup.py install
 
 script: tox
