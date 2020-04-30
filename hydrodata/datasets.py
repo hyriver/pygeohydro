@@ -629,7 +629,7 @@ class NLDI:
         return gdf
 
 
-def nhdplus_bybox(feature, bbox):
+def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
     """Get NHDPlus flowline database within a bounding box.
 
     Parameters
@@ -641,6 +641,12 @@ def nhdplus_bybox(feature, bbox):
         The bounding box for the region of interest in WGS 83, defaults to None.
         The list should provide the corners in this order:
         [west, south, east, north]
+    in_crs : string, optional
+        The spatial reference system of the input bbox, defaults to
+        epsg:4326.
+    crs: string, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
 
     Returns
     -------
@@ -653,12 +659,15 @@ def nhdplus_bybox(feature, bbox):
         msg += f" Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    wfs = services.USGSGeoserver("wfs", feature)
-    r = wfs.getfeature_bybox(bbox)
+    wfs = services.WFS(
+        "https://cida.usgs.gov/nwc/geoserver/wfs",
+        layer=f"nhdplus:{feature}",
+        outFormat="application/json",
+        crs="epsg:4269",
+    )
+    r = wfs.getfeature_bybox(bbox, in_crs=in_crs)
+    gdf = utils.json_togeodf(r.json(), "epsg:4269", crs)
 
-    crs = "epsg:4326"
-    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-    gdf.crs = crs
     if gdf.shape[0] == 0:
         raise KeyError(
             f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
@@ -667,7 +676,7 @@ def nhdplus_bybox(feature, bbox):
     return gdf
 
 
-def nhdplus_byid(feature, featureids):
+def nhdplus_byid(feature, featureids, crs="epsg:4326"):
     """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
 
     Parameters
@@ -677,6 +686,9 @@ def nhdplus_byid(feature, featureids):
         ``catchmentsp`` and ``nhdflowline_network``
     featureids : string or list
         The ID(s) of the requested feature.
+    crs: string, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
 
     Returns
     -------
@@ -688,13 +700,16 @@ def nhdplus_byid(feature, featureids):
         msg += f"Valid features are {', '.join(x for x in valid_features)}"
         raise ValueError(msg)
 
-    wfs = services.USGSGeoserver("wfs", feature)
     propertyname = "featureid" if feature == "catchmentsp" else "comid"
-    r = wfs.getfeature_byid(propertyname, featureids)
 
-    crs = "epsg:4326"
-    gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-    gdf.crs = crs
+    wfs = services.WFS(
+        "https://cida.usgs.gov/nwc/geoserver/wfs",
+        layer=f"nhdplus:{feature}",
+        outFormat="application/json",
+        crs="epsg:4269",
+    )
+    r = wfs.getfeature_byid(propertyname, featureids)
+    gdf = utils.json_togeodf(r.json(), "epsg:4269", crs)
     if gdf.shape[0] == 0:
         raise KeyError("No feature was found with the provided IDs")
     return gdf
@@ -940,7 +955,7 @@ def nlcd(
         outFormat="image/geotiff",
         fill_holes=fill_holes,
         in_crs=in_crs,
-        out_crs=out_crs,
+        crs=out_crs,
     )
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -1008,7 +1023,7 @@ def nationalmap_dem(
         fill_holes=fill_holes,
         fpath=fpath,
         in_crs=in_crs,
-        out_crs=out_crs,
+        crs=out_crs,
     )
     dem.attrs["units"] = "meters"
     return dem

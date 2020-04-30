@@ -93,7 +93,7 @@ class ArcGISServer:
     @layer.setter
     def layer(self, value):
         if value is not None:
-            v_dict, _ = self.get_layers(self.serviceName)
+            v_dict, _ = self.get_layers()
             valids = list(v_dict.keys())
             if value not in valids or not isinstance(value, int):
                 msg = f"The given layer, {value}, is not valid. "
@@ -492,215 +492,6 @@ class ArcGISREST(ArcGISServer):
         return gpd.GeoDataFrame(pd.concat(success))
 
 
-class USGSGeoserver:
-    def __init__(self, ogcType, feature=None, version=None):
-        self.root_url = "https://cida.usgs.gov/nwc/geoserver"
-
-        if ogcType in ["wfs", "wms"]:
-            self.ogcType = ogcType
-            self.version = version
-            if self.ogcType == "wms":
-                wms_v = ["1.1.1", "1.3.0"]
-                if version not in wms_v:
-                    msg = "The given version, {version}, is not valid. "
-                    msg += f"Valid versions are {', '.join(str(v) for v in wms_v)}"
-                    raise ValueError(msg)
-                self.version = wms_v[-1] if version is None else version
-                self.ows = WebMapService(
-                    url=f"{self.root_url}/{ogcType}", version=self.version
-                )
-                self.outFormat = "image/geotiff"
-            else:
-                wfs_v = ["1.0.0", "1.1.0", "2.0.0"]
-                if version not in wfs_v:
-                    msg = "The given version, {version}, is not valid. "
-                    msg += f"Valid versions are {', '.join(str(v) for v in wfs_v)}"
-                self.version = wfs_v[-1] if version is None else version
-                self.ows = WebFeatureService(
-                    url=f"{self.root_url}/{ogcType}", version=self.version
-                )
-                self.outFormat = "application/json"
-
-            vfs = [l for l in [f":{c}".split(":")[1:] for c in list(self.ows.contents)]]
-            self.valid_features = {c[1]: c[0] for c in vfs if len(c) == 2}
-            self.valid_features_list = [c[0] for c in vfs if len(c) == 1]
-        else:
-            raise ValueError("Acceptable value for ogcType are wfs and wms.")
-
-        if feature not in list(self.valid_features.keys()):
-            msg = (
-                f"The given feature, {feature}, is not valid. The valid features are:\n"
-            )
-            msg += ", ".join(str(f) for f in list(self.valid_features.keys()))
-            raise ValueError(msg)
-        else:
-            self.feature = feature
-        self.base_url = (
-            f"{self.root_url}/{self.valid_features[self.feature]}/{self.ogcType}"
-        )
-        self.session = utils.retry_requests()
-
-    def getfeature_byid(self, featurename, featureids, crs="epsg:4326"):
-        """Get features based on feature IDs using WFS.
-
-        Parameters
-        ----------
-        featurename : string
-            The name of the column where feature IDs are
-        featureids : int, string, or list
-            The feature ID(s)
-        crs : string, optional
-            The coordinate reference of the output, defaults to ``epsg:4326``
-
-        Returns
-        -------
-        requests.Response
-        """
-        if self.ogcType == "wms":
-            raise ValueError("For WMS use getmap class function.")
-
-        if not isinstance(featureids, list):
-            featureids = [featureids]
-
-        if len(featureids) == 0:
-            raise ValueError("The feature ID list is empty!")
-
-        featureids = [str(i) for i in featureids]
-
-        def filter_xml(pname, pid):
-            fstart = '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc"><ogc:Or>'
-            fend = "</ogc:Or></ogc:Filter>"
-            return (
-                fstart
-                + "".join(
-                    [
-                        f"<ogc:PropertyIsEqualTo><ogc:PropertyName>{pname}"
-                        + f"</ogc:PropertyName><ogc:Literal>{p}"
-                        + "</ogc:Literal></ogc:PropertyIsEqualTo>"
-                        for p in pid
-                    ]
-                )
-                + fend
-            )
-
-        payload = {
-            "service": f"{self.ogcType}",
-            "version": f"{self.version}",
-            "outputFormat": f"{self.outFormat}",
-            "request": "GetFeature",
-            "typeName": f"{self.valid_features[self.feature]}:{self.feature}",
-            "srsName": crs,
-            "filter": filter_xml(featurename, featureids),
-        }
-
-        r = utils.post_url(self.session, self.base_url, payload)
-        if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
-            raise ValueError(root[0][0].text.strip())
-
-        return r
-
-    def getfeature_bybox(self, bbox, crs="epsg:4326"):
-        """Get feature within a bounding box using WFS.
-
-        Parameters
-        ----------
-        bbox : list, tuple
-            The bounding box as list: [west, south, east, north]
-        crs : string, optional
-            The coordinate reference of the output, defaults to ``epsg:4326``
-
-        Returns
-        -------
-        requests.Response
-        """
-        if self.ogcType == "wms":
-            raise ValueError("For WMS use getmap class function.")
-
-        if isinstance(bbox, list) or isinstance(bbox, tuple):
-            if len(bbox) == 4:
-                query = {"bbox": ",".join(f"{b:.06f}" for b in bbox) + f",{crs}"}
-            else:
-                raise TypeError(
-                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-                )
-        else:
-            raise TypeError(
-                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-            )
-
-        payload = {
-            "service": f"{self.ogcType}",
-            "version": f"{self.version}",
-            "outputFormat": f"{self.outFormat}",
-            "request": "GetFeature",
-            "typeName": f"{self.valid_features[self.feature]}:{self.feature}",
-            **query,
-        }
-
-        r = utils.get_url(self.session, self.base_url, payload)
-        if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
-            raise ValueError(root[0][0].text.strip())
-
-        return r
-
-    def getmap(self, bbox, width, crs="epsg:4326"):
-        """Get data within a bounding box using WMS.
-
-        Parameters
-        ----------
-        bbox : list, tuple
-            The bounding box as list: [west, south, east, north]
-        width : int
-            The width of the returned map in pixels. Height is computed
-            based the bbox aspect ration.
-        crs : string, optional
-            The coordinate reference of the output, defaults to ``epsg:4326``
-
-        Returns
-        -------
-        requests.Response
-        """
-        if self.ogcType == "wfs":
-            raise ValueError(
-                "For WFS use getfeature_byid or getfeature_bybox class function."
-            )
-
-        if isinstance(bbox, list) or isinstance(bbox, tuple):
-            if len(bbox) == 4:
-                query = {"bbox": ",".join(f"{b:.06f}" for b in bbox)}
-            else:
-                raise TypeError(
-                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-                )
-        else:
-            raise TypeError(
-                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-            )
-
-        west, south, east, north = bbox
-        height = int(abs(north - south) / abs(east - west) * width)
-        payload = {
-            "service": f"{self.ogcType}",
-            "version": f"{self.version}",
-            "format": f"{self.outFormat}",
-            "request": "GetMap",
-            "layers": f"{self.valid_features[self.feature]}:{self.feature}",
-            **query,
-            "width": width,
-            "height": height,
-            "srs": crs,
-        }
-
-        r = utils.get_url(self.session, self.base_url, payload)
-        if "xml" in r.headers["Content-Type"]:
-            root = ET.fromstring(r.text)
-            raise ValueError(root[0].text.strip())
-
-        return r
-
-
 def wms_bygeom(
     url,
     service_name,
@@ -713,7 +504,7 @@ def wms_bygeom(
     fpath=None,
     version="1.3.0",
     in_crs="epsg:4326",
-    out_crs="epsg:4326",
+    crs="epsg:4326",
     fill_holes=False,
     verbose=False,
 ):
@@ -755,7 +546,7 @@ def wms_bygeom(
     in_crs : string, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    out_crs : string, optional
+    crs : string, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
     fill_holes : bool, optional
@@ -802,7 +593,7 @@ def wms_bygeom(
         )
 
     valid_crss = {l: [s.lower() for s in wms[l].crsOptions] for l in layers.values()}
-    if any(out_crs not in valid_crss[l] for l in layers.values()):
+    if any(crs not in valid_crss[l] for l in layers.values()):
         raise ValueError(
             "The crs argument is invalid."
             + "\n".join(
@@ -818,8 +609,8 @@ def wms_bygeom(
     elif fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    if in_crs != out_crs:
-        prj = pyproj.Transformer.from_crs(in_crs, out_crs, always_xy=True)
+    if in_crs != crs:
+        prj = pyproj.Transformer.from_crs(in_crs, crs, always_xy=True)
         geometry = ops.transform(prj.transform, geometry)
 
     west, south, east, north = geometry.bounds
@@ -847,7 +638,7 @@ def wms_bygeom(
         name, layer = inp
         img = wms.getmap(
             layers=[layer],
-            srs=out_crs,
+            srs=crs,
             bbox=geometry.bounds,
             size=(width, height),
             format=outFormat,
@@ -875,114 +666,179 @@ def wms_bygeom(
     return data
 
 
-def wfs_bybox(
-    url,
-    bbox,
-    layer=None,
-    outFormat=None,
-    version="2.0.0",
-    in_crs="epsg:4326",
-    out_crs="epsg:4326",
-    fill_holes=False,
-):
-    """Data from any WMS service within a geometry
+class WFS:
+    """Data from any WMS service within a geometry or by featureid"""
 
-    Parameters
-    ----------
-    url : string
-        The base url for the WMS service. Some examples:
-        https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
-    bbox : list or tuple
-        A bounding box for getting the data: [west, south, east, north]
-    layer : string
-        The layer from the service to be downloaded, defaults to None which throws
-        an error and includes all the avialable layers offered by the service.
-    outFormat : string
-        The data format to request for data from the service, defaults to None which
-         throws an error and includes all the avialable format offered by the service.
-    version : string, optional
-        The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
-    in_crs : string, optional
-        The spatial reference system of the input region, defaults to
-        epsg:4326.
-    out_crs: string, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-    fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+    def __init__(
+        self, url, layer=None, outFormat=None, version="2.0.0", crs="epsg:4326"
+    ):
+        """Initialize WFS
+        Parameters
+        ----------
+        url : string
+            The base url for the WMS service. Some examples:
+            https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
+        layer : string
+            The layer from the service to be downloaded, defaults to None which throws
+            an error and includes all the avialable layers offered by the service.
+        outFormat : string
+            The data format to request for data from the service, defaults to None which
+             throws an error and includes all the avialable format offered by the service.
+        version : string, optional
+            The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
+        crs: string, optional
+            The spatial reference system to be used for requesting the data, defaults to
+            epsg:4326.
 
-    Returns
-    -------
-    xarray.Dataset
-    """
-    wfs = WebFeatureService(url, version=version)
+        Returns
+        -------
+        requests.Response
+        """
+        self.url = url
+        self.layer = layer
+        self.outFormat = outFormat
+        self.version = version
+        self.crs = crs
 
-    valid_layers = list(wfs.contents)
-    valid_layers_lower = [l.lower() for l in valid_layers]
-    if layer is None:
-        raise ValueError(
-            "The layer argument is missing."
-            + " The following layers are available:\n"
-            + ", ".join(l for l in valid_layers)
-        )
-    elif layer.lower() not in valid_layers_lower:
-        raise ValueError(
-            "The given layers argument is invalid."
-            + " Valid layers are:\n"
-            + ", ".join(l for l in valid_layers)
-        )
+        wfs = WebFeatureService(url, version=version)
 
-    valid_outFormats = wfs.getOperationByName("GetFeature").parameters["outputFormat"][
-        "values"
-    ]
-    valid_outFormats = [f.lower() for f in valid_outFormats]
-    if outFormat is None:
-        raise ValueError(
-            "The outFormat argument is missing."
-            + " The following output formats are available:\n"
-            + ", ".join(l for l in valid_outFormats)
-        )
-    elif outFormat.lower() not in valid_outFormats:
-        raise ValueError(
-            "The outFormat argument is invalid."
-            + " Valid output formats are:\n"
-            + ", ".join(l for l in valid_outFormats)
-        )
-
-    valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions]
-    if out_crs.lower() not in valid_crss:
-        raise ValueError(
-            "The crs argument is invalid."
-            + "\n".join(
-                [
-                    f" Valid CRSs for {layer} layer are:\n"
-                    + ", ".join(c for c in valid_crss)
-                ]
+        valid_layers = list(wfs.contents)
+        valid_layers_lower = [l.lower() for l in valid_layers]
+        if layer is None:
+            raise ValueError(
+                "The layer argument is missing."
+                + " The following layers are available:\n"
+                + ", ".join(l for l in valid_layers)
             )
-        )
+        elif layer.lower() not in valid_layers_lower:
+            raise ValueError(
+                "The given layers argument is invalid."
+                + " Valid layers are:\n"
+                + ", ".join(l for l in valid_layers)
+            )
 
-    if not isinstance(bbox, list) and not isinstance(bbox, tuple):
-        raise ValueError("The bbox should be of type list or tuple.")
-    if len(bbox) != 4:
-        raise ValueError("The bbox length should be 4")
-    if in_crs != out_crs:
-        prj = pyproj.Transformer.from_crs(in_crs, out_crs, always_xy=True)
-        bbox = ops.transform(prj.transform, box(*bbox))
-        bbox = bbox.bounds
-    bbox = ",".join(str(c) for c in bbox) + f",{out_crs}"
+        valid_outFormats = wfs.getOperationByName("GetFeature").parameters[
+            "outputFormat"
+        ]["values"]
+        valid_outFormats = [f.lower() for f in valid_outFormats]
+        if outFormat is None:
+            raise ValueError(
+                "The outFormat argument is missing."
+                + " The following output formats are available:\n"
+                + ", ".join(l for l in valid_outFormats)
+            )
+        elif outFormat.lower() not in valid_outFormats:
+            raise ValueError(
+                "The outFormat argument is invalid."
+                + " Valid output formats are:\n"
+                + ", ".join(l for l in valid_outFormats)
+            )
 
-    payload = {
-        "service": "wfs",
-        "version": version,
-        "outputFormat": outFormat,
-        "request": "GetFeature",
-        "typeName": layer,
-        "bbox": bbox,
-    }
+        valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions]
+        if crs.lower() not in valid_crss:
+            raise ValueError(
+                "The crs argument is invalid."
+                + "\n".join(
+                    [
+                        f" Valid CRSs for {layer} layer are:\n"
+                        + ", ".join(c for c in valid_crss)
+                    ]
+                )
+            )
 
-    r = utils.get_url(utils.retry_requests(), url, payload)
+    def getfeature_bybox(self, bbox, in_crs="epsg:4326"):
+        """Data from any WMS service within a geometry
 
-    if r.headers["Content-Type"] == "application/xml":
-        root = ET.fromstring(r.text)
-        raise ValueError(root[0][0].text.strip())
-    return r
+        Parameters
+        ----------
+        bbox : list or tuple
+            A bounding box for getting the data: [west, south, east, north]
+        in_crs : string, optional
+            The spatial reference system of the input region, defaults to
+            epsg:4326.
+
+        Returns
+        -------
+        xarray.Dataset
+        """
+        if not isinstance(bbox, list) and not isinstance(bbox, tuple):
+            raise ValueError("The bbox should be of type list or tuple.")
+        if len(bbox) != 4:
+            raise ValueError("The bbox length should be 4")
+        if in_crs != self.crs:
+            prj = pyproj.Transformer.from_crs(in_crs, self.crs, always_xy=True)
+            bbox = ops.transform(prj.transform, box(*bbox))
+            bbox = bbox.bounds
+        bbox = ",".join(str(c) for c in bbox) + f",{self.crs}"
+
+        payload = {
+            "service": "wfs",
+            "version": self.version,
+            "outputFormat": self.outFormat,
+            "request": "GetFeature",
+            "typeName": self.layer,
+            "bbox": bbox,
+        }
+
+        r = utils.get_url(utils.retry_requests(), self.url, payload)
+
+        if r.headers["Content-Type"] == "application/xml":
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0][0].text.strip())
+        return r
+
+    def getfeature_byid(self, featurename, featureids):
+        """Get features based on feature IDs
+
+        Parameters
+        ----------
+        featurename : string
+            The name of the column for searching for feature IDs
+        featureids : int, string, or list
+            The feature ID(s)
+
+        Returns
+        -------
+        requests.Response
+        """
+
+        if not isinstance(featureids, list):
+            featureids = [featureids]
+
+        if len(featureids) == 0:
+            raise ValueError("The feature ID list is empty!")
+
+        featureids = [str(i) for i in featureids]
+
+        def filter_xml(pname, pid):
+            fstart = '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc"><ogc:Or>'
+            fend = "</ogc:Or></ogc:Filter>"
+            return (
+                fstart
+                + "".join(
+                    [
+                        f"<ogc:PropertyIsEqualTo><ogc:PropertyName>{pname}"
+                        + f"</ogc:PropertyName><ogc:Literal>{p}"
+                        + "</ogc:Literal></ogc:PropertyIsEqualTo>"
+                        for p in pid
+                    ]
+                )
+                + fend
+            )
+
+        payload = {
+            "service": "wfs",
+            "version": self.version,
+            "outputFormat": self.outFormat,
+            "request": "GetFeature",
+            "typeName": self.layer,
+            "srsName": self.crs,
+            "filter": filter_xml(featurename, featureids),
+        }
+
+        r = utils.post_url(utils.retry_requests(), self.url, payload)
+        if r.headers["Content-Type"] == "application/xml":
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0][0].text.strip())
+
+        return r
