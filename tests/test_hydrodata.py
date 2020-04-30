@@ -98,13 +98,14 @@ def test_dem():
 
 
 def test_newdb():
-    from arcgis2geojson import arcgis2geojson
-    import geopandas as gpd
-
     wshed = Station("2005-01-01", "2005-01-31", "11092450")
 
-    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = services.ArcGISREST(url_rest, outFormat="json")
+    s = services.ArcGISREST(host="maps.lacity.org", site="lahub", outFormat="json")
+    s.get_fs()
+    s.serviceName = "Stormwater_Information"
+    s.get_layers()
+    s.layer = 10
+    s.generate_url()
     s.get_featureids(wshed.geometry)
     storm_pipes = s.get_features()
 
@@ -122,18 +123,15 @@ def test_newdb():
     url_wfs = (
         "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     )
-    r = services.wfs_bybox(
+
+    wfs = services.WFS(
         url_wfs,
-        bbox=wshed.geometry.bounds,
-        version="2.0.0",
         layer="public_NFHL:Base_Flood_Elevations",
         outFormat="esrigeojson",
-        in_crs="epsg:4326",
-        out_crs="epsg:4269",
+        crs="epsg:4269",
     )
-    flood = gpd.GeoDataFrame.from_features(
-        arcgis2geojson(r.json()), crs="epsg:4269"
-    ).to_crs("epsg:4326")
+    r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
+    flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
     assert (
         abs(storm_pipes.length.sum() - 9.6357) < 1e-4
@@ -158,7 +156,7 @@ def test_plot():
 
 def test_acc():
     flw = utils.prepare_nhdplus(
-        hds.NLDI.flowlines("11092450"), 0, 0, purge_non_dendritic=False
+        hds.NLDI.flowlines("11092450"), 1, 1, purge_non_dendritic=True
     )
 
     def routing(qin, q):
@@ -179,7 +177,7 @@ def test_acc():
 
 def test_acc_threading():
     flw = utils.prepare_nhdplus(
-        hds.NLDI.flowlines("11092450"), 0, 0, purge_non_dendritic=False
+        hds.NLDI.flowlines("11092450"), 1, 1, purge_non_dendritic=True
     )
 
     def routing(qin, q):

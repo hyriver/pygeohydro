@@ -915,6 +915,35 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
     return ds
 
 
+def json_togeodf(content, in_crs, crs="epsg:4326"):
+    """Create GeoDataFrame from (Geo)JSON
+
+    Parameters
+    ----------
+    content : dict
+        A (Geo)JSON dictionary e.g., r.json()
+    in_crs : string
+        CRS of the content
+    crs : string, optional
+        CRS of the output GeoDataFrame, defaults to ``epsg:4326``
+
+    Returns
+    -------
+    GeoDataFrame
+    """
+    try:
+        gdf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
+    except TypeError:
+        from arcgis2geojson import arcgis2geojson
+
+        gdf = gpd.GeoDataFrame.from_features(arcgis2geojson(content), crs=in_crs)
+
+    gdf.crs = in_crs
+    if in_crs != crs:
+        gdf = gdf.to_crs(crs)
+    return gdf
+
+
 def geom_mask(
     geometry, width, height, geo_crs="epsg:4326", ds_crs="epsg:4326", all_touched=True
 ):
