@@ -14,9 +14,10 @@ from pathlib import Path
 from warnings import warn
 
 import geopandas as gpd
-import hydrodata.datasets as hds
 import numpy as np
 import pandas as pd
+
+import hydrodata.datasets as hds
 from hydrodata import utils
 
 MARGINE = 15

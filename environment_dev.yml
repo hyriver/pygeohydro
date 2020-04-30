@@ -1,4 +1,4 @@
-name: hydrodata
+name: hyd
 channels:
   - conda-forge
 dependencies:
@@ -7,6 +7,7 @@ dependencies:
   - owslib
   - scipy
   - pandas
+  - pyarrow
   - numba
   - matplotlib
   - descartes
@@ -20,36 +21,38 @@ dependencies:
   - folium
   - rasterio
   - jupyterlab
+  - ipywidgets
   - pyproj
   - proj
   - gdal
+  - networkx
+  - geojson
+  - simplejson
+  - xlrd
+  - pytables
+  - flake8
+  - flake8-comprehensions
+  - flake8-rst
+  - pycodestyle
+  - sphinx
+  - nbsphinx
+  - twine
+  - tox
+  - coverage
+  - mypy
+  - pre-commit
+  - pytest-runner
+  - pytest-cov
+  - pytest-xdist
+  - codecov
+  - numpydoc
+  - black
+  - sphinx-copybutton
+  - recommonmark
+  - wheel
+  - watchdog
   - pip:
-    - networkx
     - pqdm
     - arcgis2geojson
     - bump2version
-    - wheel
-    - watchdog
-    - flake8
-    - sphinx
     - sphinx-material
-    - sphinx-copybutton
-    - nbsphinx
-    - twine
-    - tox
-    - coverage
-    - pytest-runner
-    - pytest-cov
-    - pytest-xdist
-    - codecov
-    - numpydoc
-    - mypy==0.761
-    - pre-commit
-    - geojson
-    - simplejson
-    - black
-    - tables
-    - xlrd
-    - pqdm
-    - recommonmark
-    - sphinx-markdown-tables

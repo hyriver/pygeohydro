@@ -6,11 +6,11 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
-from hydrodata import helpers, services, utils
+import xarray as xr
 from pqdm.threads import pqdm
 from shapely.geometry import Polygon
 
-import xarray as xr
+from hydrodata import helpers, services, utils
 
 
 def nwis_streamflow(station_ids, start, end, raw=False):

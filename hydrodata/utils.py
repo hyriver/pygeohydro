@@ -11,8 +11,8 @@ import pandas as pd
 import rasterio as rio
 import rasterio.features as rio_features
 import rasterio.warp as rio_warp
-from hydrodata import helpers
 from owslib.wms import WebMapService
+from pqdm.threads import pqdm
 from requests.exceptions import (
     ConnectionError,
     HTTPError,
@@ -21,6 +21,8 @@ from requests.exceptions import (
     Timeout,
 )
 from shapely.geometry import box, mapping
+
+from hydrodata import helpers
 
 
 def retry_requests(
@@ -975,17 +977,19 @@ def check_requirements(reqs, cols):
         raise ValueError(msg)
 
 
-def topoogical_sort(network):
-    """Topological sorting of a network.
+def topoogical_sort(flowlines, network=False):
+    """Topological sorting of a river network.
 
     Parameters
     ----------
-    network : pandas.DataFrame
+    flowlines : pandas.DataFrame
         A dataframe with columns ID and toID
+    network : bool
+        Whether to return the generated networkx object
 
     Returns
     -------
-    (list, dict)
+    (list, dict [, networkx.DiGraph])
         A list of topologically sorted IDs and a dictionary
         with keys as IDs and values as its upstream nodes.
         Note that the terminal node ID is set to pd.NA.
@@ -993,64 +997,151 @@ def topoogical_sort(network):
     import networkx as nx
 
     upstream_nodes = {
-        i: network[network.toID == i].ID.tolist() for i in network.ID.tolist()
+        i: flowlines[flowlines.toID == i].ID.tolist() for i in flowlines.ID.tolist()
     }
-    upstream_nodes[pd.NA] = network[network.toID.isna()].ID.tolist()
+    upstream_nodes[pd.NA] = flowlines[flowlines.toID.isna()].ID.tolist()
 
     G = nx.from_pandas_edgelist(
-        network[["ID", "toID"]], source="ID", target="toID", create_using=nx.DiGraph,
+        flowlines[["ID", "toID"]], source="ID", target="toID", create_using=nx.DiGraph,
     )
     topo_sorted = list(nx.topological_sort(G))
-    return topo_sorted, upstream_nodes
+    if network:
+        return topo_sorted, upstream_nodes, G
+    else:
+        return topo_sorted, upstream_nodes
 
 
 def vector_accumulation(
-    flowlines, func, col_names, nt, id_name="comid", toid_name="tocomid"
+    flowlines,
+    func,
+    attr_col,
+    arg_cols,
+    id_col="comid",
+    toid_col="tocomid",
+    threading=False,
+    n_threads=4,
+    verbose=False,
 ):
-    """Flow accumulation using vector river network.
+    """Flow accumulation using vector river network data.
+
+    Notes
+    -----
+    The threading flag should be used with care. Considering the
+    overhead of threading and the complexity of the network,
+    parallalization might speed up the computation or slow it down.
+    It's best to test with the flag on and off before deciding.
 
     Parameters
     ----------
     flowlines : pandas.DataFrame
-        A dataframe containing comid, tocomid, and all the columns
+        A dataframe containing comid, tocomid, attr_col and all the columns
         that ara required for passing to ``func``.
     func : function
-        The function that routes the flow in a signle river segment
-    col_names : list of strings
+        The function that routes the flow in a signle river segment.
+        Positions of the arguments in the function should be as follows:
+        func(qin, *arg_cols)
+        ``qin`` is computed in this function and the rest are in the order
+        of the ``arg_cols``. For example, if ``arg_cols = ["slope", "roughness"]``
+        then the functions is called this way:
+        func(qin, slope, roughness)
+        where slope and roughness are elemental values read from the flowlines.
+    attr_col : string
+        The attribute that being accumulated in the network.
+    arg_cols : list of strings
         List of the flowlines columns that contain all the required
         data for a routing a single river segment such as slope, length,
         lateral flow, etc.
-    nt : int
-        Total number of time steps
     id_name : string, optional
         Name of the flowlines column containing IDs, defaults to comid
     toid_name : string, optional
         Name of the flowlines column containing toIDs, defaults to tocomid
+    threading : bool, optional
+        Whether to perform the accumulation with threading, defaults to False
+    n_threads : int, optional
+        Number of threads for parallelization, defaults to 4
+    verbose : bool, optional
+        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
-    dict
-        Accumulated flow at all the nodes. The keys are the IDs and the values
-        are the time series as `numpy.ndarray`s. The outlet node is called `out`.
+    pandas.Series
+        Accumulated flow for all the nodes. The dataframe is sorted from upstream
+        to downstream (topological sorting).
     """
-    topo_sorted, upstream_nodes = topoogical_sort(
-        flowlines[[id_name, toid_name]].rename(
-            columns={id_name: "ID", toid_name: "toID"}
-        )
-    )
+    import numbers
+    import networkx as nx
 
-    zero_arr = np.zeros(nt)
+    if threading:
+        sorted_nodes, upstream_nodes, G = topoogical_sort(
+            flowlines[[id_col, toid_col]].rename(
+                columns={id_col: "ID", toid_col: "toID"}
+            ),
+            network=True,
+        )
+        ups_dict = {n: len(nx.bfs_tree(G, n, reverse=True)) - 1 for n in sorted_nodes}
+        df = pd.DataFrame.from_dict(ups_dict, orient="index")
+        df = df.reset_index().rename(columns={"index": "node", 0: "n"})
+        grouped = df.groupby("n")["node"].apply(list).to_dict()
+        topo_sorted = list(grouped.values())[:-1]
+    else:
+        sorted_nodes, upstream_nodes = topoogical_sort(
+            flowlines[[id_col, toid_col]].rename(
+                columns={id_col: "ID", toid_col: "toID"}
+            ),
+            network=False,
+        )
+        topo_sorted = sorted_nodes[:-1]
+
+    init = flowlines.iloc[0][attr_col]
+    isarray = isinstance(init, np.ndarray) or isinstance(init, list)
+    isscalar = isinstance(init, numbers.Number)
+
+    outflow = flowlines.set_index(id_col)[attr_col].to_dict()
+
+    if isscalar:
+        outflow[0] = 0.0
+    elif isarray:
+        outflow[0] = np.zeros_like(init)
+    else:
+        raise ValueError(
+            "The elements in the attribute column can be either scalars or arrays"
+        )
 
     upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
-    q = {i: zero_arr for i in flowlines.comid.to_list()}
-    q[0] = zero_arr
 
-    for i in topo_sorted[:-1]:
-        q[i] = func(
-            np.sum([q[u] for u in upstream_nodes[i]], axis=0),
-            *flowlines.loc[flowlines[id_name] == i, col_names].values[0],
-        )
+    if threading:
 
-    q["out"] = q[topo_sorted[-2]]
-    q.pop(0)
-    return q
+        def acc(n):
+            return func(
+                np.sum([outflow[u] for u in upstream_nodes[n]], axis=0),
+                *flowlines.loc[flowlines[id_col] == n, arg_cols].values[0],
+            )
+
+        [
+            outflow.update(
+                dict(
+                    zip(
+                        n,
+                        pqdm(
+                            n,
+                            acc,
+                            n_jobs=n_threads,
+                            desc="Flow Accumulation",
+                            disable=not verbose,
+                        ),
+                    )
+                )
+            )
+            for n in topo_sorted
+        ]
+    else:
+        for i in topo_sorted:
+            outflow[i] = func(
+                np.sum([outflow[u] for u in upstream_nodes[i]], axis=0),
+                *flowlines.loc[flowlines[id_col] == i, arg_cols].values[0],
+            )
+
+    outflow.pop(0)
+    qsim = pd.DataFrame.from_dict(outflow, orient="index").loc[sorted_nodes[:-1]]
+    qsim = qsim.reset_index().rename(columns={"index": "comid", 0: "acc"})
+    return qsim
