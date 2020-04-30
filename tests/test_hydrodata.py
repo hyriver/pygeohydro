@@ -158,13 +158,41 @@ def test_plot():
 
 def test_acc():
     flw = utils.prepare_nhdplus(
-        hds.NLDI.flowlines("01031500"), 0, 0, purge_non_dendritic=False
+        hds.NLDI.flowlines("11092450"), 0, 0, purge_non_dendritic=False
     )
-    segments = flw[["comid", "tocomid", "lengthkm"]].copy()
 
     def routing(qin, q):
-        return qin.item() + q
+        return qin + q
 
-    qsim = utils.vector_accumulation(segments, routing, ["lengthkm"], 1)["out"]
+    qsim = utils.vector_accumulation(
+        flw[["comid", "tocomid", "lengthkm"]],
+        routing,
+        "lengthkm",
+        ["lengthkm"],
+        threading=False,
+    )
+    flw = flw.merge(qsim, on="comid")
+    diff = flw.arbolatesu - flw.acc
 
-    assert abs(qsim - segments.lengthkm.sum()) < 1e-10
+    assert diff.abs().sum() < 1e-5
+
+
+def test_acc_threading():
+    flw = utils.prepare_nhdplus(
+        hds.NLDI.flowlines("11092450"), 0, 0, purge_non_dendritic=False
+    )
+
+    def routing(qin, q):
+        return qin + q
+
+    qsim = utils.vector_accumulation(
+        flw[["comid", "tocomid", "lengthkm"]],
+        routing,
+        "lengthkm",
+        ["lengthkm"],
+        threading=True,
+    )
+    flw = flw.merge(qsim, on="comid")
+    diff = flw.arbolatesu - flw.acc
+
+    assert diff.abs().sum() < 1e-5

@@ -8,8 +8,9 @@ regime curve (monthly mean) and flow duration curve.
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
-from hydrodata import helpers, utils
 from matplotlib.colors import BoundaryNorm, ListedColormap
+
+from hydrodata import helpers, utils
 
 
 def signatures(

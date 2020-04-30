@@ -11,7 +11,7 @@ import pandas as pd
 import pyproj
 import shapely.ops as ops
 import simplejson as json
-from hydrodata import utils
+import xarray as xr
 from lxml import html
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
@@ -19,7 +19,7 @@ from pqdm.threads import pqdm
 from requests.exceptions import RetryError
 from shapely.geometry import Polygon, box
 
-import xarray as xr
+from hydrodata import utils
 
 
 class ArcGISServer:

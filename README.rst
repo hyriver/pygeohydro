@@ -2,7 +2,7 @@
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo_text.png
     :align: center
 
-| 
+|
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata
@@ -94,21 +94,22 @@ The generated ``wshed`` object has a property that shows whether the station is 
     stations = nldi.stations(sid)
     stations_m150 = nldi.stations(sid, navigation="upstreamMain", distance=150)
 
-For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, theoretically the accumulated flow at the outlet should be equall to the total length of the river network.
+For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
 
 .. code-block:: python
 
     from hydrodata import utils
 
-    flw = utils.prepare_nhdplus(hds.NLDI.flowlines('01031500'), 0, 0, purge_non_dendritic=False)
-    segments = flw[["comid", "tocomid", "lengthkm"]].copy()
+    flw = utils.prepare_nhdplus(nldi.flowlines('11092450'), 0, 0, purge_non_dendritic=False)
 
     def routing(qin, q):
-        return qin.item() + q
+        return qin + q
 
-    qsim = utils.vector_accumulation(segments, routing, ["lengthkm"], 1)["out"]
+    qsim = utils.vector_accumulation(flw[["comid", "tocomid", "lengthkm"]], routing, "lengthkm", ["lengthkm"], threading=False)
+    flw = flw.merge(qsim, on="comid")
+    diff = flw.arbolatesu - flw.acc
 
-We can check the validity of the results using ``abs(qsim - segments.lengthkm.sum()) = 1e-13``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
+We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
 
 .. code-block:: python
 
