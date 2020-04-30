@@ -173,17 +173,14 @@ The ``services`` module can be used to access some other web services as well. F
                       resolution=1)
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-    r = services.wfs_bybox(
-                       url_wfs,
-                       bbox=la_wshed.geometry.bounds,
-                       version="2.0.0",
-                       layer="public_NFHL:Base_Flood_Elevations",
-                       outFormat="esrigeojson",
-                       in_crs="epsg:4326",
-                       out_crs="epsg:4269")
-    flood = gpd.GeoDataFrame.from_features(arcgis2geojson(r.json()),
-                                           crs="epsg:4269").to_crs("epsg:4326")
-
+    wfs = services.WFS(
+        url_wfs,
+        layer="public_NFHL:Base_Flood_Elevations",
+        outFormat="esrigeojson",
+        crs="epsg:4269",
+    )
+    r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
+    flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
 ------------
