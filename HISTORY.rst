@@ -6,6 +6,8 @@ History
 ------------------
 
 * Added threading capability to the flow accumulation function
+* Generalized WFS to include both by bbox and by featureID
+* Migrate RTD to pip from conda
 
 0.5.0 (2020-04-25)
 ------------------
