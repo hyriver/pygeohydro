@@ -200,8 +200,8 @@ def signatures(
 def get_daterange(Q_dict):
     """Find data range of several data series."""
     return pd.date_range(
-        min([q.index[0] for q in list(Q_dict.values())]),
-        max([q.index[-1] for q in list(Q_dict.values())]),
+        min(q.index[0] for q in Q_dict.values()),
+        max(q.index[-1] for q in Q_dict.values()),
     ).to_pydatetime()
 
 

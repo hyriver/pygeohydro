@@ -845,14 +845,14 @@ def ssebopeta_bygeom(
         data = utils.create_dataset(
             resp[0][1], mask, transform, width, height, "eta", None
         )
-        data = data.expand_dims(dict(time=[resp[0][0]]))
+        data = data.expand_dims({"time": [resp[0][0]]})
 
         if len(resp) > 1:
             for dt, r in resp:
                 ds = utils.create_dataset(
                     r, mask, transform, width, height, "eta", None
                 )
-                ds = ds.expand_dims(dict(time=[dt]))
+                ds = ds.expand_dims({"time": [dt]})
                 data = xr.merge([data, ds])
 
     eta = data.eta.copy()

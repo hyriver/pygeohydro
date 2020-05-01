@@ -93,8 +93,11 @@ class ArcGISServer:
         if value is not None:
             valids, _ = self.get_fs()
             if value not in valids:
-                msg = f"The given folder, {value}, is not valid. "
-                msg += f"Valid folders are {', '.join(str(v) for v in valids)}"
+                msg = (
+                    f"The given folder, {value}, is not valid. "
+                    + "Valid folders are "
+                    + ", ".join(str(v) for v in valids)
+                )
                 raise ValueError(msg)
         self._folder = value
 
@@ -107,8 +110,11 @@ class ArcGISServer:
         if value is not None:
             _, valids = self.get_fs(self.folder)
             if value not in valids:
-                msg = f"The given serviceName, {value}, is not valid. "
-                msg += f"Valid serviceNames are {', '.join(str(v) for v in valids)}"
+                msg = (
+                    f"The given serviceName, {value}, is not valid. "
+                    + "Valid serviceNames are "
+                    + ", ".join(str(v) for v in valids)
+                )
                 raise ValueError(msg)
         self._serviceName = value
 
@@ -122,8 +128,11 @@ class ArcGISServer:
             v_dict, _ = self.get_layers()
             valids = list(v_dict.keys())
             if value not in valids or not isinstance(value, int):
-                msg = f"The given layer, {value}, is not valid. "
-                msg += f"Valid layers are integers {', '.join(str(v) for v in valids)}"
+                msg = (
+                    f"The given layer, {value}, is not valid. "
+                    + "Valid layers are integers "
+                    + ", ".join(str(v) for v in valids)
+                )
                 raise ValueError(msg)
         self._layer = value
 
@@ -136,8 +145,11 @@ class ArcGISServer:
         if self.base_url is not None:
             valids = self.queryFormats
             if value not in valids:
-                msg = f"The given outFormat, {value}, is not valid. "
-                msg += f"Valid outFormats are {', '.join(str(v) for v in valids)}"
+                msg = (
+                    f"The given outFormat, {value}, is not valid. "
+                    + "Valid outFormats are "
+                    + ", ".join(str(v) for v in valids)
+                )
                 raise ValueError(msg)
         self._outFormat = value
 
@@ -159,8 +171,11 @@ class ArcGISServer:
             "esriSpatialRelRelation",
         ]
         if value is not None and value.lower() not in [s.lower() for s in spatialRels]:
-            msg = f"The given spatialRel, {value}, is not valid. "
-            msg += f"Valid spatialRels are {', '.join(str(v) for v in spatialRels)}"
+            msg = (
+                f"The given spatialRel, {value}, is not valid. "
+                + "Valid spatialRels are "
+                + ", ".join(str(v) for v in spatialRels)
+            )
             raise ValueError(msg)
         self._spatialRel = value
 
@@ -326,10 +341,13 @@ class ArcGISREST(ArcGISServer):
     def generate_url(self):
         """Generate the base_url based on the class properties"""
         if self.serviceName is None:
-            msg = "The base_url set to None since serviceName is not set:\n"
-            msg += "URL's general form is https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
-            msg += "Use get_fs(<folder>) or get_layers(<serviceName> or <url>) to get the available folders, services and layers."
-            warn(msg)
+            warn(
+                "The base_url set to None since serviceName is not set:\n"
+                + "URL's general form is https://<host>/<site>/rest/"
+                + "services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
+                + "Use get_fs(<folder>) or get_layers(<serviceName> or "
+                + "<url>) to get the available folders, services and layers."
+            )
         else:
             _, services = self.get_fs(self.folder)
             if self.layer is None:
