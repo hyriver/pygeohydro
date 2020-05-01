@@ -533,7 +533,7 @@ class NLDI:
             + f"/nwissite/USGS-{station_id}/basin"
         )
         r = utils.get_url(utils.retry_requests(), url)
-        gdf = utils.json_togeodf(r.json())
+        gdf = utils.json_togeodf(r.json(), "epsg:4326")
 
         return gdf
 
@@ -615,7 +615,7 @@ class NLDI:
             url = f"{base_url}/{fid}/{nav}"
 
             r = utils.get_url(session, url)
-            return utils.json_togeodf(r.json())
+            return utils.json_togeodf(r.json(), "epsg:4326")
 
         gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
         comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
