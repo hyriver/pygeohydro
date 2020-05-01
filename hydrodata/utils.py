@@ -284,10 +284,9 @@ def pet_fao_byloc(df, lon, lat):
         The input DataFrame with an additional column named ``pet (mm/day)``
     """
 
-    keys = [v for v in df.columns]
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
-    check_requirements(reqs, keys)
+    check_requirements(reqs, df.columns)
 
     dtype = df.dtypes[0]
     df["tmean (deg c)"] = 0.5 * (df["tmax (deg c)"] + df["tmin (deg c)"])
@@ -385,7 +384,7 @@ def pet_fao_gridded(ds):
         The input dataset with an additional variable called ``pet``.
     """
 
-    keys = [v for v in ds.keys()]
+    keys = list(ds.keys())
     reqs = ["tmin", "tmax", "lat", "lon", "vp", "srad", "dayl"]
 
     check_requirements(reqs, keys)

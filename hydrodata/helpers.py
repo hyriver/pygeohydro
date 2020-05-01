@@ -27,19 +27,19 @@ def nlcd_helper():
 
     colors = root[4][1][1].text.split("\n")[2:]
     colors = [i.split() for i in colors]
-    colors = dict((int(c), (float(r), float(g), float(b))) for c, r, g, b in colors)
+    colors = {int(c): (float(r), float(g), float(b)) for c, r, g, b in colors}
 
-    classes = dict(
-        (root[4][0][3][i][0][0].text, root[4][0][3][i][0][1].text.split("-")[0].strip())
+    classes = {
+        root[4][0][3][i][0][0].text: root[4][0][3][i][0][1].text.split("-")[0].strip()
         for i in range(3, len(root[4][0][3]))
-    )
+    }
 
-    nlcd_meta = dict(
-        impervious_years=[2016, 2011, 2006, 2001],
-        canopy_years=[2016, 2011],
-        cover_years=[2016, 2013, 2011, 2008, 2006, 2004, 2001],
-        classes=classes,
-        categories={
+    nlcd_meta = {
+        "impervious_years": [2016, 2011, 2006, 2001],
+        "canopy_years": [2016, 2011],
+        "cover_years": [2016, 2013, 2011, 2008, 2006, 2004, 2001],
+        "classes": classes,
+        "categories": {
             "Unclassified": ("0"),
             "Water": ("11", "12"),
             "Developed": ("21", "22", "23", "24"),
@@ -50,7 +50,7 @@ def nlcd_helper():
             "Planted/Cultivated": ("81", "82"),
             "Wetlands": ("90", "95"),
         },
-        roughness={
+        "roughness": {
             "11": 0.001,
             "12": 0.022,
             "21": 0.0404,
@@ -72,8 +72,8 @@ def nlcd_helper():
             "90": 0.086,
             "95": 0.1825,
         },
-        colors=colors,
-    )
+        "colors": colors,
+    }
 
     return nlcd_meta
 
