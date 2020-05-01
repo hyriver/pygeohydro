@@ -215,7 +215,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         List of years
     variables : string or list
         List of variables to be downloaded. The acceptable variables are:
-        tmin, tmax, prcp, srad, vp, swe, dayl
+        ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
         Descriptions can be found in https://daymet.ornl.gov/overview
     pet : bool
         Whether to compute evapotranspiration based on
@@ -224,7 +224,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
     Returns
     -------
-    Pandas DataFrame
+    pandas.DataFrame
         Climate data for the requested location and variables
     """
 
@@ -316,7 +316,7 @@ def daymet_bygeom(
         List of years
     variables : string or list
         List of variables to be downloaded. The acceptable variables are:
-        tmin, tmax, prcp, srad, vp, swe, dayl
+        ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
         Descriptions can be found in https://daymet.ornl.gov/overview
     pet : bool
         Whether to compute evapotranspiration based on
@@ -506,7 +506,7 @@ class NLDI:
 
         Returns
         -------
-        GeoDataFrame
+        geopandas.GeoDataFrame
         """
         return cls.navigate("nwissite", station_id, navigation, "nwissite", distance)
 
@@ -566,7 +566,7 @@ class NLDI:
 
         Returns
         -------
-        GeoDataFrame
+        geopandas.GeoDataFrame
         """
         valid_features = ["comid", "nwissite"]
         if feature not in valid_features:
@@ -648,7 +648,7 @@ def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
 
     Returns
     -------
-    GeoDataFrame
+    geopandas.GeoDataFrame
     """
 
     valid_features = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
@@ -690,7 +690,7 @@ def nhdplus_byid(feature, featureids, crs="epsg:4326"):
 
     Returns
     -------
-    GeoDataFrame
+    geopandas.GeoDataFrame
     """
     valid_features = ["catchmentsp", "nhdflowline_network"]
     if feature not in valid_features:
