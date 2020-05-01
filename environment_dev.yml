@@ -28,7 +28,6 @@ dependencies:
   - networkx
   - geojson
   - simplejson
-  - xlrd
   - pytables
   - flake8
   - flake8-comprehensions
