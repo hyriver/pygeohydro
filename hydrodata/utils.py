@@ -995,7 +995,9 @@ def check_requirements(reqs, cols):
     cols : list
         A list of data names as strings
     """
-    if not isinstance(reqs, list) or not isinstance(cols, list):
+    from collections.abc import Iterable
+
+    if not isinstance(reqs, Iterable):
         raise ValueError("Inputs should be list of strings")
 
     missing = [r for r in reqs if r not in cols]
