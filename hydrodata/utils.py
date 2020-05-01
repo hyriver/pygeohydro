@@ -48,7 +48,7 @@ def retry_requests(
 
     Returns
     -------
-    session
+    requests.Session
         A session object with retry configurations.
     """
 
@@ -280,7 +280,7 @@ def pet_fao_byloc(df, lon, lat):
 
     Returns
     -------
-    DataFrame
+    pandas.DataFrame
         The input DataFrame with an additional column named ``pet (mm/day)``
     """
 
@@ -634,7 +634,7 @@ def prepare_nhdplus(
 
     Parameters
     ----------
-    fl : (Geo)DataFrame
+    fl : geopandas.GeoDataFrame
         NHDPlus flowlines with at least the following columns:
         COMID, LENGTHKM, FTYPE, TerminalFl, FromNode, ToNode, TotDASqKM,
         StartFlag, StreamOrde, StreamCalc, TerminalPa, Pathlength,
@@ -654,7 +654,7 @@ def prepare_nhdplus(
 
     Returns
     -------
-    (Geo)DataFrame
+    geopandas.GeoDataFrame
         With an additional column named ``tocomid`` that represents downstream
         comid of features.
     """
@@ -929,7 +929,7 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
 
     Returns
     -------
-    GeoDataFrame
+    geopandas.GeoDataFrame
     """
     try:
         gdf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
