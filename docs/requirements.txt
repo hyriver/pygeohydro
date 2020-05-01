@@ -16,7 +16,6 @@ folium
 rasterio
 pqdm
 tables
-xlrd
 networkx
 arcgis2geojson
 numpydoc

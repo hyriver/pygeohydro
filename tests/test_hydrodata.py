@@ -3,11 +3,15 @@
 """Tests for `hydrodata` package."""
 
 import hydrodata.datasets as hds
-from hydrodata import Station, plot, services, utils
+from hydrodata import Station, helpers, plot, services, utils
 
 
 def test_station():
-    natural = Station("2000-01-01", "2010-01-21", station_id="01031500")
+    import shutil
+
+    shutil.rmtree("data")
+    natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
+    natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
     urban = Station(start="2000-01-01", end="2010-01-21", coords=(-118.47, 34.16))
     assert natural.hcdn and not urban.hcdn
 
@@ -172,13 +176,13 @@ def test_plot():
         {"Q": (qobs["USGS-01031500"], wshed.drainage_area)}, clm_p["prcp (mm/day)"]
     )
     cmap, norm, levels = plot.cover_legends()
-    assert levels[-1] == 100
+    err = helpers.nwis_errors()
+    fc = helpers.nhdplus_fcodes()
+    assert levels[-1] == 100 and err.shape[0] == 7 and fc.shape[0] == 115
 
 
 def test_acc():
-    flw = utils.prepare_nhdplus(
-        hds.NLDI.flowlines("11092450"), 1, 1, purge_non_dendritic=True
-    )
+    flw = utils.prepare_nhdplus(hds.NLDI.flowlines("11092450"), 1, 1, 1, True, True)
 
     def routing(qin, q):
         return qin + q

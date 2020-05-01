@@ -624,8 +624,8 @@ def prepare_nhdplus(
     min_network_size,
     min_path_length,
     min_path_size=0,
-    purge_non_dendritic=True,
-    warn=True,
+    purge_non_dendritic=False,
+    warn=False,
 ):
     """Cleaning up and fixing issue in NHDPlus flowline database.
 

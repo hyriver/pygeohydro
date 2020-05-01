@@ -22,7 +22,6 @@ dependencies:
     - folium
     - rasterio
     - tables
-    - xlrd
     - networkx
     - pqdm
     - arcgis2geojson

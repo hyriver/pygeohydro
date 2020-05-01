@@ -55,8 +55,11 @@ def nwis_streamflow(station_ids, start, end, raw=False):
     ].tolist()
     nas = [s for s in station_ids if s in check_dates]
     if len(nas) > 0:
-        msg = "Daily Mean data unavailable for the specified time period for the following stations:\n"
-        msg += ", ".join(str(s) for s in nas)
+        msg = (
+            "Daily Mean data unavailable for the specified time "
+            + "period for the following stations:\n"
+            + ", ".join(str(s) for s in nas)
+        )
         raise ValueError(msg)
 
     url = "https://waterservices.usgs.gov/nwis/dv"
@@ -193,9 +196,28 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     ].astype("float64")
 
     df = df[df.site_no.apply(len) == 8]
-    df["hcdn_2009"] = df.site_no.isin(helpers.hcdn_stations())
+    hcdn = gagesii_byid(df.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
+    hcdn = hcdn.rename(columns={"STAID": "site_no", "HCDN_2009": "hcdn_2009"})
+    hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: True if len(x) > 0 else False)
+    df = df.merge(hcdn, on="site_no")
 
     return df
+
+
+def gagesii_byid(station_ids):
+    """Get USGS gages information from gagesII dataset for a set of IDs"""
+    layer = "NWC:gagesII"
+    propertyname = "STAID"
+    crs = "epsg:900913"
+
+    wfs = services.WFS(
+        "https://cida.usgs.gov/nwc/geoserver/wfs",
+        layer=layer,
+        outFormat="application/json",
+        crs=crs,
+    )
+    r = wfs.getfeature_byid(propertyname, station_ids)
+    return utils.json_togeodf(r.json(), crs, "epsg:4326")
 
 
 def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
@@ -229,8 +251,11 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     """
 
     if not (14.5 < lat < 52.0) or not (-131.0 < lon < -53.0):
-        msg = "The location is outside the Daymet dataset. The acceptable range is: "
-        msg += "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
+        msg = (
+            "The location is outside the Daymet dataset. "
+            + "The acceptable range is: "
+            + "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
+        )
         raise ValueError(msg)
 
     if years is None and start is not None and end is not None:
@@ -243,7 +268,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
-    vars_table = pd.read_html("https://daymet.ornl.gov/overview")[1]
+    vars_table = helpers.daymet_variables()
     valid_variables = vars_table.Abbr.values
 
     if variables is not None:
@@ -251,9 +276,11 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
         invalid = [v for v in variables if v not in valid_variables]
         if len(invalid) > 0:
-            msg = "These required variables are not in the dataset: "
-            msg += ", ".join(x for x in invalid)
-            msg += f'\nRequired variables are {", ".join(x for x in valid_variables)}'
+            msg = (
+                "These required variables are not in the dataset: "
+                + ", ".join(x for x in invalid)
+                + f'\nRequired variables are {", ".join(x for x in valid_variables)}'
+            )
             raise KeyError(msg)
 
         if pet:
@@ -362,7 +389,8 @@ def daymet_bygeom(
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
-    vars_table = pd.read_html("https://daymet.ornl.gov/overview")[1]
+    vars_table = helpers.daymet_variables()
+
     units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
     valid_variables = vars_table.Abbr.values
 
@@ -371,9 +399,11 @@ def daymet_bygeom(
 
         invalid = [v for v in variables if v not in valid_variables]
         if len(invalid) > 0:
-            msg = "These required variables are not in the dataset: "
-            msg += ", ".join(x for x in invalid)
-            msg += f'\nRequired variables are {", ".join(x for x in valid_variables)}'
+            msg = (
+                "These required variables are not in the dataset: "
+                + ", ".join(x for x in invalid)
+                + f'\nRequired variables are {", ".join(x for x in valid_variables)}'
+            )
             raise KeyError(msg)
 
         if pet:
@@ -570,14 +600,18 @@ class NLDI:
         """
         valid_features = ["comid", "nwissite"]
         if feature not in valid_features:
-            msg = "The acceptable feature options are:"
-            msg += f" {', '.join(x for x in valid_features)}"
+            msg = (
+                "The acceptable feature options are:"
+                + f" {', '.join(x for x in valid_features)}"
+            )
             raise ValueError(msg)
 
         valid_dataSource = ["flowline", "nwissite", "huc12pp"]
         if dataSource not in valid_dataSource:
-            msg = "The acceptable dataSource options are:"
-            msg += f"{', '.join(x for x in valid_dataSource)}"
+            msg = (
+                "The acceptable dataSource options are:"
+                + f"{', '.join(x for x in valid_dataSource)}"
+            )
             raise ValueError(msg)
 
         if not isinstance(featureids, list):
@@ -599,8 +633,10 @@ class NLDI:
             "downstreamDiversions": "DD",
         }
         if navigation is not None and navigation not in list(nav_options.keys()):
-            msg = "The acceptable navigation options are:"
-            msg += f" {', '.join(x for x in list(nav_options.keys()))}"
+            msg = (
+                "The acceptable navigation options are:"
+                + f" {', '.join(x for x in list(nav_options.keys()))}"
+            )
             raise ValueError(msg)
         elif navigation is None:
             nav = ""
@@ -653,8 +689,10 @@ def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
 
     valid_features = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
     if feature not in valid_features:
-        msg = f"The provided feature, {feature}, is not valid."
-        msg += f" Valid features are {', '.join(x for x in valid_features)}"
+        msg = (
+            f"The provided feature, {feature}, is not valid."
+            + f" Valid features are {', '.join(x for x in valid_features)}"
+        )
         raise ValueError(msg)
 
     wfs = services.WFS(
@@ -694,8 +732,10 @@ def nhdplus_byid(feature, featureids, crs="epsg:4326"):
     """
     valid_features = ["catchmentsp", "nhdflowline_network"]
     if feature not in valid_features:
-        msg = f"The provided feature, {feature}, is not valid."
-        msg += f"Valid features are {', '.join(x for x in valid_features)}"
+        msg = (
+            f"The provided feature, {feature}, is not valid."
+            + f"Valid features are {', '.join(x for x in valid_features)}"
+        )
         raise ValueError(msg)
 
     propertyname = "featureid" if feature == "catchmentsp" else "comid"

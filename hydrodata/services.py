@@ -16,7 +16,7 @@ from lxml import html
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from pqdm.threads import pqdm
-from requests.exceptions import RetryError
+from requests.exceptions import ConnectionError, RetryError
 from shapely.geometry import Polygon, box
 
 from hydrodata import utils
@@ -603,7 +603,12 @@ def wms_bygeom(
     -------
     xarray.Dataset
     """
-    wms = WebMapService(url, version=version)
+    for i in range(3):
+        try:
+            wms = WebMapService(url, version=version)
+            break
+        except ConnectionError:
+            continue
 
     valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
     if layers is None:
@@ -745,7 +750,12 @@ class WFS:
         self.version = version
         self.crs = crs
 
-        wfs = WebFeatureService(url, version=version)
+        for i in range(3):
+            try:
+                wfs = WebFeatureService(url, version=version)
+                break
+            except ConnectionError:
+                continue
 
         valid_layers = list(wfs.contents)
         valid_layers_lower = [l.lower() for l in valid_layers]

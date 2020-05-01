@@ -6,6 +6,7 @@ import xml.etree.cElementTree as ET
 
 import numpy as np
 import pandas as pd
+from requests.exceptions import ConnectionError
 
 from hydrodata import utils
 
@@ -80,30 +81,36 @@ def nlcd_helper():
 
 def nhdplus_fcodes():
     """Get NHDPlus FCode lookup table"""
-    url = (
-        "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
-        + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
-    )
-    return (
-        pd.concat(pd.read_html(url, header=0))
-        .drop_duplicates("FCode")
-        .set_index("FCode")
-    )
+    for i in range(3):
+        try:
+            url = (
+                "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
+                + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
+            )
+            return (
+                pd.concat(pd.read_html(url, header=0))
+                .drop_duplicates("FCode")
+                .set_index("FCode")
+            )
+        except ConnectionError:
+            continue
 
 
 def nwis_errors():
     """Get error code lookup table for USGS sites that have daily values"""
-    return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
+    for i in range(3):
+        try:
+            return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[
+                0
+            ]
+        except ConnectionError:
+            continue
 
 
-def hcdn_stations():
-    """Get USGS Hydro-Climatic Data Network 2009 (HCDN-2009)"""
-    hcdn = pd.read_excel(
-        "https://water.usgs.gov/osw/hcdn-2009/HCDN-2009_Station_Info.xlsx"
-    )
-    return (
-        hcdn["STATION ID"]
-        .astype("str")
-        .str.pad(width=8, side="left", fillchar="0")
-        .tolist()
-    )
+def daymet_variables():
+    """Get Daymet variables table"""
+    for i in range(3):
+        try:
+            return pd.read_html("https://daymet.ornl.gov/overview")[1]
+        except ConnectionError:
+            continue
