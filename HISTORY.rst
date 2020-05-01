@@ -2,12 +2,14 @@
 History
 =======
 
-0.5.1 (2020-04-29)
+0.5.2 (2020-05-01)
 ------------------
 
 * Added threading capability to the flow accumulation function
 * Generalized WFS to include both by bbox and by featureID
 * Migrate RTD to pip from conda
+* Changed HCDN database source to GagesII database
+* Increased robustness of functions that need network connections
 
 0.5.0 (2020-04-25)
 ------------------
