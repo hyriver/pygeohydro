@@ -111,6 +111,8 @@ def test_newdb():
     s.get_layers()
     s.layer = 10
     s.generate_url()
+    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
+    s = services.ArcGISREST(url_rest, verbose=True)
     s.n_threads = 4
     s.get_featureids(wshed.geometry.bounds)
     s.get_featureids(wshed.geometry)
