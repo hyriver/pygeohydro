@@ -1,64 +1,51 @@
 os:
-  - linux
-
+- linux
 language: python
 python:
-  - 3.8
-  - 3.7
-  - 3.6
-
+- 3.8
+- 3.7
+- 3.6
 jobs:
   include:
-    - os: osx
-      language: generic
-      env: TOXENV=py36
-    - os: osx
-      language: generic
-      env: TOXENV=py37
-    - os: osx
-      language: generic
-      env: TOXENV=py38
-
+  - os: osx
+    language: generic
+    env: TOXENV=py36
+  - os: osx
+    language: generic
+    env: TOXENV=py37
+  - os: osx
+    language: generic
+    env: TOXENV=py38
 before_install:
-  - >-
-    if [ $(uname) = "Darwin" ];
-    then
-    export TRAVIS_PYTHON_VERSION="`sed 's/^..//; s/./&./' <(echo $TOXENV)`";
-    brew update > /dev/null 2>&1;
-    brew install gnu-sed > /dev/null 2>&1;
-    gsed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml;
-    wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
-    else
-    sed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml;
-    wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - source "$HOME/miniconda/etc/profile.d/conda.sh"
-  - hash -r
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
-  - conda env create -f environment_ci.yml
-  - conda activate hydrodata-ci
-
+- if [ $(uname) = "Darwin" ]; then export TRAVIS_PYTHON_VERSION="`sed 's/^..//; s/./&./'
+  <(echo $TOXENV)`"; brew update > /dev/null 2>&1; brew install gnu-sed > /dev/null
+  2>&1; gsed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml;
+  wget https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh -O miniconda.sh;
+  else sed -i "s|python.*|python=${TRAVIS_PYTHON_VERSION}|" environment_ci.yml; wget
+  https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  fi
+- bash miniconda.sh -b -p $HOME/miniconda
+- source "$HOME/miniconda/etc/profile.d/conda.sh"
+- hash -r
+- conda config --set always_yes yes --set changeps1 no
+- conda update -q conda
+- conda info -a
+- conda env create -f environment_ci.yml
+- conda activate hydrodata-ci
 install:
-  - python setup.py install
-
+- python setup.py install
 script: tox
-
 after_success:
-  - bash <(curl -s https://codecov.io/bash)
-
+- bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
   user: tchegini
   password:
-    secure: GbJxeo0+CGm1nE4p4vCU5jt8ZlFpNYhgt/iHA6bF1T0YOp5OqoQtPQ3HwObcMNOzXP3YsJW67hI4BHbK44D1M/EGOIxnGeAvPxsDALl7fEOD4cPVBFMG789FFJ+S5va0AC+L3vq/Xaa/jVRGLavp7pN3sx5KokgPE+BCSPrtGYBJcmXRbEPWABZtWEaCi6fuV2E4Kf3e1KXVKxOay44hneJ0C01LLZgIvMqyAmK/e4ObBL1kR7s9424ZTRmF8QpCRivSbSeAl07z66SFvHMNGB0dtXCNqXcTU27eXXHo4N1KOD5/lkbV/oaPoq2diEbO8ZK0LzMEBYlklRibmQGuX8oglgVQ0SErJjUZUNJMewOnu391mGJV4uMPikK6eTl6RG+wc8dO1rDC/O0xyqSO8/IRzFizWOZlcMVzSaFnFsDLlYN5PKTQ2IJtJCpDq110e5A6326+DOlbAcdeL2LgVPVZvQutJPTUoEwQ5UhBZC58VnjiStAxYDEAJy4RDeWdRP3NkHnUVB4gBIQWHVmQPgevVfs3f4hU8GX/o5AwDyvT073OXaSZy0fN1AQV1eieA7NmujVWAbfdwLraJ9ui/bBYc+uKoY2fKHHTERnh1p/fEnoFfaEmOSMBmseOg/3xUzpUdFe10qbalDQEcCRaUQx4IbkLWDYkAyD7wsvAQYQ=
+    secure: AargDcmZ9aveeGtoXXe17ieYomoLgcwEsqmCvnIgsOCDKr0S7GssOtBchnoHxEDMKEYzjV3hFl5IKjP/yeFgdB5FMsqUHJOXPk6pPX5nwyA0zdx3EhYsPXM+bJ0GqgeDQSV/84b9OYBlKGUaxGjE7TTTQgOy9VkHRhqatqkHYob58Zfx2rHsg+36qiqNoY/HSzh/FyAFglu1nyJOvV6fjq2r8pzbuE4FAqDxMOc2W4yX85aBPOxfC3fczFvPOHKj77C2xtVwRwBkp9erNzFy/53LaWujMXfW+5RXmS/lXXEc1lnY1rD6hUihLmRYQJ04gJzW+toTMJxiOBbvvXVj+ZNvC5a0F+eX122GyfBTC0jDulAeqfEokhy+yFBdy170Pi9xL+RrDBQprq3gsCHceFQmCL52Wnck1aKcnTKA4lRGAYUAfa0ZKfL+14W0Yd4t0VS5JeFKFzUec4FFtJF+5BJdHF1Aw9Nd6yjCUxKqm8JTH8MfhQ2sr+vv5GeEHiY0l9cu4rsS+EV6md0wfLrveq2Bu2YcyAp/2EZ6LMqoUF5Ls9hZimB08nXD+ZRz4rrgXl4jdwV63JBPxEeJVoAlXUPxX3vc4XQyKXWnfAs9xu9dbmR+n8tC6dcdSQE5KMZFejIGI+5lhztHLNTpizrIl99pkciwYXdcmKcLodAdoMs=
   on:
     tags: true
     repo: cheginit/hydrodata
     python: 3.8
-
 notifications:
   email: false
