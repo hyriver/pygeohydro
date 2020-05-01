@@ -100,16 +100,34 @@ def test_dem():
 def test_newdb():
     wshed = Station("2005-01-01", "2005-01-31", "11092450")
 
-    s = services.ArcGISREST(host="maps.lacity.org", site="lahub", outFormat="json")
+    s = services.ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
+    s.spatialRel = "esriSpatialRelIntersects"
+    s.folder = "Utilities"
+    s.folder = None
     s.get_fs()
+    s.folder
     s.serviceName = "Stormwater_Information"
     s.get_layers()
     s.layer = 10
     s.generate_url()
+    s.n_threads = 4
+    s.get_featureids(wshed.geometry.bounds)
     s.get_featureids(wshed.geometry)
+    s.outFormat = "geojson"
+    storm_pipes = s.get_features()
+    s.outFormat = "json"
     storm_pipes = s.get_features()
 
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    slope = services.wms_bygeom(
+        url_wms,
+        "3DEP",
+        geometry=wshed.geometry,
+        version="1.3.0",
+        layers={"slope": "3DEPElevation:Slope Degrees"},
+        outFormat="image/tiff",
+        width=2000,
+    )
     slope = services.wms_bygeom(
         url_wms,
         "3DEP",
