@@ -127,6 +127,9 @@ def test_newdb():
         layers={"slope": "3DEPElevation:Slope Degrees"},
         outFormat="image/tiff",
         width=2000,
+        fill_holes=True,
+        in_crs="epsg:4326",
+        crs="epsg:3857",
     )
     slope = services.wms_bygeom(
         url_wms,
