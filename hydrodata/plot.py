@@ -26,11 +26,12 @@ def signatures(
     Parameters
     ----------
     Q_daily : dict of tuple
-        The first element is a series containing daily discharges in m$^3$/s
-        and the second element is the contributing drainage area in km$^2$.
+        The first element is a series containing daily discharges in
+        :math: `m^3/s` and the second element is the contributing drainage
+        area in :math: `km^2`.
         The dict keys are the labels on the plot.
     prcp : series, optional
-        Daily precipitation time series in mm/day. If given, the data is
+        Daily precipitation time series in :math: `mm/day`. If given, the data is
         plotted on the second x-axis at the top.
     title : str, optional
         The plot supertitle.
@@ -38,9 +39,9 @@ def signatures(
         Width and height of the plot in inches, defaults to (13, 13) inches.
     threshold : float, optional
         The threshold for cutting off the discharge for the flow duration
-        curve to deal with log 0 issue, defaults to 1e-3 mm/day.
+        curve to deal with log 0 issue, defaults to :math: `1e-3 mm/day`.
     output : string, optional
-        Path to save the plot as png, defaults to `None` which means
+        Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
     """
     pd.plotting.register_matplotlib_converters()
