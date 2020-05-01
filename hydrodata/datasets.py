@@ -499,7 +499,7 @@ class NLDI:
             The USGS station ID.
         navigation : string, optional
             The direction for navigating the NHDPlus database. The valid options are:
-            None, ``upstreamMain``, ``upstreamTributaries``,``downstreamMain``,
+            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
             ``downstreamDiversions``. Defaults to upstreamTributaries.
         distance : float, optional
             The distance to limit the navigation in km. Defaults to None (all stations).
