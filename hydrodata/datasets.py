@@ -528,14 +528,12 @@ class NLDI:
     @staticmethod
     def basin(station_id):
         """Get USGS stations basins using NLDI service."""
-        crs = "epsg:4326"
         url = (
             "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
             + f"/nwissite/USGS-{station_id}/basin"
         )
         r = utils.get_url(utils.retry_requests(), url)
-        gdf = gpd.GeoDataFrame.from_features(r.json(), crs=crs)
-        gdf.crs = crs
+        gdf = utils.json_togeodf(r.json())
 
         return gdf
 
@@ -617,7 +615,7 @@ class NLDI:
             url = f"{base_url}/{fid}/{nav}"
 
             r = utils.get_url(session, url)
-            return gpd.GeoDataFrame.from_features(r.json(), crs=crs)
+            return utils.json_togeodf(r.json())
 
         gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
         comid = "nhdplus_comid" if dataSource == "flowline" else "comid"

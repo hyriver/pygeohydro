@@ -33,7 +33,7 @@ class ArcGISServer:
         serviceName=None,
         layer=None,
         outFormat="geojson",
-        spatialRel="esrispatialRelIntersects",
+        spatialRel="esriSpatialRelIntersects",
     ):
         """Form the base url and get the service information.
 
@@ -45,6 +45,32 @@ class ArcGISServer:
         and for OGC interfaces:
         https://<host>/<site>/services/<serviceName>/<serviceType>/<OGCType>/
         For more information visit: `ArcGIS <https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm>`_
+        An example is:
+        https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
+
+        Parameters
+        ----------
+        host : string
+            The host part of the URL, e.g., elevation.nationalmap.gov
+        site : string
+            The site part of the URL, e.g., arcgis
+        folder : string
+            One of the available folders offered by the host. If not correct
+            a list of available folders is shown.
+        serviceName : string
+            One of the available services offered by the host. If not correct
+            a list of available services is shown.
+        layer : string
+            One of the layer of the requested service name. If not correct
+            a list of available layers is shown.
+        outFormat : string
+            One of the output formats offered by the selected layer. If not correct
+            a list of available formats is shown.
+        spatialRel : string
+            The spatial relationship to be applied on the input geometry
+            while performing the query. If not correct
+            a list of available options is shown.
+        -------
         """
         if host is not None and site is not None:
             self.root = f"https://{host}/{site}/rest/services"
@@ -132,7 +158,7 @@ class ArcGISServer:
             "esriSpatialRelWithin",
             "esriSpatialRelRelation",
         ]
-        if value is not None and value not in spatialRels:
+        if value is not None and value.lower() not in [s.lower() for s in spatialRels]:
             msg = f"The given spatialRel, {value}, is not valid. "
             msg += f"Valid spatialRels are {', '.join(str(v) for v in spatialRels)}"
             raise ValueError(msg)
@@ -254,7 +280,7 @@ class ArcGISREST(ArcGISServer):
         layer=None,
         n_threads=4,
         outFormat="json",
-        spatialRel="esrispatialRelIntersects",
+        spatialRel="esriSpatialRelIntersects",
         verbose=False,
     ):
         super().__init__(host, site, folder, serviceName, layer, outFormat, spatialRel)
@@ -298,6 +324,7 @@ class ArcGISREST(ArcGISServer):
             warn(f"No. of threads was reduced to 8 from {value}.")
 
     def generate_url(self):
+        """Generate the base_url based on the class properties"""
         if self.serviceName is None:
             msg = "The base_url set to None since serviceName is not set:\n"
             msg += "URL's general form is https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/\n"
@@ -331,6 +358,7 @@ class ArcGISREST(ArcGISServer):
             self.test_url()
 
     def test_url(self):
+        """Test the generated url and get the required parameters from the service"""
         try:
             r = utils.get_url(self.session, self.base_url, {"f": "json"}).json()
             try:
@@ -369,6 +397,7 @@ class ArcGISREST(ArcGISServer):
             print(f"Supported Query Formats: {self.queryFormats}")
 
     def get_featureids(self, geom):
+        """Get feature IDs withing a geometry"""
         if self.base_url is None:
             raise ValueError(
                 "The base_url is not set yet, use "
@@ -418,7 +447,7 @@ class ArcGISREST(ArcGISServer):
         self.splitted_ids = oid_list
 
     def get_features(self):
-        from arcgis2geojson import arcgis2geojson
+        """Get features based on the feature IDs"""
 
         def get_geojson(ids):
             payload = {
@@ -430,7 +459,7 @@ class ArcGISREST(ArcGISServer):
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
             try:
-                return gpd.GeoDataFrame.from_features(r.json(), crs="epsg:4326")
+                return utils.json_togeodf(r.json())
             except TypeError:
                 return ids
             except AssertionError:
@@ -449,9 +478,7 @@ class ArcGISREST(ArcGISServer):
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
             try:
-                return gpd.GeoDataFrame.from_features(
-                    arcgis2geojson(r.json()), crs="epsg:4326"
-                )
+                return utils.json_togeodf(r.json())
             except TypeError:
                 return ids
 
