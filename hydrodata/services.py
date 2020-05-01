@@ -459,7 +459,7 @@ class ArcGISREST(ArcGISServer):
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
             try:
-                return utils.json_togeodf(r.json())
+                return utils.json_togeodf(r.json(), "epsg:4326")
             except TypeError:
                 return ids
             except AssertionError:
@@ -478,7 +478,7 @@ class ArcGISREST(ArcGISServer):
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
             try:
-                return utils.json_togeodf(r.json())
+                return utils.json_togeodf(r.json(), "epsg:4326")
             except TypeError:
                 return ids
 
