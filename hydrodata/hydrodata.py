@@ -4,7 +4,7 @@
 
 It can be used as follows:
     >>> from hydrodata import Station
-    >>> frankford = Station('2010-01-01', '2015-12-31', station_id='01467087')
+    >>> wshed = Station('2010-01-01', '2015-12-31', station_id='01467087')
 
 For more information refer to the Usage section of the document.
 """
