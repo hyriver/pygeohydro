@@ -310,7 +310,6 @@ class ArcGISREST(ArcGISServer):
             self.generate_url()
         else:
             self.base_url = base_url
-            self.test_url()
 
     @property
     def base_url(self):

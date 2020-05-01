@@ -50,6 +50,7 @@ dependencies:
   - recommonmark
   - wheel
   - watchdog
+  - pandas-vet
   - pip:
     - pqdm
     - arcgis2geojson

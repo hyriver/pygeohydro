@@ -182,26 +182,26 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     r_list = [l.split("\t") for l in r_text if "#" not in l]
     r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
 
-    df = pd.DataFrame.from_dict(r_dict).dropna()
-    df = df.drop(df[df.alt_va == ""].index)
+    sites = pd.DataFrame.from_dict(r_dict).dropna()
+    sites = sites.drop(sites[sites.alt_va == ""].index)
     try:
-        df = df[df.parm_cd == "00060"]
-        df["begin_date"] = pd.to_datetime(df["begin_date"])
-        df["end_date"] = pd.to_datetime(df["end_date"])
+        sites = sites[sites.parm_cd == "00060"]
+        sites["begin_date"] = pd.to_datetime(sites["begin_date"])
+        sites["end_date"] = pd.to_datetime(sites["end_date"])
     except AttributeError:
         pass
 
-    df[["dec_lat_va", "dec_long_va", "alt_va"]] = df[
+    sites[["dec_lat_va", "dec_long_va", "alt_va"]] = sites[
         ["dec_lat_va", "dec_long_va", "alt_va"]
     ].astype("float64")
 
-    df = df[df.site_no.apply(len) == 8]
-    hcdn = gagesii_byid(df.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
+    sites = sites[sites.site_no.apply(len) == 8]
+    hcdn = gagesii_byid(sites.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
     hcdn = hcdn.rename(columns={"STAID": "site_no", "HCDN_2009": "hcdn_2009"})
     hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: True if len(x) > 0 else False)
-    df = df.merge(hcdn, on="site_no")
+    sites = sites.merge(hcdn, on="site_no")
 
-    return df
+    return sites
 
 
 def gagesii_byid(station_ids):
@@ -269,7 +269,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         raise ValueError("Either years or start and end arguments should be provided.")
 
     vars_table = helpers.daymet_variables()
-    valid_variables = vars_table.Abbr.values
+    valid_variables = vars_table.Abbr.to_list()
 
     if variables is not None:
         variables = variables if isinstance(variables, list) else [variables]
@@ -306,13 +306,13 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     session = utils.retry_requests()
     r = utils.get_url(session, url, payload)
 
-    df = pd.DataFrame(r.json()["data"])
-    df.index = pd.to_datetime(df.year * 1000.0 + df.yday, format="%Y%j")
-    df.drop(["year", "yday"], axis=1, inplace=True)
+    clm = pd.DataFrame(r.json()["data"])
+    clm.index = pd.to_datetime(clm.year * 1000.0 + clm.yday, format="%Y%j")
+    clm = clm.drop(["year", "yday"], axis=1)
 
     if pet:
-        df = utils.pet_fao_byloc(df, lon, lat)
-    return df
+        clm = utils.pet_fao_byloc(clm, lon, lat)
+    return clm
 
 
 def daymet_bygeom(
@@ -392,7 +392,7 @@ def daymet_bygeom(
     vars_table = helpers.daymet_variables()
 
     units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
-    valid_variables = vars_table.Abbr.values
+    valid_variables = vars_table.Abbr.to_list()
 
     if variables is not None:
         variables = variables if isinstance(variables, list) else [variables]
@@ -467,8 +467,8 @@ def daymet_bygeom(
     ] = "+proj=lcc +lon_0=-100 +lat_0=42.5 +lat_1=25 +lat_2=60 +ellps=WGS84"
 
     x_res, y_res = float(data.x.diff("x").min()), float(data.y.diff("y").min())
-    x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
-    y_origin = data.y.values[0] - y_res / 2.0  # PixelAsArea Convention
+    x_origin = data.x.values - x_res / 2.0  # PixelAsArea Convention
+    y_origin = data.y.values - y_res / 2.0  # PixelAsArea Convention
 
     transform = (x_res, 0, x_origin, 0, y_res, y_origin)
 
@@ -563,9 +563,7 @@ class NLDI:
             + f"/nwissite/USGS-{station_id}/basin"
         )
         r = utils.get_url(utils.retry_requests(), url)
-        gdf = utils.json_togeodf(r.json(), "epsg:4326")
-
-        return gdf
+        return utils.json_togeodf(r.json(), "epsg:4326")
 
     @staticmethod
     def navigate(
@@ -653,14 +651,14 @@ class NLDI:
             r = utils.get_url(session, url)
             return utils.json_togeodf(r.json(), "epsg:4326")
 
-        gdf = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
+        features = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
         comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
-        gdf = gdf.rename(columns={comid: "comid"})
-        gdf = gdf[["comid", "geometry"]]
-        gdf["comid"] = gdf.comid.astype("int64")
-        gdf.crs = crs
+        features = features.rename(columns={comid: "comid"})
+        features = features[["comid", "geometry"]]
+        features["comid"] = features.comid.astype("int64")
+        features.crs = crs
 
-        return gdf
+        return features
 
 
 def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
@@ -702,14 +700,14 @@ def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
         crs="epsg:4269",
     )
     r = wfs.getfeature_bybox(bbox, in_crs=in_crs)
-    gdf = utils.json_togeodf(r.json(), "epsg:4269", crs)
+    features = utils.json_togeodf(r.json(), "epsg:4269", crs)
 
-    if gdf.shape[0] == 0:
+    if features.shape[0] == 0:
         raise KeyError(
             f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
         )
 
-    return gdf
+    return features
 
 
 def nhdplus_byid(feature, featureids, crs="epsg:4326"):
@@ -747,10 +745,10 @@ def nhdplus_byid(feature, featureids, crs="epsg:4326"):
         crs="epsg:4269",
     )
     r = wfs.getfeature_byid(propertyname, featureids)
-    gdf = utils.json_togeodf(r.json(), "epsg:4269", crs)
-    if gdf.shape[0] == 0:
+    features = utils.json_togeodf(r.json(), "epsg:4269", crs)
+    if features.shape[0] == 0:
         raise KeyError("No feature was found with the provided IDs")
-    return gdf
+    return features
 
 
 def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
@@ -806,7 +804,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
         )
     data = pd.DataFrame.from_records(elevations)
     data.columns = ["datetime", "eta (mm/day)"]
-    data.set_index("datetime", inplace=True)
+    data = data.set_index("datetime")
     return data * 1e-3
 
 

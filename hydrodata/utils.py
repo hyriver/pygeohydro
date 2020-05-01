@@ -263,14 +263,14 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     return elevations
 
 
-def pet_fao_byloc(df, lon, lat):
+def pet_fao_byloc(clm, lon, lat):
     """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
     The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
 
     Parameters
     ----------
-    df : DataFrame
+    clm : DataFrame
         A dataframe with columns named as follows:
         ``tmin (deg c)``, ``tmax (deg c)``, ``vp (Pa)``, ``srad (W/m^2)``, ``dayl (s)``
     lon : float
@@ -286,19 +286,20 @@ def pet_fao_byloc(df, lon, lat):
 
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
-    check_requirements(reqs, df.columns)
+    check_requirements(reqs, clm.columns)
 
-    dtype = df.dtypes[0]
-    df["tmean (deg c)"] = 0.5 * (df["tmax (deg c)"] + df["tmin (deg c)"])
+    dtype = clm.dtypes[0]
+    clm["tmean (deg c)"] = 0.5 * (clm["tmax (deg c)"] + clm["tmin (deg c)"])
     Delta = (
         4098
         * (
             0.6108
             * np.exp(
-                17.27 * df["tmean (deg c)"] / (df["tmean (deg c)"] + 237.3), dtype=dtype
+                17.27 * clm["tmean (deg c)"] / (clm["tmean (deg c)"] + 237.3),
+                dtype=dtype,
             )
         )
-        / ((df["tmean (deg c)"] + 237.3) ** 2)
+        / ((clm["tmean (deg c)"] + 237.3) ** 2)
     )
     elevation = elevation_byloc(lon, lat)
 
@@ -306,21 +307,21 @@ def pet_fao_byloc(df, lon, lat):
     gamma = P * 0.665e-3
 
     G = 0.0  # recommended for daily data
-    df["vp (Pa)"] = df["vp (Pa)"] * 1e-3
+    clm["vp (Pa)"] = clm["vp (Pa)"] * 1e-3
 
     e_max = 0.6108 * np.exp(
-        17.27 * df["tmax (deg c)"] / (df["tmax (deg c)"] + 237.3), dtype=dtype
+        17.27 * clm["tmax (deg c)"] / (clm["tmax (deg c)"] + 237.3), dtype=dtype
     )
     e_min = 0.6108 * np.exp(
-        17.27 * df["tmin (deg c)"] / (df["tmin (deg c)"] + 237.3), dtype=dtype
+        17.27 * clm["tmin (deg c)"] / (clm["tmin (deg c)"] + 237.3), dtype=dtype
     )
     e_s = (e_max + e_min) * 0.5
-    e_def = e_s - df["vp (Pa)"]
+    e_def = e_s - clm["vp (Pa)"]
 
     u_2 = 2.0  # recommended when no data is available
 
-    jday = df.index.dayofyear
-    R_s = df["srad (W/m^2)"] * df["dayl (s)"] * 1e-6
+    jday = clm.index.dayofyear
+    R_s = clm["srad (W/m^2)"] * clm["dayl (s)"] * 1e-6
 
     alb = 0.23
 
@@ -347,21 +348,21 @@ def pet_fao_byloc(df, lon, lat):
     R_nl = (
         4.903e-9
         * (
-            ((df["tmax (deg c)"] + 273.16) ** 4 + (df["tmin (deg c)"] + 273.16) ** 4)
+            ((clm["tmax (deg c)"] + 273.16) ** 4 + (clm["tmin (deg c)"] + 273.16) ** 4)
             * 0.5
         )
-        * (0.34 - 0.14 * np.sqrt(df["vp (Pa)"]))
+        * (0.34 - 0.14 * np.sqrt(clm["vp (Pa)"]))
         * ((1.35 * R_s / R_so) - 0.35)
     )
     R_n = R_ns - R_nl
 
-    df["pet (mm/day)"] = (
+    clm["pet (mm/day)"] = (
         0.408 * Delta * (R_n - G)
-        + gamma * 900.0 / (df["tmean (deg c)"] + 273.0) * u_2 * e_def
+        + gamma * 900.0 / (clm["tmean (deg c)"] + 273.0) * u_2 * e_def
     ) / (Delta + gamma * (1 + 0.34 * u_2))
-    df["vp (Pa)"] = df["vp (Pa)"] * 1.0e3
+    clm["vp (Pa)"] = clm["vp (Pa)"] * 1.0e3
 
-    return df
+    return clm
 
 
 def pet_fao_gridded(ds):
@@ -505,8 +506,7 @@ def exceedance(daily):
     rank = daily.rank(ascending=False, pct=True) * 100
     fdc = pd.concat([daily, rank], axis=1)
     fdc.columns = ["Q", "rank"]
-    fdc.sort_values(by=["rank"], inplace=True)
-    fdc.set_index("rank", inplace=True, drop=True)
+    fdc = fdc.sort_values(by=["rank"]).set_index("rank", drop=True)
     return fdc
 
 
@@ -530,8 +530,8 @@ def interactive_map(bbox):
     if not isinstance(bbox, list):
         raise ValueError("bbox should be a list: [west, south, east, north]")
 
-    df = hds.nwis_siteinfo(bbox=bbox)
-    df = df[
+    sites = hds.nwis_siteinfo(bbox=bbox)
+    sites = sites[
         [
             "site_no",
             "station_nm",
@@ -545,28 +545,28 @@ def interactive_map(bbox):
             "hcdn_2009",
         ]
     ]
-    df["coords"] = [
+    sites["coords"] = [
         (lat, lon)
-        for lat, lon in df[["dec_lat_va", "dec_long_va"]].itertuples(
+        for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(
             name=None, index=False
         )
     ]
-    df["altitude"] = (
-        df["alt_va"].astype(str) + " ft above " + df["alt_datum_cd"].astype(str)
+    sites["altitude"] = (
+        sites["alt_va"].astype(str) + " ft above " + sites["alt_datum_cd"].astype(str)
     )
-    df = df.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
+    sites = sites.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
 
-    dr = hds.nwis_siteinfo(bbox=bbox, expanded=True)[
+    drain_area = hds.nwis_siteinfo(bbox=bbox, expanded=True)[
         ["site_no", "drain_area_va", "contrib_drain_area_va"]
     ]
-    df = df.merge(dr, on="site_no").dropna()
+    sites = sites.merge(drain_area, on="site_no").dropna()
 
-    df["drain_area_va"] = df["drain_area_va"].astype(str) + " square miles"
-    df["contrib_drain_area_va"] = (
-        df["contrib_drain_area_va"].astype(str) + " square miles"
+    sites["drain_area_va"] = sites["drain_area_va"].astype(str) + " square miles"
+    sites["contrib_drain_area_va"] = (
+        sites["contrib_drain_area_va"].astype(str) + " square miles"
     )
 
-    df = df[
+    sites = sites[
         [
             "site_no",
             "station_nm",
@@ -580,7 +580,7 @@ def interactive_map(bbox):
             "hcdn_2009",
         ]
     ]
-    df.columns = [
+    sites.columns = [
         "Site No.",
         "Station Name",
         "Coordinate",
@@ -594,16 +594,21 @@ def interactive_map(bbox):
     ]
 
     msgs = []
-    for row in df.itertuples(index=False):
+    for row in sites.itertuples(index=False):
         msg = ""
-        for col in df.columns:
+        for col in sites.columns:
             msg += "".join(
-                ["<strong>", col, "</strong> : ", f"{row[df.columns.get_loc(col)]}<br>"]
+                [
+                    "<strong>",
+                    col,
+                    "</strong> : ",
+                    f"{row[sites.columns.get_loc(col)]}<br>",
+                ]
             )
         msgs.append(msg[:-4])
 
-    df["msg"] = msgs
-    df = df[["Coordinate", "msg"]]
+    sites["msg"] = msgs
+    sites = sites[["Coordinate", "msg"]]
 
     west, south, east, north = bbox
     lon = (west + east) * 0.5
@@ -611,7 +616,7 @@ def interactive_map(bbox):
 
     m = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
 
-    for coords, msg in df.itertuples(name=None, index=False):
+    for coords, msg in sites.itertuples(name=None, index=False):
         folium.Marker(
             location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
         ).add_to(m)
@@ -740,7 +745,7 @@ def prepare_nhdplus(
         def tocomid(ft):
             def toid(row):
                 try:
-                    return ft[ft.fromnode == row.tonode].comid.values[0]
+                    return ft[ft.fromnode == row.tonode].comid.to_numpy()[0]
                 except IndexError:
                     return pd.NA
 
@@ -748,7 +753,7 @@ def prepare_nhdplus(
 
         fls["tocomid"] = pd.concat(map(tocomid, fl_li))
 
-    return gpd.GeoDataFrame(pd.merge(fls, fl[extra_cols], on="comid", how="left"))
+    return gpd.GeoDataFrame(fls.merge(fl[extra_cols], on="comid", how="left"))
 
 
 def traverse_json(obj, path):
@@ -931,16 +936,16 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
     geopandas.GeoDataFrame
     """
     try:
-        gdf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
+        geodf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
     except TypeError:
         from arcgis2geojson import arcgis2geojson
 
-        gdf = gpd.GeoDataFrame.from_features(arcgis2geojson(content), crs=in_crs)
+        geodf = gpd.GeoDataFrame.from_features(arcgis2geojson(content), crs=in_crs)
 
-    gdf.crs = in_crs
+    geodf.crs = in_crs
     if in_crs != crs:
-        gdf = gdf.to_crs(crs)
-    return gdf
+        geodf = geodf.to_crs(crs)
+    return geodf
 
 
 def geom_mask(
@@ -1108,10 +1113,12 @@ def vector_accumulation(
             ),
             network=True,
         )
-        ups_dict = {n: len(nx.bfs_tree(G, n, reverse=True)) - 1 for n in sorted_nodes}
-        df = pd.DataFrame.from_dict(ups_dict, orient="index")
-        df = df.reset_index().rename(columns={"index": "node", 0: "n"})
-        grouped = df.groupby("n")["node"].apply(list).to_dict()
+        upstreams_dict = {
+            n: len(nx.bfs_tree(G, n, reverse=True)) - 1 for n in sorted_nodes
+        }
+        upstreams = pd.DataFrame.from_dict(upstreams_dict, orient="index")
+        upstreams = upstreams.reset_index().rename(columns={"index": "node", 0: "n"})
+        grouped = upstreams.groupby("n")["node"].apply(list).to_dict()
         topo_sorted = list(grouped.values())[:-1]
     else:
         sorted_nodes, upstream_nodes = topoogical_sort(
@@ -1144,7 +1151,7 @@ def vector_accumulation(
         def acc(n):
             return func(
                 np.sum([outflow[u] for u in upstream_nodes[n]], axis=0),
-                *flowlines.loc[flowlines[id_col] == n, arg_cols].values[0],
+                *flowlines.loc[flowlines[id_col] == n, arg_cols].to_numpy(),
             )
 
         [
@@ -1168,7 +1175,7 @@ def vector_accumulation(
         for i in topo_sorted:
             outflow[i] = func(
                 np.sum([outflow[u] for u in upstream_nodes[i]], axis=0),
-                *flowlines.loc[flowlines[id_col] == i, arg_cols].values[0],
+                *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy(),
             )
 
     outflow.pop(0)

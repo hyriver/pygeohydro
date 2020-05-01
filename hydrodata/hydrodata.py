@@ -100,16 +100,16 @@ class Station:
         info = hds.nwis_siteinfo(ids=self.station_id, expanded=True)
         try:
             self.drainage_area = (
-                info["contrib_drain_area_va"].astype("float64").values[0] * 2.5899
+                info["contrib_drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             )
         except ValueError:
             self.drainage_area = (
-                info["drain_area_va"].astype("float64").values[0] * 2.5899
+                info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             )
         except ValueError:
             self.drainage_area = self.watershed.flowlines.areasqkm.sum()
 
-        self.hcdn = info.hcdn_2009.values[0]
+        self.hcdn = info.hcdn_2009.to_numpy()[0]
         if self.verbose:
             print(self.__repr__())
 
@@ -132,8 +132,8 @@ class Station:
         """Get coordinates of the station from station ID."""
         siteinfo = hds.nwis_siteinfo(ids=self.station_id)
         st = siteinfo[siteinfo.stat_cd == "00003"]
-        st_begin = st.begin_date.values[0]
-        st_end = st.end_date.values[0]
+        st_begin = st.begin_date.to_numpy()[0]
+        st_end = st.end_date.to_numpy()[0]
         if self.start < st_begin or self.end > st_end:
             warn(
                 f"[ID: {self.station_id}] ".ljust(MARGINE)
@@ -144,14 +144,14 @@ class Station:
             )
 
         self.coords = (
-            st["dec_long_va"].astype("float64").values[0],
-            st["dec_lat_va"].astype("float64").values[0],
+            st["dec_long_va"].astype("float64").to_numpy()[0],
+            st["dec_lat_va"].astype("float64").to_numpy()[0],
         )
         self.altitude = (
-            st["alt_va"].astype("float64").values[0] * 0.3048
+            st["alt_va"].astype("float64").to_numpy()[0] * 0.3048
         )  # convert ft to meter
-        self.datum = st["alt_datum_cd"].values[0]
-        self.name = st.station_nm.values[0]
+        self.datum = st["alt_datum_cd"].to_numpy()[0]
+        self.name = st.station_nm.to_numpy()[0]
 
     def get_id(self):
         """Get station ID based on the specified coordinates."""
@@ -164,9 +164,9 @@ class Station:
             self.coords[1] + self.srad,
         ]
 
-        df = hds.nwis_siteinfo(bbox=bbox)
-        df = df[df.stat_cd == "00003"]
-        if len(df) < 1:
+        sites = hds.nwis_siteinfo(bbox=bbox)
+        sites = sites[sites.stat_cd == "00003"]
+        if len(sites) < 1:
             msg = (
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
@@ -179,20 +179,20 @@ class Station:
         pts = dict(
             [
                 [sid, geom.Point(lon, lat)]
-                for sid, lon, lat in df[
+                for sid, lon, lat in sites[
                     ["site_no", "dec_long_va", "dec_lat_va"]
                 ].itertuples(name=None, index=False)
             ]
         )
 
-        gdf = gpd.GeoSeries(pts)
-        distance = gdf.apply(lambda x: x.distance(point)).sort_values()
+        stations = gpd.GeoSeries(pts)
+        distance = stations.apply(lambda x: x.distance(point)).sort_values()
 
         station_id = None
         for sid, dis in distance.iteritems():
-            station = df[df.site_no == sid]
-            st_begin = station.begin_date.values[0]
-            st_end = station.end_date.values[0]
+            station = sites[sites.site_no == sid]
+            st_begin = station.begin_date.to_numpy()[0]
+            st_end = station.end_date.to_numpy()[0]
 
             if self.start < st_begin or self.end > st_end:
                 continue
@@ -214,14 +214,14 @@ class Station:
             self.station_id = station_id
 
         self.coords = (
-            station.dec_long_va.astype("float64").values[0],
-            station.dec_lat_va.astype("float64").values[0],
+            station.dec_long_va.astype("float64").to_numpy()[0],
+            station.dec_lat_va.astype("float64").to_numpy()[0],
         )
         self.altitude = (
-            station["alt_va"].astype("float64").values[0] * 0.3048
+            station["alt_va"].astype("float64").to_numpy()[0] * 0.3048
         )  # convert ft to meter
-        self.datum = station["alt_datum_cd"].values[0]
-        self.name = station.station_nm.values[0]
+        self.datum = station["alt_datum_cd"].to_numpy()[0]
+        self.name = station.station_nm.to_numpy()[0]
 
     def get_watershed(self):
         """Download the watershed geometry from the NLDI service."""
@@ -250,4 +250,4 @@ class Station:
                     + f"The watershed geometry saved to {geom_file}."
                 )
 
-        self.geometry = self.basin.geometry.values[0]
+        self.geometry = self.basin.geometry.to_numpy()[0]
