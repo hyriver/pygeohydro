@@ -7,9 +7,6 @@ from hydrodata import Station, helpers, plot, services, utils
 
 
 def test_station():
-    import shutil
-
-    shutil.rmtree("data")
     natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
     natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
     urban = Station(start="2000-01-01", end="2010-01-21", coords=(-118.47, 34.16))
