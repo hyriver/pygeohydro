@@ -2,7 +2,7 @@
 History
 =======
 
-0.5.2 (2020-05-01)
+0.5.3 (2020-05-01)
 ------------------
 
 * Added threading capability to the flow accumulation function
@@ -10,6 +10,8 @@ History
 * Migrate RTD to pip from conda
 * Changed HCDN database source to GagesII database
 * Increased robustness of functions that need network connections
+* Made the flow accumulation output a pandas Series for better handling of time
+  series input
 
 0.5.0 (2020-04-25)
 ------------------
