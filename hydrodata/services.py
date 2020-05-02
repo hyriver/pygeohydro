@@ -406,12 +406,18 @@ class ArcGISREST(ArcGISServer):
             raise KeyError(f"The service url is not valid:\n{self.base_url}")
 
         if self.verbose:
-            print("The following url was generated successfully:")
-            print(self.base_url)
-            if self.units is not None:
-                print(f"Units: {self.units}")
-            print(f"Max Record Count: {self.maxRecordCount}")
-            print(f"Supported Query Formats: {self.queryFormats}")
+            print(self.__repr__())
+
+    def __repr__(self):
+        """Print the services properties."""
+        msg = (
+            f"The following url was generated successfully:\n{self.base_url}\n"
+            + f"Max Record Count: {self.maxRecordCount}\n"
+            + f"Supported Query Formats: {self.queryFormats}"
+        )
+        if self.units is not None:
+            msg += f"Units: {self.units}"
+        return msg
 
     def get_featureids(self, geom):
         """Get feature IDs withing a geometry"""
@@ -799,6 +805,17 @@ class WFS:
                     ]
                 )
             )
+
+    def __repr__(self):
+        """Print the services properties."""
+        return (
+            "Connected to the WFS service with the following properties:\n"
+            + f"URL: {self.url}\n"
+            + f"Version: {self.version}\n"
+            + f"Layer: {self.layer}\n"
+            + f"Output Format: {self.outFormat}\n"
+            + f"Output CRS: {self.crs}"
+        )
 
     def getfeature_bybox(self, bbox, in_crs="epsg:4326"):
         """Data from any WMS service within a geometry
