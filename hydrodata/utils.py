@@ -1081,7 +1081,9 @@ def vector_accumulation(
         func(qin, slope, roughness)
         where slope and roughness are elemental values read from the flowlines.
     attr_col : string
-        The attribute that being accumulated in the network.
+        The column name of the attribute being accumulated in the network.
+        The column should contain the initial condition for the attribute for
+        each river segment. It can be a scalar or an array (e.g., time series).
     arg_cols : list of strings
         List of the flowlines columns that contain all the required
         data for a routing a single river segment such as slope, length,
@@ -1101,7 +1103,9 @@ def vector_accumulation(
     -------
     pandas.Series
         Accumulated flow for all the nodes. The dataframe is sorted from upstream
-        to downstream (topological sorting).
+        to downstream (topological sorting). Depending on the given initial
+        condition in the attr_col, the outflow for each river segment can be
+        a scalar or an array.
     """
     import numbers
     import networkx as nx
