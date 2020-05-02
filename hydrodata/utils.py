@@ -1179,10 +1179,10 @@ def vector_accumulation(
         for i in topo_sorted:
             outflow[i] = func(
                 np.sum([outflow[u] for u in upstream_nodes[i]], axis=0),
-                *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy(),
+                *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy()[0],
             )
 
     outflow.pop(0)
-    qsim = pd.DataFrame.from_dict(outflow, orient="index").loc[sorted_nodes[:-1]]
-    qsim = qsim.reset_index().rename(columns={"index": "comid", 0: "acc"})
+    qsim = pd.Series(outflow).loc[sorted_nodes[:-1]]
+    qsim = qsim.rename_axis("comid").rename("acc")
     return qsim
