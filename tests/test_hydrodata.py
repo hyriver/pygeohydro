@@ -154,6 +154,7 @@ def test_newdb():
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
+    print(wfs)
     r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
