@@ -1014,6 +1014,7 @@ class NationalMap:
     service is desired they can be passes directly to ``get_map``
     function.
     """
+
     def __init__(
         self,
         geometry,
@@ -1074,7 +1075,7 @@ class NationalMap:
         self.in_crs = in_crs
         self.out_crs = out_crs
         self.fpath = fpath
-        
+
     def get_dem(self):
         """DEM as an ``xarray.DataArray`` in meters"""
 

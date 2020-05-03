@@ -1151,6 +1151,7 @@ def vector_accumulation(
     upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
 
     if threading:
+
         def acc(n):
             return func(
                 np.sum([outflow[u] for u in upstream_nodes[n]], axis=0),
