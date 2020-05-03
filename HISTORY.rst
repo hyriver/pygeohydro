@@ -2,7 +2,7 @@
 History
 =======
 
-0.5.3 (2020-05-01)
+0.5.3 (2020-05-03)
 ------------------
 
 * Added threading capability to the flow accumulation function
@@ -12,6 +12,7 @@ History
 * Increased robustness of functions that need network connections
 * Made the flow accumulation output a pandas Series for better handling of time
   series input
+* Combined DEM, slope, and aspect in a class called NationalMap.
 
 0.5.0 (2020-04-25)
 ------------------

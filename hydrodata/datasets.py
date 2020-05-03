@@ -999,67 +999,153 @@ def nlcd(
     return ds
 
 
-def nationalmap_dem(
-    geometry,
-    width=None,
-    resolution=None,
-    fill_holes=False,
-    in_crs="epsg:4326",
-    out_crs="epsg:4326",
-    fpath=None,
-):
-    """Get elevation DEM from `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
+class NationalMap:
+    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
 
     The 3DEP service has multi-resolution sources so depeneding on the user
     provided resolution (or width) the data is resampled on server-side based
     on all the available data sources.
 
-    Parameters
-    ----------
-    geometry : Geometry
-        A shapely Polygon in WGS 84 (epsg:4326).
-    width : int
-        The width of the output image in pixels. The height is computed
-        automatically from the geometry's bounding box aspect ratio. Either width
-        or resolution should be provided.
-    resolution : float
-        The data resolution in arc-seconds. The width and height are computed in pixel
-        based on the geometry bounds and the given resolution. Either width or
-        resolution should be provided.
-    fill_holes : bool, optional
-        Whether to fill the holes in the geometry's interior, defaults to False.
-    in_crs : string, optional
-        The spatial reference system of the input geometry, defaults to
-        epsg:4326.
-    out_crs : string, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-    fpath : string or Path
-        Path to save the output as a ``tiff`` file, defaults to None.
-
-    Returns
-    -------
-    xarray.DataArray
-        DEM in meters.
+    Notes
+    -----
+    There are three functions available for getting DEM ("3DEPElevation:None" layer),
+    slope ("3DEPElevation:Slope Degrees" layer), and
+    aspect ("3DEPElevation:Aspect Degrees" layer). If other layers from the 3DEP
+    service is desired they can be passes directly to ``get_map``
+    function.
     """
-    url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-
-    layers = {"elevation": "3DEPElevation:None"}
-    if fpath is not None:
-        fpath = {"elevation": fpath}
-
-    dem = services.wms_bygeom(
-        url,
-        "DEM",
+    def __init__(
+        self,
         geometry,
-        width=width,
-        resolution=resolution,
-        layers=layers,
-        outFormat="image/tiff",
-        fill_holes=fill_holes,
-        fpath=fpath,
-        in_crs=in_crs,
-        crs=out_crs,
-    )
-    dem.attrs["units"] = "meters"
-    return dem
+        layer=None,
+        width=None,
+        resolution=None,
+        fill_holes=False,
+        in_crs="epsg:4326",
+        out_crs="epsg:4326",
+        fpath=None,
+    ):
+        """
+
+        Parameters
+        ----------
+        geometry : Geometry
+            A shapely Polygon in WGS 84 (epsg:4326).
+        layer : string, optional
+            The national map 3DEP layer. Available layers are:
+            "3DEPElevation:Hillshade Gray",
+            "3DEPElevation:Aspect Degrees",
+            "3DEPElevation:Aspect Map",
+            "3DEPElevation:GreyHillshade_elevationFill",
+            "3DEPElevation:Hillshade Multidirectional",
+            "3DEPElevation:Slope Map",
+            "3DEPElevation:Slope Degrees",
+            "3DEPElevation:Hillshade Elevation Tinted",
+            "3DEPElevation:Height Ellipsoidal",
+            "3DEPElevation:Contour 25",
+            "3DEPElevation:Contour Smoothed 25", and
+            "3DEPElevation:None" (for DEM)
+            Layer can be passed directly to ``get_map`` function.
+        width : int
+            The width of the output image in pixels. The height is computed
+            automatically from the geometry's bounding box aspect ratio. Either width
+            or resolution should be provided.
+        resolution : float
+            The data resolution in arc-seconds. The width and height are computed in pixel
+            based on the geometry bounds and the given resolution. Either width or
+            resolution should be provided.
+        fill_holes : bool, optional
+            Whether to fill the holes in the geometry's interior, defaults to False.
+        in_crs : string, optional
+            The spatial reference system of the input geometry, defaults to
+            epsg:4326.
+        out_crs : string, optional
+            The spatial reference system to be used for requesting the data, defaults to
+            epsg:4326.
+        fpath : string or Path
+            Path to save the output as a ``tiff`` file, defaults to None.
+        """
+        self.url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+        self.layer = layer
+        self.geometry = geometry
+        self.width = width
+        self.resolution = resolution
+        self.fill_holes = fill_holes
+        self.in_crs = in_crs
+        self.out_crs = out_crs
+        self.fpath = fpath
+        
+    def get_dem(self):
+        """DEM as an ``xarray.DataArray`` in meters"""
+
+        if self.fpath is not None:
+            self.fpath = {"elevation": self.fpath}
+
+        self.layer = {"elevation": "3DEPElevation:None"}
+
+        dem = self.get_map()
+        dem.attrs["units"] = "meters"
+        return dem
+
+    def get_aspect(self):
+        """Aspect map as an ``xarray.DataArray`` in degrees"""
+
+        if self.fpath is not None:
+            self.fpath = {"aspect": self.fpath}
+
+        self.layer = {"aspect": "3DEPElevation:Aspect Degrees"}
+
+        aspect = self.get_map()
+        aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
+        aspect.attrs["nodatavals"] = (np.nan,)
+        aspect.attrs["units"] = "degrees"
+        return aspect
+
+    def get_slope(self, mpm=False):
+        """Slope from 3DEP service
+
+        Parameters
+        ----------
+        mpm : bool, optional
+            Whether to convert the slope to meters/meters from degrees, defaults to False
+
+        Returns
+        -------
+        xarray.DataArray
+            Slope in degrees or meters/meters
+        """
+
+        if self.fpath is not None:
+            self.fpath = {"slope": self.fpath}
+
+        self.layer = {"slope": "3DEPElevation:Slope Degrees"}
+
+        slope = self.get_map()
+        slope = slope.where(slope < slope.nodatavals[0], drop=True)
+        slope.attrs["nodatavals"] = (np.nan,)
+        if mpm:
+            attrs = slope.attrs
+            slope = xr.ufuncs.tan(slope) / 100.0
+            slope.attrs = attrs
+            slope.attrs["units"] = "meters/meters"
+        else:
+            slope.attrs["units"] = "degrees"
+        return slope
+
+    def get_map(self, layer=None):
+        """Get requested map using the national map's WMS service"""
+
+        layer = self.layer if layer is None else layer
+        return services.wms_bygeom(
+            self.url,
+            "3DEP",
+            self.geometry,
+            width=self.width,
+            resolution=self.resolution,
+            layers=layer,
+            outFormat="image/tiff",
+            fill_holes=self.fill_holes,
+            fpath=self.fpath,
+            in_crs=self.in_crs,
+            crs=self.out_crs,
+        )

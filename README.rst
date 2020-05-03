@@ -35,7 +35,7 @@ Hydrodata is a python library designed to aid in watershed analysis. It provides
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data)
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ for Digital Elevation Model
+* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from National Map service for getting data such as Digital Elevation Model, slope, and aspect.
 
 Additionally, the following functionalities are offered:
 
@@ -109,11 +109,12 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
     flw = flw.merge(qsim, on="comid")
     diff = flw.arbolatesu - flw.acc
 
-We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
+We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
 
 .. code-block:: python
 
-    dem = hds.nationalmap_dem(wshed.geometry, resolution=30)
+    nm = hds.NationalMap(wshed.geometry, resolution=30)
+    dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
 
 The climate data and streamflow observations for a location of interest can be retrieved as well. Note the use of ``pet`` flag for computing PET:
 
