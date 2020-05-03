@@ -1054,7 +1054,7 @@ def vector_accumulation(
     id_col="comid",
     toid_col="tocomid",
     threading=False,
-    n_threads=4,
+    n_jobs=4,
     verbose=False,
 ):
     """Flow accumulation using vector river network data.
@@ -1094,7 +1094,7 @@ def vector_accumulation(
         Name of the flowlines column containing toIDs, defaults to tocomid
     threading : bool, optional
         Whether to perform the accumulation with threading, defaults to False
-    n_threads : int, optional
+    n_jobs : int, optional
         Number of threads for parallelization, defaults to 4
     verbose : bool, optional
         Whether to show more information during runtime, defaults to False
@@ -1151,11 +1151,10 @@ def vector_accumulation(
     upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
 
     if threading:
-
         def acc(n):
             return func(
                 np.sum([outflow[u] for u in upstream_nodes[n]], axis=0),
-                *flowlines.loc[flowlines[id_col] == n, arg_cols].to_numpy(),
+                *flowlines.loc[flowlines[id_col] == n, arg_cols].to_numpy()[0],
             )
 
         [
@@ -1166,7 +1165,7 @@ def vector_accumulation(
                         pqdm(
                             n,
                             acc,
-                            n_jobs=n_threads,
+                            n_jobs=n_jobs,
                             desc="Flow Accumulation",
                             disable=not verbose,
                         ),
