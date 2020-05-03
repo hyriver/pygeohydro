@@ -322,12 +322,11 @@ def daymet_bygeom(
     years=None,
     variables=None,
     pet=False,
-    resolution=None,
     fill_holes=False,
     n_threads=4,
     verbose=False,
 ):
-    """Gridded data from the Daymet database.
+    """Gridded data from the Daymet database as 1-km resolution.
 
     The data is clipped using netCDF Subset Service.
 
@@ -349,9 +348,6 @@ def daymet_bygeom(
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
-    resolution : float
-        The desired output resolution for the output in km,
-        defaults to no resampling. The resampling is done using bilinear method
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
@@ -467,8 +463,8 @@ def daymet_bygeom(
     ] = "+proj=lcc +lon_0=-100 +lat_0=42.5 +lat_1=25 +lat_2=60 +ellps=WGS84"
 
     x_res, y_res = float(data.x.diff("x").min()), float(data.y.diff("y").min())
-    x_origin = data.x.values - x_res / 2.0  # PixelAsArea Convention
-    y_origin = data.y.values - y_res / 2.0  # PixelAsArea Convention
+    x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
+    y_origin = data.y.values[0] - y_res / 2.0  # PixelAsArea Convention
 
     transform = (x_res, 0, x_origin, 0, y_res, y_origin)
 

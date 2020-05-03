@@ -967,7 +967,7 @@ def geom_mask(
         CRS of the dataset to be masked, defaults to epsg:4326
     all_touched : bool
         Wether to include all the elements where the geometry touchs
-        rather than only the element center, defaults to True
+        rather than only the element's center, defaults to True
 
     Returns
     -------
