@@ -92,10 +92,13 @@ def test_nlcd():
     assert abs(st["categories"]["Forest"] - 43.0943) < 1e-4
 
 
-def test_dem():
+def test_nm():
     wshed = Station("2000-01-01", "2000-01-05", station_id="01031500")
-    dem = hds.nationalmap_dem(wshed.geometry, resolution=1)
-    assert abs(dem.mean().values.item() - 302.2381) < 1e-4
+    nm = hds.NationalMap(wshed.geometry, resolution=1)
+    dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
+    assert (abs(dem.mean().values.item() - 302.2381) < 1e-4
+            and abs(slope.mean().values.item() - 4.1805) < 1e-4
+            and abs(aspect.mean().values.item() - 168.8906) < 1e-4)
 
 
 def test_newdb():
