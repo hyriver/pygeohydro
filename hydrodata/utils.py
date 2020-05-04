@@ -630,7 +630,7 @@ def prepare_nhdplus(
     min_path_length,
     min_path_size=0,
     purge_non_dendritic=False,
-    warn=False,
+    verbose=False,
 ):
     """Cleaning up and fixing issue in NHDPlus flowline database.
 
@@ -653,7 +653,7 @@ def prepare_nhdplus(
         this value will be removed.
     purge_non_dendritic : bool
         Whether to remove non dendritic paths.
-    warn : bool
+    verbose : bool
         Whether to show a message about the removed features, defaults to True.
 
     Returns
@@ -735,7 +735,7 @@ def prepare_nhdplus(
         fls = fls[~fls.terminalpa.isin(tiny_networks.terminalpa.unique())]
 
     n_rm = fl.shape[0] - fls.shape[0]
-    if n_rm > 0:
+    if n_rm > 0 and verbose:
         print(f"Removed {n_rm} rows from the flowlines database.")
 
     if fls.shape[0] > 0:
