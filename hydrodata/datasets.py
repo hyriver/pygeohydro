@@ -1075,9 +1075,6 @@ class NationalMap:
     def get_dem(self):
         """DEM as an ``xarray.DataArray`` in meters"""
 
-        if self.fpath is not None:
-            self.fpath = {"elevation": self.fpath}
-
         self.layer = {"elevation": "3DEPElevation:None"}
 
         dem = self.get_map()
@@ -1086,9 +1083,6 @@ class NationalMap:
 
     def get_aspect(self):
         """Aspect map as an ``xarray.DataArray`` in degrees"""
-
-        if self.fpath is not None:
-            self.fpath = {"aspect": self.fpath}
 
         self.layer = {"aspect": "3DEPElevation:Aspect Degrees"}
 
@@ -1112,9 +1106,6 @@ class NationalMap:
             Slope in degrees or meters/meters
         """
 
-        if self.fpath is not None:
-            self.fpath = {"slope": self.fpath}
-
         self.layer = {"slope": "3DEPElevation:Slope Degrees"}
 
         slope = self.get_map()
@@ -1133,6 +1124,8 @@ class NationalMap:
         """Get requested map using the national map's WMS service"""
 
         layer = self.layer if layer is None else layer
+        name = str(list(layer.keys())[0]).replace(" ", "_")
+        fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
             self.url,
             "3DEP",
@@ -1142,7 +1135,7 @@ class NationalMap:
             layers=layer,
             outFormat="image/tiff",
             fill_holes=self.fill_holes,
-            fpath=self.fpath,
+            fpath=fpath,
             in_crs=self.in_crs,
             crs=self.out_crs,
         )
