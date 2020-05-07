@@ -1133,15 +1133,12 @@ def vector_accumulation(
         )
         topo_sorted = sorted_nodes[:-1]
 
-    init = flowlines.iloc[0][attr_col]
-    isarray = isinstance(init, np.ndarray) or isinstance(init, list)
-    isscalar = isinstance(init, numbers.Number)
-
     outflow = flowlines.set_index(id_col)[attr_col].to_dict()
 
-    if isscalar:
+    init = flowlines.iloc[0][attr_col]
+    if isinstance(init, numbers.Number):
         outflow[0] = 0.0
-    elif isarray:
+    elif isinstance(init, np.ndarray) or isinstance(init, list):
         outflow[0] = np.zeros_like(init)
     else:
         raise ValueError(

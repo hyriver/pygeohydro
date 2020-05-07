@@ -1,6 +1,6 @@
 name: hydrodata
 channels:
-  - defaults
+  - conda-forge
 dependencies:
   - python>=3.6
   - pip
@@ -16,14 +16,15 @@ dependencies:
   - bottleneck
   - lxml
   - geopandas
-  - pyarrow
+  - folium
+  - rasterio
+  - pyproj
+  - proj
+  - gdal
+  - networkx
+  - geojson
+  - simplejson
+  - pytables
   - pip:
-    - geojson
-    - simplejson
-    - folium
-    - rasterio
     - pqdm
-    - tables
-    - networkx
     - arcgis2geojson
-    - hydrodata
