@@ -1113,7 +1113,7 @@ class NationalMap:
         slope.attrs["nodatavals"] = (np.nan,)
         if mpm:
             attrs = slope.attrs
-            slope = xr.ufuncs.tan(slope) / 100.0
+            slope = xr.ufuncs.tan(xr.ufuncs.deg2rad(slope))
             slope.attrs = attrs
             slope.attrs["units"] = "meters/meters"
         else:
