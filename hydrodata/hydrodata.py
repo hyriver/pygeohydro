@@ -99,15 +99,15 @@ class Station:
 
         info = hds.nwis_siteinfo(ids=self.station_id, expanded=True)
         try:
-            self.drainage_area = (
+            self.areasqkm = (
                 info["contrib_drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             )
         except ValueError:
-            self.drainage_area = (
+            self.areasqkm = (
                 info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             )
         except ValueError:
-            self.drainage_area = self.watershed.flowlines.areasqkm.sum()
+            self.areasqkm = self.watershed.flowlines.areasqkm.sum()
 
         self.hcdn = info.hcdn_2009.to_numpy()[0]
         if self.verbose:
@@ -123,7 +123,7 @@ class Station:
             + "".ljust(MARGINE)
             + f"Altitude: {self.altitude:.0f} m above {self.datum}\n"
             + "".ljust(MARGINE)
-            + f"Drainage area: {self.drainage_area:.0f} sqkm\n"
+            + f"Drainage area: {self.areasqkm:.0f} sqkm\n"
             + "".ljust(MARGINE)
             + f"HCDN 2009: {self.hcdn}."
         )
