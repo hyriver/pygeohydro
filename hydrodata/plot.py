@@ -14,7 +14,14 @@ from hydrodata import helpers, utils
 
 
 def signatures(
-    Q_daily, prcp=None, title=None, figsize=(13, 13), threshold=1e-3, output=None,
+    daily_dict,
+    daily_unit="cms",
+    prcp=None,
+    prcp_unit="mm/day",
+    title=None,
+    figsize=(13, 13),
+    threshold=1e-3,
+    output=None,
 ):
     """Plot hydrological signatures with w/ or w/o precipitation.
 
@@ -25,14 +32,16 @@ def signatures(
 
     Parameters
     ----------
-    Q_daily : dict of tuple
-        The first element is a series containing daily discharges in
-        :math:`m^3/s` and the second element is the contributing drainage
-        area in :math:`km^2`.
-        The dict keys are the labels on the plot.
+    daily_dict : dict
+        The dict keys are used as labels on the plot and the values should be
+        daily streamflow.
+    daily_unit : string, optional
+        The unit of the daily streamflow to appear on the plots, defaults to cms.
     prcp : series, optional
         Daily precipitation time series in :math:`mm/day`. If given, the data is
         plotted on the second x-axis at the top.
+    prcp_unit : string, optional
+        The unit of the precipitation to appear on the plots, defaults to mm/day.
     title : str, optional
         The plot supertitle.
     figsize : tuple, optional
@@ -47,22 +56,8 @@ def signatures(
     pd.plotting.register_matplotlib_converters()
     mpl.rcParams["figure.dpi"] = 300
 
-    if not isinstance(Q_daily, dict):
+    if not isinstance(daily_dict, dict):
         raise TypeError("The daily_dict argument should be a dictionary.")
-
-    for _, v in Q_daily.items():
-        if isinstance(v, tuple):
-            if not len(v) == 2:
-                raise ValueError(
-                    "The tuple should have exactly two elemenets, (Q, area)."
-                )
-        else:
-            raise TypeError("The values of the input dictionary should be tuples.")
-
-    # convert cms to mm/day
-    daily_dict = {
-        k: v[0] * 1000.0 * 24.0 * 3600.0 / (v[1] * 1.0e6) for k, v in Q_daily.items()
-    }
 
     month_Q_dict, year_Q_dict, mean_month_Q_dict, Q_fdc_dict = {}, {}, {}, {}
     for label, daily in daily_dict.items():
@@ -85,7 +80,7 @@ def signatures(
     for label, daily in daily_dict.items():
         ax1.plot(daily.index.to_pydatetime(), daily, label=label)
     ax1.set_xlim(dates[0], dates[-1])
-    ax1.set_ylabel("$Q$ (mm/day)")
+    ax1.set_ylabel(f"$Q$ ({daily_unit})")
     ax1.set_xlabel("")
     ax1.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax1.set_title("Total Hydrograph (daily)")
@@ -97,7 +92,7 @@ def signatures(
         ax12.bar(prcp.index.to_pydatetime(), prcp.values, alpha=0.7, width=1, color="g")
         ax12.set_ylim(0, prcp.max() * 2.5)
         ax12.set_ylim(ax12.get_ylim()[::-1])
-        ax12.set_ylabel("$P$ (mm/day)")
+        ax12.set_ylabel(f"$P$ ({prcp_unit})")
         ax12.set_xlabel("")
 
     ax2 = plt.subplot(4, 2, (3, 4))
@@ -107,7 +102,7 @@ def signatures(
         ax2.plot(month_Q.index.to_pydatetime(), month_Q, label=label)
     ax2.set_xlim(dates[0], dates[-1])
     ax2.set_xlabel("")
-    ax2.set_ylabel("$Q$ (mm/month)")
+    ax2.set_ylabel(f"$Q$ ({daily_unit})")
     ax2.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax2.set_title("Total Hydrograph (monthly)")
 
@@ -122,7 +117,7 @@ def signatures(
         )
         ax22.set_ylim(0, month_P.max() * 2.5)
         ax22.set_ylim(ax22.get_ylim()[::-1])
-        ax22.set_ylabel("$P$ (mm/day)")
+        ax22.set_ylabel(f"$P$ ({prcp_unit})")
         ax22.set_xlabel("")
 
     ax3 = plt.subplot(4, 2, 5)
@@ -132,7 +127,7 @@ def signatures(
         ax3.plot(dates, mean_month_Q, label=label)
     ax3.set_xlim(dates[0], dates[-1])
     ax3.set_xlabel("")
-    ax3.set_ylabel(r"$\overline{Q}$ (mm/month)")
+    ax3.set_ylabel(fr"$\overline{{Q}}$ ({daily_unit})")
     ax3.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax3.set_title("Regime Curve (monthly mean)")
 
@@ -141,7 +136,7 @@ def signatures(
         ax32.bar(dates, mean_month_P.values, alpha=0.7, width=1, color="g")
         ax32.set_ylim(0, mean_month_P.max() * 2.5)
         ax32.set_ylim(ax32.get_ylim()[::-1])
-        ax32.set_ylabel("$P$ (mm/day)")
+        ax32.set_ylabel(f"$P$ ({prcp_unit})")
         ax32.set_xlabel("")
 
     ax4 = plt.subplot(4, 2, 6)
@@ -151,7 +146,7 @@ def signatures(
         ax4.plot(year_Q.index.to_pydatetime(), year_Q, label=label)
     ax4.set_xlim(dates[0], dates[-1])
     ax4.set_xlabel("")
-    ax4.set_ylabel("$Q$ (mm/year)")
+    ax4.set_ylabel(f"$Q$ ({daily_unit})")
     ax4.ticklabel_format(axis="y", style="plain", scilimits=(0, 0))
     ax4.set_title("Total Hydrograph (annual)")
 
@@ -163,7 +158,7 @@ def signatures(
         ax42.set_xlim(dates[0], dates[-1])
         ax42.set_ylim(0, year_P.max() * 2.5)
         ax42.set_ylim(ax42.get_ylim()[::-1])
-        ax42.set_ylabel("$P$ (mm/day)")
+        ax42.set_ylabel(f"$P$ ({prcp_unit})")
         ax42.set_xlabel("")
 
     ax5 = plt.subplot(4, 2, (7, 8))
@@ -172,7 +167,7 @@ def signatures(
     ax5.set_yscale("log")
     ax5.set_xlim(0, 100)
     ax5.set_xlabel("% Exceedence")
-    ax5.set_ylabel(r"$\log(Q)$ (mm/day)")
+    ax5.set_ylabel(fr"$\log(Q)$ ({daily_unit})")
     ax5.set_title("Flow Duration Curve")
 
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=True)
