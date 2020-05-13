@@ -267,7 +267,7 @@ class ArcGISServer:
             return lid
 
         parent_layers = {
-            i: [layers[l] for l in get_parents(i)[:-1]]
+            i: [layers[layer] for layer in get_parents(i)[:-1]]
             for i in utils.traverse_json(info, ["layers", "id"])
         }
         sublayers = [
@@ -626,7 +626,7 @@ def wms_bygeom(
         raise ValueError(
             "The layers argument should be of type dict: {var_name : layer_name}"
         )
-    elif any(str(l) not in valid_layers.keys() for l in layers.values()):
+    elif any(str(layer) not in valid_layers.keys() for layer in layers.values()):
         raise ValueError(
             "The given layers argument is invalid."
             + " Valid layers are:\n"
@@ -638,17 +638,19 @@ def wms_bygeom(
         raise ValueError(
             "The outFormat argument is missing."
             + " The following output formats are available:\n"
-            + ", ".join(l for l in valid_outFormats)
+            + ", ".join(fmt for fmt in valid_outFormats)
         )
     elif outFormat not in valid_outFormats:
         raise ValueError(
             "The outFormat argument is invalid."
             + " Valid output formats are:\n"
-            + ", ".join(l for l in valid_outFormats)
+            + ", ".join(fmt for fmt in valid_outFormats)
         )
 
-    valid_crss = {l: [s.lower() for s in wms[l].crsOptions] for l in layers.values()}
-    if any(crs not in valid_crss[l] for l in layers.values()):
+    valid_crss = {
+        layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()
+    }
+    if any(crs not in valid_crss[layer] for layer in layers.values()):
         raise ValueError(
             "The crs argument is invalid."
             + "\n".join(
@@ -763,18 +765,18 @@ class WFS:
                 continue
 
         valid_layers = list(wfs.contents)
-        valid_layers_lower = [l.lower() for l in valid_layers]
+        valid_layers_lower = [layer.lower() for layer in valid_layers]
         if layer is None:
             raise ValueError(
                 "The layer argument is missing."
                 + " The following layers are available:\n"
-                + ", ".join(l for l in valid_layers)
+                + ", ".join(layer for layer in valid_layers)
             )
         elif layer.lower() not in valid_layers_lower:
             raise ValueError(
                 "The given layers argument is invalid."
                 + " Valid layers are:\n"
-                + ", ".join(l for l in valid_layers)
+                + ", ".join(layer for layer in valid_layers)
             )
 
         valid_outFormats = wfs.getOperationByName("GetFeature").parameters[
@@ -785,13 +787,13 @@ class WFS:
             raise ValueError(
                 "The outFormat argument is missing."
                 + " The following output formats are available:\n"
-                + ", ".join(l for l in valid_outFormats)
+                + ", ".join(fmt for fmt in valid_outFormats)
             )
         elif outFormat.lower() not in valid_outFormats:
             raise ValueError(
                 "The outFormat argument is invalid."
                 + " Valid output formats are:\n"
-                + ", ".join(l for l in valid_outFormats)
+                + ", ".join(fmt for fmt in valid_outFormats)
             )
 
         valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions]

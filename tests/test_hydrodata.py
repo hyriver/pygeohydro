@@ -178,9 +178,7 @@ def test_plot():
     clm_p = hds.daymet_byloc(
         *wshed.coords, start=wshed.start, end=wshed.end, variables=["prcp"]
     )
-    plot.signatures(
-        {"Q": (qobs["USGS-01031500"], wshed.drainage_area)}, clm_p["prcp (mm/day)"]
-    )
+    plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     err = helpers.nwis_errors()
     fc = helpers.nhdplus_fcodes()
