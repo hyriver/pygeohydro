@@ -179,7 +179,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     r = utils.post_url(session, url, payload)
 
     r_text = r.text.split("\n")
-    r_list = [l.split("\t") for l in r_text if "#" not in l]
+    r_list = [txt.split("\t") for txt in r_text if "#" not in txt]
     r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
 
     sites = pd.DataFrame.from_dict(r_dict).dropna()
@@ -448,9 +448,7 @@ def daymet_bygeom(
         return xr.open_dataset(utils.get_url(session, url).content)
 
     data = xr.merge(
-        pqdm(
-            urls, getter, n_jobs=n_threads, desc=f"Gridded Daymet", disable=not verbose
-        )
+        pqdm(urls, getter, n_jobs=n_threads, desc="Gridded Daymet", disable=not verbose)
     )
 
     for k, v in units.items():
@@ -873,7 +871,7 @@ def ssebopeta_bygeom(
             return (dt, z.read(z.filelist[0].filename))
 
         resp = pqdm(
-            f_list, _ssebop, n_jobs=4, desc=f"Gridded SSEBop", disable=not verbose
+            f_list, _ssebop, n_jobs=4, desc="Gridded SSEBop", disable=not verbose
         )
 
         data = utils.create_dataset(

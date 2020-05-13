@@ -164,14 +164,15 @@ The ``services`` module can be used to access some other web services as well. F
     storm_pipes = s.get_features()
 
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-    slope = services.wms_bygeom(
-                      url_wms,
-                      "3DEP",
-                      geometry=la_wshed.geometry,
-                      version="1.3.0",
-                      layers={"slope": "3DEPElevation:Slope Degrees"},
-                      outFormat="image/tiff",
-                      resolution=1)
+    hillshade = services.wms_bygeom(
+        url_wms,
+        "3DEP",
+        geometry=wshed.geometry,
+        version="1.3.0",
+        layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
+        outFormat="image/tiff",
+        resolution=1
+    )
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     wfs = services.WFS(
