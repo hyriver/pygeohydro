@@ -74,7 +74,20 @@ Alternatively, you can install the `dependencies <https://hydrodata.readthedocs.
 Quickstart
 ----------
 
-With just a few lines of code, Hydrodata provides easy access to a handful of databases. ``Station`` gathers the USGS site information such as name, contributing drainage area, and watershed geometry.
+With just a few lines of code, Hydrodata provides easy access to a handful of databases. We can start by exploring the available USGS stations within a bounding box:
+
+.. code-block:: python
+
+    from hydrodata import utils
+
+    utils.interactive_map([-70, 44, -69, 46])
+
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
+    :align: center
+
+
+Then, we can either specify a station ID or coordinates to the ``Station`` function and gathers the USGS site information such as name, contributing drainage area, and watershed geometry.
 
 .. code-block:: python
 
