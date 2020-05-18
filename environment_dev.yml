@@ -51,7 +51,6 @@ dependencies:
   - wheel
   - watchdog
   - pandas-vet
-  - pyarrow
   - pip:
     - pqdm
     - arcgis2geojson

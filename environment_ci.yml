@@ -15,7 +15,6 @@ dependencies:
   - netCDF4
   - bottleneck
   - lxml
-  - pyarrow
   - pip:
     - simplejson
     - geopandas
