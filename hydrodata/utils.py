@@ -26,7 +26,7 @@ from hydrodata import helpers
 
 
 def retry_requests(
-    retries=3,
+    retries=5,
     backoff_factor=0.5,
     status_to_retry=(500, 502, 504),
     prefixes=("http://", "https://"),
