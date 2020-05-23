@@ -688,8 +688,8 @@ def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
         raise ValueError(msg)
 
     wfs = services.WFS(
-        "https://cida.usgs.gov/nwc/geoserver/wfs",
-        layer=f"nhdplus:{feature}",
+        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+        layer=f"wmadata:{feature}",
         outFormat="application/json",
         crs="epsg:4269",
     )
@@ -733,8 +733,8 @@ def nhdplus_byid(feature, featureids, crs="epsg:4326"):
     propertyname = "featureid" if feature == "catchmentsp" else "comid"
 
     wfs = services.WFS(
-        "https://cida.usgs.gov/nwc/geoserver/wfs",
-        layer=f"nhdplus:{feature}",
+        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+        layer=f"wmadata:{feature}",
         outFormat="application/json",
         crs="epsg:4269",
     )
