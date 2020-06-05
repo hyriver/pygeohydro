@@ -31,7 +31,6 @@ dependencies:
   - flake8-rst-docstrings
   - flake8-blind-except
   - pycodestyle
-  - pre-commit
   - pytest-runner
   - pytest-cov
   - pytest-xdist
