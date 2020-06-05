@@ -27,10 +27,6 @@ jobs:
           conda list
           pip install --no-deps -e .
 
-      - name: Run style checks
-        run: ci/code_checks.sh
-        if: always()
-
       - name: Run tests
         run: |
           conda activate hydrodata

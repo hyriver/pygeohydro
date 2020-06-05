@@ -31,7 +31,6 @@ dependencies:
   - pytables
   - flake8
   - flake8-comprehensions
-  - flake8-rst
   - flake8-builtins
   - flake8-rst-docstrings
   - flake8-blind-except
