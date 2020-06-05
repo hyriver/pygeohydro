@@ -17,7 +17,7 @@ jobs:
           python-version: 3.8
 
       - name: Install Python dependencies
-        run: pip install black flake8 flake8-comprehensions flake8-rst-docstrings flake8-blind-except
+        run: pip install black flake8 flake8-comprehensions flake8-rst-docstrings flake8-blind-except mypy
 
       - name: Run linters
         uses: samuelmeuli/lint-action@v1
