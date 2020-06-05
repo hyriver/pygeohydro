@@ -1,0 +1,43 @@
+name: hydrodata-ci
+channels:
+  - defaults
+dependencies:
+  - python>=3.6
+  - pip
+  - owslib
+  - scipy
+  - pandas
+  - matplotlib
+  - numba
+  - descartes
+  - xarray
+  - dask
+  - netCDF4
+  - bottleneck
+  - lxml
+  - pip:
+    - simplejson
+    - geopandas
+    - geojson
+    - folium
+    - rasterio
+    - tables
+    - networkx
+    - pqdm
+    - arcgis2geojson
+    - mypy==0.761
+    - black
+    - wheel
+    - pqdm
+    - watchdog
+    - flake8
+    - twine
+    - tox
+    - tox-travis
+    - coverage
+    - pytest-runner
+    - pytest-cov
+    - pytest-xdist
+    - codecov
+    - numpydoc
+    - pre-commit
