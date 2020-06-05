@@ -19,7 +19,8 @@ jobs:
           activate-environment: hydrodata
           python-version: ${{ matrix.python-version }}
           environment-file: ci/requirements/environment.yml
-          channels: conda-forge
+          auto-update-conda: true
+          auto-activate-base: false
 
       - shell: bash -l {0}
         run: |
@@ -28,6 +29,7 @@ jobs:
           pip install --no-deps -e .
 
       - name: Run tests
+        shell: bash -l {0}
         run: pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
 
       - name: Codecov
