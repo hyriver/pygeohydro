@@ -14,8 +14,8 @@ def test_station():
 
 
 def test_nwis():
-    df = hds.nwis_streamflow("01031500", "2000-01-01", "2000-01-31")
-    assert abs(df.sum().values[0] - 139.8569) < 1e-4
+    discharge = hds.nwis_streamflow("01031500", "2000-01-01", "2000-01-31")
+    assert abs(discharge.sum().values[0] - 139.8569) < 1e-4
 
 
 def test_daymet():

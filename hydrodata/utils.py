@@ -97,12 +97,12 @@ def onlyIPv4():
 
     orig_getaddrinfo = socket.getaddrinfo
 
-    def getaddrinfoIPv4(host, port, family=0, type=0, proto=0, flags=0):
+    def getaddrinfoIPv4(host, port, family=0, ptype=0, proto=0, flags=0):
         return orig_getaddrinfo(
             host=host,
             port=port,
             family=socket.AF_INET,
-            type=type,
+            type=ptype,
             proto=proto,
             flags=flags,
         )
@@ -760,7 +760,7 @@ def traverse_json(obj, path):
     """Extracts an element from a JSON file along a specified path.
 
     Notes
-    ----
+    -----
     From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`_
 
     Parameters
@@ -854,7 +854,7 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
     """Create dataset from a response clipped by a geometry
 
     Parameters
-    ---------
+    ----------
     content : requests.Response
         The response to be processed
     mask : numpy.ndarray
@@ -1064,7 +1064,7 @@ def vector_accumulation(
     The threading flag should be used with care. Considering the
     overhead of threading and the complexity of the network,
     parallalization might speed up the computation or slow it down.
-    It's best to test with the flag on and off before deciding.
+    It is best to test with and without the flag before deciding.
 
     Parameters
     ----------
@@ -1074,7 +1074,7 @@ def vector_accumulation(
     func : function
         The function that routes the flow in a signle river segment.
         Positions of the arguments in the function should be as follows:
-        func(qin, *arg_cols)
+        ``func(qin, *arg_cols)``
         ``qin`` is computed in this function and the rest are in the order
         of the ``arg_cols``. For example, if ``arg_cols = ["slope", "roughness"]``
         then the functions is called this way:

@@ -9,8 +9,8 @@ The following dependencies must be eirther installed manually or using the provi
 Dependencies
 ------------
 
-- `Python 3.6+ <https://www.python.org/downloads>`_ 
-- `NumPy <http://www.numpy.org>`_ 
+- `Python 3.6+ <https://www.python.org/downloads>`_
+- `NumPy <http://www.numpy.org>`_
 - `Pandas <http://pandas.pydata.org>`_
 - `Xarray <https://xarray.pydata.org>`_
 - `Requests <https://requests.readthedocs.io>`_

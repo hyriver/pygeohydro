@@ -814,7 +814,7 @@ def ssebopeta_bygeom(
     """Gridded data from the SSEBop database.
 
     Notes
-    ----
+    -----
     Since there's still no web service available for subsetting, the data first
     needs to be downloaded for the requested period then the data is masked by the
     region interest locally. Therefore, it's not as fast as other functions and
@@ -910,7 +910,7 @@ def nlcd(
     a given geometry in epsg:4326.
 
     Notes
-    ----
+    -----
         NLCD data has a resolution of 1 arc-sec (~30 m).
 
     Parameters
