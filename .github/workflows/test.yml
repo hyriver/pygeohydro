@@ -1,11 +1,11 @@
-name: build
+name: test
 
 on: [push, pull_request]
 
 jobs:
-  build:
-    name: build (${{ matrix.python-version }}, ${{ matrix.os }})
-    runs-on: ubuntu-latest
+  test:
+    name: Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.6", "3.7", "3.8"]
@@ -28,9 +28,7 @@ jobs:
           pip install --no-deps -e .
 
       - name: Run tests
-        run: |
-          conda activate hydrodata
-          pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
+        run: pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
 
       - name: Codecov
         uses: codecov/codecov-action@v1.0.7
