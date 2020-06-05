@@ -1,0 +1,40 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    name: build (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.6", "3.7", "3.8"]
+        os: ["ubuntu-latest", "macos-latest"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Miniconda
+        uses: goanpeca/setup-miniconda@v1.5.0
+        with:
+          activate-environment: hydrodata
+          python-version: ${{ matrix.python-version }}
+          environment-file: ci/requirements/environment.yml
+          channels: conda-forge
+
+      - shell: bash -l {0}
+        run: |
+          conda info
+          conda list
+          pip install --no-deps -e .
+
+      - name: Run style checks
+        run: ci/code_checks.sh
+        if: always()
+
+      - name: Run tests
+        run: |
+          conda activate hydrodata
+          pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
+
+      - name: Codecov
+        uses: codecov/codecov-action@v1.0.7
