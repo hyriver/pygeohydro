@@ -25,4 +25,4 @@ jobs:
           github_token: ${{ secrets.github_token }}
           black: true
           flake8: true
-          mypy: true
+          # mypy: true
