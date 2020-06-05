@@ -70,7 +70,6 @@ class ArcGISServer:
             The spatial relationship to be applied on the input geometry
             while performing the query. If not correct
             a list of available options is shown.
-        -------
         """
         if host is not None and site is not None:
             self.root = f"https://{host}/{site}/rest/services"
@@ -539,7 +538,10 @@ class ArcGISREST(ArcGISServer):
 
         if len(success) == 0:
             raise ValueError("No valid feature were found.")
-        return gpd.GeoDataFrame(pd.concat(success))
+
+        data = gpd.GeoDataFrame(pd.concat(success))
+        data.crs = "epsg:4326"
+        return data
 
 
 def wms_bygeom(
@@ -730,6 +732,7 @@ class WFS:
         self, url, layer=None, outFormat=None, version="2.0.0", crs="epsg:4326"
     ):
         """Initialize WFS
+
         Parameters
         ----------
         url : string
