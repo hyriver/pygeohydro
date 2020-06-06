@@ -1,4 +1,4 @@
-name: test
+name: PyTest
 
 on: [push, pull_request]
 
@@ -18,11 +18,12 @@ jobs:
         with:
           activate-environment: hydrodata
           python-version: ${{ matrix.python-version }}
-          environment-file: ci/requirements/environment.yml
+          environment-file: ci/requirements/py${{ matrix.python-version }}.yml
           auto-update-conda: true
           auto-activate-base: false
 
-      - shell: bash -l {0}
+      - name: Install Hydrodata
+        shell: bash -l {0}
         run: |
           conda info
           conda list
@@ -32,5 +33,5 @@ jobs:
         shell: bash -l {0}
         run: pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
 
-      - name: Codecov
+      - name: Run codecov
         uses: codecov/codecov-action@v1.0.7
