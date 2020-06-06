@@ -19,8 +19,7 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r ci/requirements/requirements_lint.txt
 
-      - name: Run linters
-        run: isort --recursive --diff hydrodata tests
-        run: black --py36 --diff hydrodata tests
-        run: pyupgrade --py36-plus
-        run: flake8 hydrodata tests
+      - run: isort --recursive --diff hydrodata tests
+      - run: black --py36 --diff hydrodata tests
+      - run: pyupgrade --py36-plus
+      - run: flake8 hydrodata tests
