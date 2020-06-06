@@ -27,3 +27,4 @@ sphinx-material
 sphinx-copybutton
 recommonmark
 nbsphinx
+defusedxml
