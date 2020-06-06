@@ -17,12 +17,10 @@ jobs:
           python-version: 3.8
 
       - name: Install Python dependencies
-        run: pip install black flake8 flake8-comprehensions flake8-rst-docstrings flake8-blind-except mypy
+        run: pip install -r ci/requirements/requirements_lint.txt
 
       - name: Run linters
-        uses: samuelmeuli/lint-action@v1
-        with:
-          github_token: ${{ secrets.github_token }}
-          black: true
-          flake8: true
-          # mypy: true
+        run: isort --recursive --diff hydrodata tests
+        run: black --py36 --diff hydrodata tests
+        run: pyupgrade --py36-plus
+        run: flake8 hydrodata tests

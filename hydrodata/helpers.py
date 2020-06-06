@@ -1,9 +1,7 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Some helper function for Hydrodata"""
 
-import xml.etree.cElementTree as ET
-
+import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
 from requests.exceptions import ConnectionError

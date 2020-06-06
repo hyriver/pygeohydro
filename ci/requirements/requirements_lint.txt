@@ -7,3 +7,4 @@ pycodestyle
 mypy
 numpydoc
 black
+pyupgrade

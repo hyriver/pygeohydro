@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """The main module for generating an instance of hydrodata.
 
 It can be used as follows:
@@ -176,14 +175,12 @@ class Station:
             raise ValueError(msg)
 
         point = geom.Point(self.coords)
-        pts = dict(
-            [
-                [sid, geom.Point(lon, lat)]
-                for sid, lon, lat in sites[
-                    ["site_no", "dec_long_va", "dec_lat_va"]
-                ].itertuples(name=None, index=False)
-            ]
-        )
+        pts = {
+            sid: geom.Point(lon, lat)
+            for sid, lon, lat in sites[
+                ["site_no", "dec_long_va", "dec_lat_va"]
+            ].itertuples(name=None, index=False)
+        }
 
         stations = gpd.GeoSeries(pts)
         distance = stations.apply(lambda x: x.distance(point)).sort_values()
