@@ -1,11 +1,10 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Base classes and function for REST, WMS, and WMF services."""
 
-import xml.etree.cElementTree as ET
 from itertools import zip_longest
 from warnings import warn
 
+import defusedxml.cElementTree as ET
 import geopandas as gpd
 import pandas as pd
 import pyproj

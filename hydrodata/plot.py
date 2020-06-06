@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Plot hydrological signatures.
 
 Plots includes  daily, monthly and annual hydrograph as well as

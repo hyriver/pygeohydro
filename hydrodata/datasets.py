@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Accessing data from the supported databases through their APIs."""
+
+import io
+import zipfile
 
 import geopandas as gpd
 import numpy as np
@@ -13,7 +15,7 @@ from shapely.geometry import Polygon
 from hydrodata import helpers, services, utils
 
 
-def nwis_streamflow(station_ids, start, end, raw=False):
+def nwis_streamflow(station_ids, start, end):
     """Get daily streamflow observations from USGS.
 
     Parameters
@@ -24,10 +26,6 @@ def nwis_streamflow(station_ids, start, end, raw=False):
         Start date
     end : string or datetime
         End date
-    raw : bool
-        Whether to return the raw data without cleanup as a Dataframe or
-        remove all the columns except for ``qobs`` as a Series, default to
-        False.
 
     Returns
     -------
@@ -135,16 +133,18 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     pandas.DataFrame
     """
     if bbox is not None and ids is None:
-        if isinstance(bbox, list) or isinstance(bbox, tuple):
+        if isinstance(bbox, (list, tuple)):
             if len(bbox) == 4:
                 query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
             else:
                 raise TypeError(
-                    "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+                    "The bounding box should be a list or tuple of length 4: "
+                    + "[west, south, east, north]"
                 )
         else:
             raise TypeError(
-                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
+                "The bounding box should be a list or tuple of length 4: "
+                + "[west, south, east, north]"
             )
 
     elif ids is not None and bbox is None:
@@ -198,7 +198,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     sites = sites[sites.site_no.apply(len) == 8]
     hcdn = gagesii_byid(sites.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
     hcdn = hcdn.rename(columns={"STAID": "site_no", "HCDN_2009": "hcdn_2009"})
-    hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: True if len(x) > 0 else False)
+    hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: len(x) > 0)
     sites = sites.merge(hcdn, on="site_no")
 
     return sites
@@ -250,7 +250,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         Climate data for the requested location and variables
     """
 
-    if not (14.5 < lat < 52.0) or not (-131.0 < lon < -53.0):
+    if not ((14.5 < lat < 52.0) or (-131.0 < lon < -53.0)):
         msg = (
             "The location is outside the Daymet dataset. "
             + "The acceptable range is: "
@@ -381,7 +381,7 @@ def daymet_bygeom(
                 end_list.append(pd.to_datetime(f"{year}1230") + DateOffset(hour=12))
             else:
                 end_list.append(pd.to_datetime(f"{year}1231") + DateOffset(hour=12))
-        dates = [(s, e) for s, e in zip(start_list, end_list)]
+        dates = zip(start_list, end_list)
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
@@ -770,9 +770,6 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
     xarray.DataArray
         The actual ET for the requested region.
     """
-
-    import zipfile
-    import io
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = utils.retry_requests()
