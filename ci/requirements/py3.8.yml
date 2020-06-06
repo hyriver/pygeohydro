@@ -37,6 +37,7 @@ dependencies:
   - codecov
   - numpydoc
   - coverage
+  - defusedxml
   - pip:
     - pqdm
     - arcgis2geojson
