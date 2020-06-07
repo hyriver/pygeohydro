@@ -1,3 +1,28 @@
-numpy >= 1.15
-pandas >= 0.25
-setuptools >= 41.2
+# This file is auto-generated from py3.8.yml, do not modify.
+# See that file for comments about the need/usage of each dependency.
+
+pip
+owslib
+scipy
+pandas
+numba
+matplotlib
+descartes
+xarray
+dask
+netCDF4
+bottleneck
+lxml
+geopandas
+folium
+rasterio
+pyproj
+proj
+gdal
+networkx
+geojson
+simplejson
+tables
+defusedxml
+pqdm
+arcgis2geojson

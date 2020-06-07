@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """
 Convert the conda environment.yml to the pip requirements-dev.txt,
-or check that they have the same packages (for the CI)
+or check that they have the same packages (for the CI). The original
+script is taken from Pandas github repository.
+https://github.com/pandas-dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py
 
 Usage:
 
     Generate `requirements-dev.txt`
-    $ ./conda_to_pip
+    $ ./generate_pip_deps_from_conda.py
 
     Compare and fail (exit status != 0) if `requirements-dev.txt` has not been
     generated with this script:
-    $ ./conda_to_pip --compare
+    $ ./generate_pip_deps_from_conda.py --compare
 """
 import argparse
 import os
@@ -114,15 +116,12 @@ if __name__ == "__main__":
         action="store_true",
         help="compare whether the two files are equivalent",
     )
-    argparser.add_argument(
-        "--azure", action="store_true", help="show the output in azure-pipelines format"
-    )
     args = argparser.parse_args()
 
     repo_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     res = main(
-        os.path.join(repo_path, "environment.yml"),
-        os.path.join(repo_path, "requirements-dev.txt"),
+        os.path.join(repo_path, "ci/requirements/py3.8.yml"),
+        os.path.join(repo_path, "requirements.txt"),
         compare=args.compare,
     )
     if res:
