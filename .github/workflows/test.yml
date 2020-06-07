@@ -27,7 +27,7 @@ jobs:
         run: |
           conda info
           conda list
-          conda install -c -y conda-forge pytest
+          conda install -y -c conda-forge pytest
           pip install --no-deps -e .
 
       - name: Run tests
