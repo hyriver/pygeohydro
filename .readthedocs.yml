@@ -6,7 +6,7 @@ build:
 python:
    version: 3.8
    install:
-      - requirements: docs/requirements.txt
+      - requirements: ci/requirements/requirements_doc.txt
       - method: pip
         path: .
         extra_requirements:
