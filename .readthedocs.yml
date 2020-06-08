@@ -1,11 +1,7 @@
 version: 2
 
 build:
-    image: stable
+    image: latest
 
-python:
-   version: 3.7
-   install:
-      - requirements: ci/requirements/requirements_doc.txt
-      - method: pip
-        path: .
+conda:
+    environment: ci/requirements/doc.yml

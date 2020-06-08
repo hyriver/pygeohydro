@@ -57,13 +57,13 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-You can install Hydrodata using ``pip``:
+You can install Hydrodata using ``pip`` after installing `gdal` and `libgdal` on your system:
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed via ``conda``:
+Alternatively, you can installed it with all the required dependecies via ``conda``:
 
 .. code-block:: console
 

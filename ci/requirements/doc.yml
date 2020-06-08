@@ -1,0 +1,41 @@
+name: doc
+channels:
+  - defaults
+dependencies:
+  - python
+  - pip
+  - owslib
+  - scipy
+  - pandas
+  - numba
+  - matplotlib
+  - descartes
+  - xarray
+  - dask
+  - netCDF4
+  - bottleneck
+  - lxml
+  - geopandas
+  - rasterio
+  - pyproj
+  - gdal
+  - libgdal
+  - geos
+  - networkx
+  - simplejson
+  - pytables
+  - defusedxml
+  - numpydoc
+  - ipykernel
+  - ipython
+  - sphinx
+  - recommonmark
+  - pip:
+    - nbsphinx
+    - geojson
+    - folium
+    - sphinx-markdown-tables
+    - sphinx-copybutton
+    - pqdm
+    - arcgis2geojson
+    - git+https://github.com/bashtage/sphinx-material.git
