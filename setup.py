@@ -12,4 +12,4 @@ def parse_requirements(req):
     return distutils.text_file.TextFile(Path(__file__).with_name(req)).readlines()
 
 
-setup(version="0.5.3", install_requires=parse_requirements("requirements.txt"))
+setup(version="0.5.4", install_requires=parse_requirements("requirements.txt"))
