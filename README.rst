@@ -10,8 +10,8 @@
 .. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
     :target: https://codecov.io/gh/cheginit/hydrodata
 
-.. image:: https://travis-ci.com/cheginit/hydrodata.svg?branch=master
-    :target: https://travis-ci.com/cheginit/hydrodata
+.. image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
+    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
 
 .. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
     :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
