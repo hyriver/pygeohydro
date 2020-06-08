@@ -1,10 +1,10 @@
-name: PyTest
+name: build
 
 on: [push, pull_request]
 
 jobs:
   test:
-    name: Test (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: pytest (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
