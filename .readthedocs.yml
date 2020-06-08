@@ -4,7 +4,7 @@ build:
     image: stable
 
 python:
-   version: 3.8
+   version: 3.7
    install:
       - requirements: ci/requirements/requirements_doc.txt
       - method: pip
