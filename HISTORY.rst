@@ -2,6 +2,11 @@
 History
 =======
 
+0.5.4 (2020-06-07)
+------------------
+
+* Add to conda-forge
+
 0.5.3 (2020-06-07)
 ------------------
 
@@ -13,7 +18,6 @@ History
 * Made the flow accumulation output a pandas Series for better handling of time
   series input
 * Combined DEM, slope, and aspect in a class called NationalMap.
-* Add to conda-forge
 * Installation from pip installs all the dependencies
 
 0.5.0 (2020-04-25)
