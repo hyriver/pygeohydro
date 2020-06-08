@@ -21,6 +21,8 @@ dependencies:
   - pyproj
   - proj
   - gdal
+  - libgdal
+  - geos
   - networkx
   - geojson
   - simplejson

@@ -1,9 +1,0 @@
-numpydoc
-ipykernel
-ipython
-sphinx
-sphinx-markdown-tables
-sphinx-material
-sphinx-copybutton
-recommonmark
-nbsphinx
