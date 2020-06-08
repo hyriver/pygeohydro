@@ -4,8 +4,6 @@
 Installation
 ============
 
-The following dependencies must be eirther installed manually or using the provided YAML file `here <https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml>`_:
-
 Dependencies
 ------------
 
@@ -44,21 +42,17 @@ Optional
 Stable release
 --------------
 
-After installing dependencies, to install Hydrodata, run this command in your terminal:
+You can install Hydrodata using ``pip``:
 
 .. code-block:: console
 
-    pip install hydrodata
+    $ pip install hydrodata
 
-This is the preferred method to install Hydrodata, as it will always install the most recent stable release.
-
-Alternatively, Hydrodata and all its dependencies can be installed using `Conda <https://conda.io/en/latest/>`_ as follows:
+Alternatively, it can be installed via ``conda``:
 
 .. code-block:: console
 
-    wget https://raw.githubusercontent.com/cheginit/hydrodata/master/environment.yml
-    conda env create -f environment.yml
-    conda activate hydrodata
+    $ conda install -c conda-forge hydrodata
 
 From sources
 ------------
@@ -81,9 +75,7 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    conda env create -f environment.yml
-    conda activate hydrodata
-    python setup.py install
+    python -m pip install . -vv
 
 
 .. _Github repo: https://github.com/cheginit/hydrodata
