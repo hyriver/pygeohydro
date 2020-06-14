@@ -26,6 +26,4 @@ dependencies:
   - simplejson
   - pytables
   - defusedxml
-  - pip:
-    - pqdm
-    - arcgis2geojson
+  - typing-extensions

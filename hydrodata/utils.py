@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 """Some utilities for Hydrodata"""
 
+import numbers
 import os
+from concurrent import futures
 from pathlib import Path
+from warnings import warn
 
 import geopandas as gpd
 import numpy as np
@@ -10,8 +13,8 @@ import pandas as pd
 import rasterio as rio
 import rasterio.features as rio_features
 import rasterio.warp as rio_warp
+import simplejson as json
 from owslib.wms import WebMapService
-from pqdm.threads import pqdm
 from requests.exceptions import (
     ConnectionError,
     HTTPError,
@@ -19,7 +22,7 @@ from requests.exceptions import (
     RetryError,
     Timeout,
 )
-from shapely.geometry import box, mapping
+from shapely.geometry import LineString, Point, box, mapping
 
 from hydrodata import helpers
 
@@ -87,6 +90,39 @@ def post_url(session, url, payload=None):
         return session.post(url, data=payload)
     except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
         raise
+
+
+def threading(func, iter_list, param_list=[], max_workers=8):
+    """Run a function using threading
+
+    Parameters
+    ----------
+    func : function
+        The function to be ran in threads
+    iter_list : list
+        The iterator for the function
+    param_list : list, optional
+        List of other parameters, defaults to an empty list
+    max_workers : int, optional
+        Maximum number of threads, defaults to 8
+
+    Returns
+    -------
+    list
+        A list of function returns for each iterator. The list is not ordered.
+    """
+    data = []
+    with futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_itr = {
+            executor.submit(func, itr, *param_list): itr for itr in iter_list
+        }
+        for future in futures.as_completed(future_to_itr):
+            itr = future_to_itr[future]
+            try:
+                data.append(future.result())
+            except Exception as exc:
+                raise Exception(f"{itr}: {exc}")
+    return data
 
 
 def onlyIPv4():
@@ -499,8 +535,7 @@ def exceedance(daily):
     """
 
     if not isinstance(daily, pd.Series):
-        msg = "The input should be of type pandas Series."
-        raise TypeError(msg)
+        raise TypeError("The input should be of type pandas Series.")
 
     rank = daily.rank(ascending=False, pct=True) * 100
     fdc = pd.concat([daily, rank], axis=1)
@@ -680,9 +715,10 @@ def prepare_nhdplus(
     ]
     fl.columns = map(str.lower, fl.columns)
     if any(c not in fl.columns for c in req_cols):
-        msg = "The required columns are not in the provided flowline dataframe."
-        msg += f" The required columns are {', '.join(c for c in req_cols)}"
-        raise ValueError(msg)
+        raise ValueError(
+            "The required columns are not in the provided flowline dataframe."
+            + f" The required columns are {', '.join(c for c in req_cols)}"
+        )
 
     extra_cols = ["comid"] + [c for c in fl.columns if c not in req_cols]
     int_cols = [
@@ -937,14 +973,216 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
     try:
         geodf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
     except TypeError:
-        from arcgis2geojson import arcgis2geojson
-
-        geodf = gpd.GeoDataFrame.from_features(arcgis2geojson(content), crs=in_crs)
+        geodf = gpd.GeoDataFrame.from_features(arcgis_togeojson(content), crs=in_crs)
 
     geodf.crs = in_crs
     if in_crs != crs:
         geodf = geodf.to_crs(crs)
     return geodf
+
+
+def arcgis_togeojson(arcgis, idAttribute=None):
+    """Convert ArcGIS GeoJSON format to GeoJSON.
+
+    Notes
+    -----
+    Based on https://github.com/chris48s/arcgis_togeojson
+
+    Parameters
+    ----------
+    arcgis : string or binary
+        The ArcGIS GeoJSON format string (or binary)
+    idAttribute : string
+        ID of the attribute of interest
+
+    Returns
+    -------
+    dict
+        A GeoJSON file readable by GeoPandas
+    """
+    if isinstance(arcgis, str):
+        return json.dumps(convert(json.loads(arcgis), idAttribute))
+    else:
+        return convert(arcgis, idAttribute)
+
+
+def convert(arcgis, idAttribute=None):
+    """Convert an ArcGIS JSON object to a GeoJSON object"""
+    geojson = {}
+
+    if "features" in arcgis and arcgis["features"]:
+        geojson["type"] = "FeatureCollection"
+        geojson["features"] = []
+        geojson["features"] = [
+            convert(feature, idAttribute) for feature in arcgis["features"]
+        ]
+
+    if (
+        "x" in arcgis
+        and isinstance(arcgis["x"], numbers.Number)
+        and "y" in arcgis
+        and isinstance(arcgis["y"], numbers.Number)
+    ):
+        geojson["type"] = "Point"
+        geojson["coordinates"] = [arcgis["x"], arcgis["y"]]
+        if "z" in arcgis and isinstance(arcgis["z"], numbers.Number):
+            geojson["coordinates"].append(arcgis["z"])
+
+    if "points" in arcgis:
+        geojson["type"] = "MultiPoint"
+        geojson["coordinates"] = arcgis["points"]
+
+    if "paths" in arcgis:
+        if len(arcgis["paths"]) == 1:
+            geojson["type"] = "LineString"
+            geojson["coordinates"] = arcgis["paths"][0]
+        else:
+            geojson["type"] = "MultiLineString"
+            geojson["coordinates"] = arcgis["paths"]
+
+    if "rings" in arcgis:
+        geojson = convertRingsToGeoJSON(arcgis["rings"])
+
+    if (
+        "xmin" in arcgis
+        and isinstance(arcgis["xmin"], numbers.Number)
+        and "ymin" in arcgis
+        and isinstance(arcgis["ymin"], numbers.Number)
+        and "xmax" in arcgis
+        and isinstance(arcgis["xmax"], numbers.Number)
+        and "ymax" in arcgis
+        and isinstance(arcgis["ymax"], numbers.Number)
+    ):
+        geojson["type"] = "Polygon"
+        geojson["coordinates"] = [
+            [
+                [arcgis["xmax"], arcgis["ymax"]],
+                [arcgis["xmin"], arcgis["ymax"]],
+                [arcgis["xmin"], arcgis["ymin"]],
+                [arcgis["xmax"], arcgis["ymin"]],
+                [arcgis["xmax"], arcgis["ymax"]],
+            ]
+        ]
+
+    if "geometry" in arcgis or "attributes" in arcgis:
+        geojson["type"] = "Feature"
+        if "geometry" in arcgis:
+            geojson["geometry"] = convert(arcgis["geometry"])
+        else:
+            geojson["geometry"] = None
+
+        if "attributes" in arcgis:
+            geojson["properties"] = arcgis["attributes"]
+            try:
+                attributes = arcgis["attributes"]
+                keys = (
+                    [idAttribute, "OBJECTID", "FID"]
+                    if idAttribute
+                    else ["OBJECTID", "FID"]
+                )
+                for key in keys:
+                    if key in attributes and (
+                        isinstance(attributes[key], numbers.Number)
+                        or isinstance(attributes[key], str)
+                    ):
+                        geojson["id"] = attributes[key]
+                        break
+            except KeyError:
+                warn("No valid id attribute found")
+                pass
+        else:
+            geojson["properties"] = None
+
+    if "geometry" in geojson and not geojson["geometry"]:
+        geojson["geometry"] = None
+
+    return geojson
+
+
+def convertRingsToGeoJSON(rings):
+    """Checks for holes in the ring and fill them"""
+
+    outerRings = []
+    holes = []
+    x = None  # iterator
+    outerRing = None  # current outer ring being evaluated
+    hole = None  # current hole being evaluated
+
+    for ring in rings:
+        if not all(np.isclose(ring[0], ring[-1])):
+            ring.append(ring[0])
+
+        if len(ring) < 4:
+            continue
+
+        total = sum(
+            (pt2[0] - pt1[0]) * (pt2[1] + pt1[1])
+            for pt1, pt2 in zip(ring[:-1], ring[1:])
+        )
+        # Clock-wise check
+        if total >= 0:
+            outerRings.append(
+                [ring[::-1]]
+            )  # wind outer rings counterclockwise for RFC 7946 compliance
+        else:
+            holes.append(
+                ring[::-1]
+            )  # wind inner rings clockwise for RFC 7946 compliance
+
+    uncontainedHoles = []
+
+    # while there are holes left...
+    while len(holes):
+        # pop a hole off out stack
+        hole = holes.pop()
+
+        # loop over all outer rings and see if they contain our hole.
+        contained = False
+        x = len(outerRings) - 1
+        while x >= 0:
+            outerRing = outerRings[x][0]
+            l1, l2 = LineString(outerRing), LineString(hole)
+            p2 = Point(hole[0])
+            intersects = l1.intersects(l2)
+            contains = l1.contains(p2)
+            if not intersects and contains:
+                # the hole is contained push it into our polygon
+                outerRings[x].append(hole)
+                contained = True
+                break
+            x = x - 1
+
+        # ring is not contained in any outer ring
+        # sometimes this happens https://github.com/Esri/esri-leaflet/issues/320
+        if not contained:
+            uncontainedHoles.append(hole)
+
+    # if we couldn't match any holes using contains we can try intersects...
+    while len(uncontainedHoles):
+        # pop a hole off out stack
+        hole = uncontainedHoles.pop()
+
+        # loop over all outer rings and see if any intersect our hole.
+        intersects = False
+        x = len(outerRings) - 1
+        while x >= 0:
+            outerRing = outerRings[x][0]
+            l1, l2 = LineString(outerRing), LineString(hole)
+            intersects = l1.intersects(l2)
+            if intersects:
+                # the hole is contained push it into our polygon
+                outerRings[x].append(hole)
+                intersects = True
+                break
+            x = x - 1
+
+        if not intersects:
+            outerRings.append([hole[::-1]])
+
+    if len(outerRings) == 1:
+        return {"type": "Polygon", "coordinates": outerRings[0]}
+    else:
+        return {"type": "MultiPolygon", "coordinates": outerRings}
 
 
 def geom_mask(
@@ -1006,9 +1244,9 @@ def check_requirements(reqs, cols):
 
     missing = [r for r in reqs if r not in cols]
     if len(missing) > 1:
-        msg = "The following required data are missing:\n"
-        msg += ", ".join(m for m in missing)
-        raise ValueError(msg)
+        raise ValueError(
+            "The following required data are missing:\n" + ", ".join(m for m in missing)
+        )
 
 
 def topoogical_sort(flowlines, network=False):
@@ -1046,24 +1284,9 @@ def topoogical_sort(flowlines, network=False):
 
 
 def vector_accumulation(
-    flowlines,
-    func,
-    attr_col,
-    arg_cols,
-    id_col="comid",
-    toid_col="tocomid",
-    threading=False,
-    n_jobs=4,
-    verbose=False,
+    flowlines, func, attr_col, arg_cols, id_col="comid", toid_col="tocomid",
 ):
     """Flow accumulation using vector river network data.
-
-    Notes
-    -----
-    The threading flag should be used with care. Considering the
-    overhead of threading and the complexity of the network,
-    parallalization might speed up the computation or slow it down.
-    It is best to test with and without the flag before deciding.
 
     Parameters
     ----------
@@ -1091,12 +1314,6 @@ def vector_accumulation(
         Name of the flowlines column containing IDs, defaults to comid
     toid_name : string, optional
         Name of the flowlines column containing toIDs, defaults to tocomid
-    threading : bool, optional
-        Whether to perform the accumulation with threading, defaults to False
-    n_jobs : int, optional
-        Number of threads for parallelization, defaults to 4
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -1107,30 +1324,12 @@ def vector_accumulation(
         a scalar or an array.
     """
     import numbers
-    import networkx as nx
 
-    if threading:
-        sorted_nodes, upstream_nodes, G = topoogical_sort(
-            flowlines[[id_col, toid_col]].rename(
-                columns={id_col: "ID", toid_col: "toID"}
-            ),
-            network=True,
-        )
-        upstreams_dict = {
-            n: len(nx.bfs_tree(G, n, reverse=True)) - 1 for n in sorted_nodes
-        }
-        upstreams = pd.DataFrame.from_dict(upstreams_dict, orient="index")
-        upstreams = upstreams.reset_index().rename(columns={"index": "node", 0: "n"})
-        grouped = upstreams.groupby("n")["node"].apply(list).to_dict()
-        topo_sorted = list(grouped.values())[:-1]
-    else:
-        sorted_nodes, upstream_nodes = topoogical_sort(
-            flowlines[[id_col, toid_col]].rename(
-                columns={id_col: "ID", toid_col: "toID"}
-            ),
-            network=False,
-        )
-        topo_sorted = sorted_nodes[:-1]
+    sorted_nodes, upstream_nodes = topoogical_sort(
+        flowlines[[id_col, toid_col]].rename(columns={id_col: "ID", toid_col: "toID"}),
+        network=False,
+    )
+    topo_sorted = sorted_nodes[:-1]
 
     outflow = flowlines.set_index(id_col)[attr_col].to_dict()
 
@@ -1146,37 +1345,11 @@ def vector_accumulation(
 
     upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
 
-    if threading:
-
-        def acc(n):
-            return func(
-                np.sum([outflow[u] for u in upstream_nodes[n]], axis=0),
-                *flowlines.loc[flowlines[id_col] == n, arg_cols].to_numpy()[0],
-            )
-
-        [
-            outflow.update(
-                dict(
-                    zip(
-                        n,
-                        pqdm(
-                            n,
-                            acc,
-                            n_jobs=n_jobs,
-                            desc="Flow Accumulation",
-                            disable=not verbose,
-                        ),
-                    )
-                )
-            )
-            for n in topo_sorted
-        ]
-    else:
-        for i in topo_sorted:
-            outflow[i] = func(
-                np.sum([outflow[u] for u in upstream_nodes[i]], axis=0),
-                *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy()[0],
-            )
+    for i in topo_sorted:
+        outflow[i] = func(
+            np.sum([outflow[u] for u in upstream_nodes[i]], axis=0),
+            *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy()[0],
+        )
 
     outflow.pop(0)
     qsim = pd.Series(outflow).loc[sorted_nodes[:-1]]

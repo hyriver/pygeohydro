@@ -2,7 +2,7 @@ name: doc
 channels:
   - defaults
 dependencies:
-  - python
+  - python>=3.8
   - pip
   - owslib
   - scipy
@@ -36,6 +36,4 @@ dependencies:
     - folium
     - sphinx-markdown-tables
     - sphinx-copybutton
-    - pqdm
-    - arcgis2geojson
     - git+https://github.com/bashtage/sphinx-material.git

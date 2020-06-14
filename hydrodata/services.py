@@ -14,11 +14,11 @@ import xarray as xr
 from lxml import html
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
-from pqdm.threads import pqdm
 from requests.exceptions import ConnectionError, RetryError
 from shapely.geometry import Polygon, box
 
 from hydrodata import utils
+from hydrodata.utils import threading
 
 
 class ArcGISServer:
@@ -91,12 +91,11 @@ class ArcGISServer:
         if value is not None:
             valids, _ = self.get_fs()
             if value not in valids:
-                msg = (
+                raise ValueError(
                     f"The given folder, {value}, is not valid. "
                     + "Valid folders are "
                     + ", ".join(str(v) for v in valids)
                 )
-                raise ValueError(msg)
         self._folder = value
 
     @property
@@ -108,12 +107,11 @@ class ArcGISServer:
         if value is not None:
             _, valids = self.get_fs(self.folder)
             if value not in valids:
-                msg = (
+                raise ValueError(
                     f"The given serviceName, {value}, is not valid. "
                     + "Valid serviceNames are "
                     + ", ".join(str(v) for v in valids)
                 )
-                raise ValueError(msg)
         self._serviceName = value
 
     @property
@@ -126,12 +124,11 @@ class ArcGISServer:
             v_dict, _ = self.get_layers()
             valids = list(v_dict.keys())
             if value not in valids or not isinstance(value, int):
-                msg = (
+                raise ValueError(
                     f"The given layer, {value}, is not valid. "
                     + "Valid layers are integers "
                     + ", ".join(str(v) for v in valids)
                 )
-                raise ValueError(msg)
         self._layer = value
 
     @property
@@ -143,12 +140,11 @@ class ArcGISServer:
         if self.base_url is not None:
             valids = self.queryFormats
             if value not in valids:
-                msg = (
+                raise ValueError(
                     f"The given outFormat, {value}, is not valid. "
                     + "Valid outFormats are "
                     + ", ".join(str(v) for v in valids)
                 )
-                raise ValueError(msg)
         self._outFormat = value
 
     @property
@@ -169,12 +165,11 @@ class ArcGISServer:
             "esriSpatialRelRelation",
         ]
         if value is not None and value.lower() not in [s.lower() for s in spatialRels]:
-            msg = (
+            raise ValueError(
                 f"The given spatialRel, {value}, is not valid. "
                 + "Valid spatialRels are "
                 + ", ".join(str(v) for v in spatialRels)
             )
-            raise ValueError(msg)
         self._spatialRel = value
 
     def get_fs(self, folder=None):
@@ -508,12 +503,8 @@ class ArcGISREST(ArcGISServer):
         else:
             getter = get_geojson
 
-        feature_list = pqdm(
-            self.splitted_ids,
-            getter,
-            n_jobs=self.n_threads,
-            desc=f"{self.layer_name}",
-            disable=not self.verbose,
+        feature_list = threading(
+            getter, self.splitted_ids, max_workers=min(self.n_threads, 8),
         )
 
         # Find the failed batches and retry
@@ -526,13 +517,7 @@ class ArcGISREST(ArcGISServer):
 
         if len(fails) > 0:
             fails = ([x] for y in fails for x in y)
-            retry = pqdm(
-                fails,
-                getter,
-                n_jobs=min(self.n_threads * 2, 8),
-                desc="Retry failed batches",
-                disable=not self.verbose,
-            )
+            retry = threading(getter, fails, max_workers=min(self.n_threads, 8),)
             success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
 
         if len(success) == 0:
@@ -557,7 +542,6 @@ def wms_bygeom(
     in_crs="epsg:4326",
     crs="epsg:4326",
     fill_holes=False,
-    verbose=False,
 ):
     """Data from a WMS service within a geometry
 
@@ -602,8 +586,6 @@ def wms_bygeom(
         epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -703,13 +685,7 @@ def wms_bygeom(
         )
         return (name, img.read())
 
-    resp = pqdm(
-        zip(name_list, layer_list),
-        _wms,
-        n_jobs=4,
-        desc=f"{service_name}",
-        disable=not verbose,
-    )
+    resp = threading(_wms, zip(name_list, layer_list), max_workers=len(name_list),)
 
     data = utils.create_dataset(
         resp[0][1], mask, transform, width, height, resp[0][0], fpath[resp[0][0]]

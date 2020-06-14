@@ -99,7 +99,7 @@ def test_nm():
     nm.get_slope(mpm=True)
     assert (
         abs(dem.mean().values.item() - 302.2381) < 1e-4
-        and abs(slope.mean().values.item() - 4.1804) < 1e-4
+        and abs(slope.mean().values.item() - 4.1805) < 1e-4
         and abs(aspect.mean().values.item() - 168.8906) < 1e-4
     )
 
@@ -192,11 +192,7 @@ def test_acc():
         return qin + q
 
     qsim = utils.vector_accumulation(
-        flw[["comid", "tocomid", "lengthkm"]],
-        routing,
-        "lengthkm",
-        ["lengthkm"],
-        threading=False,
+        flw[["comid", "tocomid", "lengthkm"]], routing, "lengthkm", ["lengthkm"],
     )
     flw = flw.merge(qsim, on="comid")
     diff = flw.arbolatesu - flw.acc
@@ -204,22 +200,105 @@ def test_acc():
     assert diff.abs().sum() < 1e-5
 
 
-def test_acc_threading():
-    flw = utils.prepare_nhdplus(
-        hds.NLDI.flowlines("11092450"), 1, 1, purge_non_dendritic=True
-    )
+def test_ring():
+    ring = {
+        "rings": [
+            [
+                [-97.06138, 32.837],
+                [-97.06133, 32.836],
+                [-97.06124, 32.834],
+                [-97.06127, 32.832],
+                [-97.06138, 32.837],
+            ],
+            [
+                [-97.06326, 32.759],
+                [-97.06298, 32.755],
+                [-97.06153, 32.749],
+                [-97.06326, 32.759],
+            ],
+        ],
+        "spatialReference": {"wkid": 4326},
+    }
+    _ring = utils.arcgis_togeojson(ring)
+    res = {
+        "type": "MultiPolygon",
+        "coordinates": [
+            [
+                [
+                    [-97.06138, 32.837],
+                    [-97.06127, 32.832],
+                    [-97.06124, 32.834],
+                    [-97.06133, 32.836],
+                    [-97.06138, 32.837],
+                ]
+            ],
+            [
+                [
+                    [-97.06326, 32.759],
+                    [-97.06298, 32.755],
+                    [-97.06153, 32.749],
+                    [-97.06326, 32.759],
+                ]
+            ],
+        ],
+    }
+    assert _ring == res
 
-    def routing(qin, q):
-        return qin + q
 
-    qsim = utils.vector_accumulation(
-        flw[["comid", "tocomid", "lengthkm"]],
-        routing,
-        "lengthkm",
-        ["lengthkm"],
-        threading=True,
-    )
-    flw = flw.merge(qsim, on="comid")
-    diff = flw.arbolatesu - flw.acc
+def test_point():
+    point = {"x": -118.15, "y": 33.80, "z": 10.0, "spatialReference": {"wkid": 4326}}
+    _point = utils.arcgis_togeojson(point)
+    res = {"type": "Point", "coordinates": [-118.15, 33.8, 10.0]}
+    assert _point == res
 
-    assert diff.abs().sum() < 1e-5
+
+def test_multipoint():
+    mpoint = {
+        "hasZ": "true",
+        "points": [
+            [-97.06138, 32.837, 35.0],
+            [-97.06133, 32.836, 35.1],
+            [-97.06124, 32.834, 35.2],
+        ],
+        "spatialReference": {"wkid": 4326},
+    }
+    _mpoint = utils.arcgis_togeojson(mpoint)
+    res = {
+        "type": "MultiPoint",
+        "coordinates": [
+            [-97.06138, 32.837, 35.0],
+            [-97.06133, 32.836, 35.1],
+            [-97.06124, 32.834, 35.2],
+        ],
+    }
+    assert _mpoint == res
+
+
+def test_path():
+    path = {
+        "hasM": "true",
+        "paths": [
+            [
+                [-97.06138, 32.837, 5],
+                [-97.06133, 32.836, 6],
+                [-97.06124, 32.834, 7],
+                [-97.06127, 32.832, 8],
+            ],
+            [[-97.06326, 32.759], [-97.06298, 32.755]],
+        ],
+        "spatialReference": {"wkid": 4326},
+    }
+    _path = utils.arcgis_togeojson(path)
+    res = {
+        "type": "MultiLineString",
+        "coordinates": [
+            [
+                [-97.06138, 32.837, 5],
+                [-97.06133, 32.836, 6],
+                [-97.06124, 32.834, 7],
+                [-97.06127, 32.832, 8],
+            ],
+            [[-97.06326, 32.759], [-97.06298, 32.755]],
+        ],
+    }
+    assert _path == res
