@@ -24,5 +24,3 @@ geojson
 simplejson
 tables
 defusedxml
-pqdm
-arcgis2geojson
