@@ -2,7 +2,7 @@ name: hydrodata-dev
 channels:
   - conda-forge
 dependencies:
-  - python>=3.6
+  - python>=3.8
   - pip
   - owslib
   - scipy
@@ -40,6 +40,3 @@ dependencies:
   - numpydoc
   - coverage
   - defusedxml
-  - pip:
-    - pqdm
-    - arcgis2geojson
