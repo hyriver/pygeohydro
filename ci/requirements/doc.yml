@@ -2,7 +2,7 @@ name: doc
 channels:
   - defaults
 dependencies:
-  - python>=3.8
+  - python>=3.6
   - pip
   - owslib
   - scipy
@@ -18,9 +18,6 @@ dependencies:
   - geopandas
   - rasterio
   - pyproj
-  - gdal
-  - libgdal
-  - geos
   - networkx
   - simplejson
   - pytables
