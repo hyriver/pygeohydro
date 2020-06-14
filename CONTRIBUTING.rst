@@ -67,21 +67,22 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
 3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you set up your fork for local development::
 
     $ cd hydrodata/
-    $ conda env create -f environment_dev.yml
-    $ conda activate hydrodata
-    $ python setup.py install
+    $ conda env create -f ci/requirements/environment.yml
+    $ conda activate hydrodata-dev
+    $ python -m pip install . --no-deps
 
 4. Create a branch for local development::
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
-   Now you can make your changes locally.
+   Now you can make your changes locally and add a discription of the changes
+   to ``HISTORY.rst`` file.
 
 5. When you're done making changes, install and test the code::
 
     $ make clean
     $ make install
-    $ make test
+    $ make coverage
 
 6. Before you first commit, pre-commit needs to be setup::
 
@@ -114,7 +115,7 @@ Tips
 
 To run a subset of tests::
 
-$ make test
+$ make coverage
 
 Deploying
 ---------
@@ -127,4 +128,4 @@ $ bump2version patch # possible: major / minor / patch
 $ git push
 $ git push --tags
 
-Travis will then deploy to PyPI if tests pass.
+Then release the tag and Github Actions will deploy it to PyPi.

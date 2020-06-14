@@ -19,10 +19,6 @@ dependencies:
   - folium
   - rasterio
   - pyproj
-  - proj
-  - gdal
-  - libgdal
-  - geos
   - networkx
   - geojson
   - simplejson
@@ -36,7 +32,19 @@ dependencies:
   - pytest-runner
   - pytest-cov
   - pytest-xdist
+  - pre-commit
   - codecov
   - numpydoc
   - coverage
   - defusedxml
+  - ipykernel
+  - ipython
+  - sphinx
+  - recommonmark
+  - nbsphinx
+  - geojson
+  - folium
+  - sphinx-markdown-tables
+  - sphinx-copybutton
+  - pip:
+    - git+https://github.com/bashtage/sphinx-material.git
