@@ -2,10 +2,11 @@
 History
 =======
 
-0.5.4 (2020-06-07)
+0.5.5 (2020-06-13)
 ------------------
 
 * Add to conda-forge
+* Remove pqdm and arcgis2geojson dependencies
 
 0.5.3 (2020-06-07)
 ------------------
