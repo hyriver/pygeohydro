@@ -23,28 +23,29 @@ dependencies:
   - geojson
   - simplejson
   - pytables
+  - geojson
+  - folium
+  - defusedxml
+
   - flake8
   - flake8-comprehensions
   - flake8-builtins
   - flake8-rst-docstrings
   - flake8-blind-except
   - pycodestyle
+  - numpydoc
+
   - pytest-runner
   - pytest-cov
   - pytest-xdist
   - pre-commit
   - codecov
-  - numpydoc
   - coverage
-  - defusedxml
-  - ipykernel
-  - ipython
-  - sphinx
+
+  - jupyterlab
   - recommonmark
   - nbsphinx
-  - geojson
-  - folium
-  - sphinx-markdown-tables
+  - sphinx
   - sphinx-copybutton
   - pip:
     - git+https://github.com/bashtage/sphinx-material.git

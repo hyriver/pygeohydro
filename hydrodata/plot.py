@@ -34,12 +34,12 @@ def signatures(
     daily_dict : dict
         The dict keys are used as labels on the plot and the values should be
         daily streamflow.
-    daily_unit : string, optional
+    daily_unit : str, optional
         The unit of the daily streamflow to appear on the plots, defaults to cms.
     prcp : series, optional
         Daily precipitation time series in :math:`mm/day`. If given, the data is
         plotted on the second x-axis at the top.
-    prcp_unit : string, optional
+    prcp_unit : str, optional
         The unit of the precipitation to appear on the plots, defaults to mm/day.
     title : str, optional
         The plot supertitle.
@@ -48,7 +48,7 @@ def signatures(
     threshold : float, optional
         The threshold for cutting off the discharge for the flow duration
         curve to deal with log 0 issue, defaults to :math:`1e-3 mm/day`.
-    output : string, optional
+    output : str, optional
         Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
     """

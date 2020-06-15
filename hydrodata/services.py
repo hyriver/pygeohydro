@@ -49,23 +49,23 @@ class ArcGISServer:
 
         Parameters
         ----------
-        host : string
+        host : str
             The host part of the URL, e.g., elevation.nationalmap.gov
-        site : string
+        site : str
             The site part of the URL, e.g., arcgis
-        folder : string
+        folder : str
             One of the available folders offered by the host. If not correct
             a list of available folders is shown.
-        serviceName : string
+        serviceName : str
             One of the available services offered by the host. If not correct
             a list of available services is shown.
-        layer : string
+        layer : str
             One of the layer of the requested service name. If not correct
             a list of available layers is shown.
-        outFormat : string
+        outFormat : str
             One of the output formats offered by the selected layer. If not correct
             a list of available formats is shown.
-        spatialRel : string
+        spatialRel : str
             The spatial relationship to be applied on the input geometry
             while performing the query. If not correct
             a list of available options is shown.
@@ -200,9 +200,9 @@ class ArcGISServer:
 
         Parameters
         ----------
-        url : string, optional
+        url : str, optional
             The url that contains the layers
-        serviceName : string, optional
+        serviceName : str, optional
             The geoserver serviceName, defaults to the serviceName instance variable of the class
 
         Returns
@@ -382,7 +382,7 @@ class ArcGISREST(ArcGISServer):
         except RetryError:
             try:
                 r = utils.get_url(self.session, self.base_url)
-                tree = html.fromstring(r.content)
+                tree = html.fromstr(r.content)
                 info = tree.xpath('//div[@class="rbody"]//text()')
                 info = [i.strip() for i in info if i.strip() != ""]
                 try:
@@ -547,11 +547,11 @@ def wms_bygeom(
 
     Parameters
     ----------
-    url : string
+    url : str
         The base url for the WMS service. Some examples:
         https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
         https://www.mrlc.gov/geoserver/mrlc_download/wms
-    service_name : string
+    service_name : str
         Name of the service to appear in the progress bar
     geometry : Polygon
         A shapely Polygon for getting the data
@@ -568,7 +568,7 @@ def wms_bygeom(
         an error and includes all the avialable layers offered by the service. The
         argument should be a dict with keys as the variable name in the output
         dataframe and values as the complete name of the layer in the service.
-    outFormat : string
+    outFormat : str
         The data format to request for data from the service, defaults to None which
          throws an error and includes all the avialable format offered by the service.
     fpath : dict, optional
@@ -576,12 +576,12 @@ def wms_bygeom(
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
         a dict with keys as the variable name in the output dataframe and values as
         the path to save to the file.
-    version : string, optional
+    version : str, optional
         The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
-    in_crs : string, optional
+    in_crs : str, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    crs : string, optional
+    crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
     fill_holes : bool, optional
@@ -710,18 +710,18 @@ class WFS:
 
         Parameters
         ----------
-        url : string
+        url : str
             The base url for the WMS service. Some examples:
             https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
-        layer : string
+        layer : str
             The layer from the service to be downloaded, defaults to None which throws
             an error and includes all the avialable layers offered by the service.
-        outFormat : string
+        outFormat : str
             The data format to request for data from the service, defaults to None which
              throws an error and includes all the avialable format offered by the service.
-        version : string, optional
+        version : str, optional
             The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
-        crs: string, optional
+        crs: str, optional
             The spatial reference system to be used for requesting the data, defaults to
             epsg:4326.
 
@@ -804,7 +804,7 @@ class WFS:
         ----------
         bbox : list or tuple
             A bounding box for getting the data: [west, south, east, north]
-        in_crs : string, optional
+        in_crs : str, optional
             The spatial reference system of the input region, defaults to
             epsg:4326.
 
@@ -834,7 +834,7 @@ class WFS:
         r = utils.get_url(utils.retry_requests(), self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
+            root = ET.fromstr(r.text)
             raise ValueError(root[0][0].text.strip())
         return r
 
@@ -843,9 +843,9 @@ class WFS:
 
         Parameters
         ----------
-        featurename : string
+        featurename : str
             The name of the column for searching for feature IDs
-        featureids : int, string, or list
+        featureids : int, str, or list
             The feature ID(s)
 
         Returns
@@ -889,7 +889,7 @@ class WFS:
 
         r = utils.post_url(utils.retry_requests(), self.url, payload)
         if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
+            root = ET.fromstr(r.text)
             raise ValueError(root[0][0].text.strip())
 
         return r

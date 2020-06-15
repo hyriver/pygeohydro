@@ -248,7 +248,7 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
         Gridded data resolution in arc-second
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
-    crs : string, optional
+    crs : str, optional
         The spatial reference system of the input region, defaults to
         epsg:4326.
 
@@ -802,7 +802,7 @@ def traverse_json(obj, path):
     ----------
     obj : dict
         The input json dictionary
-    path : list of strings
+    path : list of strs
         The path to the requested element
 
     Returns
@@ -900,9 +900,9 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
         x-dimension of the data
     heigth : int
         y-dimension of the data
-    name : string
+    name : str
         Variable name in the dataset
-    fpath : string or Path
+    fpath : str or Path
         The path save the file
 
     Returns
@@ -961,9 +961,9 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
     ----------
     content : dict
         A (Geo)JSON dictionary e.g., r.json()
-    in_crs : string
+    in_crs : str
         CRS of the content
-    crs : string, optional
+    crs : str, optional
         CRS of the output GeoDataFrame, defaults to ``epsg:4326``
 
     Returns
@@ -990,9 +990,9 @@ def arcgis_togeojson(arcgis, idAttribute=None):
 
     Parameters
     ----------
-    arcgis : string or binary
-        The ArcGIS GeoJSON format string (or binary)
-    idAttribute : string
+    arcgis : str or binary
+        The ArcGIS GeoJSON format str (or binary)
+    idAttribute : str
         ID of the attribute of interest
 
     Returns
@@ -1198,9 +1198,9 @@ def geom_mask(
         x-dimension of the data
     heigth : int
         y-dimension of the data
-    geo_crs : string, CRS
+    geo_crs : str, CRS
         CRS of the geometry, defaults to epsg:4326
-    ds_crs : string, CRS
+    ds_crs : str, CRS
         CRS of the dataset to be masked, defaults to epsg:4326
     all_touched : bool
         Wether to include all the elements where the geometry touchs
@@ -1233,14 +1233,14 @@ def check_requirements(reqs, cols):
     Parameters
     ----------
     reqs : list
-        A list of required data names as strings
+        A list of required data names as strs
     cols : list
-        A list of data names as strings
+        A list of data names as strs
     """
     from collections.abc import Iterable
 
     if not isinstance(reqs, Iterable):
-        raise ValueError("Inputs should be list of strings")
+        raise ValueError("Inputs should be list of strs")
 
     missing = [r for r in reqs if r not in cols]
     if len(missing) > 1:
@@ -1302,17 +1302,17 @@ def vector_accumulation(
         then the functions is called this way:
         func(qin, slope, roughness)
         where slope and roughness are elemental values read from the flowlines.
-    attr_col : string
+    attr_col : str
         The column name of the attribute being accumulated in the network.
         The column should contain the initial condition for the attribute for
         each river segment. It can be a scalar or an array (e.g., time series).
-    arg_cols : list of strings
+    arg_cols : list of strs
         List of the flowlines columns that contain all the required
         data for a routing a single river segment such as slope, length,
         lateral flow, etc.
-    id_name : string, optional
+    id_name : str, optional
         Name of the flowlines column containing IDs, defaults to comid
-    toid_name : string, optional
+    toid_name : str, optional
         Name of the flowlines column containing toIDs, defaults to tocomid
 
     Returns

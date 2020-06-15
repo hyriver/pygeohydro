@@ -44,18 +44,18 @@ class Station:
 
         Parameters
         ----------
-        start : string or datetime
+        start : str or datetime
             The starting date of the time period.
-        end : string or datetime
+        end : str or datetime
             The end of the time period.
-        station_id : string, optional
+        station_id : str, optional
             USGS station ID, defaults to None
         coords : tuple, optional
             Longitude and latitude of the point of interest, defaults to None
         srad : float, optional
             Search radius in degrees for finding the closest station
             when coords is given, default to 0.5 degrees
-        data_dir : string or Path, optional
+        data_dir : str or Path, optional
             Path to the location of climate data, defaults to 'data'
         verbose : bool
             Whether to show messages
@@ -138,8 +138,8 @@ class Station:
                 f"[ID: {self.station_id}] ".ljust(MARGINE)
                 + "Daily Mean data unavailable for the specified time period."
                 + " The data is available from "
-                + f"{np.datetime_as_string(st_begin, 'D')} to "
-                + f"{np.datetime_as_string(st_end, 'D')}."
+                + f"{np.datetime_as_str(st_begin, 'D')} to "
+                + f"{np.datetime_as_str(st_end, 'D')}."
             )
 
         self.coords = (

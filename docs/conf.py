@@ -96,7 +96,7 @@ extensions = [
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
     "recommonmark",
-    "sphinx_markdown_tables",
+    "sphinx_copybutton",
 ]
 
 extlinks = {
