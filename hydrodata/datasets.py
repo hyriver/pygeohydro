@@ -20,11 +20,11 @@ def nwis_streamflow(station_ids, start, end):
 
     Parameters
     ----------
-    station_ids : string, list
+    station_ids : str, list
         The gage ID(s)  of the USGS station
-    start : string or datetime
+    start : str or datetime
         Start date
-    end : string or datetime
+    end : str or datetime
         End date
 
     Returns
@@ -38,9 +38,7 @@ def nwis_streamflow(station_ids, start, end):
     elif isinstance(station_ids, list):
         station_ids = [str(i) for i in station_ids]
     else:
-        raise ValueError(
-            "the ids argument should be either a string or a list or strings"
-        )
+        raise ValueError("the ids argument should be either a str or a list or str")
     start = pd.to_datetime(start)
     end = pd.to_datetime(end)
 
@@ -95,33 +93,38 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
     Only stations that record(ed) daily streamflow data are returned.
     The following columns are included in the dataframe:
-    site_no         -- Site identification number
-    station_nm      -- Site name
-    site_tp_cd      -- Site type
-    dec_lat_va      -- Decimal latitude
-    dec_long_va     -- Decimal longitude
-    coord_acy_cd    -- Latitude-longitude accuracy
-    dec_coord_datum_cd -- Decimal Latitude-longitude datum
-    alt_va          -- Altitude of Gage/land surface
-    alt_acy_va      -- Altitude accuracy
-    alt_datum_cd    -- Altitude datum
-    huc_cd          -- Hydrologic unit code
-    parm_cd         -- Parameter code
-    stat_cd         -- Statistical code
-    ts_id           -- Internal timeseries ID
-    loc_web_ds      -- Additional measurement description
-    medium_grp_cd   -- Medium group code
-    parm_grp_cd     -- Parameter group code
-    srs_id          -- SRS ID
-    access_cd       -- Access code
-    begin_date      -- Begin date
-    end_date        -- End date
-    count_nu        -- Record count
-    hcdn_2009       -- Whether is in HCDN-2009 stations
+
+    ==================  ==================================
+    Name                Description
+    ==================  ==================================
+    site_no             Site identification number
+    station_nm          Site name
+    site_tp_cd          Site type
+    dec_lat_va          Decimal latitude
+    dec_long_va         Decimal longitude
+    coord_acy_cd        Latitude-longitude accuracy
+    dec_coord_datum_cd  Decimal Latitude-longitude datum
+    alt_va              Altitude of Gage/land surface
+    alt_acy_va          Altitude accuracy
+    alt_datum_cd        Altitude datum
+    huc_cd              Hydrologic unit code
+    parm_cd             Parameter code
+    stat_cd             Statistical code
+    ts_id               Internal timeseries ID
+    loc_web_ds          Additional measurement description
+    medium_grp_cd       Medium group code
+    parm_grp_cd         Parameter group code
+    srs_id              SRS ID
+    access_cd           Access code
+    begin_date          Begin date
+    end_date            End date
+    count_nu            Record count
+    hcdn_2009           Whether is in HCDN-2009 stations
+    ==================  ==================================
 
     Parameters
     ----------
-    ids : string or list of strings
+    ids : str or list of str
         Station ID(s)
     bbox : list
         List of corners in this order [west, south, east, north]
@@ -153,9 +156,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
         elif isinstance(ids, list):
             query = {"sites": ",".join(str(i) for i in ids)}
         else:
-            raise ValueError(
-                "the ids argument should be either a string or a list or strings"
-            )
+            raise ValueError("the ids argument should be either a str or a list or str")
     else:
         raise ValueError("Either ids or bbox argument should be provided.")
 
@@ -229,13 +230,13 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         Longitude of the point of interest
     lat : float
         Latitude of the point of interest
-    start : string or datetime
+    start : str or datetime
         Start date
-    end : string or datetime
+    end : str or datetime
         End date
     years : list
         List of years
-    variables : string or list
+    variables : str or list
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
         Descriptions can be found in https://daymet.ornl.gov/overview
@@ -334,13 +335,13 @@ def daymet_bygeom(
     ----------
     geometry : Polygon, box
         The geometry of the region of interest
-    start : string or datetime
+    start : str or datetime
         Starting date
-    end : string or datetime
+    end : str or datetime
         Ending date
     years : list
         List of years
-    variables : string or list
+    variables : str or list
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
         Descriptions can be found in https://daymet.ornl.gov/overview
@@ -517,9 +518,9 @@ class NLDI:
 
         Parameters
         ----------
-        station_id : string
+        station_id : str
             The USGS station ID.
-        navigation : string, optional
+        navigation : str, optional
             The direction for navigating the NHDPlus database. The valid options are:
             None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
             ``downstreamDiversions``. Defaults to upstreamTributaries.
@@ -569,17 +570,17 @@ class NLDI:
 
         Parameters
         ----------
-        feature : string
+        feature : str
             The requested feature. The valid features are ``nwissite`` and ``comid``.
-        featureids : string or list
+        featureids : str or list
             The ID(s) of the requested feature.
-        navigation : string, optional
+        navigation : str, optional
             The direction for navigating the NHDPlus database. The valid options are:
             None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
             ``downstreamDiversions``. Defaults to upstreamTributaries.
         distance : float, optional
             The distance to limit the navigation in km. Defaults to None (limitless).
-        dataSource : string, optional
+        dataSource : str, optional
             The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
             ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
             Defaults to None.
@@ -658,17 +659,17 @@ def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
 
     Parameters
     ----------
-    feature : string
+    feature : str
         The NHDPlus feature to be downloaded. Valid features are:
         ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, and ``nhdflowline_network``
     bbox : list
         The bounding box for the region of interest in WGS 83, defaults to None.
         The list should provide the corners in this order:
         [west, south, east, north]
-    in_crs : string, optional
+    in_crs : str, optional
         The spatial reference system of the input bbox, defaults to
         epsg:4326.
-    crs: string, optional
+    crs: str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
 
@@ -707,12 +708,12 @@ def nhdplus_byid(feature, featureids, crs="epsg:4326"):
 
     Parameters
     ----------
-    feature : string
+    feature : str
         The requested feature. The valid features are:
         ``catchmentsp`` and ``nhdflowline_network``
-    featureids : string or list
+    featureids : str or list
         The ID(s) of the requested feature.
-    crs: string, optional
+    crs: str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
 
@@ -754,9 +755,9 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
         The bounding box for downloading the data. The order should be
         as follows:
         geom = [west, south, east, north]
-    start : string or datetime
+    start : str or datetime
         Starting date
-    end : string or datetime
+    end : str or datetime
         Ending date
     years : list
         List of years
@@ -819,9 +820,9 @@ def ssebopeta_bygeom(
         The geometry for downloading clipping the data. For a box geometry,
         the order should be as follows:
         geom = box(minx, miny, maxx, maxy)
-    start : string or datetime
+    start : str or datetime
         Starting date
-    end : string or datetime
+    end : str or datetime
         Ending date
     years : list
         List of years
@@ -926,10 +927,10 @@ def nlcd(
         the path to save to the file.
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
-    in_crs : string, optional
+    in_crs : str, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    out_crs : string, optional
+    out_crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
 
@@ -1017,7 +1018,7 @@ class NationalMap:
         ----------
         geometry : Geometry
             A shapely Polygon in WGS 84 (epsg:4326).
-        layer : string, optional
+        layer : str, optional
             The national map 3DEP layer. Available layers are:
             "3DEPElevation:Hillshade Gray",
             "3DEPElevation:Aspect Degrees",
@@ -1042,13 +1043,13 @@ class NationalMap:
             resolution should be provided.
         fill_holes : bool, optional
             Whether to fill the holes in the geometry's interior, defaults to False.
-        in_crs : string, optional
+        in_crs : str, optional
             The spatial reference system of the input geometry, defaults to
             epsg:4326.
-        out_crs : string, optional
+        out_crs : str, optional
             The spatial reference system to be used for requesting the data, defaults to
             epsg:4326.
-        fpath : string or Path
+        fpath : str or Path
             Path to save the output as a ``tiff`` file, defaults to None.
         """
         self.url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
