@@ -648,14 +648,14 @@ def interactive_map(bbox):
     lon = (west + east) * 0.5
     lat = (south + north) * 0.5
 
-    m = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
+    imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
 
     for coords, msg in sites.itertuples(name=None, index=False):
         folium.Marker(
             location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
-        ).add_to(m)
+        ).add_to(imap)
 
-    return m
+    return imap
 
 
 def prepare_nhdplus(
@@ -858,7 +858,6 @@ def cover_statistics(ds):
     Returns
     -------
     dict
-        Percentages of classes and categories
     """
     nlcd_meta = helpers.nlcd_helper()
     cover_arr = ds.values
@@ -982,7 +981,7 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
 
 
 def arcgis_togeojson(arcgis, idAttribute=None):
-    """Convert ArcGIS GeoJSON format to GeoJSON.
+    """Convert ESRIGeoJSON format to GeoJSON.
 
     Notes
     -----
@@ -991,7 +990,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
     Parameters
     ----------
     arcgis : str or binary
-        The ArcGIS GeoJSON format str (or binary)
+        The ESRIGeoJSON format str (or binary)
     idAttribute : str
         ID of the attribute of interest
 
@@ -1000,189 +999,188 @@ def arcgis_togeojson(arcgis, idAttribute=None):
     dict
         A GeoJSON file readable by GeoPandas
     """
+
+    def convert(arcgis, idAttribute=None):
+        """Convert an ArcGIS JSON object to a GeoJSON object"""
+        geojson = {}
+
+        if "features" in arcgis and arcgis["features"]:
+            geojson["type"] = "FeatureCollection"
+            geojson["features"] = []
+            geojson["features"] = [
+                convert(feature, idAttribute) for feature in arcgis["features"]
+            ]
+
+        if (
+            "x" in arcgis
+            and isinstance(arcgis["x"], numbers.Number)
+            and "y" in arcgis
+            and isinstance(arcgis["y"], numbers.Number)
+        ):
+            geojson["type"] = "Point"
+            geojson["coordinates"] = [arcgis["x"], arcgis["y"]]
+            if "z" in arcgis and isinstance(arcgis["z"], numbers.Number):
+                geojson["coordinates"].append(arcgis["z"])
+
+        if "points" in arcgis:
+            geojson["type"] = "MultiPoint"
+            geojson["coordinates"] = arcgis["points"]
+
+        if "paths" in arcgis:
+            if len(arcgis["paths"]) == 1:
+                geojson["type"] = "LineString"
+                geojson["coordinates"] = arcgis["paths"][0]
+            else:
+                geojson["type"] = "MultiLineString"
+                geojson["coordinates"] = arcgis["paths"]
+
+        if "rings" in arcgis:
+            geojson = rings_togeojson(arcgis["rings"])
+
+        if (
+            "xmin" in arcgis
+            and isinstance(arcgis["xmin"], numbers.Number)
+            and "ymin" in arcgis
+            and isinstance(arcgis["ymin"], numbers.Number)
+            and "xmax" in arcgis
+            and isinstance(arcgis["xmax"], numbers.Number)
+            and "ymax" in arcgis
+            and isinstance(arcgis["ymax"], numbers.Number)
+        ):
+            geojson["type"] = "Polygon"
+            geojson["coordinates"] = [
+                [
+                    [arcgis["xmax"], arcgis["ymax"]],
+                    [arcgis["xmin"], arcgis["ymax"]],
+                    [arcgis["xmin"], arcgis["ymin"]],
+                    [arcgis["xmax"], arcgis["ymin"]],
+                    [arcgis["xmax"], arcgis["ymax"]],
+                ]
+            ]
+
+        if "geometry" in arcgis or "attributes" in arcgis:
+            geojson["type"] = "Feature"
+            if "geometry" in arcgis:
+                geojson["geometry"] = convert(arcgis["geometry"])
+            else:
+                geojson["geometry"] = None
+
+            if "attributes" in arcgis:
+                geojson["properties"] = arcgis["attributes"]
+                try:
+                    attributes = arcgis["attributes"]
+                    keys = (
+                        [idAttribute, "OBJECTID", "FID"]
+                        if idAttribute
+                        else ["OBJECTID", "FID"]
+                    )
+                    for key in keys:
+                        if key in attributes and (
+                            isinstance(attributes[key], numbers.Number)
+                            or isinstance(attributes[key], str)
+                        ):
+                            geojson["id"] = attributes[key]
+                            break
+                except KeyError:
+                    warn("No valid id attribute found")
+                    pass
+            else:
+                geojson["properties"] = None
+
+        if "geometry" in geojson and not geojson["geometry"]:
+            geojson["geometry"] = None
+
+        return geojson
+
+    def rings_togeojson(rings):
+        """Checks for holes in the ring and fill them"""
+
+        outerRings = []
+        holes = []
+        x = None  # iterator
+        outerRing = None  # current outer ring being evaluated
+        hole = None  # current hole being evaluated
+
+        for ring in rings:
+            if not all(np.isclose(ring[0], ring[-1])):
+                ring.append(ring[0])
+
+            if len(ring) < 4:
+                continue
+
+            total = sum(
+                (pt2[0] - pt1[0]) * (pt2[1] + pt1[1])
+                for pt1, pt2 in zip(ring[:-1], ring[1:])
+            )
+            # Clock-wise check
+            if total >= 0:
+                outerRings.append(
+                    [ring[::-1]]
+                )  # wind outer rings counterclockwise for RFC 7946 compliance
+            else:
+                holes.append(
+                    ring[::-1]
+                )  # wind inner rings clockwise for RFC 7946 compliance
+
+        uncontainedHoles = []
+
+        # while there are holes left...
+        while len(holes):
+            # pop a hole off out stack
+            hole = holes.pop()
+
+            # loop over all outer rings and see if they contain our hole.
+            contained = False
+            x = len(outerRings) - 1
+            while x >= 0:
+                outerRing = outerRings[x][0]
+                l1, l2 = LineString(outerRing), LineString(hole)
+                p2 = Point(hole[0])
+                intersects = l1.intersects(l2)
+                contains = l1.contains(p2)
+                if not intersects and contains:
+                    # the hole is contained push it into our polygon
+                    outerRings[x].append(hole)
+                    contained = True
+                    break
+                x = x - 1
+
+            # ring is not contained in any outer ring
+            # sometimes this happens https://github.com/Esri/esri-leaflet/issues/320
+            if not contained:
+                uncontainedHoles.append(hole)
+
+        # if we couldn't match any holes using contains we can try intersects...
+        while len(uncontainedHoles):
+            # pop a hole off out stack
+            hole = uncontainedHoles.pop()
+
+            # loop over all outer rings and see if any intersect our hole.
+            intersects = False
+            x = len(outerRings) - 1
+            while x >= 0:
+                outerRing = outerRings[x][0]
+                l1, l2 = LineString(outerRing), LineString(hole)
+                intersects = l1.intersects(l2)
+                if intersects:
+                    # the hole is contained push it into our polygon
+                    outerRings[x].append(hole)
+                    intersects = True
+                    break
+                x = x - 1
+
+            if not intersects:
+                outerRings.append([hole[::-1]])
+
+        if len(outerRings) == 1:
+            return {"type": "Polygon", "coordinates": outerRings[0]}
+        else:
+            return {"type": "MultiPolygon", "coordinates": outerRings}
+
     if isinstance(arcgis, str):
         return json.dumps(convert(json.loads(arcgis), idAttribute))
     else:
         return convert(arcgis, idAttribute)
-
-
-def convert(arcgis, idAttribute=None):
-    """Convert an ArcGIS JSON object to a GeoJSON object"""
-    geojson = {}
-
-    if "features" in arcgis and arcgis["features"]:
-        geojson["type"] = "FeatureCollection"
-        geojson["features"] = []
-        geojson["features"] = [
-            convert(feature, idAttribute) for feature in arcgis["features"]
-        ]
-
-    if (
-        "x" in arcgis
-        and isinstance(arcgis["x"], numbers.Number)
-        and "y" in arcgis
-        and isinstance(arcgis["y"], numbers.Number)
-    ):
-        geojson["type"] = "Point"
-        geojson["coordinates"] = [arcgis["x"], arcgis["y"]]
-        if "z" in arcgis and isinstance(arcgis["z"], numbers.Number):
-            geojson["coordinates"].append(arcgis["z"])
-
-    if "points" in arcgis:
-        geojson["type"] = "MultiPoint"
-        geojson["coordinates"] = arcgis["points"]
-
-    if "paths" in arcgis:
-        if len(arcgis["paths"]) == 1:
-            geojson["type"] = "LineString"
-            geojson["coordinates"] = arcgis["paths"][0]
-        else:
-            geojson["type"] = "MultiLineString"
-            geojson["coordinates"] = arcgis["paths"]
-
-    if "rings" in arcgis:
-        geojson = convertRingsToGeoJSON(arcgis["rings"])
-
-    if (
-        "xmin" in arcgis
-        and isinstance(arcgis["xmin"], numbers.Number)
-        and "ymin" in arcgis
-        and isinstance(arcgis["ymin"], numbers.Number)
-        and "xmax" in arcgis
-        and isinstance(arcgis["xmax"], numbers.Number)
-        and "ymax" in arcgis
-        and isinstance(arcgis["ymax"], numbers.Number)
-    ):
-        geojson["type"] = "Polygon"
-        geojson["coordinates"] = [
-            [
-                [arcgis["xmax"], arcgis["ymax"]],
-                [arcgis["xmin"], arcgis["ymax"]],
-                [arcgis["xmin"], arcgis["ymin"]],
-                [arcgis["xmax"], arcgis["ymin"]],
-                [arcgis["xmax"], arcgis["ymax"]],
-            ]
-        ]
-
-    if "geometry" in arcgis or "attributes" in arcgis:
-        geojson["type"] = "Feature"
-        if "geometry" in arcgis:
-            geojson["geometry"] = convert(arcgis["geometry"])
-        else:
-            geojson["geometry"] = None
-
-        if "attributes" in arcgis:
-            geojson["properties"] = arcgis["attributes"]
-            try:
-                attributes = arcgis["attributes"]
-                keys = (
-                    [idAttribute, "OBJECTID", "FID"]
-                    if idAttribute
-                    else ["OBJECTID", "FID"]
-                )
-                for key in keys:
-                    if key in attributes and (
-                        isinstance(attributes[key], numbers.Number)
-                        or isinstance(attributes[key], str)
-                    ):
-                        geojson["id"] = attributes[key]
-                        break
-            except KeyError:
-                warn("No valid id attribute found")
-                pass
-        else:
-            geojson["properties"] = None
-
-    if "geometry" in geojson and not geojson["geometry"]:
-        geojson["geometry"] = None
-
-    return geojson
-
-
-def convertRingsToGeoJSON(rings):
-    """Checks for holes in the ring and fill them"""
-
-    outerRings = []
-    holes = []
-    x = None  # iterator
-    outerRing = None  # current outer ring being evaluated
-    hole = None  # current hole being evaluated
-
-    for ring in rings:
-        if not all(np.isclose(ring[0], ring[-1])):
-            ring.append(ring[0])
-
-        if len(ring) < 4:
-            continue
-
-        total = sum(
-            (pt2[0] - pt1[0]) * (pt2[1] + pt1[1])
-            for pt1, pt2 in zip(ring[:-1], ring[1:])
-        )
-        # Clock-wise check
-        if total >= 0:
-            outerRings.append(
-                [ring[::-1]]
-            )  # wind outer rings counterclockwise for RFC 7946 compliance
-        else:
-            holes.append(
-                ring[::-1]
-            )  # wind inner rings clockwise for RFC 7946 compliance
-
-    uncontainedHoles = []
-
-    # while there are holes left...
-    while len(holes):
-        # pop a hole off out stack
-        hole = holes.pop()
-
-        # loop over all outer rings and see if they contain our hole.
-        contained = False
-        x = len(outerRings) - 1
-        while x >= 0:
-            outerRing = outerRings[x][0]
-            l1, l2 = LineString(outerRing), LineString(hole)
-            p2 = Point(hole[0])
-            intersects = l1.intersects(l2)
-            contains = l1.contains(p2)
-            if not intersects and contains:
-                # the hole is contained push it into our polygon
-                outerRings[x].append(hole)
-                contained = True
-                break
-            x = x - 1
-
-        # ring is not contained in any outer ring
-        # sometimes this happens https://github.com/Esri/esri-leaflet/issues/320
-        if not contained:
-            uncontainedHoles.append(hole)
-
-    # if we couldn't match any holes using contains we can try intersects...
-    while len(uncontainedHoles):
-        # pop a hole off out stack
-        hole = uncontainedHoles.pop()
-
-        # loop over all outer rings and see if any intersect our hole.
-        intersects = False
-        x = len(outerRings) - 1
-        while x >= 0:
-            outerRing = outerRings[x][0]
-            l1, l2 = LineString(outerRing), LineString(hole)
-            intersects = l1.intersects(l2)
-            if intersects:
-                # the hole is contained push it into our polygon
-                outerRings[x].append(hole)
-                intersects = True
-                break
-            x = x - 1
-
-        if not intersects:
-            outerRings.append([hole[::-1]])
-
-    if len(outerRings) == 1:
-        return {"type": "Polygon", "coordinates": outerRings[0]}
-    else:
-        return {"type": "MultiPolygon", "coordinates": outerRings}
 
 
 def geom_mask(
