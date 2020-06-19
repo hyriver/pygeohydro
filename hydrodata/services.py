@@ -16,6 +16,7 @@ from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from requests.exceptions import ConnectionError, RetryError
 from shapely.geometry import Polygon, box
+from simplejson import JSONDecodeError
 
 from hydrodata import utils
 from hydrodata.utils import threading
@@ -32,6 +33,7 @@ class ArcGISServer:
         serviceName=None,
         layer=None,
         outFormat="geojson",
+        outFields="*",
         spatialRel="esriSpatialRelIntersects",
     ):
         """Form the base url and get the service information.
@@ -53,22 +55,25 @@ class ArcGISServer:
             The host part of the URL, e.g., elevation.nationalmap.gov
         site : str
             The site part of the URL, e.g., arcgis
-        folder : str
+        folder : str, optional
             One of the available folders offered by the host. If not correct
-            a list of available folders is shown.
-        serviceName : str
+            a list of available folders is shown, default to ``None``.
+        serviceName : str, optional
             One of the available services offered by the host. If not correct
-            a list of available services is shown.
-        layer : str
+            a list of available services is shown, default to ``None``.
+        layer : str, optional
             One of the layer of the requested service name. If not correct
-            a list of available layers is shown.
-        outFormat : str
+            a list of available layers is shown, default to ``None``.
+        outFormat : str, optional
             One of the output formats offered by the selected layer. If not correct
-            a list of available formats is shown.
-        spatialRel : str
+            a list of available formats is shown, defaults to ``geojson``.
+        outFields : str or list
+            The output fields to be requested. Setting ``*`` as outFields requests
+            all the available fields. Defaults to ``*``.
+        spatialRel : str, optional
             The spatial relationship to be applied on the input geometry
-            while performing the query. If not correct
-            a list of available options is shown.
+            while performing the query. If not correct a list of available options is shown.
+            Defaults to ``esriSpatialRelIntersects``.
         """
         if host is not None and site is not None:
             self.root = f"https://{host}/{site}/rest/services"
@@ -80,6 +85,7 @@ class ArcGISServer:
         self._layer = layer
         self._outFormat = outFormat
         self._spatialRel = spatialRel
+        self._outFields = [outFields] if isinstance(outFields, str) else outFields
         self.session = utils.retry_requests()
 
     @property
@@ -171,6 +177,19 @@ class ArcGISServer:
                 + ", ".join(str(v) for v in spatialRels)
             )
         self._spatialRel = value
+
+    @property
+    def outFields(self):
+        return self._outFields
+
+    @outFields.setter
+    def outFields(self, value):
+        if isinstance(value, str):
+            self._outFields = [value]
+        elif isinstance(value, list):
+            self._outFields = value
+        else:
+            raise TypeError("outFields should be either a str or list.")
 
     def get_fs(self, folder=None):
         """Get folders and services of the geoserver's a folder/root url"""
@@ -286,12 +305,15 @@ class ArcGISREST(ArcGISServer):
         folder=None,
         serviceName=None,
         layer=None,
-        n_threads=4,
         outFormat="json",
+        outFields="*",
         spatialRel="esriSpatialRelIntersects",
+        n_threads=4,
         verbose=False,
     ):
-        super().__init__(host, site, folder, serviceName, layer, outFormat, spatialRel)
+        super().__init__(
+            host, site, folder, serviceName, layer, outFormat, outFields, spatialRel
+        )
         self.verbose = verbose
 
         if self.outFormat not in ["json", "geojson"]:
@@ -329,6 +351,33 @@ class ArcGISREST(ArcGISServer):
         self._n_threads = min(value, 8)
         if value > 8:
             warn(f"No. of threads was reduced to 8 from {value}.")
+
+    @property
+    def max_nrecords(self):
+        return self._max_nrecords
+
+    @max_nrecords.setter
+    def max_nrecords(self, value):
+        if isinstance(value, int) and value > 0:
+            self._max_nrecords = min(self.maxRecordCount, value)
+        else:
+            raise ValueError("``max_nrecords`` should be a positive integer.")
+
+    @property
+    def featureids(self):
+        return self._featureids
+
+    @featureids.setter
+    def featureids(self, value):
+        if isinstance(value, (list, str)):
+            oids = [value] if isinstance(value, str) else value
+            oid_list = list(zip_longest(*[iter(oids)] * self.max_nrecords))
+            oid_list[-1] = tuple(i for i in oid_list[-1] if i is not None)
+            self._featureids = oid_list
+        else:
+            raise TypeError(
+                "feature IDs should be either a string or a list of strings"
+            )
 
     def generate_url(self):
         """Generate the base_url based on the class properties"""
@@ -379,10 +428,11 @@ class ArcGISREST(ArcGISServer):
             self.queryFormats = (
                 r["supportedQueryFormats"].replace(" ", "").lower().split(",")
             )
+            self.valid_fields = utils.traverse_json(r, ["fields", "name"]) + ["*"]
         except RetryError:
             try:
                 r = utils.get_url(self.session, self.base_url)
-                tree = html.fromstr(r.content)
+                tree = html.fromstring(r.content)
                 info = tree.xpath('//div[@class="rbody"]//text()')
                 info = [i.strip() for i in info if i.strip() != ""]
                 try:
@@ -393,11 +443,15 @@ class ArcGISREST(ArcGISServer):
                 self.maxRecordCount = int(info[info.index("MaxRecordCount:") + 1])
                 queryFormats = info[info.index("Supported Query Formats:") + 1]
                 self.queryFormats = queryFormats.lower().replace(" ", "").split(",")
+                self.valid_fields = info[
+                    info.index("Fields:") + 1 : info.index("Supported Operations") : 2
+                ] + ["*"]
             except ValueError:
                 raise KeyError(f"The service url is not valid:\n{self.base_url}")
         except KeyError:
             raise KeyError(f"The service url is not valid:\n{self.base_url}")
 
+        self.max_nrecords = self.maxRecordCount
         if self.verbose:
             print(self.__repr__())
 
@@ -413,14 +467,14 @@ class ArcGISREST(ArcGISServer):
         return msg
 
     def get_featureids(self, geom):
-        """Get feature IDs withing a geometry"""
+        """Get feature IDs withing a geometry in EPSG:4326"""
         if self.base_url is None:
             raise ValueError(
                 "The base_url is not set yet, use "
                 + "self.generate_url(<layer>) to form the url"
             )
 
-        if isinstance(geom, list) or isinstance(geom, tuple):
+        if isinstance(geom, (list, tuple)):
             if len(geom) != 4:
                 raise TypeError(
                     "The bounding box should be a list or tuple of form [west, south, east, north]"
@@ -451,26 +505,31 @@ class ArcGISREST(ArcGISServer):
         r = utils.post_url(self.session, f"{self.base_url}/query", payload)
         try:
             oids = r.json()["objectIds"]
-            oid_list = list(zip_longest(*[iter(oids)] * self.maxRecordCount))
-            oid_list[-1] = [i for i in oid_list[-1] if i is not None]
-        except (KeyError, TypeError, IndexError):
+        except (KeyError, TypeError, IndexError, JSONDecodeError):
             warn(
                 "No feature ID were found within the requested "
                 + f"region using the spatial relationship {self.spatialRel}."
             )
             raise
 
-        self.splitted_ids = oid_list
+        self.featureids = oids
 
     def get_features(self):
         """Get features based on the feature IDs"""
+
+        if not all(f in self.valid_fields for f in self.outFields):
+            raise ValueError(
+                "Given outFields is invalid.\n"
+                + "Valid fileds are:\n"
+                + ", ".join(f for f in self.valid_fields)
+            )
 
         def get_geojson(ids):
             payload = {
                 "objectIds": ",".join(str(i) for i in ids),
                 "returnGeometry": "true",
                 "outSR": "4326",
-                "outFields": "*",
+                "outFields": ",".join(str(i) for i in self.outFields),
                 "f": self.outFormat,
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
@@ -489,7 +548,7 @@ class ArcGISREST(ArcGISServer):
                 "objectIds": ",".join(str(i) for i in ids),
                 "returnGeometry": "true",
                 "outSR": "4326",
-                "outFields": "*",
+                "outFields": ",".join(str(i) for i in self.outFields),
                 "f": self.outFormat,
             }
             r = utils.post_url(self.session, f"{self.base_url}/query", payload)
@@ -504,7 +563,7 @@ class ArcGISREST(ArcGISServer):
             getter = get_geojson
 
         feature_list = threading(
-            getter, self.splitted_ids, max_workers=min(self.n_threads, 8),
+            getter, self.featureids, max_workers=min(self.n_threads, 8),
         )
 
         # Find the failed batches and retry
@@ -523,14 +582,13 @@ class ArcGISREST(ArcGISServer):
         if len(success) == 0:
             raise ValueError("No valid feature were found.")
 
-        data = gpd.GeoDataFrame(pd.concat(success))
+        data = gpd.GeoDataFrame(pd.concat(success)).reset_index(drop=True)
         data.crs = "epsg:4326"
         return data
 
 
 def wms_bygeom(
     url,
-    service_name,
     geometry,
     width=None,
     resolution=None,
@@ -551,8 +609,6 @@ def wms_bygeom(
         The base url for the WMS service. Some examples:
         https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
         https://www.mrlc.gov/geoserver/mrlc_download/wms
-    service_name : str
-        Name of the service to appear in the progress bar
     geometry : Polygon
         A shapely Polygon for getting the data
     width : int
@@ -720,7 +776,8 @@ class WFS:
             The data format to request for data from the service, defaults to None which
              throws an error and includes all the avialable format offered by the service.
         version : str, optional
-            The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
+            The WMS service version which should be either 1.1.1, 1.3.0, or 2.0.0.
+            Defaults to 2.0.0.
         crs: str, optional
             The spatial reference system to be used for requesting the data, defaults to
             epsg:4326.

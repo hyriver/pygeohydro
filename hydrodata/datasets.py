@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import rasterio as rio
 import xarray as xr
+from owslib.wfs import WebFeatureService
 from shapely.geometry import Polygon
 
 from hydrodata import helpers, services, utils
@@ -92,7 +93,8 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     """Get NWIS stations by a list of IDs or within a bounding box.
 
     Only stations that record(ed) daily streamflow data are returned.
-    The following columns are included in the dataframe:
+    The following columns are included in the dataframe with expanded
+    set to False:
 
     ==================  ==================================
     Name                Description
@@ -199,6 +201,11 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     sites = sites[sites.site_no.apply(len) == 8]
     hcdn = gagesii_byid(sites.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
     hcdn = hcdn.rename(columns={"STAID": "site_no", "HCDN_2009": "hcdn_2009"})
+    #     gii = WaterData("gagesii", "epsg:900913")
+    #     hcdn = gii.features_byid("staid", sites.site_no.tolist())[
+    #         ["staid", "hcdn_2009"]
+    #     ].copy()
+    #     hcdn = hcdn.rename(columns={"staid": "site_no"})
     hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: len(x) > 0)
     sites = sites.merge(hcdn, on="site_no")
 
@@ -219,6 +226,311 @@ def gagesii_byid(station_ids):
     )
     r = wfs.getfeature_byid(propertyname, station_ids)
     return utils.json_togeodf(r.json(), crs, "epsg:4326")
+
+
+class WaterData:
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`_ service.
+    """
+
+    def __init__(self, layer, crs="epsg:4269"):
+        """Initialize the class
+
+        Parameters
+        ----------
+        layer : str
+            A valid layer from the WaterData service. Valid layers are:
+            ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, ``nhdflowline_network``
+            ``gagesii``, ``huc08``, ``huc12``, ``huc12agg``, and ``huc12all``.
+        crs : str, optional
+            The spatial reference system for requesting the data. Each layer support
+            a limited number of CRSs, defaults to ``epsg:4269``.
+        """
+        wfs = WebFeatureService(
+            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows", version="2.0.0"
+        )
+        self.valid_layers = [v.split(":")[-1] for v in list(wfs.contents)]
+        if layer not in self.valid_layers:
+            raise ValueError(
+                "The given layers argument is invalid."
+                + " Valid layers are:\n"
+                + ", ".join(layer for layer in self.valid_layers)
+            )
+        self.wfs = services.WFS(
+            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+            layer=f"wmadata:{layer}",
+            outFormat="application/json",
+            crs=crs,
+        )
+        self.layer = layer
+        self.crs = crs
+
+    @staticmethod
+    def get_validnames(layer, crs="epsg:4269"):
+        """Get valid column names on the layer's database
+
+        Parameters
+        ----------
+        layer : str
+            A valid layer from the WaterData service to get the column names
+        crs : str, optional
+            The spatial reference system for requesting the data. Each layer support
+            a limited number of CRSs, defaults to ``epsg:4269``.
+
+        Returns
+        -------
+        list
+        """
+        session = utils.retry_requests()
+        url = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
+        payload = {
+            "service": "WFS",
+            "version": "1.0.0",
+            "request": "GetFeature",
+            "typeName": f"wmadata:{layer}",
+            "maxFeatures": "1",
+            "outputFormat": "application/json",
+        }
+        r = utils.get_url(session, url, payload=payload)
+        sample = utils.json_togeodf(r.json(), crs, crs)
+
+        return sample.columns.to_list()
+
+    def features_bybox(self, bbox, in_crs="epsg:4326", out_crs="epsg:4326"):
+        """Get NHDPlus flowline database within a bounding box.
+
+        Parameters
+        ----------
+        bbox : list
+            The bounding box for the region of interest in WGS 83, defaults to None.
+            The list should provide the corners in this order:
+            [west, south, east, north]
+        in_crs : str, optional
+            The spatial reference system of the input bbox, defaults to
+            epsg:4326.
+        out_crs: str, optional
+            The spatial reference system to be used for the returned data, defaults to
+            epsg:4326.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+
+        r = self.wfs.getfeature_bybox(bbox, in_crs=in_crs)
+        features = utils.json_togeodf(r.json(), self.crs, out_crs)
+
+        if features.shape[0] == 0:
+            raise KeyError(
+                f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
+            )
+
+        return features
+
+    def features_byid(self, property_name, property_ids, out_crs="epsg:4326"):
+        """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
+
+        Parameters
+        ----------
+        property_name : str
+            Property (column) name of the requested features in the database.
+            You can use ``get_validnames(layer)`` class function to get all
+            the available column names for a specific layer.
+        property_ids : str or list
+            The ID(s) of the requested property name.
+        crs: str, optional
+            The spatial reference system to be used for the returned data, defaults to
+            ``epsg:4326``.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        valid_names = self.get_validnames(self.layer)
+        if property_name not in valid_names:
+            raise ValueError(
+                "The given property name argument is invalid."
+                + f" Valid property names for {self.layer} layer are:\n"
+                + ", ".join(name for name in valid_names)
+            )
+
+        r = self.wfs.getfeature_byid(property_name, property_ids)
+        features = utils.json_togeodf(r.json(), self.crs, out_crs)
+        if features.shape[0] == 0:
+            raise KeyError("No feature was found with the provided IDs")
+        return features
+
+
+class NLDI:
+    """Access to the Hydro Network-Linked Data Index (NLDI) service."""
+
+    @staticmethod
+    def available_features():
+        url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+        r = utils.get_url(utils.retry_requests(), url)
+        return r.json()
+
+    @classmethod
+    def starting_comid(cls, station_id):
+        """Find starting ComID based on the USGS station."""
+        return cls.navigate("nwissite", station_id, navigation=None).comid.tolist()[0]
+
+    @classmethod
+    def comids(cls, station_id):
+        """Find ComIDs of all the flowlines."""
+        return cls.navigate("nwissite", station_id).comid.tolist()
+
+    @classmethod
+    def tributaries(cls, station_id):
+        """Get upstream tributaries of the watershed."""
+        return cls.navigate("nwissite", station_id)
+
+    @classmethod
+    def main(cls, station_id):
+        """Get upstream main channel of the watershed."""
+        return cls.navigate("nwissite", station_id, "upstreamMain")
+
+    @classmethod
+    def stations(cls, station_id, navigation="upstreamTributaries", distance=None):
+        """Get USGS stations up/downstream of a station.
+
+        Parameters
+        ----------
+        station_id : str
+            The USGS station ID.
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to upstreamTributaries.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (all stations).
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        return cls.navigate("nwissite", station_id, navigation, "nwissite", distance)
+
+    @classmethod
+    def pour_points(cls, station_id):
+        """Get upstream tributaries of the watershed."""
+        return cls.navigate("nwissite", station_id, dataSource="huc12pp")
+
+    @classmethod
+    def flowlines(cls, station_id):
+        """Get flowlines for the entire watershed from NHDPlus V2"""
+        wd = WaterData("nhdflowline_network")
+        return wd.features_byid("comid", cls.comids(station_id))
+
+    @classmethod
+    def catchments(cls, station_id):
+        """Get chatchments for the entire watershed from NHDPlus V2"""
+        wd = WaterData("catchmentsp")
+        return wd.features_byid("featureid", cls.comids(station_id))
+
+    @staticmethod
+    def basin(station_id):
+        """Get USGS stations basins using NLDI service."""
+        url = (
+            "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+            + f"/nwissite/USGS-{station_id}/basin"
+        )
+        r = utils.get_url(utils.retry_requests(), url)
+        return utils.json_togeodf(r.json(), "epsg:4269", crs="epsg:4326")
+
+    @staticmethod
+    def navigate(
+        feature,
+        featureids,
+        navigation="upstreamTributaries",
+        dataSource="flowline",
+        distance=None,
+    ):
+        """Navigate NHDPlus V2 based on ComID(s).
+
+        Parameters
+        ----------
+        feature : str
+            The requested feature. The valid features are ``nwissite`` and ``comid``.
+        featureids : str or list
+            The ID(s) of the requested feature.
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to upstreamTributaries.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (limitless).
+        dataSource : str, optional
+            The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
+            ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
+            Defaults to None.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        valid_features = ["comid", "nwissite"]
+        if feature not in valid_features:
+            msg = (
+                "The acceptable feature options are:"
+                + f" {', '.join(x for x in valid_features)}"
+            )
+            raise ValueError(msg)
+
+        valid_dataSource = ["flowline", "nwissite", "huc12pp"]
+        if dataSource not in valid_dataSource:
+            msg = (
+                "The acceptable dataSource options are:"
+                + f"{', '.join(x for x in valid_dataSource)}"
+            )
+            raise ValueError(msg)
+
+        if not isinstance(featureids, list):
+            featureids = [featureids]
+
+        if feature == "nwissite":
+            featureids = ["USGS-" + str(f) for f in featureids]
+
+        if len(featureids) == 0:
+            raise ValueError("The featureID list is empty!")
+
+        ds = "" if dataSource == "flowline" else f"/{dataSource}"
+        dis = "" if distance is None else f"?distance={distance}"
+
+        nav_options = {
+            "upstreamMain": "UM",
+            "upstreamTributaries": "UT",
+            "downstreamMain": "DM",
+            "downstreamDiversions": "DD",
+        }
+        if navigation is not None and navigation not in list(nav_options.keys()):
+            msg = (
+                "The acceptable navigation options are:"
+                + f" {', '.join(x for x in list(nav_options.keys()))}"
+            )
+            raise ValueError(msg)
+        elif navigation is None:
+            nav = ""
+        else:
+            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
+
+        base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
+        crs = "epsg:4326"
+        session = utils.retry_requests()
+
+        def get_url(fid):
+            url = f"{base_url}/{fid}/{nav}"
+
+            r = utils.get_url(session, url)
+            return utils.json_togeodf(r.json(), "epsg:4269", crs=crs)
+
+        features = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
+        comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
+        features = features.rename(columns={comid: "comid"})
+        features = features[["comid", "geometry"]]
+        features["comid"] = features.comid.astype("int64")
+        features.crs = crs
+
+        return features
 
 
 def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
@@ -263,7 +575,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         start = pd.to_datetime(start)
         end = pd.to_datetime(end)
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 till present.")
+            raise ValueError("Daymet database ranges from 1980 till 2019.")
     elif years is not None and start is None and end is None:
         years = years if isinstance(years, list) else [years]
     else:
@@ -325,7 +637,6 @@ def daymet_bygeom(
     pet=False,
     fill_holes=False,
     n_threads=4,
-    verbose=False,
 ):
     """Gridded data from the Daymet database as 1-km resolution.
 
@@ -353,8 +664,6 @@ def daymet_bygeom(
         Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
         Number of threads for simultanious download, defaults to 4 and max is 8.
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -489,262 +798,7 @@ def daymet_bygeom(
     return data
 
 
-class NLDI:
-    """Access to the Hydro Network-Linked Data Index (NLDI) service."""
-
-    @classmethod
-    def starting_comid(cls, station_id):
-        """Find starting ComID based on the USGS station."""
-        return cls.navigate("nwissite", station_id, navigation=None).comid.tolist()[0]
-
-    @classmethod
-    def comids(cls, station_id):
-        """Find ComIDs of all the flowlines."""
-        return cls.navigate("nwissite", station_id).comid.tolist()
-
-    @classmethod
-    def tributaries(cls, station_id):
-        """Get upstream tributaries of the watershed."""
-        return cls.navigate("nwissite", station_id)
-
-    @classmethod
-    def main(cls, station_id):
-        """Get upstream main channel of the watershed."""
-        return cls.navigate("nwissite", station_id, "upstreamMain")
-
-    @classmethod
-    def stations(cls, station_id, navigation="upstreamTributaries", distance=None):
-        """Get USGS stations up/downstream of a station.
-
-        Parameters
-        ----------
-        station_id : str
-            The USGS station ID.
-        navigation : str, optional
-            The direction for navigating the NHDPlus database. The valid options are:
-            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
-            ``downstreamDiversions``. Defaults to upstreamTributaries.
-        distance : float, optional
-            The distance to limit the navigation in km. Defaults to None (all stations).
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-        """
-        return cls.navigate("nwissite", station_id, navigation, "nwissite", distance)
-
-    @classmethod
-    def pour_points(cls, station_id):
-        """Get upstream tributaries of the watershed."""
-        return cls.navigate("nwissite", station_id, dataSource="huc12pp")
-
-    @classmethod
-    def flowlines(cls, station_id):
-        """Get flowlines for the entire watershed from NHDPlus V2"""
-        return nhdplus_byid("nhdflowline_network", cls.comids(station_id))
-
-    @classmethod
-    def catchments(cls, station_id):
-        """Get chatchments for the entire watershed from NHDPlus V2"""
-        return nhdplus_byid("catchmentsp", cls.comids(station_id))
-
-    @staticmethod
-    def basin(station_id):
-        """Get USGS stations basins using NLDI service."""
-        url = (
-            "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
-            + f"/nwissite/USGS-{station_id}/basin"
-        )
-        r = utils.get_url(utils.retry_requests(), url)
-        return utils.json_togeodf(r.json(), "epsg:4326")
-
-    @staticmethod
-    def navigate(
-        feature,
-        featureids,
-        navigation="upstreamTributaries",
-        dataSource="flowline",
-        distance=None,
-    ):
-        """Navigate NHDPlus V2 based on ComID(s).
-
-        Parameters
-        ----------
-        feature : str
-            The requested feature. The valid features are ``nwissite`` and ``comid``.
-        featureids : str or list
-            The ID(s) of the requested feature.
-        navigation : str, optional
-            The direction for navigating the NHDPlus database. The valid options are:
-            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
-            ``downstreamDiversions``. Defaults to upstreamTributaries.
-        distance : float, optional
-            The distance to limit the navigation in km. Defaults to None (limitless).
-        dataSource : str, optional
-            The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
-            ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
-            Defaults to None.
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-        """
-        valid_features = ["comid", "nwissite"]
-        if feature not in valid_features:
-            msg = (
-                "The acceptable feature options are:"
-                + f" {', '.join(x for x in valid_features)}"
-            )
-            raise ValueError(msg)
-
-        valid_dataSource = ["flowline", "nwissite", "huc12pp"]
-        if dataSource not in valid_dataSource:
-            msg = (
-                "The acceptable dataSource options are:"
-                + f"{', '.join(x for x in valid_dataSource)}"
-            )
-            raise ValueError(msg)
-
-        if not isinstance(featureids, list):
-            featureids = [featureids]
-
-        if feature == "nwissite":
-            featureids = ["USGS-" + str(f) for f in featureids]
-
-        if len(featureids) == 0:
-            raise ValueError("The featureID list is empty!")
-
-        ds = "" if dataSource == "flowline" else f"/{dataSource}"
-        dis = "" if distance is None else f"?distance={distance}"
-
-        nav_options = {
-            "upstreamMain": "UM",
-            "upstreamTributaries": "UT",
-            "downstreamMain": "DM",
-            "downstreamDiversions": "DD",
-        }
-        if navigation is not None and navigation not in list(nav_options.keys()):
-            msg = (
-                "The acceptable navigation options are:"
-                + f" {', '.join(x for x in list(nav_options.keys()))}"
-            )
-            raise ValueError(msg)
-        elif navigation is None:
-            nav = ""
-        else:
-            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
-
-        base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
-        crs = "epsg:4326"
-        session = utils.retry_requests()
-
-        def get_url(fid):
-            url = f"{base_url}/{fid}/{nav}"
-
-            r = utils.get_url(session, url)
-            return utils.json_togeodf(r.json(), "epsg:4326")
-
-        features = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
-        comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
-        features = features.rename(columns={comid: "comid"})
-        features = features[["comid", "geometry"]]
-        features["comid"] = features.comid.astype("int64")
-        features.crs = crs
-
-        return features
-
-
-def nhdplus_bybox(feature, bbox, in_crs="epsg:4326", crs="epsg:4326"):
-    """Get NHDPlus flowline database within a bounding box.
-
-    Parameters
-    ----------
-    feature : str
-        The NHDPlus feature to be downloaded. Valid features are:
-        ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, and ``nhdflowline_network``
-    bbox : list
-        The bounding box for the region of interest in WGS 83, defaults to None.
-        The list should provide the corners in this order:
-        [west, south, east, north]
-    in_crs : str, optional
-        The spatial reference system of the input bbox, defaults to
-        epsg:4326.
-    crs: str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-
-    Returns
-    -------
-    geopandas.GeoDataFrame
-    """
-
-    valid_features = ["nhdarea", "nhdwaterbody", "catchmentsp", "nhdflowline_network"]
-    if feature not in valid_features:
-        msg = (
-            f"The provided feature, {feature}, is not valid."
-            + f" Valid features are {', '.join(x for x in valid_features)}"
-        )
-        raise ValueError(msg)
-
-    wfs = services.WFS(
-        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
-        layer=f"wmadata:{feature}",
-        outFormat="application/json",
-        crs="epsg:4269",
-    )
-    r = wfs.getfeature_bybox(bbox, in_crs=in_crs)
-    features = utils.json_togeodf(r.json(), "epsg:4269", crs)
-
-    if features.shape[0] == 0:
-        raise KeyError(
-            f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
-        )
-
-    return features
-
-
-def nhdplus_byid(feature, featureids, crs="epsg:4326"):
-    """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
-
-    Parameters
-    ----------
-    feature : str
-        The requested feature. The valid features are:
-        ``catchmentsp`` and ``nhdflowline_network``
-    featureids : str or list
-        The ID(s) of the requested feature.
-    crs: str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-
-    Returns
-    -------
-    geopandas.GeoDataFrame
-    """
-    valid_features = ["catchmentsp", "nhdflowline_network"]
-    if feature not in valid_features:
-        msg = (
-            f"The provided feature, {feature}, is not valid."
-            + f"Valid features are {', '.join(x for x in valid_features)}"
-        )
-        raise ValueError(msg)
-
-    propertyname = "featureid" if feature == "catchmentsp" else "comid"
-
-    wfs = services.WFS(
-        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
-        layer=f"wmadata:{feature}",
-        outFormat="application/json",
-        crs="epsg:4269",
-    )
-    r = wfs.getfeature_byid(propertyname, featureids)
-    features = utils.json_togeodf(r.json(), "epsg:4269", crs)
-    if features.shape[0] == 0:
-        raise KeyError("No feature was found with the provided IDs")
-    return features
-
-
-def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
+def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     """Gridded data from the SSEBop database.
 
     The data is clipped using netCDF Subset Service.
@@ -761,8 +815,6 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
         Ending date
     years : list
         List of years
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -797,13 +849,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None, verbose=False):
 
 
 def ssebopeta_bygeom(
-    geometry,
-    start=None,
-    end=None,
-    years=None,
-    resolution=None,
-    fill_holes=False,
-    verbose=False,
+    geometry, start=None, end=None, years=None, resolution=None, fill_holes=False,
 ):
     """Gridded data from the SSEBop database.
 
@@ -828,8 +874,6 @@ def ssebopeta_bygeom(
         List of years
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
-    verbose : bool, optional
-        Whether to show more information during runtime, defaults to False
 
     Returns
     -------
@@ -969,7 +1013,6 @@ def nlcd(
 
     ds = services.wms_bygeom(
         url,
-        "NLCD",
         geometry,
         width=width,
         resolution=resolution,
@@ -1118,7 +1161,6 @@ class NationalMap:
         fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
             self.url,
-            "3DEP",
             self.geometry,
             width=self.width,
             resolution=self.resolution,

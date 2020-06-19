@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """Tests for `hydrodata` package."""
 
 import hydrodata.datasets as hds
@@ -7,33 +6,34 @@ from hydrodata import Station, helpers, plot, services, utils
 
 
 def test_station():
-    natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
-    natural = Station("2000-01-01", "2010-01-21", station_id="01031500", verbose=True)
-    urban = Station(start="2000-01-01", end="2010-01-21", coords=(-118.47, 34.16))
+    natural = Station(station_id="01031500", verbose=True)
+    natural = Station(station_id="01031500", verbose=True)
+    urban = Station(coords=(-118.47, 34.16), dates=("2000-01-01", "2010-01-21"))
     assert natural.hcdn and not urban.hcdn
 
 
 def test_nwis():
     discharge = hds.nwis_streamflow("01031500", "2000-01-01", "2000-01-31")
-    assert abs(discharge.sum().values[0] - 139.8569) < 1e-4
+    assert abs(discharge.sum().values[0] - 139.857) < 1e-3
 
 
 def test_daymet():
-    wshed = Station("2000-01-01", "2000-01-12", station_id="01031500")
+    wshed = Station(station_id="01031500")
+    start, end = "2000-01-01", "2000-01-12"
     variables = ["tmin"]
     st_p = hds.daymet_byloc(
-        -118.47, 34.16, start=wshed.start, end=wshed.end, variables=variables, pet=True
+        -118.47, 34.16, start=start, end=end, variables=variables, pet=True
     )
     yr_p = hds.daymet_byloc(-118.47, 34.16, years=2010, variables=variables)
 
     st_g = hds.daymet_bygeom(
-        wshed.geometry, start=wshed.start, end=wshed.end, variables=variables, pet=True
+        wshed.geometry, start=start, end=end, variables=variables, pet=True
     )
     yr_g = hds.daymet_bygeom(wshed.geometry, years=2010, variables=variables)
     assert (
-        abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.6823) < 1e-4
+        abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.682) < 1e-3
         and abs(yr_g.isel(time=10, x=5, y=10).tmin.values.item() - (-18.0)) < 1e-1
-        and abs(st_p.iloc[10]["pet (mm/day)"] - 2.3928) < 1e-4
+        and abs(st_p.iloc[10]["pet (mm/day)"] - 2.393) < 1e-3
         and abs(yr_p.iloc[10]["tmin (deg c)"] - 11.5) < 1e-1
     )
 
@@ -63,49 +63,56 @@ def test_nldi():
         and stm.shape[0] == 2
         and pp.shape[0] == 12
         and abs(fl.lengthkm.sum() - 565.755) < 1e-3
-        and abs(ct.areasqkm.sum() - 773.9541) < 1e-4
+        and abs(ct.areasqkm.sum() - 773.954) < 1e-3
     )
 
 
 def test_nhdplus_bybox():
-    wb = hds.nhdplus_bybox(
-        "nhdwaterbody",
+    wd = hds.WaterData("nhdwaterbody")
+    wb = wd.features_bybox(
         (-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),
     )
     assert abs(wb.areasqkm.sum() - 87.084) < 1e-3
 
 
+def test_nhdplus_byid():
+    wd = hds.WaterData("catchmentsp")
+    ct = wd.features_byid("featureid", hds.NLDI().comids("01031500"))
+    assert abs(ct.areasqkm.sum() - 773.954) < 1e-3
+
+
 def test_ssebopeta():
-    wshed = Station("2000-01-01", "2000-01-05", station_id="01031500")
-    eta_p = hds.ssebopeta_byloc(*wshed.coords, start=wshed.start, end=wshed.end)
-    eta_g = hds.ssebopeta_bygeom(wshed.geometry, start=wshed.start, end=wshed.end)
+    wshed = Station(station_id="01031500")
+    start, end = "2000-01-01", "2000-01-05"
+    eta_p = hds.ssebopeta_byloc(*wshed.coords, start=start, end=end)
+    eta_g = hds.ssebopeta_bygeom(wshed.geometry, start=start, end=end)
     assert (
-        abs(eta_p.mean().values[0] == 0.5750) < 1e-4
-        and abs(eta_g.mean().values.item() - 0.5766) < 1e-4
+        abs(eta_p.mean().values[0] == 0.575) < 1e-3
+        and abs(eta_g.mean().values.item() - 0.577) < 1e-3
     )
 
 
 def test_nlcd():
-    wshed = Station("2000-01-01", "2000-01-05", station_id="01031500")
+    wshed = Station(station_id="01031500")
     lulc = hds.nlcd(wshed.geometry, resolution=1)
     st = utils.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 43.0943) < 1e-4
+    assert abs(st["categories"]["Forest"] - 43.094) < 1e-3
 
 
 def test_nm():
-    wshed = Station("2000-01-01", "2000-01-05", station_id="01031500")
+    wshed = Station(station_id="01031500")
     nm = hds.NationalMap(wshed.geometry, resolution=1)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
     nm.get_slope(mpm=True)
     assert (
-        abs(dem.mean().values.item() - 302.2381) < 1e-4
-        and abs(slope.mean().values.item() - 4.1805) < 1e-4
-        and abs(aspect.mean().values.item() - 168.8906) < 1e-4
+        abs(dem.mean().values.item() - 302.237) < 1e-3
+        and abs(slope.mean().values.item() - 4.180) < 1e-3
+        and abs(aspect.mean().values.item() - 168.891) < 1e-3
     )
 
 
 def test_newdb():
-    wshed = Station("2005-01-01", "2005-01-31", "11092450")
+    wshed = Station(station_id="11092450")
 
     s = services.ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
     s.spatialRel = "esriSpatialRelIntersects"
@@ -130,7 +137,6 @@ def test_newdb():
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     slope = services.wms_bygeom(
         url_wms,
-        "3DEP",
         geometry=wshed.geometry,
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
@@ -142,7 +148,6 @@ def test_newdb():
     )
     slope = services.wms_bygeom(
         url_wms,
-        "3DEP",
         geometry=wshed.geometry,
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
@@ -165,19 +170,18 @@ def test_newdb():
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
     assert (
-        abs(storm_pipes.length.sum() - 9.6357) < 1e-4
-        and abs(slope.mean().values.item() == 118.9719) < 1e-4
-        and abs(flood.length.sum() == 0.1916) < 1e-4
+        abs(storm_pipes.length.sum() - 9.636) < 1e-3
+        and abs(slope.mean().values.item() == 118.972) < 1e-3
+        and abs(flood.length.sum() == 0.192) < 1e-3
     )
 
 
 def test_plot():
     utils.interactive_map([-70, 44, -69, 46])
-    wshed = Station("2000-01-01", "2000-01-05", station_id="01031500")
-    qobs = hds.nwis_streamflow(wshed.station_id, wshed.start, wshed.end)
-    clm_p = hds.daymet_byloc(
-        *wshed.coords, start=wshed.start, end=wshed.end, variables=["prcp"]
-    )
+    wshed = Station(station_id="01031500")
+    start, end = "2000-01-01", "2000-01-05"
+    qobs = hds.nwis_streamflow(wshed.station_id, start, end)
+    clm_p = hds.daymet_byloc(*wshed.coords, start=start, end=end, variables=["prcp"])
     plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     err = helpers.nwis_errors()
@@ -302,3 +306,14 @@ def test_path():
         ],
     }
     assert _path == res
+
+
+def test_wbd():
+    wbd = services.ArcGISREST(
+        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1"
+    )
+    wbd.max_nrecords = 5
+    wbd.featureids = [str(n) for n in range(1, 21)]
+    wbd.outFields = ["HUC2", "NAME", "SHAPE_Area"]
+    f = wbd.get_features()
+    assert f.shape[0] == len([x for y in wbd.featureids for x in y])

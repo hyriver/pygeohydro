@@ -6,21 +6,32 @@
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata
+   :alt: PyPi
 
 .. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
     :target: https://codecov.io/gh/cheginit/hydrodata
+   :alt: CodeCov
 
 .. image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
     :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
+   :alt: Github Actions
 
 .. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
     :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
+   :alt: ReadTheDocs
 
 .. image:: https://zenodo.org/badge/237573928.svg
     :target: https://zenodo.org/badge/latestdoi/237573928
+   :alt: Zenodo
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
     :target: https://github.com/psf/black
+   :alt: black
+
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+   :target: https://github.com/pre-commit/pre-commit
+   :alt: pre-commit
+
 
 -----------------
 

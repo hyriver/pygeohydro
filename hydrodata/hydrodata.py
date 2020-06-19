@@ -10,7 +10,6 @@ For more information refer to the Usage section of the document.
 
 import os
 from pathlib import Path
-from warnings import warn
 
 import geopandas as gpd
 import numpy as np
@@ -32,10 +31,9 @@ class Station:
 
     def __init__(
         self,
-        start,
-        end,
         station_id=None,
         coords=None,
+        dates=None,
         srad=0.5,
         data_dir="data",
         verbose=False,
@@ -44,14 +42,13 @@ class Station:
 
         Parameters
         ----------
-        start : str or datetime
-            The starting date of the time period.
-        end : str or datetime
-            The end of the time period.
         station_id : str, optional
             USGS station ID, defaults to None
         coords : tuple, optional
             Longitude and latitude of the point of interest, defaults to None
+        dates : tuple, optional
+            Limit the search for stations with daily mean discharge available within
+            a date interval when coords is specified, defaults to None
         srad : float, optional
             Search radius in degrees for finding the closest station
             when coords is given, default to 0.5 degrees
@@ -60,9 +57,11 @@ class Station:
         verbose : bool
             Whether to show messages
         """
+        if dates is not None:
+            start, end = dates
+            self.start = pd.to_datetime(start)
+            self.end = pd.to_datetime(end)
 
-        self.start = pd.to_datetime(start)
-        self.end = pd.to_datetime(end)
         self.verbose = verbose
 
         self.session = utils.retry_requests()
@@ -124,23 +123,19 @@ class Station:
             + "".ljust(MARGINE)
             + f"Drainage area: {self.areasqkm:.0f} sqkm\n"
             + "".ljust(MARGINE)
-            + f"HCDN 2009: {self.hcdn}."
+            + f"HCDN 2009: {self.hcdn}\n"
+            + "".ljust(MARGINE)
+            + "Data availlability:"
+            + f"{np.datetime_as_string(self.st_begin, 'D')} to "
+            + f"{np.datetime_as_string(self.st_end, 'D')}."
         )
 
     def get_coords(self):
         """Get coordinates of the station from station ID."""
         siteinfo = hds.nwis_siteinfo(ids=self.station_id)
         st = siteinfo[siteinfo.stat_cd == "00003"]
-        st_begin = st.begin_date.to_numpy()[0]
-        st_end = st.end_date.to_numpy()[0]
-        if self.start < st_begin or self.end > st_end:
-            warn(
-                f"[ID: {self.station_id}] ".ljust(MARGINE)
-                + "Daily Mean data unavailable for the specified time period."
-                + " The data is available from "
-                + f"{np.datetime_as_str(st_begin, 'D')} to "
-                + f"{np.datetime_as_str(st_end, 'D')}."
-            )
+        self.st_begin = st.begin_date.to_numpy()[0]
+        self.st_end = st.end_date.to_numpy()[0]
 
         self.coords = (
             st["dec_long_va"].astype("float64").to_numpy()[0],
@@ -166,13 +161,12 @@ class Station:
         sites = hds.nwis_siteinfo(bbox=bbox)
         sites = sites[sites.stat_cd == "00003"]
         if len(sites) < 1:
-            msg = (
+            raise ValueError(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
                 + f"{int(self.srad * 111 / 10) * 10}-km radius "
                 + f"of ({self.coords[0]}, {self.coords[1]}) with daily mean streamflow."
             )
-            raise ValueError(msg)
 
         point = geom.Point(self.coords)
         pts = {
@@ -185,28 +179,34 @@ class Station:
         stations = gpd.GeoSeries(pts)
         distance = stations.apply(lambda x: x.distance(point)).sort_values()
 
-        station_id = None
-        for sid, dis in distance.iteritems():
-            station = sites[sites.site_no == sid]
-            st_begin = station.begin_date.to_numpy()[0]
-            st_end = station.end_date.to_numpy()[0]
+        if distance.shape[0] == 0:
+            station_id = None
+        elif self.start is None and self.end is None:
+            station = sites[sites.site_no == distance.index[0]]
+            self.st_begin = station.begin_date.to_numpy()[0]
+            self.st_end = station.end_date.to_numpy()[0]
+            station_id = station.site_no.to_numpy()[0]
+        else:
+            station_id = None
+            for sid, dis in distance.iteritems():
+                station = sites[sites.site_no == sid]
+                self.st_begin = station.begin_date.to_numpy()[0]
+                self.st_end = station.end_date.to_numpy()[0]
 
-            if self.start < st_begin or self.end > st_end:
-                continue
-            else:
-                station_id = sid
-                break
+                if self.start < self.st_begin or self.end > self.st_end:
+                    continue
+                else:
+                    station_id = sid
+                    break
 
         if station_id is None:
-            msg = (
+            raise ValueError(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
-                + f"{int(self.srad * 111 / 10) * 10}-km radius "
-                + f"with daily mean streamflow from {self.start} to {self.end}"
-                + ".\nUse utils.interactive_map(bbox) function to explore "
-                + "the available stations in the area."
+                + f"{int(self.srad * 111 / 10) * 10}-km radius.\n"
+                + "Use ``utils.interactive_map(bbox)`` function to explore "
+                + "the available stations within a bounding box."
             )
-            raise ValueError(msg)
         else:
             self.station_id = station_id
 
@@ -214,9 +214,8 @@ class Station:
             station.dec_long_va.astype("float64").to_numpy()[0],
             station.dec_lat_va.astype("float64").to_numpy()[0],
         )
-        self.altitude = (
-            station["alt_va"].astype("float64").to_numpy()[0] * 0.3048
-        )  # convert ft to meter
+        # convert ft to meter
+        self.altitude = station["alt_va"].astype("float64").to_numpy()[0] * 0.3048
         self.datum = station["alt_datum_cd"].to_numpy()[0]
         self.name = station.station_nm.to_numpy()[0]
 
