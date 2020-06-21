@@ -522,9 +522,9 @@ def mean_monthly(daily):
     """Compute monthly mean for the regime curve."""
     import calendar
 
-    d = dict(enumerate(calendar.month_abbr))
+    month_abbr = dict(enumerate(calendar.month_abbr))
     mean_month = daily.groupby(daily.index.month).mean()
-    mean_month.index = mean_month.index.map(d)
+    mean_month.index = mean_month.index.map(month_abbr)
     return mean_month
 
 

@@ -199,33 +199,15 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     ].astype("float64")
 
     sites = sites[sites.site_no.apply(len) == 8]
-    hcdn = gagesii_byid(sites.site_no.tolist())[["STAID", "HCDN_2009"]].copy()
-    hcdn = hcdn.rename(columns={"STAID": "site_no", "HCDN_2009": "hcdn_2009"})
-    #     gii = WaterData("gagesii", "epsg:900913")
-    #     hcdn = gii.features_byid("staid", sites.site_no.tolist())[
-    #         ["staid", "hcdn_2009"]
-    #     ].copy()
-    #     hcdn = hcdn.rename(columns={"staid": "site_no"})
+    gii = WaterData("gagesii", "epsg:900913")
+    hcdn = gii.features_byid("staid", sites.site_no.tolist())[
+        ["staid", "hcdn_2009"]
+    ].copy()
+    hcdn = hcdn.rename(columns={"staid": "site_no"})
     hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: len(x) > 0)
     sites = sites.merge(hcdn, on="site_no")
 
     return sites
-
-
-def gagesii_byid(station_ids):
-    """Get USGS gages information from gagesII dataset for a set of IDs"""
-    layer = "NWC:gagesII"
-    propertyname = "STAID"
-    crs = "epsg:900913"
-
-    wfs = services.WFS(
-        "https://cida.usgs.gov/nwc/geoserver/wfs",
-        layer=layer,
-        outFormat="application/json",
-        crs=crs,
-    )
-    r = wfs.getfeature_byid(propertyname, station_ids)
-    return utils.json_togeodf(r.json(), crs, "epsg:4326")
 
 
 class WaterData:
@@ -245,9 +227,10 @@ class WaterData:
             The spatial reference system for requesting the data. Each layer support
             a limited number of CRSs, defaults to ``epsg:4269``.
         """
-        wfs = WebFeatureService(
-            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows", version="2.0.0"
-        )
+        url = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
+        version = "1.1.0"
+
+        wfs = WebFeatureService(url, version=version)
         self.valid_layers = [v.split(":")[-1] for v in list(wfs.contents)]
         if layer not in self.valid_layers:
             raise ValueError(
@@ -256,13 +239,25 @@ class WaterData:
                 + ", ".join(layer for layer in self.valid_layers)
             )
         self.wfs = services.WFS(
-            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+            url,
             layer=f"wmadata:{layer}",
             outFormat="application/json",
+            version=version,
             crs=crs,
         )
         self.layer = layer
         self.crs = crs
+
+    def __repr__(self):
+        """Print the services properties."""
+        return (
+            "Connected to the WFS service with the following properties:\n"
+            + f"URL: {self.wfs.url}\n"
+            + f"Version: {self.wfs.version}\n"
+            + f"Layer: {self.wfs.layer}\n"
+            + f"Output Format: {self.wfs.outFormat}\n"
+            + f"Output CRS: {self.wfs.crs}"
+        )
 
     @staticmethod
     def get_validnames(layer, crs="epsg:4269"):
@@ -354,6 +349,12 @@ class WaterData:
             )
 
         r = self.wfs.getfeature_byid(property_name, property_ids)
+        rjson = r.json()
+        if rjson["numberMatched"] == 0:
+            raise ValueError(
+                f"No feature was found in {self.layer} "
+                + "layer that matches the given ID(s)."
+            )
         features = utils.json_togeodf(r.json(), self.crs, out_crs)
         if features.shape[0] == 0:
             raise KeyError("No feature was found with the provided IDs")
