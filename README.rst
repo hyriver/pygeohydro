@@ -97,7 +97,7 @@ Then, we can either specify a station ID or coordinates to the ``Station`` funct
     from hydrodata import Station
     import hydrodata.datasets as hds
 
-    wshed = Station(start='2000-01-01', end='2010-01-21', coords=(-69.32, 45.17))
+    wshed = Station(coords=(-69.32, 45.17), dates=('2000-01-01', '2010-01-21'))
 
 The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases. For example, we can get the main river channel and the tributaries of the watershed, the USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
 
