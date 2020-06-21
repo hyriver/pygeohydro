@@ -79,7 +79,7 @@ def nlcd_helper():
 
 def nhdplus_fcodes():
     """Get NHDPlus FCode lookup table"""
-    for i in range(3):
+    for i in range(5):
         try:
             url = (
                 "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
@@ -96,7 +96,7 @@ def nhdplus_fcodes():
 
 def nwis_errors():
     """Get error code lookup table for USGS sites that have daily values"""
-    for i in range(3):
+    for i in range(5):
         try:
             return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[
                 0
@@ -107,7 +107,7 @@ def nwis_errors():
 
 def daymet_variables():
     """Get Daymet variables table"""
-    for i in range(3):
+    for i in range(5):
         try:
             return pd.read_html("https://daymet.ornl.gov/overview")[1]
         except (ConnectionError, HTTPError):
