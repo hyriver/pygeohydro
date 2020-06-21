@@ -600,6 +600,7 @@ def wms_bygeom(
     in_crs="epsg:4326",
     crs="epsg:4326",
     fill_holes=False,
+    validation=True,
 ):
     """Data from a WMS service within a geometry
 
@@ -642,6 +643,10 @@ def wms_bygeom(
         epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
+    validation : bool
+        Validate the input arguments from the WFS service, defaults to True. Set this
+        to False if you are sure all the WMS settings such as layer and crs are correct
+        to avoid sending extra requestes.
 
     Returns
     -------
@@ -654,51 +659,56 @@ def wms_bygeom(
         except ConnectionError:
             continue
 
-    valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
-    if layers is None:
-        raise ValueError(
-            "The layers argument is missing."
-            + " The following layers are available:\n"
-            + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
-        )
-    elif not isinstance(layers, dict):
-        raise ValueError(
-            "The layers argument should be of type dict: {var_name : layer_name}"
-        )
-    elif any(str(layer) not in valid_layers.keys() for layer in layers.values()):
-        raise ValueError(
-            "The given layers argument is invalid."
-            + " Valid layers are:\n"
-            + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
-        )
-
-    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
-    if outFormat is None:
-        raise ValueError(
-            "The outFormat argument is missing."
-            + " The following output formats are available:\n"
-            + ", ".join(fmt for fmt in valid_outFormats)
-        )
-    elif outFormat not in valid_outFormats:
-        raise ValueError(
-            "The outFormat argument is invalid."
-            + " Valid output formats are:\n"
-            + ", ".join(fmt for fmt in valid_outFormats)
-        )
-
-    valid_crss = {
-        layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()
-    }
-    if any(crs not in valid_crss[layer] for layer in layers.values()):
-        raise ValueError(
-            "The crs argument is invalid."
-            + "\n".join(
-                [
-                    f" Valid CRSs for {layer} layer are:\n" + ", ".join(c for c in crss)
-                    for layer, crss in valid_crss.items()
-                ]
+    if validation:
+        valid_layers = {
+            wms[layer].name: wms[layer].title for layer in list(wms.contents)
+        }
+        if layers is None:
+            raise ValueError(
+                "The layers argument is missing."
+                + " The following layers are available:\n"
+                + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
             )
-        )
+        elif not isinstance(layers, dict):
+            raise ValueError(
+                "The layers argument should be of type dict: {var_name : layer_name}"
+            )
+        elif any(str(layer) not in valid_layers.keys() for layer in layers.values()):
+            raise ValueError(
+                "The given layers argument is invalid."
+                + " Valid layers are:\n"
+                + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
+            )
+
+        valid_outFormats = wms.getOperationByName("GetMap").formatOptions
+        if outFormat is None:
+            raise ValueError(
+                "The outFormat argument is missing."
+                + " The following output formats are available:\n"
+                + ", ".join(fmt for fmt in valid_outFormats)
+            )
+        elif outFormat not in valid_outFormats:
+            raise ValueError(
+                "The outFormat argument is invalid."
+                + " Valid output formats are:\n"
+                + ", ".join(fmt for fmt in valid_outFormats)
+            )
+
+        valid_crss = {
+            layer: [s.lower() for s in wms[layer].crsOptions]
+            for layer in layers.values()
+        }
+        if any(crs not in valid_crss[layer] for layer in layers.values()):
+            raise ValueError(
+                "The crs argument is invalid."
+                + "\n".join(
+                    [
+                        f" Valid CRSs for {layer} layer are:\n"
+                        + ", ".join(c for c in crss)
+                        for layer, crss in valid_crss.items()
+                    ]
+                )
+            )
 
     if not isinstance(geometry, Polygon):
         raise ValueError("Geometry should be of type shapley's Polygon")
@@ -757,17 +767,23 @@ def wms_bygeom(
 
 
 class WFS:
-    """Data from any WMS service within a geometry or by featureid"""
+    """Data from any WFS service within a geometry or by featureid"""
 
     def __init__(
-        self, url, layer=None, outFormat=None, version="2.0.0", crs="epsg:4326"
+        self,
+        url,
+        layer=None,
+        outFormat=None,
+        version="2.0.0",
+        crs="epsg:4326",
+        validation=True,
     ):
         """Initialize WFS
 
         Parameters
         ----------
         url : str
-            The base url for the WMS service. Some examples:
+            The base url for the WFS service. Some examples:
             https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
         layer : str
             The layer from the service to be downloaded, defaults to None which throws
@@ -776,11 +792,15 @@ class WFS:
             The data format to request for data from the service, defaults to None which
              throws an error and includes all the avialable format offered by the service.
         version : str, optional
-            The WMS service version which should be either 1.1.1, 1.3.0, or 2.0.0.
+            The WFS service version which should be either 1.1.1, 1.3.0, or 2.0.0.
             Defaults to 2.0.0.
         crs: str, optional
             The spatial reference system to be used for requesting the data, defaults to
             epsg:4326.
+        validation : bool
+            Validate the input arguments from the WFS service, defaults to True. Set this
+            to False if you are sure all the WFS settings such as layer and crs are correct
+            to avoid sending extra requestes.
 
         Returns
         -------
@@ -792,56 +812,59 @@ class WFS:
         self.version = version
         self.crs = crs
 
-        for i in range(3):
-            try:
-                wfs = WebFeatureService(url, version=version)
-                break
-            except ConnectionError:
-                continue
+        if validation:
+            for i in range(3):
+                try:
+                    wfs = WebFeatureService(url, version=version)
+                    break
+                except ConnectionError:
+                    continue
 
-        valid_layers = list(wfs.contents)
-        valid_layers_lower = [layer.lower() for layer in valid_layers]
-        if layer is None:
-            raise ValueError(
-                "The layer argument is missing."
-                + " The following layers are available:\n"
-                + ", ".join(layer for layer in valid_layers)
-            )
-        elif layer.lower() not in valid_layers_lower:
-            raise ValueError(
-                "The given layers argument is invalid."
-                + " Valid layers are:\n"
-                + ", ".join(layer for layer in valid_layers)
-            )
-
-        valid_outFormats = wfs.getOperationByName("GetFeature").parameters[
-            "outputFormat"
-        ]["values"]
-        valid_outFormats = [f.lower() for f in valid_outFormats]
-        if outFormat is None:
-            raise ValueError(
-                "The outFormat argument is missing."
-                + " The following output formats are available:\n"
-                + ", ".join(fmt for fmt in valid_outFormats)
-            )
-        elif outFormat.lower() not in valid_outFormats:
-            raise ValueError(
-                "The outFormat argument is invalid."
-                + " Valid output formats are:\n"
-                + ", ".join(fmt for fmt in valid_outFormats)
-            )
-
-        valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions]
-        if crs.lower() not in valid_crss:
-            raise ValueError(
-                "The crs argument is invalid."
-                + "\n".join(
-                    [
-                        f" Valid CRSs for {layer} layer are:\n"
-                        + ", ".join(c for c in valid_crss)
-                    ]
+            valid_layers = list(wfs.contents)
+            valid_layers_lower = [layer.lower() for layer in valid_layers]
+            if layer is None:
+                raise ValueError(
+                    "The layer argument is missing."
+                    + " The following layers are available:\n"
+                    + ", ".join(layer for layer in valid_layers)
                 )
-            )
+            elif layer.lower() not in valid_layers_lower:
+                raise ValueError(
+                    "The given layers argument is invalid."
+                    + " Valid layers are:\n"
+                    + ", ".join(layer for layer in valid_layers)
+                )
+
+            valid_outFormats = wfs.getOperationByName("GetFeature").parameters[
+                "outputFormat"
+            ]["values"]
+            valid_outFormats = [f.lower() for f in valid_outFormats]
+            if outFormat is None:
+                raise ValueError(
+                    "The outFormat argument is missing."
+                    + " The following output formats are available:\n"
+                    + ", ".join(fmt for fmt in valid_outFormats)
+                )
+            elif outFormat.lower() not in valid_outFormats:
+                raise ValueError(
+                    "The outFormat argument is invalid."
+                    + " Valid output formats are:\n"
+                    + ", ".join(fmt for fmt in valid_outFormats)
+                )
+
+            valid_crss = [
+                f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions
+            ]
+            if crs.lower() not in valid_crss:
+                raise ValueError(
+                    "The crs argument is invalid."
+                    + "\n".join(
+                        [
+                            f" Valid CRSs for {layer} layer are:\n"
+                            + ", ".join(c for c in valid_crss)
+                        ]
+                    )
+                )
 
     def __repr__(self):
         """Print the services properties."""
@@ -945,6 +968,7 @@ class WFS:
         }
 
         r = utils.post_url(utils.retry_requests(), self.url, payload)
+
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
             raise ValueError(root[0][0].text.strip())
