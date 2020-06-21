@@ -22,7 +22,7 @@ def nlcd_helper():
     url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/NLCD_2016_Land_Cover_Science_product_L48.xml"
     r = utils.get_url(utils.retry_requests(), url)
 
-    root = ET.fromstr(r.content)
+    root = ET.fromstring(r.content)
 
     colors = root[4][1][1].text.split("\n")[2:]
     colors = [i.split() for i in colors]
