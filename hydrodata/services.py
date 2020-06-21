@@ -891,7 +891,7 @@ class WFS:
         r = utils.get_url(utils.retry_requests(), self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstr(r.text)
+            root = ET.fromstring(r.text)
             raise ValueError(root[0][0].text.strip())
         return r
 
@@ -946,7 +946,7 @@ class WFS:
 
         r = utils.post_url(utils.retry_requests(), self.url, payload)
         if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstr(r.text)
+            root = ET.fromstring(r.text)
             raise ValueError(root[0][0].text.strip())
 
         return r
