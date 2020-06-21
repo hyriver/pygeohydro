@@ -4,7 +4,7 @@
 import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
-from requests.exceptions import ConnectionError
+from requests.exceptions import ConnectionError, HTTPError
 
 from hydrodata import utils
 
@@ -90,7 +90,7 @@ def nhdplus_fcodes():
                 .drop_duplicates("FCode")
                 .set_index("FCode")
             )
-        except ConnectionError:
+        except (ConnectionError, HTTPError):
             continue
 
 
@@ -101,7 +101,7 @@ def nwis_errors():
             return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[
                 0
             ]
-        except ConnectionError:
+        except (ConnectionError, HTTPError):
             continue
 
 
@@ -110,5 +110,5 @@ def daymet_variables():
     for i in range(3):
         try:
             return pd.read_html("https://daymet.ornl.gov/overview")[1]
-        except ConnectionError:
+        except (ConnectionError, HTTPError):
             continue

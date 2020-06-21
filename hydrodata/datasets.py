@@ -9,7 +9,6 @@ import numpy as np
 import pandas as pd
 import rasterio as rio
 import xarray as xr
-from owslib.wfs import WebFeatureService
 from shapely.geometry import Polygon
 
 from hydrodata import helpers, services, utils
@@ -222,31 +221,24 @@ class WaterData:
         layer : str
             A valid layer from the WaterData service. Valid layers are:
             ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, ``nhdflowline_network``
-            ``gagesii``, ``huc08``, ``huc12``, ``huc12agg``, and ``huc12all``.
+            ``gagesii``, ``huc08``, ``huc12``, ``huc12agg``, and ``huc12all``. Note that
+            the layers' worksapce for the Water Data service is ``wmadata`` which will
+            be added to the given ``layer`` argument if it is not provided.
         crs : str, optional
             The spatial reference system for requesting the data. Each layer support
             a limited number of CRSs, defaults to ``epsg:4269``.
         """
-        url = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
-        version = "1.1.0"
 
-        wfs = WebFeatureService(url, version=version)
-        self.valid_layers = [v.split(":")[-1] for v in list(wfs.contents)]
-        if layer not in self.valid_layers:
-            raise ValueError(
-                "The given layers argument is invalid."
-                + " Valid layers are:\n"
-                + ", ".join(layer for layer in self.valid_layers)
-            )
-        self.wfs = services.WFS(
-            url,
-            layer=f"wmadata:{layer}",
-            outFormat="application/json",
-            version=version,
-            crs=crs,
-        )
-        self.layer = layer
+        self.layer = layer if ":" in layer else f"wmadata:{layer}"
         self.crs = crs
+
+        self.wfs = services.WFS(
+            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+            layer=self.layer,
+            outFormat="application/json",
+            version="1.1.0",
+            crs=self.crs,
+        )
 
     def __repr__(self):
         """Print the services properties."""
@@ -281,7 +273,7 @@ class WaterData:
             "service": "WFS",
             "version": "1.0.0",
             "request": "GetFeature",
-            "typeName": f"wmadata:{layer}",
+            "typeName": layer if ":" in layer else f"wmadata:{layer}",
             "maxFeatures": "1",
             "outputFormat": "application/json",
         }
