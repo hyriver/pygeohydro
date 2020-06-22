@@ -12,7 +12,6 @@ import xarray as xr
 from shapely.geometry import Polygon
 
 from hydrodata import helpers, services, utils
-from hydrodata.utils import threading
 
 
 def nwis_streamflow(station_ids, start, end):
@@ -751,7 +750,7 @@ def daymet_bygeom(
     def getter(url):
         return xr.open_dataset(utils.get_url(session, url).content)
 
-    data = xr.merge(threading(getter, urls, max_workers=n_threads))
+    data = xr.merge(utils.threading(getter, urls, max_workers=n_threads))
 
     for k, v in units.items():
         if k in variables:
@@ -835,7 +834,7 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
                         "eta": [e[0] for e in src.sample([(lon, lat)])][0],
                     }
 
-        elevations = threading(_ssebop, f_list, max_workers=4)
+        elevations = utils.threading(_ssebop, f_list, max_workers=4)
     data = pd.DataFrame.from_records(elevations)
     data.columns = ["datetime", "eta (mm/day)"]
     data = data.set_index("datetime")
@@ -900,7 +899,7 @@ def ssebopeta_bygeom(
             z = zipfile.ZipFile(io.BytesIO(r.content))
             return (dt, z.read(z.filelist[0].filename))
 
-        resp = threading(_ssebop, f_list, max_workers=4,)
+        resp = utils.threading(_ssebop, f_list, max_workers=4,)
 
         data = utils.create_dataset(
             resp[0][1], mask, transform, width, height, "eta", None

@@ -3,7 +3,7 @@
 
 It can be used as follows:
     >>> from hydrodata import Station
-    >>> wshed = Station('2010-01-01', '2015-12-31', station_id='01467087')
+    >>> wshed = Station(station_id='01467087')
 
 For more information refer to the Usage section of the document.
 """
@@ -208,8 +208,8 @@ class Station:
                 + "Use ``utils.interactive_map(bbox)`` function to explore "
                 + "the available stations within a bounding box."
             )
-        else:
-            self.station_id = station_id
+
+        self.station_id = station_id
 
         self.coords = (
             station.dec_long_va.astype("float64").to_numpy()[0],
