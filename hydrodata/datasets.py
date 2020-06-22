@@ -817,12 +817,13 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     xarray.DataArray
         The actual ET for the requested region.
     """
+    from hydrodata import connection
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
 
     elevations = {}
-    with utils.onlyIPv4():
+    with connection.onlyIPv4():
 
         def _ssebop(urls):
             dt, url = urls
@@ -1391,3 +1392,116 @@ class Station:
                 )
 
         self.geometry = self.basin.geometry.to_numpy()[0]
+
+
+def interactive_map(bbox):
+    """An interactive map including all USGS stations within a bounding box.
+
+    Only stations that record(ed) daily streamflow data are included.
+
+    Parameters
+    ----------
+    bbox : list
+        List of corners in this order [west, south, east, north]
+
+    Returns
+    -------
+    folium.Map
+    """
+    import folium
+
+    if not isinstance(bbox, list):
+        raise ValueError("bbox should be a list: [west, south, east, north]")
+
+    sites = nwis_siteinfo(bbox=bbox)
+    sites = sites[
+        [
+            "site_no",
+            "station_nm",
+            "dec_lat_va",
+            "dec_long_va",
+            "alt_va",
+            "alt_datum_cd",
+            "huc_cd",
+            "begin_date",
+            "end_date",
+            "hcdn_2009",
+        ]
+    ]
+    sites["coords"] = [
+        (lat, lon)
+        for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(
+            name=None, index=False
+        )
+    ]
+    sites["altitude"] = (
+        sites["alt_va"].astype(str) + " ft above " + sites["alt_datum_cd"].astype(str)
+    )
+    sites = sites.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
+
+    drain_area = nwis_siteinfo(bbox=bbox, expanded=True)[
+        ["site_no", "drain_area_va", "contrib_drain_area_va"]
+    ]
+    sites = sites.merge(drain_area, on="site_no").dropna()
+
+    sites["drain_area_va"] = sites["drain_area_va"].astype(str) + " square miles"
+    sites["contrib_drain_area_va"] = (
+        sites["contrib_drain_area_va"].astype(str) + " square miles"
+    )
+
+    sites = sites[
+        [
+            "site_no",
+            "station_nm",
+            "coords",
+            "altitude",
+            "huc_cd",
+            "drain_area_va",
+            "contrib_drain_area_va",
+            "begin_date",
+            "end_date",
+            "hcdn_2009",
+        ]
+    ]
+    sites.columns = [
+        "Site No.",
+        "Station Name",
+        "Coordinate",
+        "Altitude",
+        "HUC8",
+        "Drainage Area",
+        "Contributing Drainga Area",
+        "Begin date",
+        "End data",
+        "HCDN 2009",
+    ]
+
+    msgs = []
+    for row in sites.itertuples(index=False):
+        msg = ""
+        for col in sites.columns:
+            msg += "".join(
+                [
+                    "<strong>",
+                    col,
+                    "</strong> : ",
+                    f"{row[sites.columns.get_loc(col)]}<br>",
+                ]
+            )
+        msgs.append(msg[:-4])
+
+    sites["msg"] = msgs
+    sites = sites[["Coordinate", "msg"]]
+
+    west, south, east, north = bbox
+    lon = (west + east) * 0.5
+    lat = (south + north) * 0.5
+
+    imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
+
+    for coords, msg in sites.itertuples(name=None, index=False):
+        folium.Marker(
+            location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
+        ).add_to(imap)
+
+    return imap
