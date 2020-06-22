@@ -1,10 +1,22 @@
 #!/usr/bin/env python
 """Tests for `hydrodata` package."""
 
+import shutil
 from urllib.error import HTTPError
 
 import hydrodata.datasets as hds
-from hydrodata import Station, helpers, plot, services, utils
+from hydrodata import (
+    NLDI,
+    WFS,
+    ArcGISREST,
+    NationalMap,
+    Station,
+    WaterData,
+    helpers,
+    plot,
+    services,
+    utils,
+)
 
 
 def test_station():
@@ -42,19 +54,18 @@ def test_daymet():
 
 def test_nldi():
     station_id = "01031500"
-    nldi = hds.NLDI
 
-    sid = nldi.starting_comid(station_id)
-    ids = nldi.comids(station_id)
-    trib = nldi.tributaries(station_id)
-    main = nldi.main(station_id)
-    st100 = nldi.stations(station_id, navigation="upstreamTributaries", distance=100)
-    stm = nldi.stations(station_id, navigation="upstreamMain")
-    pp = nldi.pour_points(station_id)
+    sid = NLDI.starting_comid(station_id)
+    ids = NLDI.comids(station_id)
+    trib = NLDI.tributaries(station_id)
+    main = NLDI.main(station_id)
+    st100 = NLDI.stations(station_id, navigation="upstreamTributaries", distance=100)
+    stm = NLDI.stations(station_id, navigation="upstreamMain")
+    pp = NLDI.pour_points(station_id)
     fl = utils.prepare_nhdplus(
-        nldi.flowlines(station_id), 0, 0, purge_non_dendritic=False
+        NLDI.flowlines(station_id), 0, 0, purge_non_dendritic=False
     )
-    ct = nldi.catchments(station_id)
+    ct = NLDI.catchments(station_id)
 
     assert (
         sid == 1722317
@@ -70,7 +81,7 @@ def test_nldi():
 
 
 def test_nhdplus_bybox():
-    wd = hds.WaterData("nhdwaterbody")
+    wd = WaterData("nhdwaterbody")
     wb = wd.features_bybox(
         (-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),
     )
@@ -78,8 +89,8 @@ def test_nhdplus_bybox():
 
 
 def test_nhdplus_byid():
-    wd = hds.WaterData("catchmentsp")
-    ct = wd.features_byid("featureid", hds.NLDI().comids("01031500"))
+    wd = WaterData("catchmentsp")
+    ct = wd.features_byid("featureid", NLDI().comids("01031500"))
     assert abs(ct.areasqkm.sum() - 773.954) < 1e-3
 
 
@@ -103,7 +114,7 @@ def test_nlcd():
 
 def test_nm():
     wshed = Station(station_id="01031500")
-    nm = hds.NationalMap(wshed.geometry, resolution=1)
+    nm = NationalMap(wshed.geometry, resolution=1)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
     nm.get_slope(mpm=True)
     assert (
@@ -116,7 +127,7 @@ def test_nm():
 def test_newdb():
     wshed = Station(station_id="11092450")
 
-    s = services.ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
+    s = ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
     s.spatialRel = "esriSpatialRelIntersects"
     s.folder = "Utilities"
     s.folder = None
@@ -126,7 +137,7 @@ def test_newdb():
     s.layer = 10
     s.generate_url()
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = services.ArcGISREST(url_rest, verbose=True)
+    s = ArcGISREST(url_rest, verbose=True)
     s.n_threads = 4
     s.get_featureids(wshed.geometry.bounds)
     s.get_featureids(wshed.geometry)
@@ -142,11 +153,13 @@ def test_newdb():
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
         outFormat="image/tiff",
+        fpath={"slope": "tmp/slope.tiff"},
         width=2000,
         fill_holes=True,
         in_crs="epsg:4326",
         crs="epsg:3857",
     )
+
     slope = services.wms_bygeom(
         url_wms,
         geometry=wshed.geometry,
@@ -160,15 +173,17 @@ def test_newdb():
         "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     )
 
-    wfs = services.WFS(
+    wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
-    print(wfs)
+
     r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
+
+    shutil.rmtree("tmp", ignore_errors=True)
 
     assert (
         abs(storm_pipes.length.sum() - 9.636) < 1e-3
@@ -198,7 +213,7 @@ def test_helpers():
 
 
 def test_acc():
-    flw = utils.prepare_nhdplus(hds.NLDI.flowlines("11092450"), 1, 1, 1, True, True)
+    flw = utils.prepare_nhdplus(NLDI.flowlines("11092450"), 1, 1, 1, True, True)
 
     def routing(qin, q):
         return qin + q
@@ -317,7 +332,7 @@ def test_path():
 
 
 def test_wbd():
-    wbd = services.ArcGISREST(
+    wbd = ArcGISREST(
         base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1"
     )
     wbd.max_nrecords = 5
