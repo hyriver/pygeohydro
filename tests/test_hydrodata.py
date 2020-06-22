@@ -181,7 +181,7 @@ def test_newdb():
 def test_plot():
     utils.interactive_map([-70, 44, -69, 46])
     wshed = Station(station_id="01031500")
-    start, end = "2000-01-01", "2000-01-05"
+    start, end = "2000-01-01", "2009-12-31"
     qobs = hds.nwis_streamflow(wshed.station_id, start, end)
     clm_p = hds.daymet_byloc(*wshed.coords, start=start, end=end, variables=["prcp"])
     plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
@@ -194,7 +194,7 @@ def test_helpers():
     try:
         fc = helpers.nhdplus_fcodes()
         assert err.shape[0] == 7 and fc.shape[0] == 115
-    except HTTPError:
+    except (HTTPError, AttributeError):
         assert err.shape[0] == 7
         pass
 
