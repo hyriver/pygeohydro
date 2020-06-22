@@ -193,7 +193,7 @@ def test_newdb():
 
 
 def test_plot():
-    utils.interactive_map([-70, 44, -69, 46])
+    hds.interactive_map([-70, 44, -69, 46])
     wshed = Station(station_id="01031500")
     start, end = "2000-01-01", "2009-12-31"
     qobs = hds.nwis_streamflow(wshed.station_id, start, end)

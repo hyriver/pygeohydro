@@ -13,7 +13,7 @@ import rasterio as rio
 import xarray as xr
 from shapely.geometry import Polygon
 
-from hydrodata import helpers, services, utils
+from hydrodata import connection, helpers, services, utils
 from hydrodata.connection import RetrySession
 from hydrodata.services import WFS
 
@@ -817,7 +817,6 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     xarray.DataArray
         The actual ET for the requested region.
     """
-    from hydrodata import connection
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
@@ -895,7 +894,7 @@ def ssebopeta_bygeom(
 
     session = RetrySession()
 
-    with utils.onlyIPv4():
+    with connection.onlyIPv4():
 
         def _ssebop(url_stamped):
             dt, url = url_stamped

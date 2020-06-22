@@ -4,7 +4,6 @@
 Plots includes  daily, monthly and annual hydrograph as well as
 regime curve (monthly mean) and flow duration curve.
 """
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.colors import BoundaryNorm, ListedColormap
@@ -53,7 +52,6 @@ def signatures(
         the plot is not saved to a file.
     """
     pd.plotting.register_matplotlib_converters()
-    mpl.rcParams["figure.dpi"] = 300
 
     if not isinstance(daily_dict, dict):
         raise TypeError("The daily_dict argument should be a dictionary.")
