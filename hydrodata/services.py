@@ -20,7 +20,6 @@ from shapely.geometry import Polygon, box
 from simplejson import JSONDecodeError
 
 from hydrodata import utils
-from hydrodata.utils import threading
 
 
 class ArcGISServer:
@@ -563,7 +562,7 @@ class ArcGISREST(ArcGISServer):
         else:
             getter = get_geojson
 
-        feature_list = threading(
+        feature_list = utils.threading(
             getter, self.featureids, max_workers=min(self.n_threads, 8),
         )
 
@@ -573,7 +572,7 @@ class ArcGISREST(ArcGISServer):
 
         if len(fails) > 0:
             fails = ([x] for y in fails for x in y)
-            retry = threading(getter, fails, max_workers=min(self.n_threads, 8),)
+            retry = utils.threading(getter, fails, max_workers=min(self.n_threads, 8),)
             success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
 
         if len(success) == 0:
@@ -671,7 +670,8 @@ def wms_bygeom(
             raise ValueError(
                 "The layers argument should be of type dict: {var_name : layer_name}"
             )
-        elif any(str(layer) not in valid_layers.keys() for layer in layers.values()):
+
+        if any(str(layer) not in valid_layers.keys() for layer in layers.values()):
             raise ValueError(
                 "The given layers argument is invalid."
                 + " Valid layers are:\n"
@@ -685,7 +685,8 @@ def wms_bygeom(
                 + " The following output formats are available:\n"
                 + ", ".join(fmt for fmt in valid_outFormats)
             )
-        elif outFormat not in valid_outFormats:
+
+        if outFormat not in valid_outFormats:
             raise ValueError(
                 "The outFormat argument is invalid."
                 + " Valid output formats are:\n"
@@ -750,7 +751,9 @@ def wms_bygeom(
         )
         return (name, img.read())
 
-    resp = threading(_wms, zip(name_list, layer_list), max_workers=len(name_list),)
+    resp = utils.threading(
+        _wms, zip(name_list, layer_list), max_workers=len(name_list),
+    )
 
     data = utils.create_dataset(
         resp[0][1], mask, transform, width, height, resp[0][0], fpath[resp[0][0]]

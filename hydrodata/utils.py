@@ -1297,7 +1297,6 @@ def check_requirements(reqs, cols):
     cols : list
         A list of data names as strs
     """
-    from collections.abc import Iterable
 
     if not isinstance(reqs, Iterable):
         raise ValueError("Inputs should be list of strs")
