@@ -8,6 +8,8 @@ import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
 
+from hydrodata.connection import RetrySession
+
 
 def nlcd_helper():
     """Helper for NLCD cover data
@@ -19,13 +21,12 @@ def nlcd_helper():
         * https://www.mrlc.gov/data-services-page
         * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
     """
-    from hydrodata.utils import get_url, retry_requests
 
     url = (
         "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/"
         + "NLCD_2016_Land_Cover_Science_product_L48.xml"
     )
-    r = get_url(retry_requests(), url)
+    r = RetrySession().get(url)
 
     root = ET.fromstring(r.content)
 

@@ -16,73 +16,9 @@ import rasterio.features as rio_features
 import rasterio.warp as rio_warp
 import simplejson as json
 from owslib.wms import WebMapService
-from requests.exceptions import HTTPError, RequestException, RetryError, Timeout
 from shapely.geometry import LineString, Point, box, mapping
 
-
-def retry_requests(
-    retries=5,
-    backoff_factor=0.5,
-    status_to_retry=(500, 502, 504),
-    prefixes=("http://", "https://"),
-):
-    """Configures the passed-in session to retry on failed requests.
-
-    The fails can be due to connection errors, specific HTTP response
-    codes and 30X redirections. The original code is taken from:
-    https://github.com/bustawin/retry-requests
-
-    Parameters
-    ----------
-    retries : int
-        The number of maximum retries before raising an exception.
-    backoff_factor : float
-        A factor used to compute the waiting time between retries.
-    status_to_retry : tuple of ints
-        A tuple of status codes that trigger the reply behaviour.
-
-    Returns
-    -------
-    requests.Session
-        A session object with retry configurations.
-    """
-
-    import requests
-    from requests.adapters import HTTPAdapter
-    from urllib3 import Retry
-
-    session = requests.Session()
-
-    r = Retry(
-        total=retries,
-        read=retries,
-        connect=retries,
-        backoff_factor=backoff_factor,
-        status_forcelist=status_to_retry,
-        method_whitelist=False,
-    )
-    adapter = HTTPAdapter(max_retries=r)
-    for prefix in prefixes:
-        session.mount(prefix, adapter)
-    session.hooks = {"response": lambda r, *args, **kwargs: r.raise_for_status()}
-
-    return session
-
-
-def get_url(session, url, payload=None):
-    """Retrieve data from a url by GET using a requests session"""
-    try:
-        return session.get(url, params=payload)
-    except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
-        raise
-
-
-def post_url(session, url, payload=None):
-    """Retrieve data from a url by POST using a requests session"""
-    try:
-        return session.post(url, data=payload)
-    except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
-        raise
+from hydrodata.connection import RetrySession
 
 
 def threading(func, iter_list, param_list=[], max_workers=8):
@@ -118,36 +54,18 @@ def threading(func, iter_list, param_list=[], max_workers=8):
     return data
 
 
-def onlyIPv4():
-    """disable IPv6 and only use IPv4"""
-    import socket
-    from unittest.mock import patch
-
-    orig_getaddrinfo = socket.getaddrinfo
-
-    def getaddrinfoIPv4(host, port, family=0, ptype=0, proto=0, flags=0):
-        return orig_getaddrinfo(
-            host=host,
-            port=port,
-            family=socket.AF_INET,
-            type=ptype,
-            proto=proto,
-            flags=flags,
-        )
-
-    return patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4)
-
-
-def check_dir(fpath):
+def check_dir(fpath_itr):
     """Create parent directory for a file if doesn't exist"""
-    if not isinstance(fpath, Iterable):
-        fpath = [fpath]
+    if isinstance(fpath_itr, str):
+        fpath_itr = [fpath_itr]
+    elif not isinstance(fpath_itr, Iterable):
+        raise ValueError("Input should be either a string or an iterable object.")
 
-    for f in fpath:
+    for f in fpath_itr:
         parent = Path(f).parent
         if not parent.is_dir():
             try:
-                os.makedirs(f)
+                os.makedirs(parent)
             except OSError:
                 raise OSError(f"Parent directory cannot be created: {parent}")
 
@@ -219,9 +137,8 @@ def elevation_byloc(lon, lat):
     """
 
     url = "https://nationalmap.gov/epqs/pqs.php"
-    session = retry_requests()
     payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
-    r = get_url(session, url, payload)
+    r = RetrySession().get(url, payload)
     root = r.json()["USGS_Elevation_Point_Query_Service"]
     elevation = root["Elevation_Query"]["Elevation"]
     if elevation == -1000000:

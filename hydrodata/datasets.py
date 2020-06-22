@@ -14,6 +14,7 @@ import xarray as xr
 from shapely.geometry import Polygon
 
 from hydrodata import helpers, services, utils
+from hydrodata.connection import RetrySession
 from hydrodata.services import WFS
 
 MARGINE = 15
@@ -73,8 +74,7 @@ def nwis_streamflow(station_ids, start, end):
         "siteStatus": "all",
     }
 
-    session = utils.retry_requests()
-    r = utils.post_url(session, url, payload)
+    r = RetrySession().post(url, payload)
 
     ts = r.json()["value"]["timeSeries"]
     r_ts = {
@@ -181,8 +181,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
         "hasDataTypeCd": "dv",
     }
 
-    session = utils.retry_requests()
-    r = utils.post_url(session, url, payload)
+    r = RetrySession().post(url, payload)
 
     r_text = r.text.split("\n")
     r_list = [txt.split("\t") for txt in r_text if "#" not in txt]
@@ -271,7 +270,7 @@ class WaterData:
         -------
         list
         """
-        session = utils.retry_requests()
+
         url = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
         payload = {
             "service": "WFS",
@@ -281,7 +280,7 @@ class WaterData:
             "maxFeatures": "1",
             "outputFormat": "application/json",
         }
-        r = utils.get_url(session, url, payload=payload)
+        r = RetrySession().get(url, payload=payload)
         sample = utils.json_togeodf(r.json(), crs, crs)
 
         return sample.columns.to_list()
@@ -363,7 +362,7 @@ class NLDI:
     @staticmethod
     def available_features():
         url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
-        r = utils.get_url(utils.retry_requests(), url)
+        r = RetrySession().get(url)
         return r.json()
 
     @classmethod
@@ -431,7 +430,7 @@ class NLDI:
             "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
             + f"/nwissite/USGS-{station_id}/basin"
         )
-        r = utils.get_url(utils.retry_requests(), url)
+        r = RetrySession().get(url)
         return utils.json_togeodf(r.json(), "epsg:4269", crs="epsg:4326")
 
     @staticmethod
@@ -512,12 +511,12 @@ class NLDI:
 
         base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
         crs = "epsg:4326"
-        session = utils.retry_requests()
+        session = RetrySession()
 
         def get_url(fid):
             url = f"{base_url}/{fid}/{nav}"
 
-            r = utils.get_url(session, url)
+            r = session.get(url)
             return utils.json_togeodf(r.json(), "epsg:4269", crs=crs)
 
         features = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
@@ -613,8 +612,7 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         **dates,
     }
 
-    session = utils.retry_requests()
-    r = utils.get_url(session, url, payload)
+    r = RetrySession().get(url, payload)
 
     clm = pd.DataFrame(r.json()["data"])
     clm.index = pd.to_datetime(clm.year * 1000.0 + clm.yday, format="%Y%j")
@@ -750,10 +748,10 @@ def daymet_bygeom(
                     ]
                 )
             )
-    session = utils.retry_requests()
+    session = RetrySession()
 
     def getter(url):
-        return xr.open_dataset(utils.get_url(session, url).content)
+        return xr.open_dataset(session.get(url).content)
 
     data = xr.merge(utils.threading(getter, urls, max_workers=n_threads))
 
@@ -821,14 +819,14 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
     """
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
-    session = utils.retry_requests()
+    session = RetrySession()
 
     elevations = {}
     with utils.onlyIPv4():
 
         def _ssebop(urls):
             dt, url = urls
-            r = utils.get_url(session, url)
+            r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
 
             with rio.MemoryFile() as memfile:
@@ -894,13 +892,13 @@ def ssebopeta_bygeom(
     mask, transform = utils.geom_mask(geometry, width, height)
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
 
-    session = utils.retry_requests()
+    session = RetrySession()
 
     with utils.onlyIPv4():
 
         def _ssebop(url_stamped):
             dt, url = url_stamped
-            r = utils.get_url(session, url)
+            r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
             return (dt, z.read(z.filelist[0].filename))
 
