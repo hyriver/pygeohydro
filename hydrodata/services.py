@@ -20,6 +20,7 @@ from shapely.geometry import Polygon, box
 from simplejson import JSONDecodeError
 
 from hydrodata import utils
+from hydrodata.connection import RetrySession
 
 
 class ArcGISServer:
@@ -86,7 +87,7 @@ class ArcGISServer:
         self._outFormat = outFormat
         self._spatialRel = spatialRel
         self._outFields = [outFields] if isinstance(outFields, str) else outFields
-        self.session = utils.retry_requests()
+        self.session = RetrySession()
 
     @property
     def folder(self):
@@ -194,7 +195,7 @@ class ArcGISServer:
     def get_fs(self, folder=None):
         """Get folders and services of the geoserver's a folder/root url"""
         url = self.root if folder is None else f"{self.root}/{folder}"
-        info = utils.get_url(self.session, url, {"f": "json"}).json()
+        info = self.session.get(url, {"f": "json"}).json()
         try:
             folders = info["folders"]
         except KeyError:
@@ -247,7 +248,7 @@ class ArcGISServer:
                     "The serviceName was not found. Check if folder is set correctly."
                 )
 
-        info = utils.get_url(self.session, url, {"f": "json"}).json()
+        info = self.session.get(url, {"f": "json"}).json()
         try:
             layers = {
                 i: n
@@ -419,7 +420,7 @@ class ArcGISREST(ArcGISServer):
     def test_url(self):
         """Test the generated url and get the required parameters from the service"""
         try:
-            r = utils.get_url(self.session, self.base_url, {"f": "json"}).json()
+            r = self.session.get(self.base_url, {"f": "json"}).json()
             try:
                 self.units = r["units"].replace("esri", "").lower()
             except KeyError:
@@ -431,7 +432,7 @@ class ArcGISREST(ArcGISServer):
             self.valid_fields = utils.traverse_json(r, ["fields", "name"]) + ["*"]
         except RetryError:
             try:
-                r = utils.get_url(self.session, self.base_url)
+                r = self.session.get(self.base_url)
                 tree = html.fromstring(r.content)
                 info = tree.xpath('//div[@class="rbody"]//text()')
                 info = [i.strip() for i in info if i.strip() != ""]
@@ -502,7 +503,7 @@ class ArcGISREST(ArcGISServer):
             "returnIdsOnly": "true",
             "f": self.outFormat,
         }
-        r = utils.post_url(self.session, f"{self.base_url}/query", payload)
+        r = self.session.post(f"{self.base_url}/query", payload)
         try:
             oids = r.json()["objectIds"]
         except (KeyError, TypeError, IndexError, JSONDecodeError):
@@ -532,7 +533,7 @@ class ArcGISREST(ArcGISServer):
                 "outFields": ",".join(str(i) for i in self.outFields),
                 "f": self.outFormat,
             }
-            r = utils.post_url(self.session, f"{self.base_url}/query", payload)
+            r = self.session.post(f"{self.base_url}/query", payload)
             try:
                 return utils.json_togeodf(r.json(), "epsg:4326")
             except TypeError:
@@ -551,7 +552,7 @@ class ArcGISREST(ArcGISServer):
                 "outFields": ",".join(str(i) for i in self.outFields),
                 "f": self.outFormat,
             }
-            r = utils.post_url(self.session, f"{self.base_url}/query", payload)
+            r = self.session.post(f"{self.base_url}/query", payload)
             try:
                 return utils.json_togeodf(r.json(), "epsg:4326")
             except TypeError:
@@ -732,6 +733,10 @@ def wms_bygeom(
     if fpath is None:
         fpath = {k: tempfile.NamedTemporaryFile(delete=True) for k in layers.keys()}
     elif isinstance(fpath, dict):
+        if not all(layer in layers.keys() for layer in fpath.keys()):
+            raise ValueError(
+                "Keys of ``fpath`` and ``layers`` dictionaries should be the same."
+            )
         utils.check_dir(fpath.values())
     else:
         raise ValueError("The fpath argument should be of type dict: {var_name : path}")
@@ -915,7 +920,7 @@ class WFS:
             "bbox": bbox,
         }
 
-        r = utils.get_url(utils.retry_requests(), self.url, payload)
+        r = RetrySession().get(self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
@@ -971,7 +976,7 @@ class WFS:
             "filter": filter_xml(featurename, featureids),
         }
 
-        r = utils.post_url(utils.retry_requests(), self.url, payload)
+        r = RetrySession().post(self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
