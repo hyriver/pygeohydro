@@ -103,12 +103,12 @@ The generated ``wshed`` object has a property that shows whether the station is 
 
 .. code-block:: python
 
-    nldi, sid = hds.NLDI, wshed.station_id
+    from hydrodata import NLDI
 
-    tributaries = nldi.tributaries(sid)
-    main = nldi.main(sid)
-    stations = nldi.stations(sid)
-    stations_m150 = nldi.stations(sid, navigation="upstreamMain", distance=150)
+    tributaries = NLDI.tributaries(wshed.station_id)
+    main = NLDI.main(wshed.station_id)
+    stations = NLDI.stations(wshed.station_id)
+    stations_m150 = NLDI.stations(wshed.station_id, navigation="upstreamMain", distance=150)
 
 For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
 
@@ -116,12 +116,17 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
 
     from hydrodata import utils
 
-    flw = utils.prepare_nhdplus(nldi.flowlines('11092450'), 0, 0, purge_non_dendritic=False)
+    flw = utils.prepare_nhdplus(NLDI.flowlines('11092450'), 0, 0, purge_non_dendritic=False)
 
     def routing(qin, q):
         return qin + q
 
-    qsim = utils.vector_accumulation(flw[["comid", "tocomid", "lengthkm"]], routing, "lengthkm", ["lengthkm"], threading=False)
+    qsim = utils.vector_accumulation(
+        flw[["comid", "tocomid", "lengthkm"]],
+        routing,
+        "lengthkm",
+        ["lengthkm"], threading=False
+    )
     flw = flw.merge(qsim, on="comid")
     diff = flw.arbolatesu - flw.acc
 
@@ -129,7 +134,9 @@ We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Fur
 
 .. code-block:: python
 
-    nm = hds.NationalMap(wshed.geometry, resolution=30)
+    from hydrodata import NationalMap
+
+    nm = NationalMap(wshed.geometry, resolution=30)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
 
 The climate data and streamflow observations for a location of interest can be retrieved as well. Note the use of ``pet`` flag for computing PET:
@@ -168,30 +175,28 @@ The ``services`` module can be used to access some other web services as well. F
 
 .. code-block:: python
 
-    from hydrodata import services
-    from arcgis2geojson import arcgis2geojson
+    from hydrodata import ArcGISREST, WFS, services
     import geopandas as gpd
 
     la_wshed = Station('2005-01-01', '2005-01-31', '11092450')
 
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = services.ArcGISREST(url_rest, outFormat="json")
+    s = ArcGISREST(url_rest, outFormat="json")
     s.get_featureids(la_wshed.geometry)
     storm_pipes = s.get_features()
 
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     hillshade = services.wms_bygeom(
         url_wms,
-        "3DEP",
         geometry=wshed.geometry,
         version="1.3.0",
-        layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
+        layers={"hillshade": "3DEPElevation:GreyHillshade_elevationFill"},
         outFormat="image/tiff",
         resolution=1
     )
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-    wfs = services.WFS(
+    wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
         outFormat="esrigeojson",
