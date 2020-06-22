@@ -2,7 +2,14 @@
 History
 =======
 
-0.5.5 (2020-06-13)
+0.6.0 (2020-06-03)
+------------------
+
+* Refactor requests session
+* Improve overall code quality based on CodeFactor suggestions
+* Migrate to Github Actions from TravisCI
+
+0.5.5 (2020-06-03)
 ------------------
 
 * Add to conda-forge
