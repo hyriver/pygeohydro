@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """Base classes and function for REST, WMS, and WMF services."""
 
+import tempfile
 from itertools import zip_longest
 from warnings import warn
 
@@ -14,7 +15,7 @@ import xarray as xr
 from lxml import html
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
-from requests.exceptions import ConnectionError, RetryError
+from requests.exceptions import RetryError
 from shapely.geometry import Polygon, box
 from simplejson import JSONDecodeError
 
@@ -567,11 +568,7 @@ class ArcGISREST(ArcGISServer):
         )
 
         # Find the failed batches and retry
-        fails = [
-            ids
-            for ids in feature_list
-            if isinstance(ids, tuple) or isinstance(ids, list)
-        ]
+        fails = [ids for ids in feature_list if isinstance(ids, (tuple, list))]
         success = [ids for ids in feature_list if isinstance(ids, gpd.GeoDataFrame)]
 
         if len(fails) > 0:
@@ -669,7 +666,8 @@ def wms_bygeom(
                 + " The following layers are available:\n"
                 + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
             )
-        elif not isinstance(layers, dict):
+
+        if not isinstance(layers, dict):
             raise ValueError(
                 "The layers argument should be of type dict: {var_name : layer_name}"
             )
@@ -712,7 +710,8 @@ def wms_bygeom(
 
     if not isinstance(geometry, Polygon):
         raise ValueError("Geometry should be of type shapley's Polygon")
-    elif fill_holes:
+
+    if fill_holes:
         geometry = Polygon(geometry.exterior)
 
     if in_crs != crs:
@@ -730,11 +729,11 @@ def wms_bygeom(
     height = int(abs(north - south) / abs(east - west) * width)
 
     if fpath is None:
-        fpath = {k: f"/tmp/{k}.tiff" for k in layers.keys()}
-    elif fpath is not None and not isinstance(fpath, dict):
+        fpath = {k: tempfile.NamedTemporaryFile(delete=True) for k in layers.keys()}
+    elif isinstance(fpath, dict):
+        utils.check_dir(fpath.values())
+    else:
         raise ValueError("The fpath argument should be of type dict: {var_name : path}")
-
-    [utils.check_dir(f) for f in fpath.values()]
 
     mask, transform = utils.geom_mask(geometry, width, height)
     name_list = list(layers.keys())
@@ -828,7 +827,8 @@ class WFS:
                     + " The following layers are available:\n"
                     + ", ".join(layer for layer in valid_layers)
                 )
-            elif layer.lower() not in valid_layers_lower:
+
+            if layer.lower() not in valid_layers_lower:
                 raise ValueError(
                     "The given layers argument is invalid."
                     + " Valid layers are:\n"
@@ -845,7 +845,8 @@ class WFS:
                     + " The following output formats are available:\n"
                     + ", ".join(fmt for fmt in valid_outFormats)
                 )
-            elif outFormat.lower() not in valid_outFormats:
+
+            if outFormat.lower() not in valid_outFormats:
                 raise ValueError(
                     "The outFormat argument is invalid."
                     + " Valid output formats are:\n"
@@ -892,7 +893,7 @@ class WFS:
         -------
         xarray.Dataset
         """
-        if not isinstance(bbox, list) and not isinstance(bbox, tuple):
+        if not isinstance(bbox, (list, tuple)):
             raise ValueError("The bbox should be of type list or tuple.")
         if len(bbox) != 4:
             raise ValueError("The bbox length should be 4")

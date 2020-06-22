@@ -5,6 +5,7 @@ import numbers
 import os
 from concurrent import futures
 from pathlib import Path
+from typing import Iterable
 from warnings import warn
 
 import geopandas as gpd
@@ -15,13 +16,7 @@ import rasterio.features as rio_features
 import rasterio.warp as rio_warp
 import simplejson as json
 from owslib.wms import WebMapService
-from requests.exceptions import (
-    ConnectionError,
-    HTTPError,
-    RequestException,
-    RetryError,
-    Timeout,
-)
+from requests.exceptions import HTTPError, RequestException, RetryError, Timeout
 from shapely.geometry import LineString, Point, box, mapping
 
 from hydrodata import helpers
@@ -147,12 +142,16 @@ def onlyIPv4():
 
 def check_dir(fpath):
     """Create parent directory for a file if doesn't exist"""
-    parent = Path(fpath).parent
-    if not parent.is_dir():
-        try:
-            os.makedirs(parent)
-        except OSError:
-            raise OSError(f"Parent directory cannot be created: {parent}")
+    if not isinstance(fpath, Iterable):
+        fpath = [fpath]
+
+    for f in fpath:
+        parent = Path(f).parent
+        if not parent.is_dir():
+            try:
+                os.makedirs(f)
+            except OSError:
+                raise OSError(f"Parent directory cannot be created: {parent}")
 
 
 def daymet_dates(start, end):
@@ -231,8 +230,8 @@ def elevation_byloc(lon, lat):
         raise ValueError(
             f"The altitude of the requested coordinate ({lon}, {lat}) cannot be found."
         )
-    else:
-        return elevation
+
+    return elevation
 
 
 def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
@@ -260,7 +259,7 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     import pyproj
     import shapely.ops as ops
 
-    if isinstance(bbox, list) or isinstance(bbox, tuple):
+    if isinstance(bbox, (list, tuple)):
         if len(bbox) != 4:
             raise TypeError(
                 "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
@@ -658,8 +657,30 @@ def interactive_map(bbox):
     return imap
 
 
+def check_columns(df, req_cols):
+    """Check if a dataframe has a list of required columns
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        A Pandas DataFrame.
+    req_cols : list or tuple
+        A list of required column names
+
+    Raises
+    ------
+    ValueError
+        Shows the missing columns
+    """
+    missing = [c for c in req_cols if c not in df]
+    if missing:
+        raise ValueError(
+            "The following columns are missing:\n" + f"{', '.join(m for m in missing)}"
+        )
+
+
 def prepare_nhdplus(
-    fl,
+    flw,
     min_network_size,
     min_path_length,
     min_path_size=0,
@@ -672,7 +693,7 @@ def prepare_nhdplus(
 
     Parameters
     ----------
-    fl : geopandas.GeoDataFrame
+    flw : geopandas.GeoDataFrame
         NHDPlus flowlines with at least the following columns:
         COMID, LENGTHKM, FTYPE, TerminalFl, FromNode, ToNode, TotDASqKM,
         StartFlag, StreamOrde, StreamCalc, TerminalPa, Pathlength,
@@ -681,80 +702,104 @@ def prepare_nhdplus(
         Minimum size of drainage network in sqkm
     min_path_length : float
         Minimum length of terminal level path of a network in km.
-    min_path_size : float
+    min_path_size : float, optional
         Minimum size of outlet level path of a drainage basin in km.
         Drainage basins with an outlet drainage area smaller than
-        this value will be removed.
-    purge_non_dendritic : bool
-        Whether to remove non dendritic paths.
-    verbose : bool
+        this value will be removed. Defaults to 0.
+    purge_non_dendritic : bool, optional
+        Whether to remove non dendritic paths, defaults to False
+    verbose : bool, optional
         Whether to show a message about the removed features, defaults to True.
 
     Returns
     -------
     geopandas.GeoDataFrame
-        With an additional column named ``tocomid`` that represents downstream
-        comid of features.
+        Note that all column names are converted to lower case.
     """
+
+    flw.columns = flw.columns.str.lower()
+    nrows = flw.shape[0]
+
     req_cols = [
         "comid",
-        "lengthkm",
+        "terminalfl",
+        "terminalpa",
+        "hydroseq",
+        "streamorde",
+        "streamcalc",
+        "divergence",
+        "fromnode",
         "ftype",
-        "terminalfl",
-        "fromnode",
-        "tonode",
-        "totdasqkm",
-        "startflag",
-        "streamorde",
-        "streamcalc",
-        "terminalpa",
-        "pathlength",
-        "divergence",
-        "hydroseq",
-        "levelpathi",
     ]
-    fl.columns = map(str.lower, fl.columns)
-    if any(c not in fl.columns for c in req_cols):
-        raise ValueError(
-            "The required columns are not in the provided flowline dataframe."
-            + f" The required columns are {', '.join(c for c in req_cols)}"
-        )
 
-    extra_cols = ["comid"] + [c for c in fl.columns if c not in req_cols]
-    int_cols = [
-        "comid",
-        "terminalfl",
-        "fromnode",
-        "tonode",
-        "startflag",
-        "streamorde",
-        "streamcalc",
-        "terminalpa",
-        "divergence",
-        "hydroseq",
-        "levelpathi",
-    ]
-    for c in int_cols:
-        fl[c] = fl[c].astype("Int64")
+    check_columns(flw, req_cols)
+    flw[req_cols[:-1]] = flw[req_cols[:-1]].astype("Int64")
 
-    fls = fl[req_cols].copy()
-    if not any(fls.terminalfl == 1):
-        if all(fls.terminalpa == fls.terminalpa.iloc[0]):
-            fls.loc[fls.hydroseq == fls.hydroseq.min(), "terminalfl"] = 1
+    if not any(flw.terminalfl == 1):
+        if all(flw.terminalpa == flw.terminalpa.iloc[0]):
+            flw.loc[flw.hydroseq == flw.hydroseq.min(), "terminalfl"] = 1
         else:
             raise ValueError("No terminal flag were found in the dataframe.")
 
     if purge_non_dendritic:
-        fls = fls[
-            ((fls.ftype != "Coastline") | (fls.ftype != 566))
-            & (fls.streamorde == fls.streamcalc)
+        flw = flw[
+            ((flw.ftype != "Coastline") | (flw.ftype != 566))
+            & (flw.streamorde == flw.streamcalc)
         ]
     else:
-        fls = fls[(fls.ftype != "Coastline") | (fls.ftype != 566)]
-        fls.loc[fls.divergence == 2, "fromnode"] = pd.NA
+        flw = flw[(flw.ftype != "Coastline") | (flw.ftype != 566)]
+        flw.loc[flw.divergence == 2, "fromnode"] = pd.NA
+
+    flw = remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size)
+
+    if verbose:
+        print(f"Removed {nrows - flw.shape[0]} paths from the flowlines.")
+
+    if flw.shape[0] > 0:
+        flw = add_tocomid(flw)
+
+    return flw
+
+
+def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
+    """Remove small paths in NHDPlus flowline database.
+
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
+
+    Parameters
+    ----------
+    flw : geopandas.GeoDataFrame
+        NHDPlus flowlines with at least the following columns:
+        levelpathi, hydroseq, totdasqkm, terminalfl, startflag,
+        pathlength, terminalpa
+    min_network_size : float
+        Minimum size of drainage network in sqkm.
+    min_path_length : float
+        Minimum length of terminal level path of a network in km.
+    min_path_size : float
+        Minimum size of outlet level path of a drainage basin in km.
+        Drainage basins with an outlet drainage area smaller than
+        this value will be removed.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+    """
+    req_cols = [
+        "levelpathi",
+        "hydroseq",
+        "terminalfl",
+        "startflag",
+        "terminalpa",
+        "totdasqkm",
+        "pathlength",
+    ]
+    check_columns(flw, req_cols)
+
+    flw[req_cols[:-2]] = flw[req_cols[:-2]].astype("Int64")
 
     if min_path_size > 0:
-        short_paths = fls.groupby("levelpathi").apply(
+        short_paths = flw.groupby("levelpathi").apply(
             lambda x: (x.hydroseq == x.hydroseq.min())
             & (x.totdasqkm < min_path_size)
             & (x.totdasqkm >= 0)
@@ -762,33 +807,51 @@ def prepare_nhdplus(
         short_paths = short_paths.index.get_level_values("levelpathi")[
             short_paths
         ].tolist()
-        fls = fls[~fls.levelpathi.isin(short_paths)]
-    terminal_filter = (fls.terminalfl == 1) & (fls.totdasqkm < min_network_size)
-    start_filter = (fls.startflag == 1) & (fls.pathlength < min_path_length)
+        flw = flw[~flw.levelpathi.isin(short_paths)]
+
+    terminal_filter = (flw.terminalfl == 1) & (flw.totdasqkm < min_network_size)
+    start_filter = (flw.startflag == 1) & (flw.pathlength < min_path_length)
+
     if any(terminal_filter.dropna()) or any(start_filter.dropna()):
-        tiny_networks = fls[terminal_filter].append(fls[start_filter])
-        fls = fls[~fls.terminalpa.isin(tiny_networks.terminalpa.unique())]
+        tiny_networks = flw[terminal_filter].append(flw[start_filter])
+        flw = flw[~flw.terminalpa.isin(tiny_networks.terminalpa.unique())]
 
-    n_rm = fl.shape[0] - fls.shape[0]
-    if n_rm > 0 and verbose:
-        print(f"Removed {n_rm} rows from the flowlines database.")
+    return flw
 
-    if fls.shape[0] > 0:
-        fl_gr = fls.groupby("terminalpa")
-        fl_li = [fl_gr.get_group(g) for g in fl_gr.groups]
 
-        def tocomid(ft):
-            def toid(row):
-                try:
-                    return ft[ft.fromnode == row.tonode].comid.to_numpy()[0]
-                except IndexError:
-                    return pd.NA
+def add_tocomid(flw):
+    """Find the downstream comid(s) of each comid in NHDPlus flowline database.
 
-            return ft.apply(toid, axis=1)
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
 
-        fls["tocomid"] = pd.concat(map(tocomid, fl_li))
+    Parameters
+    ----------
+    flw : geopandas.GeoDataFrame
+        NHDPlus flowlines with at least the following columns:
+        comid, terminalpa, fromnode, tonode
 
-    return gpd.GeoDataFrame(fls.merge(fl[extra_cols], on="comid", how="left"))
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        The input dataframe With an additional column named ``tocomid``.
+    """
+
+    req_cols = ["comid", "terminalpa", "fromnode", "tonode"]
+    check_columns(flw, req_cols)
+
+    flw[req_cols] = flw[req_cols].astype("Int64")
+
+    def tocomid(group):
+        def toid(row):
+            try:
+                return group[group.fromnode == row.tonode].comid.to_numpy()[0]
+            except IndexError:
+                return pd.NA
+
+        return group.apply(toid, axis=1)
+
+    flw["tocomid"] = pd.concat([tocomid(g) for _, g in flw.groupby("terminalpa")])
+    return flw
 
 
 def traverse_json(obj, path):
@@ -841,7 +904,8 @@ def traverse_json(obj, path):
 
     if isinstance(obj, dict):
         return extract(obj, path, 0, [])
-    elif isinstance(obj, list):
+
+    if isinstance(obj, list):
         outer_arr = []
         for item in obj:
             outer_arr.append(extract(item, path, 0, []))
@@ -1076,14 +1140,12 @@ def arcgis_togeojson(arcgis, idAttribute=None):
                     )
                     for key in keys:
                         if key in attributes and (
-                            isinstance(attributes[key], numbers.Number)
-                            or isinstance(attributes[key], str)
+                            isinstance(attributes[key], (numbers.Number, str))
                         ):
                             geojson["id"] = attributes[key]
                             break
                 except KeyError:
-                    warn("No valid id attribute found")
-                    pass
+                    warn("No valid id attribute found.")
             else:
                 geojson["properties"] = None
 
@@ -1125,7 +1187,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
         uncontainedHoles = []
 
         # while there are holes left...
-        while len(holes):
+        while holes:
             # pop a hole off out stack
             hole = holes.pop()
 
@@ -1151,7 +1213,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
                 uncontainedHoles.append(hole)
 
         # if we couldn't match any holes using contains we can try intersects...
-        while len(uncontainedHoles):
+        while uncontainedHoles:
             # pop a hole off out stack
             hole = uncontainedHoles.pop()
 
@@ -1174,13 +1236,13 @@ def arcgis_togeojson(arcgis, idAttribute=None):
 
         if len(outerRings) == 1:
             return {"type": "Polygon", "coordinates": outerRings[0]}
-        else:
-            return {"type": "MultiPolygon", "coordinates": outerRings}
+
+        return {"type": "MultiPolygon", "coordinates": outerRings}
 
     if isinstance(arcgis, str):
         return json.dumps(convert(json.loads(arcgis), idAttribute))
-    else:
-        return convert(arcgis, idAttribute)
+
+    return convert(arcgis, idAttribute)
 
 
 def geom_mask(
@@ -1247,22 +1309,21 @@ def check_requirements(reqs, cols):
         )
 
 
-def topoogical_sort(flowlines, network=False):
+def topoogical_sort(flowlines):
     """Topological sorting of a river network.
 
     Parameters
     ----------
     flowlines : pandas.DataFrame
         A dataframe with columns ID and toID
-    network : bool
-        Whether to return the generated networkx object
 
     Returns
     -------
-    (list, dict [, networkx.DiGraph])
-        A list of topologically sorted IDs and a dictionary
-        with keys as IDs and values as its upstream nodes.
-        Note that the terminal node ID is set to pd.NA.
+    (list, dict , networkx.DiGraph)
+        A list of topologically sorted IDs, a dictionary
+        with keys as IDs and values as its upstream nodes,
+        and the generated networkx object. Note that the
+        terminal node ID is set to pd.NA.
     """
     import networkx as nx
 
@@ -1275,10 +1336,7 @@ def topoogical_sort(flowlines, network=False):
         flowlines[["ID", "toID"]], source="ID", target="toID", create_using=nx.DiGraph,
     )
     topo_sorted = list(nx.topological_sort(G))
-    if network:
-        return topo_sorted, upstream_nodes, G
-    else:
-        return topo_sorted, upstream_nodes
+    return topo_sorted, upstream_nodes, G
 
 
 def vector_accumulation(
@@ -1321,11 +1379,9 @@ def vector_accumulation(
         condition in the attr_col, the outflow for each river segment can be
         a scalar or an array.
     """
-    import numbers
 
-    sorted_nodes, upstream_nodes = topoogical_sort(
-        flowlines[[id_col, toid_col]].rename(columns={id_col: "ID", toid_col: "toID"}),
-        network=False,
+    sorted_nodes, upstream_nodes, _ = topoogical_sort(
+        flowlines[[id_col, toid_col]].rename(columns={id_col: "ID", toid_col: "toID"})
     )
     topo_sorted = sorted_nodes[:-1]
 
@@ -1334,7 +1390,7 @@ def vector_accumulation(
     init = flowlines.iloc[0][attr_col]
     if isinstance(init, numbers.Number):
         outflow[0] = 0.0
-    elif isinstance(init, np.ndarray) or isinstance(init, list):
+    elif isinstance(init, (np.ndarray, list)):
         outflow[0] = np.zeros_like(init)
     else:
         raise ValueError(
