@@ -101,11 +101,12 @@ class Station:
                 info["contrib_drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             )
         except ValueError:
-            self.areasqkm = (
-                info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
-            )
-        except ValueError:
-            self.areasqkm = self.watershed.flowlines.areasqkm.sum()
+            try:
+                self.areasqkm = (
+                    info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
+                )
+            except ValueError:
+                self.areasqkm = self.watershed.flowlines.areasqkm.sum()
 
         self.hcdn = info.hcdn_2009.to_numpy()[0]
         if self.verbose:

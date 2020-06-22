@@ -495,16 +495,16 @@ class NLDI:
             "downstreamMain": "DM",
             "downstreamDiversions": "DD",
         }
-        if navigation is not None and navigation not in list(nav_options.keys()):
-            msg = (
+
+        if navigation is None:
+            nav = ""
+        elif navigation in nav_options.keys():
+            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
+        else:
+            raise ValueError(
                 "The acceptable navigation options are:"
                 + f" {', '.join(x for x in list(nav_options.keys()))}"
             )
-            raise ValueError(msg)
-        elif navigation is None:
-            nav = ""
-        else:
-            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
 
         base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
         crs = "epsg:4326"
@@ -637,7 +637,7 @@ def daymet_bygeom(
 
     Parameters
     ----------
-    geometry : Polygon, box
+    geometry : shapely.geometry.Polygon
         The geometry of the region of interest
     start : str or datetime
         Starting date
@@ -716,7 +716,8 @@ def daymet_bygeom(
 
     if not isinstance(geometry, Polygon):
         raise TypeError("The geometry argument should be of Shapely's Polygon type.")
-    elif fill_holes:
+
+    if fill_holes:
         geometry = Polygon(geometry.exterior)
 
     n_threads = min(n_threads, 8)
@@ -848,14 +849,14 @@ def ssebopeta_bygeom(
 
     Notes
     -----
-    Since there's still no web service available for subsetting, the data first
-    needs to be downloaded for the requested period then the data is masked by the
-    region interest locally. Therefore, it's not as fast as other functions and
+    Since there's still no web service available for subsetting SSEBop, the data first
+    needs to be downloaded for the requested period then it is masked by the
+    region of interest locally. Therefore, it's not as fast as other functions and
     the bottleneck could be the download speed.
 
     Parameters
     ----------
-    geometry : Geometry
+    geometry : shapely.geometry.Polygon
         The geometry for downloading clipping the data. For a box geometry,
         the order should be as follows:
         geom = box(minx, miny, maxx, maxy)
@@ -874,12 +875,10 @@ def ssebopeta_bygeom(
         The actual ET for the requested region at 1 km resolution.
     """
 
-    import zipfile
-    import io
-
     if not isinstance(geometry, Polygon):
         raise TypeError("Geometry should be of type Shapely Polygon.")
-    elif fill_holes:
+
+    if fill_holes:
         geometry = Polygon(geometry.exterior)
 
     resolution = 1.0e3 / 6371000.0 * 3600.0 / np.pi * 180.0
@@ -944,7 +943,7 @@ def nlcd(
 
     Parameters
     ----------
-    geometry : Shapely Polygon
+    geometry : shapely.geometry.Polygon
         The geometry for extracting the data.
     years : dict, optional
         The years for NLCD data as a dictionary, defaults to
@@ -1052,7 +1051,7 @@ class NationalMap:
 
         Parameters
         ----------
-        geometry : Geometry
+        geometry : shapely.geometry.Polygon
             A shapely Polygon in WGS 84 (epsg:4326).
         layer : str, optional
             The national map 3DEP layer. Available layers are:

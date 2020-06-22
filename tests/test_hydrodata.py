@@ -121,7 +121,6 @@ def test_newdb():
     s.folder = "Utilities"
     s.folder = None
     s.get_fs()
-    s.folder
     s.serviceName = "Stormwater_Information"
     s.get_layers()
     s.layer = 10
@@ -196,7 +195,6 @@ def test_helpers():
         assert err.shape[0] == 7 and fc.shape[0] == 115
     except (HTTPError, AttributeError):
         assert err.shape[0] == 7
-        pass
 
 
 def test_acc():
