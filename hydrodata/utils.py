@@ -19,8 +19,6 @@ from owslib.wms import WebMapService
 from requests.exceptions import HTTPError, RequestException, RetryError, Timeout
 from shapely.geometry import LineString, Point, box, mapping
 
-from hydrodata import helpers
-
 
 def retry_requests(
     retries=5,
@@ -923,7 +921,9 @@ def cover_statistics(ds):
     -------
     dict
     """
-    nlcd_meta = helpers.nlcd_helper()
+    from hydrodata.helpers import nlcd_helper
+
+    nlcd_meta = nlcd_helper()
     cover_arr = ds.values
     total_pix = np.count_nonzero(~np.isnan(cover_arr))
 
