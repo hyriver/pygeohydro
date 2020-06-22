@@ -26,4 +26,3 @@ dependencies:
   - simplejson
   - pytables
   - defusedxml
-  - typing-extensions
