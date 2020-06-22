@@ -108,7 +108,7 @@ nbsphinx_timeout = 600
 nbsphinx_execute = "always"
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
-You can run, download, or view this notebook in `on Github <https://github.com/cheginit/hydrodata/blob/master/docs/{{ docname }}>`_.
+You can run, download, or view this notebook `on Github <https://github.com/cheginit/hydrodata/blob/master/docs/{{ docname }}>`_.
 """
 
 autosummary_generate = True
