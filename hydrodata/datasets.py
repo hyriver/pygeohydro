@@ -239,7 +239,7 @@ class WaterData:
             "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
             layer=self.layer,
             outFormat="application/json",
-            version="1.1.0",
+            version="2.0.0",
             crs=self.crs,
         )
 
@@ -315,7 +315,7 @@ class WaterData:
                 + ", ".join(name for name in valid_names)
             )
 
-        r = self.wfs.getfeature_byid(property_name, property_ids)
+        r = self.wfs.getfeature_byid(property_name, property_ids, filter_spec="2.0")
         rjson = r.json()
         if rjson["numberMatched"] == 0:
             raise ValueError(
