@@ -340,3 +340,16 @@ def test_wbd():
     wbd.outFields = ["HUC2", "NAME", "SHAPE_Area"]
     f = wbd.get_features()
     assert f.shape[0] == len([x for y in wbd.featureids for x in y])
+
+
+def test_fspec1():
+    wfs = WFS(
+        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+        layer="wmadata:gagesii",
+        outFormat="application/json",
+        version="1.1.0",
+        crs="epsg:900913",
+    )
+
+    st = wfs.getfeature_byid("staid", "01031500", "1.1")
+    assert st.json()["numberMatched"] == 1
