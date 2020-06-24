@@ -82,7 +82,7 @@ def test_nldi():
 
 def test_nhdplus_bybox():
     wd = WaterData("nhdwaterbody")
-    wb = wd.features_bybox(
+    wb = wd.getfeature_bybox(
         (-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),
     )
     assert abs(wb.areasqkm.sum() - 87.084) < 1e-3
@@ -90,7 +90,7 @@ def test_nhdplus_bybox():
 
 def test_nhdplus_byid():
     wd = WaterData("catchmentsp")
-    ct = wd.features_byid("featureid", NLDI().comids("01031500"))
+    ct = wd.getfeature_byid("featureid", NLDI().comids("01031500"))
     assert abs(ct.areasqkm.sum() - 773.954) < 1e-3
 
 

@@ -202,7 +202,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
     sites = sites[sites.site_no.apply(len) == 8]
     gii = WaterData("gagesii", "epsg:900913")
-    hcdn = gii.features_byid("staid", sites.site_no.tolist())[
+    hcdn = gii.getfeature_byid("staid", sites.site_no.tolist())[
         ["staid", "hcdn_2009"]
     ].copy()
     hcdn = hcdn.rename(columns={"staid": "site_no"})
@@ -254,38 +254,7 @@ class WaterData:
             + f"Output CRS: {self.wfs.crs}"
         )
 
-    @staticmethod
-    def get_validnames(layer, crs="epsg:4269"):
-        """Get valid column names on the layer's database
-
-        Parameters
-        ----------
-        layer : str
-            A valid layer from the WaterData service to get the column names
-        crs : str, optional
-            The spatial reference system for requesting the data. Each layer support
-            a limited number of CRSs, defaults to ``epsg:4269``.
-
-        Returns
-        -------
-        list
-        """
-
-        url = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
-        payload = {
-            "service": "WFS",
-            "version": "1.0.0",
-            "request": "GetFeature",
-            "typeName": layer if ":" in layer else f"wmadata:{layer}",
-            "maxFeatures": "1",
-            "outputFormat": "application/json",
-        }
-        r = RetrySession().get(url, payload=payload)
-        sample = utils.json_togeodf(r.json(), crs, crs)
-
-        return sample.columns.to_list()
-
-    def features_bybox(self, bbox, in_crs="epsg:4326", out_crs="epsg:4326"):
+    def getfeature_bybox(self, bbox, in_crs="epsg:4326", out_crs="epsg:4326"):
         """Get NHDPlus flowline database within a bounding box.
 
         Parameters
@@ -316,14 +285,14 @@ class WaterData:
 
         return features
 
-    def features_byid(self, property_name, property_ids, out_crs="epsg:4326"):
+    def getfeature_byid(self, property_name, property_ids, out_crs="epsg:4326"):
         """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
 
         Parameters
         ----------
         property_name : str
             Property (column) name of the requested features in the database.
-            You can use ``get_validnames(layer)`` class function to get all
+            You can use ``wfs.get_validnames()`` class function to get all
             the available column names for a specific layer.
         property_ids : str or list
             The ID(s) of the requested property name.
@@ -335,7 +304,10 @@ class WaterData:
         -------
         geopandas.GeoDataFrame
         """
-        valid_names = self.get_validnames(self.layer)
+
+        r = self.wfs.get_validnames()
+        valid_names = utils.json_togeodf(r.json(), self.crs, self.crs)
+
         if property_name not in valid_names:
             raise ValueError(
                 "The given property name argument is invalid."
@@ -350,10 +322,8 @@ class WaterData:
                 f"No feature was found in {self.layer} "
                 + "layer that matches the given ID(s)."
             )
-        features = utils.json_togeodf(r.json(), self.crs, out_crs)
-        if features.shape[0] == 0:
-            raise KeyError("No feature was found with the provided IDs")
-        return features
+
+        return utils.json_togeodf(rjson, self.crs, out_crs)
 
 
 class NLDI:

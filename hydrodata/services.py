@@ -764,7 +764,7 @@ def wms_bygeom(
         resp[0][1], mask, transform, width, height, resp[0][0], fpath[resp[0][0]]
     )
 
-    if len(resp) > 1:
+    if resp:
         for name, r in resp:
             ds = utils.create_dataset(
                 r, mask, transform, width, height, name, fpath[name]
@@ -875,6 +875,8 @@ class WFS:
                     )
                 )
 
+            self.session = RetrySession()
+
     def __repr__(self):
         """Print the services properties."""
         return (
@@ -885,6 +887,27 @@ class WFS:
             + f"Output Format: {self.outFormat}\n"
             + f"Output CRS: {self.crs}"
         )
+
+    def get_validnames(self):
+        """Get valid column names for a layer"""
+
+        max_features = "count" if self.version == "2.0.0" else "maxFeatures"
+
+        payload = {
+            "service": "wfs",
+            "version": self.version,
+            "outputFormat": self.outFormat,
+            "request": "GetFeature",
+            "typeName": self.layer,
+            max_features: "1",
+        }
+
+        r = self.session.get(self.url, payload)
+
+        if r.headers["Content-Type"] == "application/xml":
+            root = ET.fromstring(r.text)
+            raise ValueError(root[0][0].text.strip())
+        return r
 
     def getfeature_bybox(self, bbox, in_crs="epsg:4326"):
         """Data from any WMS service within a geometry
@@ -899,8 +922,9 @@ class WFS:
 
         Returns
         -------
-        xarray.Dataset
+        requests.Response
         """
+
         if not isinstance(bbox, (list, tuple)):
             raise ValueError("The bbox should be of type list or tuple.")
         if len(bbox) != 4:
@@ -909,7 +933,6 @@ class WFS:
             prj = pyproj.Transformer.from_crs(in_crs, self.crs, always_xy=True)
             bbox = ops.transform(prj.transform, box(*bbox))
             bbox = bbox.bounds
-        bbox = ",".join(str(c) for c in bbox) + f",{self.crs}"
 
         payload = {
             "service": "wfs",
@@ -917,10 +940,10 @@ class WFS:
             "outputFormat": self.outFormat,
             "request": "GetFeature",
             "typeName": self.layer,
-            "bbox": bbox,
+            "bbox": ",".join(str(c) for c in bbox) + f",{self.crs}",
         }
 
-        r = RetrySession().get(self.url, payload)
+        r = self.session.get(self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
@@ -976,7 +999,7 @@ class WFS:
             "filter": filter_xml(featurename, featureids),
         }
 
-        r = RetrySession().post(self.url, payload)
+        r = self.session.post(self.url, payload)
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
