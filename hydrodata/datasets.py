@@ -385,13 +385,13 @@ class NLDI:
     def flowlines(cls, station_id):
         """Get flowlines for the entire watershed from NHDPlus V2"""
         wd = WaterData("nhdflowline_network")
-        return wd.features_byid("comid", cls.comids(station_id))
+        return wd.getfeature_byid("comid", cls.comids(station_id))
 
     @classmethod
     def catchments(cls, station_id):
         """Get chatchments for the entire watershed from NHDPlus V2"""
         wd = WaterData("catchmentsp")
-        return wd.features_byid("featureid", cls.comids(station_id))
+        return wd.getfeature_byid("featureid", cls.comids(station_id))
 
     @staticmethod
     def basin(station_id):
