@@ -1095,7 +1095,7 @@ def check_requirements(reqs, cols):
 
     Parameters
     ----------
-    reqs : list
+    reqs : Iterable
         A list of required data names as strs
     cols : list
         A list of data names as strs
@@ -1105,7 +1105,7 @@ def check_requirements(reqs, cols):
         raise ValueError("Inputs should be list of strs")
 
     missing = [r for r in reqs if r not in cols]
-    if len(missing) > 1:
+    if missing:
         raise ValueError(
             "The following required data are missing:\n" + ", ".join(m for m in missing)
         )
