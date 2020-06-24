@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 """Some helper function for Hydrodata"""
 
-import time
-from urllib.error import HTTPError
-
 import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
@@ -85,39 +82,22 @@ def nlcd_helper():
 
 def nhdplus_fcodes():
     """Get NHDPlus FCode lookup table"""
-    for i in range(3):
-        try:
-            url = (
-                "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
-                + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
-            )
-            return (
-                pd.concat(pd.read_html(url, header=0))
-                .drop_duplicates("FCode")
-                .set_index("FCode")
-            )
-        except HTTPError:
-            time.sleep(0.5)
-            continue
+    url = (
+        "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
+        + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
+    )
+    return (
+        pd.concat(pd.read_html(url, header=0))
+        .drop_duplicates("FCode")
+        .set_index("FCode")
+    )
 
 
 def nwis_errors():
     """Get error code lookup table for USGS sites that have daily values"""
-    for i in range(3):
-        try:
-            return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[
-                0
-            ]
-        except HTTPError:
-            time.sleep(0.5)
-            continue
+    return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
 
 def daymet_variables():
     """Get Daymet variables table"""
-    for i in range(3):
-        try:
-            return pd.read_html("https://daymet.ornl.gov/overview")[1]
-        except HTTPError:
-            time.sleep(0.5)
-            continue
+    return pd.read_html("https://daymet.ornl.gov/overview")[1]

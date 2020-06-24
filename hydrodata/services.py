@@ -764,7 +764,7 @@ def wms_bygeom(
         resp[0][1], mask, transform, width, height, resp[0][0], fpath[resp[0][0]]
     )
 
-    if resp:
+    if len(resp) > 1:
         for name, r in resp:
             ds = utils.create_dataset(
                 r, mask, transform, width, height, name, fpath[name]
@@ -950,7 +950,7 @@ class WFS:
             raise ValueError(root[0][0].text.strip())
         return r
 
-    def getfeature_byid(self, featurename, featureids):
+    def getfeature_byid(self, featurename, featureids, filter_spec="1.1"):
         """Get features based on feature IDs
 
         Parameters
@@ -959,6 +959,9 @@ class WFS:
             The name of the column for searching for feature IDs
         featureids : int, str, or list
             The feature ID(s)
+        filter_spec : str
+            The OGC filter spec, defaults to "1.1". Supported vesions are
+            1.1 and 2.0.
 
         Returns
         -------
@@ -973,7 +976,13 @@ class WFS:
 
         featureids = [str(i) for i in featureids]
 
-        def filter_xml(pname, pid):
+        fspecs = ["2.0", "1.1"]
+        if filter_spec not in fspecs:
+            raise ValueError(
+                "The supported filter specs are:\n" + ", ".join(fs for fs in fspecs)
+            )
+
+        def filter_xml1(pname, pid):
             fstart = '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc"><ogc:Or>'
             fend = "</ogc:Or></ogc:Filter>"
             return (
@@ -989,6 +998,24 @@ class WFS:
                 + fend
             )
 
+        def filter_xml2(pname, pid):
+            fstart = '<fes:Filter xmlns:fes="http://www.opengis.net/fes/2.0"><fes:Or>'
+            fend = "</fes:Or></fes:Filter>"
+            return (
+                fstart
+                + "".join(
+                    [
+                        f"<fes:PropertyIsEqualTo><fes:ValueReference>{pname}"
+                        + f"</fes:ValueReference><fes:Literal>{p}"
+                        + "</fes:Literal></fes:PropertyIsEqualTo>"
+                        for p in pid
+                    ]
+                )
+                + fend
+            )
+
+        fxml = filter_xml1 if filter_spec == "1.1" else filter_xml2
+
         payload = {
             "service": "wfs",
             "version": self.version,
@@ -996,7 +1023,7 @@ class WFS:
             "request": "GetFeature",
             "typeName": self.layer,
             "srsName": self.crs,
-            "filter": filter_xml(featurename, featureids),
+            "filter": fxml(featurename, featureids),
         }
 
         r = self.session.post(self.url, payload)
