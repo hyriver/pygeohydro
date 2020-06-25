@@ -8,6 +8,10 @@
     :target: https://pypi.python.org/pypi/hydrodata
     :alt: PyPi
 
+.. image:: https://img.shields.io/conda/vn/conda-forge/hydrodata.svg
+    :target: https://anaconda.org/conda-forge/hydrodata
+    :alt: Conda Version
+
 .. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
     :target: https://codecov.io/gh/cheginit/hydrodata
     :alt: CodeCov
@@ -46,22 +50,23 @@ Features
 
 Hydrodata is a python library designed to aid in watershed analysis. It provides easy and consistent access to a handful of hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
 
-* `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ and `NHDPlus V2 <https://www.usgs.gov/core-science-systems/ngp/national-hydrography/national-hydrography-dataset?qt-science_support_page_related_con=0#qt-science_support_page_related_con>`_ for vector river network, catchments, and other NHDPlus data.
-* `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded
-* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data)
-* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations
-* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from National Map service for getting data such as Digital Elevation Model, slope, and aspect.
+* `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
+* `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
+* `WaterData GeoServer <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?1>`__ for catchments, HUC8, HUC12, GagesII, NHDPlus V2 flowlines, and water bodies,
+* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations,
+* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse,
+* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data),
+* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from National Map service for getting data such as Digital Elevation Model, slope, and aspect,
+* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded.
 
 Additionally, the following functionalities are offered:
 
 * **Interactive map** for exploring USGS stations within a bounding box,
 * Efficient vector-based **flow accumulation** in a stream network,
-* Computing **Potential Evapotranspiration** (PET) using Daymet data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
-* High level APIs for easy access to all ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
+* Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
+* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
 * Helpers for plotting land cover data based on **official NLCD cover legends**,
-* A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing.
+* A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing among other applications.
 
 Requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
 
@@ -74,11 +79,17 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-You can install Hydrodata using ``pip`` after installing ``libgdal`` (for example ``libgdal`` in ``Conda`` environment or ``libgdal-dev`` in Ubuntu) on your system or environment:
+You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu) :
 
 .. code-block:: console
 
     $ pip install hydrodata
+
+Alternatively, it can be installed from ``conda-forge`` using `Conda <https://docs.conda.io/en/latest/>`_:
+
+.. code-block:: console
+
+    $ conda install -c conda-forge hydrodata
 
 Quickstart
 ----------
@@ -104,7 +115,7 @@ Then, we can either specify a station ID or coordinates to the ``Station`` funct
 
     wshed = Station(coords=(-69.32, 45.17), dates=('2000-01-01', '2010-01-21'))
 
-The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases. For example, we can get the main river channel and the tributaries of the watershed, the USGS stations upstream (or downstream) of the main river channel (or tributatires) up to a certain distance, say 150 km or all the stations:
+The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases within the watershed geometry. For example, we can get the main river channel and its tributaries, the USGS stations upstream (or downstream) of the main river channel (or the tributatires) up to a certain distance, say 150 km or all the stations:
 
 .. code-block:: python
 
@@ -130,7 +141,7 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
         flw[["comid", "tocomid", "lengthkm"]],
         routing,
         "lengthkm",
-        ["lengthkm"], threading=False
+        ["lengthkm"]
     )
     flw = flw.merge(qsim, on="comid")
     diff = flw.arbolatesu - flw.acc
