@@ -17,7 +17,6 @@ Dependencies
 - `RasterIO <https://github.com/mapbox/rasterio>`_
 - `Matplotlib <http://matplotlib.org>`_
 - `Shapely <https://shapely.readthedocs.io>`_
-- `PQDM <https://pqdm.readthedocs.io>`_
 - `SimpleJSON <https://simplejson.readthedocs.io>`_
 
 Sub-dependencies
@@ -31,7 +30,6 @@ Sub-dependencies
 - `Lxml <https://lxml.de>`_
 - `Descartes <https://pypi.org/project/descartes>`_
 - `GeoJSON <https://pypi.org/project/geojson>`_
-- `ArcGIS2GeoJSON <https://github.com/chris48s/arcgis2geojson>`_
 
 Optional
 --------
@@ -42,13 +40,13 @@ Optional
 Stable release
 --------------
 
-You can install Hydrodata using ``pip``:
+You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu) :
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed via ``conda``:
+Alternatively, it can be installed from ``conda-forge`` using `Conda <https://docs.conda.io/en/latest/>`_:
 
 .. code-block:: console
 
@@ -75,7 +73,7 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    python -m pip install . -vv
+    python -m pip install .
 
 
 .. _Github repo: https://github.com/cheginit/hydrodata
