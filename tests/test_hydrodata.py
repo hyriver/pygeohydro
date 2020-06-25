@@ -27,22 +27,19 @@ def test_station():
 
 
 def test_nwis():
-    discharge = hds.nwis_streamflow("01031500", "2000-01-01", "2000-01-31")
+    discharge = hds.nwis_streamflow("01031500", ("2000-01-01", "2000-01-31"))
     assert abs(discharge.sum().values[0] - 139.857) < 1e-3
 
 
 def test_daymet():
     wshed = Station(station_id="01031500")
-    start, end = "2000-01-01", "2000-01-12"
+    coords = (-118.47, 34.16)
+    dates = ("2000-01-01", "2000-01-12")
     variables = ["tmin"]
-    st_p = hds.daymet_byloc(
-        -118.47, 34.16, start=start, end=end, variables=variables, pet=True
-    )
-    yr_p = hds.daymet_byloc(-118.47, 34.16, years=2010, variables=variables)
+    st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
+    yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
-    st_g = hds.daymet_bygeom(
-        wshed.geometry, start=start, end=end, variables=variables, pet=True
-    )
+    st_g = hds.daymet_bygeom(wshed.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(wshed.geometry, years=2010, variables=variables)
     assert (
         abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.682) < 1e-3
@@ -96,9 +93,9 @@ def test_nhdplus_byid():
 
 def test_ssebopeta():
     wshed = Station(station_id="01031500")
-    start, end = "2000-01-01", "2000-01-05"
-    eta_p = hds.ssebopeta_byloc(*wshed.coords, start=start, end=end)
-    eta_g = hds.ssebopeta_bygeom(wshed.geometry, start=start, end=end)
+    dates = ("2000-01-01", "2000-01-05")
+    eta_p = hds.ssebopeta_byloc(wshed.coords, dates=dates)
+    eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
     assert (
         abs(eta_p.mean().values[0] == 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.577) < 1e-3
@@ -138,7 +135,7 @@ def test_newdb():
     s.generate_url()
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
     s = ArcGISREST(url_rest, verbose=True)
-    s.n_threads = 4
+    s.n_threads = 10
     s.get_featureids(wshed.geometry.bounds)
     s.get_featureids(wshed.geometry)
     s.outFormat = "geojson"
@@ -179,6 +176,7 @@ def test_newdb():
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
+    print(wfs)
 
     r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
@@ -195,9 +193,9 @@ def test_newdb():
 def test_plot():
     hds.interactive_map([-70, 44, -69, 46])
     wshed = Station(station_id="01031500")
-    start, end = "2000-01-01", "2009-12-31"
-    qobs = hds.nwis_streamflow(wshed.station_id, start, end)
-    clm_p = hds.daymet_byloc(*wshed.coords, start=start, end=end, variables=["prcp"])
+    dates = ("2000-01-01", "2009-12-31")
+    qobs = hds.nwis_streamflow(wshed.station_id, dates)
+    clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=["prcp"])
     plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100

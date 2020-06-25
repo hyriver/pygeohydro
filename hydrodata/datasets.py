@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import rasterio as rio
 import xarray as xr
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, box
 
 from hydrodata import connection, helpers, services, utils
 from hydrodata.connection import RetrySession
@@ -20,17 +20,15 @@ from hydrodata.services import WFS
 MARGINE = 15
 
 
-def nwis_streamflow(station_ids, start, end):
+def nwis_streamflow(station_ids, dates):
     """Get daily streamflow observations from USGS.
 
     Parameters
     ----------
     station_ids : str, list
-        The gage ID(s)  of the USGS station
-    start : str or datetime
-        Start date
-    end : str or datetime
-        End date
+        The gage ID(s)  of the USGS station.
+    dates : tuple
+        Start and end dates as a tuple (start, end).
 
     Returns
     -------
@@ -44,8 +42,12 @@ def nwis_streamflow(station_ids, start, end):
         station_ids = [str(i) for i in station_ids]
     else:
         raise ValueError("the ids argument should be either a str or a list or str")
-    start = pd.to_datetime(start)
-    end = pd.to_datetime(end)
+
+    if isinstance(dates, tuple) and len(dates) == 2:
+        start = pd.to_datetime(dates[0])
+        end = pd.to_datetime(dates[1])
+    else:
+        raise ValueError("dates argument should be tuple of length 2: (start, end)")
 
     siteinfo = nwis_siteinfo(station_ids)
     check_dates = siteinfo.loc[
@@ -499,26 +501,23 @@ class NLDI:
         return features
 
 
-def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet=False):
+def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     """Get daily climate data from Daymet for a single point.
 
     Parameters
     ----------
-    lon : float
-        Longitude of the point of interest
-    lat : float
-        Latitude of the point of interest
-    start : str or datetime
-        Start date
-    end : str or datetime
-        End date
-    years : list
-        List of years
-    variables : str or list
+    coords : tuple
+        Longitude and latitude of the location of interest as a tuple (lon, lat)
+    dates : tuple, optional
+        Start and end dates as a tuple (start, end), default to None.
+    years : int or list or tuple, optional
+        List of year(s), default to None.
+    variables : str or list or tuple, optional
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
-        Descriptions can be found in https://daymet.ornl.gov/overview
-    pet : bool
+        Descriptions can be found in https://daymet.ornl.gov/overview.
+        Defaults to None i.e., all the variables are downloaded.
+    pet : bool, optional
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
         The default is False
@@ -529,21 +528,35 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         Climate data for the requested location and variables
     """
 
+    if isinstance(coords, tuple) and len(coords) == 2:
+        lon, lat = coords
+    else:
+        raise ValueError("coords argument should be a tuple of length 2: (lon, lat)")
+
     if not ((14.5 < lat < 52.0) or (-131.0 < lon < -53.0)):
-        msg = (
+        raise ValueError(
             "The location is outside the Daymet dataset. "
             + "The acceptable range is: "
             + "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
         )
-        raise ValueError(msg)
 
-    if years is None and start is not None and end is not None:
-        start = pd.to_datetime(start)
-        end = pd.to_datetime(end)
+    if years is None and dates is not None:
+        if isinstance(dates, tuple) and len(dates) == 2:
+            start = pd.to_datetime(dates[0])
+            end = pd.to_datetime(dates[1])
+        else:
+            raise ValueError("dates argument should be tuple of length 2: (start, end)")
+
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 till 2019.")
-    elif years is not None and start is None and end is None:
-        years = years if isinstance(years, list) else [years]
+            raise ValueError("Daymet database ranges from 1980 to 2019.")
+
+        date_dict = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
+        }
+    elif years is not None and dates is None:
+        years = years if isinstance(years, (list, tuple)) else [years]
+        date_dict = {"years": ",".join(str(x) for x in years)}
     else:
         raise ValueError("Either years or start and end arguments should be provided.")
 
@@ -551,16 +564,15 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
     valid_variables = vars_table.Abbr.to_list()
 
     if variables is not None:
-        variables = variables if isinstance(variables, list) else [variables]
+        variables = variables if isinstance(variables, (list, tuple)) else [variables]
 
         invalid = [v for v in variables if v not in valid_variables]
-        if len(invalid) > 0:
-            msg = (
+        if invalid:
+            raise KeyError(
                 "These required variables are not in the dataset: "
                 + ", ".join(x for x in invalid)
                 + f'\nRequired variables are {", ".join(x for x in valid_variables)}'
             )
-            raise KeyError(msg)
 
         if pet:
             reqs = ["tmin", "tmax", "vp", "srad", "dayl"]
@@ -569,17 +581,13 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
         variables = valid_variables
 
     url = "https://daymet.ornl.gov/single-pixel/api/data"
-    if years is None:
-        dates = {"start": start.strftime("%Y-%m-%d"), "end": end.strftime("%Y-%m-%d")}
-    else:
-        dates = {"years": ",".join(str(x) for x in years)}
 
     payload = {
         "lat": round(lat, 6),
         "lon": round(lon, 6),
-        "vars": ",".join(x for x in variables),
+        "vars": ",".join(v for v in variables),
         "format": "json",
-        **dates,
+        **date_dict,
     }
 
     r = RetrySession().get(url, payload)
@@ -595,13 +603,12 @@ def daymet_byloc(lon, lat, start=None, end=None, years=None, variables=None, pet
 
 def daymet_bygeom(
     geometry,
-    start=None,
-    end=None,
+    dates=None,
     years=None,
     variables=None,
     pet=False,
     fill_holes=False,
-    n_threads=4,
+    n_threads=8,
 ):
     """Gridded data from the Daymet database as 1-km resolution.
 
@@ -611,10 +618,8 @@ def daymet_bygeom(
     ----------
     geometry : shapely.geometry.Polygon
         The geometry of the region of interest
-    start : str or datetime
-        Starting date
-    end : str or datetime
-        Ending date
+    dates : tuple, optional
+        Start and end dates as a tuple (start, end), default to None.
     years : list
         List of years
     variables : str or list
@@ -640,13 +645,17 @@ def daymet_bygeom(
 
     base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
 
-    if years is None and start is not None and end is not None:
-        start = pd.to_datetime(start) + DateOffset(hour=12)
-        end = pd.to_datetime(end) + DateOffset(hour=12)
+    if years is None and dates is not None:
+        if isinstance(dates, tuple) and len(dates) == 2:
+            start = pd.to_datetime(dates[0]) + DateOffset(hour=12)
+            end = pd.to_datetime(dates[1]) + DateOffset(hour=12)
+        else:
+            raise ValueError("dates argument should be tuple of length 2: (start, end)")
         if start < pd.to_datetime("1980-01-01"):
             raise ValueError("Daymet database ranges from 1980 till 2019.")
         dates = utils.daymet_dates(start, end)
-    elif years is not None and start is None and end is None:
+
+    elif years is not None and dates is None:
         years = years if isinstance(years, list) else [years]
         start_list, end_list = [], []
         for year in years:
@@ -730,9 +739,16 @@ def daymet_bygeom(
             data[k].attrs["units"] = v
 
     data = data.drop_vars(["lambert_conformal_conic"])
-    data.attrs[
-        "crs"
-    ] = "+proj=lcc +lon_0=-100 +lat_0=42.5 +lat_1=25 +lat_2=60 +ellps=WGS84"
+    data.attrs["crs"] = " ".join(
+        [
+            "+proj=lcc",
+            "+lon_0=-100",
+            "+lat_0=42.5",
+            "+lat_1=25",
+            "+lat_2=60",
+            "+ellps=WGS84",
+        ]
+    )
 
     x_res, y_res = float(data.x.diff("x").min()), float(data.y.diff("y").min())
     x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
@@ -758,35 +774,37 @@ def daymet_bygeom(
         data = utils.pet_fao_gridded(data)
 
     mask, transform = utils.geom_mask(
-        geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs
+        geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs,
     )
     data = data.where(~xr.DataArray(mask, dims=("y", "x")), drop=True)
     return data
 
 
-def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
-    """Gridded data from the SSEBop database.
-
-    The data is clipped using netCDF Subset Service.
+def ssebopeta_byloc(coords, dates=None, years=None):
+    """Daily actual ET for a location from SSEBop database in mm/day.
 
     Parameters
     ----------
-    geom : list
-        The bounding box for downloading the data. The order should be
-        as follows:
-        geom = [west, south, east, north]
-    start : str or datetime
-        Starting date
-    end : str or datetime
-        Ending date
-    years : list
-        List of years
+    coords : tuple
+        Longitude and latitude of the location of interest as a tuple (lon, lat)
+    dates : tuple, optional
+        Start and end dates as a tuple (start, end), default to None.
+    years : list or tuple, optional
+        List of years, default to None.
 
     Returns
     -------
-    xarray.DataArray
-        The actual ET for the requested region.
+    pandas.DataFrame
     """
+    if isinstance(coords, tuple) and len(coords) == 2:
+        lon, lat = coords
+    else:
+        raise ValueError("coords argument should be a tuple of length 2: (lon, lat)")
+
+    if isinstance(dates, tuple) and len(dates) == 2:
+        start, end = dates
+    else:
+        raise ValueError("dates argument should be tuple of length 2: (start, end)")
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
@@ -815,9 +833,9 @@ def ssebopeta_byloc(lon, lat, start=None, end=None, years=None):
 
 
 def ssebopeta_bygeom(
-    geometry, start=None, end=None, years=None, resolution=None, fill_holes=False,
+    geometry, dates=None, years=None, resolution=None, fill_holes=False,
 ):
-    """Gridded data from the SSEBop database.
+    """Daily actual ET for a region from SSEBop database in mm/day at 1 km resolution.
 
     Notes
     -----
@@ -828,14 +846,11 @@ def ssebopeta_bygeom(
 
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon
+    geometry : shapely.geometry.Polygon or shapely.geometry.box
         The geometry for downloading clipping the data. For a box geometry,
-        the order should be as follows:
-        geom = box(minx, miny, maxx, maxy)
-    start : str or datetime
-        Starting date
-    end : str or datetime
-        Ending date
+        the order should be (minx, miny, maxx, maxy).
+    dates : tuple, optional
+        Start and end dates as a tuple (start, end), default to None.
     years : list
         List of years
     fill_holes : bool, optional
@@ -844,13 +859,12 @@ def ssebopeta_bygeom(
     Returns
     -------
     xarray.DataArray
-        The actual ET for the requested region at 1 km resolution.
     """
 
-    if not isinstance(geometry, Polygon):
+    if not isinstance(geometry, (Polygon, box)):
         raise TypeError("Geometry should be of type Shapely Polygon.")
 
-    if fill_holes:
+    if isinstance(geometry, Polygon) and fill_holes:
         geometry = Polygon(geometry.exterior)
 
     resolution = 1.0e3 / 6371000.0 * 3600.0 / np.pi * 180.0
@@ -860,6 +874,12 @@ def ssebopeta_bygeom(
     height = int(abs(north - south) / abs(east - west) * width)
 
     mask, transform = utils.geom_mask(geometry, width, height)
+
+    if isinstance(dates, tuple) and len(dates) == 2:
+        start, end = dates
+    else:
+        raise ValueError("dates argument should be tuple of length 2: (start, end)")
+
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
 
     session = RetrySession()
