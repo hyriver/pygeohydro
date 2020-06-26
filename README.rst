@@ -79,7 +79,7 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu) :
+You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu):
 
 .. code-block:: console
 
@@ -113,7 +113,8 @@ Then, we can either specify a station ID or coordinates to the ``Station`` funct
 
     from hydrodata import Station
 
-    wshed = Station(coords=(-69.32, 45.17), dates=('2000-01-01', '2010-01-21'))
+    dates = ('2000-01-01', '2010-01-21')
+    wshed = Station(coords=(-69.32, 45.17), dates=dates)
 
 The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases within the watershed geometry. For example, we can get the main river channel and its tributaries, the USGS stations upstream (or downstream) of the main river channel (or the tributatires) up to a certain distance, say 150 km or all the stations:
 
@@ -132,18 +133,19 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
 
     from hydrodata import utils
 
-    flw = utils.prepare_nhdplus(NLDI.flowlines('11092450'), 0, 0, purge_non_dendritic=False)
+    flowlines = NLDI.flowlines(wshed.station_id)
+    flw = utils.prepare_nhdplus(flowlines, 0, 0, purge_non_dendritic=False)
 
     def routing(qin, q):
         return qin + q
 
-    qsim = utils.vector_accumulation(
+    acc = utils.vector_accumulation(
         flw[["comid", "tocomid", "lengthkm"]],
         routing,
         "lengthkm",
         ["lengthkm"]
     )
-    flw = flw.merge(qsim, on="comid")
+    flw = flw.merge(acc, on="comid")
     diff = flw.arbolatesu - flw.acc
 
 We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
@@ -160,19 +162,26 @@ The climate data and streamflow observations for a location of interest can be r
 .. code-block:: python
 
     variables = ["tmin", "tmax", "prcp"]
-    clm_p = hds.daymet_byloc(wshed.lon, wshed.lat,
-                             start=wshed.start, end=wshed.end,
-                             variables=variables, pet=True)
-    clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, wshed.start, wshed.end)
+    clm_p = hds.daymet_byloc(
+        wshed.coords,
+        dates=dates,
+        variables=variables,
+        pet=True
+    )
+    clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, dates)
 
 Other than point-based data, we can get data from gridded databases. The retrieved data are masked with the watershed geometry:
 
 .. code-block:: python
 
-    clm_g = hds.daymet_bygeom(wshed.geometry,
-                              start='2005-01-01', end='2005-01-31',
-                              variables=variables, pet=True)
-    eta_g = hds.ssebopeta_bygeom(wshed.geometry, start='2005-01-01', end='2005-01-31')
+    dates = ('2005-01-01', '2005-01-31')
+    clm_g = hds.daymet_bygeom(
+        wshed.geometry,
+        dates=dates,
+        variables=variables,
+        pet=True
+    )
+    eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
 
 All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures graphs in one plot:
 
@@ -180,7 +189,7 @@ All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stabl
 
     from hydrodata import plot
 
-    plot.signatures(clm_loc['Q (cms)'], wshed.drainage_area, prcp=clm_loc['prcp (mm/day)'], title=wshed.name)
+    plot.signatures({"Q": clm_p['Q (cms)']}, prcp=clm_p["prcp (mm/day)"])
 
 Some example plots are shown below:
 
@@ -192,9 +201,8 @@ The ``services`` module can be used to access some other web services as well. F
 .. code-block:: python
 
     from hydrodata import ArcGISREST, WFS, services
-    import geopandas as gpd
 
-    la_wshed = Station('2005-01-01', '2005-01-31', '11092450')
+    la_wshed = Station(station_id='11092450')
 
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
     s = ArcGISREST(url_rest, outFormat="json")
@@ -206,7 +214,7 @@ The ``services`` module can be used to access some other web services as well. F
         url_wms,
         geometry=wshed.geometry,
         version="1.3.0",
-        layers={"hillshade": "3DEPElevation:GreyHillshade_elevationFill"},
+        layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
         outFormat="image/tiff",
         resolution=1
     )
@@ -218,7 +226,7 @@ The ``services`` module can be used to access some other web services as well. F
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
-    r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
+    r = wfs.getfeature_bybox(la_wshed.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
