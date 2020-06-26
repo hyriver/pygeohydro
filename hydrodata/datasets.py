@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Accessing data from the supported databases through their APIs."""
 
 import io
@@ -1323,7 +1322,7 @@ class Station:
             station_id = station.site_no.to_numpy()[0]
         else:
             station_id = None
-            for sid, dis in distance.iteritems():
+            for sid in distance.index:
                 station = sites[sites.site_no == sid]
                 self.st_begin = station.begin_date.to_numpy()[0]
                 self.st_end = station.end_date.to_numpy()[0]

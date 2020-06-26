@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Some utilities for Hydrodata"""
 
 import numbers
@@ -21,7 +20,7 @@ from shapely.geometry import LineString, Point, box, mapping
 from hydrodata.connection import RetrySession
 
 
-def threading(func, iter_list, param_list=[], max_workers=8):
+def threading(func, iter_list, param_list=None, max_workers=8):
     """Run a function using threading
 
     Parameters
@@ -41,6 +40,7 @@ def threading(func, iter_list, param_list=[], max_workers=8):
         A list of function returns for each iterator. The list is not ordered.
     """
     data = []
+    param_list = [] if param_list is None else param_list
     with futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_to_itr = {
             executor.submit(func, itr, *param_list): itr for itr in iter_list

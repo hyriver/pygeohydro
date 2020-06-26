@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Some helper function for Hydrodata"""
 
 import defusedxml.cElementTree as ET

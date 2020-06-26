@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """requests wrapper with retry"""
 
 import socket
