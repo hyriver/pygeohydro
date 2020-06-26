@@ -4,10 +4,12 @@
 Installation
 ============
 
-Dependencies
-------------
+Required Dependencies
+---------------------
 
 - `Python 3.6+ <https://www.python.org/downloads>`_
+- `SciPy <https://www.scipy.org>`_
+- `Lxml <https://lxml.de>`_
 - `NumPy <http://www.numpy.org>`_
 - `Pandas <http://pandas.pydata.org>`_
 - `Xarray <https://xarray.pydata.org>`_
@@ -18,24 +20,23 @@ Dependencies
 - `Matplotlib <http://matplotlib.org>`_
 - `Shapely <https://shapely.readthedocs.io>`_
 - `SimpleJSON <https://simplejson.readthedocs.io>`_
+- `Folium <https://python-visualization.github.io/folium/>`_
+- `GeoJSON <https://pypi.org/project/geojson>`_
+- `PyPROJ <https://pyproj4.github.io/pyproj/stable/>`_
+- `DefusedXML <https://github.com/tiran/defusedxml>`_
 
-Sub-dependencies
-----------------
+Recommended
+-----------
 
-- `Tables <https://www.pytables.org/usersguide/tutorials.html>`_
 - `Dask <https://dask.org>`_
 - `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
 - `Bottleneck <https://pypi.org/project/Bottleneck>`_
-- `SciPy <https://www.scipy.org>`_
-- `Lxml <https://lxml.de>`_
-- `Descartes <https://pypi.org/project/descartes>`_
-- `GeoJSON <https://pypi.org/project/geojson>`_
 
 Optional
 --------
 
 - `NetworkX <https://networkx.github.io>`_ for flow accumulation
-- `CartoPy <http://scitools.org.uk/cartopy>`_ for plotting
+- `CartoPy <http://scitools.org.uk/cartopy>`_ for plotting in various projections
 
 Stable release
 --------------
@@ -61,19 +62,19 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    git clone git://github.com/cheginit/hydrodata
+    $ git clone git://github.com/cheginit/hydrodata
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    curl -OJL https://github.com/cheginit/hydrodata/tarball/master
+    $ curl -OJL https://github.com/cheginit/hydrodata/tarball/master
 
 Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    python -m pip install .
+    $ python -m pip install . --no-deps
 
 
 .. _Github repo: https://github.com/cheginit/hydrodata
