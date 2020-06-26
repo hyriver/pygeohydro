@@ -1,6 +1,6 @@
 name: doc
 channels:
-  - conda-forge
+  - defaults
 dependencies:
   - python=3.8
   - pip
@@ -11,8 +11,6 @@ dependencies:
   - scipy
   - lxml
   - geopandas
-  - geojson
-  - folium
   - rasterio
   - pyproj
   - networkx
@@ -24,8 +22,10 @@ dependencies:
   - ipython
   - sphinx
   - recommonmark
-  - nbsphinx
-  - sphinx-markdown-tables
-  - sphinx-copybutton
   - pip:
+    - geojson
+    - folium
+    - nbsphinx
+    - sphinx-markdown-tables
+    - sphinx-copybutton
     - git+https://github.com/bashtage/sphinx-material.git
