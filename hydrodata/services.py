@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Base classes and function for REST, WMS, and WMF services."""
 
 import tempfile
@@ -649,7 +648,7 @@ def wms_bygeom(
     -------
     xarray.Dataset
     """
-    for i in range(3):
+    for _ in range(3):
         try:
             wms = WebMapService(url, version=version)
             break
@@ -820,7 +819,7 @@ class WFS:
         self.crs = crs
 
         if validation:
-            for i in range(3):
+            for _ in range(3):
                 try:
                     wfs = WebFeatureService(url, version=version)
                     break
