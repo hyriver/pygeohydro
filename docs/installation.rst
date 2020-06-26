@@ -4,26 +4,27 @@
 Installation
 ============
 
-Required Dependencies
----------------------
+Dependencies
+------------
 
 - `Python 3.6+ <https://www.python.org/downloads>`_
-- `SciPy <https://www.scipy.org>`_
 - `Lxml <https://lxml.de>`_
 - `NumPy <http://www.numpy.org>`_
 - `Pandas <http://pandas.pydata.org>`_
 - `Xarray <https://xarray.pydata.org>`_
-- `Requests <https://requests.readthedocs.io>`_
+- `SciPy <https://www.scipy.org>`_
 - `OWSLib <https://geopython.github.io/OWSLib>`_
 - `GeoPandas <https://geopandas.org>`_
+- `GeoJSON <https://pypi.org/project/geojson>`_
 - `RasterIO <https://github.com/mapbox/rasterio>`_
 - `Matplotlib <http://matplotlib.org>`_
 - `Shapely <https://shapely.readthedocs.io>`_
 - `SimpleJSON <https://simplejson.readthedocs.io>`_
 - `Folium <https://python-visualization.github.io/folium/>`_
-- `GeoJSON <https://pypi.org/project/geojson>`_
 - `PyPROJ <https://pyproj4.github.io/pyproj/stable/>`_
+- `Requests <https://requests.readthedocs.io>`_
 - `DefusedXML <https://github.com/tiran/defusedxml>`_
+- `NetworkX <https://networkx.github.io>`_
 
 Recommended
 -----------
@@ -34,20 +35,18 @@ Recommended
 
 Optional
 --------
-
-- `NetworkX <https://networkx.github.io>`_ for flow accumulation
 - `CartoPy <http://scitools.org.uk/cartopy>`_ for plotting in various projections
 
 Stable release
 --------------
 
-You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu) :
+You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu):
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed from ``conda-forge`` using `Conda <https://docs.conda.io/en/latest/>`_:
+Alternatively, it can be installed from ``conda-forge`` using `Conda`_:
 
 .. code-block:: console
 
@@ -56,7 +55,7 @@ Alternatively, it can be installed from ``conda-forge`` using `Conda <https://do
 From sources
 ------------
 
-The sources for Hydrodata can be downloaded from the `Github repo`_.
+The sources for Hydrodata can be downloaded from the Github `repo`_.
 
 You can either clone the public repository:
 
@@ -77,5 +76,6 @@ Once you have a copy of the source, you can install it with:
     $ python -m pip install . --no-deps
 
 
-.. _Github repo: https://github.com/cheginit/hydrodata
+.. _Conda: https://docs.conda.io/en/latest
+.. _repo: https://github.com/cheginit/hydrodata
 .. _tarball: https://github.com/cheginit/hydrodata/tarball/master
