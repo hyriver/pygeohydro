@@ -2,35 +2,34 @@ name: doc
 channels:
   - defaults
 dependencies:
-  - python>=3.6
+  - python=3.6
   - pip
   - owslib
-  - scipy
   - pandas
-  - numba
   - matplotlib-base
-  - descartes
   - xarray
-  - dask
-  - netCDF4
-  - bottleneck
+  - scipy
   - lxml
   - geopandas
   - rasterio
   - pyproj
   - networkx
   - simplejson
-  - pytables
   - defusedxml
+
+  - dask
+  - netCDF4
+  - bottleneck
+
   - numpydoc
   - ipykernel
   - ipython
   - sphinx
   - recommonmark
   - pip:
-    - nbsphinx
     - geojson
     - folium
+    - nbsphinx
     - sphinx-markdown-tables
     - sphinx-copybutton
     - git+https://github.com/bashtage/sphinx-material.git

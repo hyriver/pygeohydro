@@ -5,37 +5,36 @@ dependencies:
   - python>=3.8
   - pip
   - owslib
-  - scipy
   - pandas
-  - numba
   - matplotlib-base
-  - descartes
   - xarray
-  - dask
-  - netCDF4
-  - bottleneck
+  - scipy
   - lxml
   - geopandas
+  - geojson
   - folium
   - rasterio
   - pyproj
   - networkx
-  - geojson
   - simplejson
-  - pytables
-  - geojson
-  - folium
   - defusedxml
 
+  - dask
+  - netCDF4
+  - bottleneck
+
+  - isort
+  - black
   - flake8
   - flake8-comprehensions
   - flake8-builtins
   - flake8-rst-docstrings
   - flake8-blind-except
+  - pyupgrade
   - pycodestyle
   - numpydoc
 
-  - pytest-runner
+  - bump2version
   - pytest-cov
   - pytest-xdist
   - pre-commit

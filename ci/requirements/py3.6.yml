@@ -5,24 +5,16 @@ dependencies:
   - python=3.6
   - pip
   - owslib
-  - scipy
   - pandas
-  - numba
   - matplotlib-base
-  - descartes
   - xarray
-  - dask
-  - netCDF4
-  - bottleneck
+  - scipy
   - lxml
   - geopandas
+  - geojson
   - folium
   - rasterio
   - pyproj
-  - proj
-  - gdal
   - networkx
-  - geojson
   - simplejson
-  - pytables
   - defusedxml
