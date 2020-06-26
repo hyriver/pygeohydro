@@ -30,6 +30,7 @@ dependencies:
   - flake8-builtins
   - flake8-rst-docstrings
   - flake8-blind-except
+  - flake8-bugbear
   - pyupgrade
   - pycodestyle
   - numpydoc

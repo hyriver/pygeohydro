@@ -3,6 +3,7 @@ flake8-comprehensions
 flake8-builtins
 flake8-rst-docstrings
 flake8-blind-except
+flake8-bugbear
 pycodestyle
 mypy
 numpydoc
