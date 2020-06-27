@@ -148,18 +148,14 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     pandas.DataFrame
     """
     if bbox is not None and ids is None:
-        if isinstance(bbox, (list, tuple)):
-            if len(bbox) == 4:
-                query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-            else:
-                raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
-        else:
+        if not isinstance(bbox, (list, tuple)) and len(bbox) != 4:
             raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
+        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
     elif ids is not None and bbox is None:
         if isinstance(ids, str):
             query = {"sites": ids}
-        elif isinstance(ids, list):
+        elif isinstance(ids, (list, tuple)):
             query = {"sites": ",".join(str(i) for i in ids)}
         else:
             raise InvalidInputType("ids", "str or list")
@@ -168,10 +164,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
     url = "https://waterservices.usgs.gov/nwis/site"
 
-    if expanded:
-        outputType = {"siteOutput": "expanded"}
-    else:
-        outputType = {"outputDataTypeCd": "dv"}
+    outputType = {"siteOutput": "expanded"} if expanded else {"outputDataTypeCd": "dv"}
 
     payload = {
         **query,
@@ -197,24 +190,22 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
     except AttributeError:
         pass
 
-    sites[["dec_lat_va", "dec_long_va", "alt_va"]] = sites[
-        ["dec_lat_va", "dec_long_va", "alt_va"]
-    ].astype("float64")
+    int_cols = ["dec_lat_va", "dec_long_va", "alt_va"]
+    sites[int_cols] = sites[int_cols].astype("float64")
 
     sites = sites[sites.site_no.apply(len) == 8]
+
     gii = WaterData("gagesii", "epsg:900913")
-    hcdn = gii.getfeature_byid("staid", sites.site_no.tolist())[
-        ["staid", "hcdn_2009"]
-    ].copy()
-    hcdn = hcdn.rename(columns={"staid": "site_no"})
-    hcdn["hcdn_2009"] = hcdn.hcdn_2009.apply(lambda x: len(x) > 0)
-    sites = sites.merge(hcdn, on="site_no")
+    hcdn = gii.getfeature_byid("staid", sites.site_no.tolist())
+    sites["hcdn_2009"] = sites.site_no.apply(
+        lambda x: hcdn.loc[hcdn.staid == x, "hcdn_2009"].to_numpy()
+    )
 
     return sites
 
 
 class WaterData:
-    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`_ service."""
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service."""
 
     def __init__(self, layer, crs="epsg:4269"):
         """Initialize the class
@@ -425,6 +416,71 @@ class NLDI:
         )
 
 
+class Daymet:
+    """Base class for Daymet requests"""
+
+    def __init__(self, dates=None, years=None, variables=None, pet=False):
+        """Initialize Daymet class
+
+        Parameters
+        ----------
+        dates : tuple, optional
+            Start and end dates as a tuple (start, end), default to None.
+        years : int or list or tuple, optional
+            List of year(s), default to None.
+        variables : str or list or tuple, optional
+            List of variables to be downloaded. The acceptable variables are:
+            ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
+            Descriptions can be found in https://daymet.ornl.gov/overview.
+            Defaults to None i.e., all the variables are downloaded.
+        pet : bool, optional
+            Whether to compute evapotranspiration based on
+            `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
+            The default is False
+        """
+        self.session = RetrySession()
+
+        if years is None and dates is not None:
+            if isinstance(dates, tuple) and len(dates) == 2:
+                start = pd.to_datetime(dates[0])
+                end = pd.to_datetime(dates[1])
+            else:
+                raise InvalidInputType("dates", "tuple", "(start, end)")
+
+            if start < pd.to_datetime("1980-01-01"):
+                raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
+
+            self.date_dict = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
+            }
+        elif years is not None and dates is None:
+            years = years if isinstance(years, (list, tuple)) else [years]
+            self.date_dict = {"years": ",".join(str(x) for x in years)}
+        else:
+            raise MissingInputs(
+                "Either years or start and end arguments should be provided."
+            )
+
+        vars_table = helpers.daymet_variables()
+        self.units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
+        valid_variables = vars_table.Abbr.to_list()
+
+        if variables is not None:
+            self.variables = (
+                variables if isinstance(variables, (list, tuple)) else [variables]
+            )
+
+            if not all(v for v in variables if v not in valid_variables):
+                raise InvalidInputValue("variables", valid_variables)
+
+            if pet:
+                reqs = ("tmin", "tmax", "vp", "srad", "dayl")
+                self.variables = tuple(set(reqs) | set(variables))
+        else:
+            self.variables = valid_variables
+
+
 def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     """Get daily climate data from Daymet for a single point.
 
@@ -443,7 +499,7 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
         Defaults to None i.e., all the variables are downloaded.
     pet : bool, optional
         Whether to compute evapotranspiration based on
-        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
+        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
         The default is False
 
     Returns
@@ -451,6 +507,7 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     pandas.DataFrame
         Climate data for the requested location and variables
     """
+    daymet = Daymet(dates, years, variables, pet)
 
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
@@ -464,54 +521,17 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
             + "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
         )
 
-    if years is None and dates is not None:
-        if isinstance(dates, tuple) and len(dates) == 2:
-            start = pd.to_datetime(dates[0])
-            end = pd.to_datetime(dates[1])
-        else:
-            raise InvalidInputType("dates", "tuple", "(start, end)")
-
-        if start < pd.to_datetime("1980-01-01"):
-            raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
-
-        date_dict = {
-            "start": start.strftime("%Y-%m-%d"),
-            "end": end.strftime("%Y-%m-%d"),
-        }
-    elif years is not None and dates is None:
-        years = years if isinstance(years, (list, tuple)) else [years]
-        date_dict = {"years": ",".join(str(x) for x in years)}
-    else:
-        raise MissingInputs(
-            "Either years or start and end arguments should be provided."
-        )
-
-    vars_table = helpers.daymet_variables()
-    valid_variables = vars_table.Abbr.to_list()
-
-    if variables is not None:
-        variables = variables if isinstance(variables, (list, tuple)) else [variables]
-
-        if not all(v for v in variables if v not in valid_variables):
-            raise InvalidInputValue("variables", valid_variables)
-
-        if pet:
-            reqs = ("tmin", "tmax", "vp", "srad", "dayl")
-            variables = tuple(set(reqs) | set(variables))
-    else:
-        variables = valid_variables
-
     url = "https://daymet.ornl.gov/single-pixel/api/data"
 
     payload = {
         "lat": round(lat, 6),
         "lon": round(lon, 6),
-        "vars": ",".join(v for v in variables),
+        "vars": ",".join(v for v in daymet.variables),
         "format": "json",
-        **date_dict,
+        **daymet.date_dict,
     }
 
-    r = RetrySession().get(url, payload)
+    r = daymet.session.get(url, payload)
 
     clm = pd.DataFrame(r.json()["data"])
     clm.index = pd.to_datetime(clm.year * 1000.0 + clm.yday, format="%Y%j")
@@ -549,7 +569,7 @@ def daymet_bygeom(
         Descriptions can be found in https://daymet.ornl.gov/overview
     pet : bool
         Whether to compute evapotranspiration based on
-        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`_.
+        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
         The default is False
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
@@ -561,51 +581,25 @@ def daymet_bygeom(
     xarray.DataArray
         The climate data within the requested geometery.
     """
-
     from pandas.tseries.offsets import DateOffset
 
-    base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
+    daymet = Daymet(dates, years, variables, pet)
 
-    if years is None and dates is not None:
-        if isinstance(dates, tuple) and len(dates) == 2:
-            start = pd.to_datetime(dates[0]) + DateOffset(hour=12)
-            end = pd.to_datetime(dates[1]) + DateOffset(hour=12)
-        else:
-            raise InvalidInputType("dates", "tuple", "(start, end)")
-        if start < pd.to_datetime("1980-01-01"):
-            raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
+    if years is None:
+        start = pd.to_datetime(daymet.date_dict["start"]) + DateOffset(hour=12)
+        end = pd.to_datetime(daymet.date_dict["end"]) + DateOffset(hour=12)
         dates = utils.daymet_dates(start, end)
 
-    elif years is not None and dates is None:
-        years = years if isinstance(years, list) else [years]
+    else:
         start_list, end_list = [], []
-        for year in years:
+        for year in daymet.date_dict["years"].split(","):
             s = pd.to_datetime(f"{year}0101")
             start_list.append(s + DateOffset(hour=12))
-            if year % 4 == 0 and (year % 100 != 0 or year % 400 == 0):
+            if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0):
                 end_list.append(pd.to_datetime(f"{year}1230") + DateOffset(hour=12))
             else:
                 end_list.append(pd.to_datetime(f"{year}1231") + DateOffset(hour=12))
         dates = zip(start_list, end_list)
-    else:
-        raise MissingInputs("Either years or dates arguments should be provided.")
-
-    vars_table = helpers.daymet_variables()
-
-    units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
-    valid_variables = vars_table.Abbr.to_list()
-
-    if variables is not None:
-        variables = variables if isinstance(variables, (list, tuple)) else [variables]
-
-        if not all(v for v in variables if v not in valid_variables):
-            raise InvalidInputValue("variables", valid_variables)
-
-        if pet:
-            reqs = ("tmin", "tmax", "vp", "srad", "dayl")
-            variables = tuple(set(reqs) | set(variables))
-    else:
-        variables = valid_variables
 
     if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapely's Polygon")
@@ -616,9 +610,11 @@ def daymet_bygeom(
     n_threads = min(n_threads, 8)
 
     west, south, east, north = np.round(geometry.bounds, 6)
+    base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
     urls = []
+
     for s, e in dates:
-        for v in variables:
+        for v in daymet.variables:
             urls.append(
                 base_url
                 + "&".join(
@@ -639,14 +635,13 @@ def daymet_bygeom(
                     ]
                 )
             )
-    session = RetrySession()
 
     def getter(url):
-        return xr.open_dataset(session.get(url).content)
+        return xr.open_dataset(daymet.session.get(url).content)
 
     data = xr.merge(utils.threading(getter, urls, max_workers=n_threads))
 
-    for k, v in units.items():
+    for k, v in daymet.units.items():
         if k in variables:
             data[k].attrs["units"] = v
 
@@ -925,7 +920,7 @@ def nlcd(
 
 
 class NationalMap:
-    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ service.
+    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ service.
 
     The 3DEP service has multi-resolution sources so depeneding on the user
     provided resolution (or width) the data is resampled on server-side based
