@@ -3,24 +3,16 @@
 
 pip
 owslib
-scipy
 pandas
-numba
-matplotlib
-descartes
+matplotlib-base
 xarray
-dask
-netCDF4
-bottleneck
+scipy
 lxml
 geopandas
+geojson
 folium
 rasterio
 pyproj
-proj
-gdal
 networkx
-geojson
 simplejson
-tables
 defusedxml
