@@ -20,6 +20,13 @@ from simplejson import JSONDecodeError
 
 from hydrodata import utils
 from hydrodata.connection import RetrySession
+from hydrodata.exceptions import (
+    InvalidInputType,
+    InvalidInputValue,
+    MissingInputs,
+    ServerError,
+    ZeroMatched,
+)
 
 
 class ArcGISServer:
@@ -95,13 +102,10 @@ class ArcGISServer:
     @folder.setter
     def folder(self, value):
         if value is not None:
-            valids, _ = self.get_fs()
-            if value not in valids:
-                raise ValueError(
-                    f"The given folder, {value}, is not valid. "
-                    + "Valid folders are "
-                    + ", ".join(str(v) for v in valids)
-                )
+            valid_folders = self.get_fs()[0]
+            if value not in valid_folders:
+                raise InvalidInputValue("folder", valid_folders)
+
         self._folder = value
 
     @property
@@ -111,13 +115,10 @@ class ArcGISServer:
     @serviceName.setter
     def serviceName(self, value):
         if value is not None:
-            _, valids = self.get_fs(self.folder)
-            if value not in valids:
-                raise ValueError(
-                    f"The given serviceName, {value}, is not valid. "
-                    + "Valid serviceNames are "
-                    + ", ".join(str(v) for v in valids)
-                )
+            valid_services = self.get_fs(self.folder)[1]
+            if value not in valid_services:
+                raise InvalidInputValue("serviceName", valid_services)
+
         self._serviceName = value
 
     @property
@@ -127,14 +128,12 @@ class ArcGISServer:
     @layer.setter
     def layer(self, value):
         if value is not None:
-            v_dict, _ = self.get_layers()
-            valids = list(v_dict.keys())
-            if value not in valids or not isinstance(value, int):
-                raise ValueError(
-                    f"The given layer, {value}, is not valid. "
-                    + "Valid layers are integers "
-                    + ", ".join(str(v) for v in valids)
-                )
+            valid_layers = self.get_layers()[0].keys()
+            if value not in valid_layers:
+                raise InvalidInputValue("layer", valid_layers)
+            if not isinstance(value, int):
+                raise InvalidInputType("layer", "int")
+
         self._layer = value
 
     @property
@@ -143,14 +142,9 @@ class ArcGISServer:
 
     @outFormat.setter
     def outFormat(self, value):
-        if self.base_url is not None:
-            valids = self.queryFormats
-            if value not in valids:
-                raise ValueError(
-                    f"The given outFormat, {value}, is not valid. "
-                    + "Valid outFormats are "
-                    + ", ".join(str(v) for v in valids)
-                )
+        if self.base_url is not None and value not in self.queryFormats:
+            raise InvalidInputValue("outFormat", self.queryFormats)
+
         self._outFormat = value
 
     @property
@@ -159,7 +153,7 @@ class ArcGISServer:
 
     @spatialRel.setter
     def spatialRel(self, value):
-        spatialRels = [
+        valid_spatialRels = [
             "esriSpatialRelIntersects",
             "esriSpatialRelContains",
             "esriSpatialRelCrosses",
@@ -170,12 +164,11 @@ class ArcGISServer:
             "esriSpatialRelWithin",
             "esriSpatialRelRelation",
         ]
-        if value is not None and value.lower() not in [s.lower() for s in spatialRels]:
-            raise ValueError(
-                f"The given spatialRel, {value}, is not valid. "
-                + "Valid spatialRels are "
-                + ", ".join(str(v) for v in spatialRels)
-            )
+        if value is not None and value.lower() not in [
+            s.lower() for s in valid_spatialRels
+        ]:
+            raise InvalidInputValue("spatialRel", valid_spatialRels)
+
         self._spatialRel = value
 
     @property
@@ -189,7 +182,7 @@ class ArcGISServer:
         elif isinstance(value, list):
             self._outFields = value
         else:
-            raise TypeError("outFields should be either a str or list.")
+            raise InvalidInputType("outFields", "str or list")
 
     def get_fs(self, folder=None):
         """Get folders and services of the geoserver's a folder/root url"""
@@ -233,7 +226,7 @@ class ArcGISServer:
             _, services = self.get_fs(self.folder)
             serviceName = self.serviceName if serviceName is None else serviceName
             if serviceName is None:
-                raise ValueError(
+                raise MissingInputs(
                     "serviceName should be either passed as an argument "
                     + "or be set as a class instance variable"
                 )
@@ -243,7 +236,7 @@ class ArcGISServer:
                 else:
                     url = f"{self.root}/{self.folder}/{serviceName}/{services[serviceName]}"
             except KeyError:
-                raise KeyError(
+                raise MissingInputs(
                     "The serviceName was not found. Check if folder is set correctly."
                 )
 
@@ -259,10 +252,10 @@ class ArcGISServer:
             }
             layers.update({-1: "HEAD LAYER"})
         except TypeError:
-            raise TypeError(f"The url doesn't have layers, {url}")
+            raise ServerError(url)
 
         if len(layers) < 2:
-            raise ValueError(f"The url doesn't have layers, {url}")
+            raise ServerError(url)
 
         parent_layers = {
             i: p
@@ -316,8 +309,9 @@ class ArcGISREST(ArcGISServer):
         )
         self.verbose = verbose
 
-        if self.outFormat not in ["json", "geojson"]:
-            raise ValueError("Only json and geojson are supported for outFormat.")
+        valid_outFormats = ["json", "geojson"]
+        if self.outFormat not in valid_outFormats:
+            raise InvalidInputValue("outFormat", valid_outFormats)
 
         self._n_threads = min(n_threads, 8)
 
@@ -361,7 +355,7 @@ class ArcGISREST(ArcGISServer):
         if isinstance(value, int) and value > 0:
             self._max_nrecords = min(self.maxRecordCount, value)
         else:
-            raise ValueError("``max_nrecords`` should be a positive integer.")
+            raise InvalidInputType("max_nrecords", "positive int")
 
     @property
     def featureids(self):
@@ -375,9 +369,7 @@ class ArcGISREST(ArcGISServer):
             oid_list[-1] = tuple(i for i in oid_list[-1] if i is not None)
             self._featureids = oid_list
         else:
-            raise TypeError(
-                "feature IDs should be either a string or a list of strings"
-            )
+            raise InvalidInputType("featureids", "str or list")
 
     def generate_url(self):
         """Generate the base_url based on the class properties"""
@@ -403,16 +395,12 @@ class ArcGISREST(ArcGISServer):
                 try:
                     self.base_url = f"{self.root}/{self.serviceName}/{services[self.serviceName]}{layer_suffix}"
                 except KeyError:
-                    raise KeyError(
-                        f"The requetsed service is not available on the server:\n{self.base_url}"
-                    )
+                    raise ServerError(self.base_url)
             else:
                 try:
                     self.base_url = f"{self.root}/{self.folder}/{self.serviceName}/{services[self.serviceName]}{layer_suffix}"
                 except KeyError:
-                    raise KeyError(
-                        f"The requetsed service is not available on the server:\n{self.base_url}"
-                    )
+                    raise ServerError(self.base_url)
 
             self.test_url()
 
@@ -447,9 +435,9 @@ class ArcGISREST(ArcGISServer):
                     info.index("Fields:") + 1 : info.index("Supported Operations") : 2
                 ] + ["*"]
             except ValueError:
-                raise KeyError(f"The service url is not valid:\n{self.base_url}")
+                raise ServerError(self.base_url)
         except KeyError:
-            raise KeyError(f"The service url is not valid:\n{self.base_url}")
+            raise ServerError(self.base_url)
 
         self.max_nrecords = self.maxRecordCount
         if self.verbose:
@@ -469,16 +457,15 @@ class ArcGISREST(ArcGISServer):
     def get_featureids(self, geom):
         """Get feature IDs withing a geometry in EPSG:4326"""
         if self.base_url is None:
-            raise ValueError(
-                "The base_url is not set yet, use "
-                + "self.generate_url(<layer>) to form the url"
+            raise MissingInputs(
+                "The ``base_url`` is not set yet, use "
+                + "``generate_url(<layer>)`` class functin to form the url."
             )
 
         if isinstance(geom, (list, tuple)):
             if len(geom) != 4:
-                raise TypeError(
-                    "The bounding box should be a list or tuple of form [west, south, east, north]"
-                )
+                raise InvalidInputType("bbox", "tupe", "(west, south, east, north)")
+
             geometryType = "esriGeometryEnvelope"
             bbox = dict(zip(["xmin", "ymin", "xmax", "ymax"], geom))
             geom_json = {**bbox, "spatialRelference": {"wkid": 4326}}
@@ -491,7 +478,7 @@ class ArcGISREST(ArcGISServer):
             }
             geometry = json.dumps(geom_json)
         else:
-            raise ValueError("The geometry should be either a bbox (list) or a Polygon")
+            raise InvalidInputType("geometry", "tuple or Polygon")
 
         payload = {
             "geometryType": geometryType,
@@ -506,11 +493,10 @@ class ArcGISREST(ArcGISServer):
         try:
             oids = r.json()["objectIds"]
         except (KeyError, TypeError, IndexError, JSONDecodeError):
-            warn(
+            raise ZeroMatched(
                 "No feature ID were found within the requested "
                 + f"region using the spatial relationship {self.spatialRel}."
             )
-            raise
 
         self.featureids = oids
 
@@ -518,11 +504,7 @@ class ArcGISREST(ArcGISServer):
         """Get features based on the feature IDs"""
 
         if not all(f in self.valid_fields for f in self.outFields):
-            raise ValueError(
-                "Given outFields is invalid.\n"
-                + "Valid fileds are:\n"
-                + ", ".join(f for f in self.valid_fields)
-            )
+            raise InvalidInputValue("outFields", self.valid_fields)
 
         def get_geojson(ids):
             payload = {
@@ -538,7 +520,7 @@ class ArcGISREST(ArcGISServer):
             except TypeError:
                 return ids
             except AssertionError:
-                raise AssertionError(
+                raise ZeroMatched(
                     "There was a problem processing GeoJSON, "
                     + "try setting outFormat to json"
                 )
@@ -576,7 +558,7 @@ class ArcGISREST(ArcGISServer):
             success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
 
         if len(success) == 0:
-            raise ValueError("No valid feature were found.")
+            raise ZeroMatched("No valid feature was found.")
 
         data = gpd.GeoDataFrame(pd.concat(success)).reset_index(drop=True)
         data.crs = "epsg:4326"
@@ -660,57 +642,43 @@ def wms_bygeom(
             wms[layer].name: wms[layer].title for layer in list(wms.contents)
         }
         if layers is None:
-            raise ValueError(
+            raise MissingInputs(
                 "The layers argument is missing."
                 + " The following layers are available:\n"
                 + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
             )
 
         if not isinstance(layers, dict):
-            raise ValueError(
-                "The layers argument should be of type dict: {var_name : layer_name}"
-            )
+            raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
 
         if any(str(layer) not in valid_layers.keys() for layer in layers.values()):
-            raise ValueError(
-                "The given layers argument is invalid."
-                + " Valid layers are:\n"
-                + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
+            raise InvalidInputValue(
+                "layer", (f"{n}: {t}\n" for n, t in valid_layers.items())
             )
 
         valid_outFormats = wms.getOperationByName("GetMap").formatOptions
         if outFormat is None:
-            raise ValueError(
+            raise MissingInputs(
                 "The outFormat argument is missing."
                 + " The following output formats are available:\n"
                 + ", ".join(fmt for fmt in valid_outFormats)
             )
 
         if outFormat not in valid_outFormats:
-            raise ValueError(
-                "The outFormat argument is invalid."
-                + " Valid output formats are:\n"
-                + ", ".join(fmt for fmt in valid_outFormats)
-            )
+            raise InvalidInputValue("outFormat", valid_outFormats)
 
         valid_crss = {
             layer: [s.lower() for s in wms[layer].crsOptions]
             for layer in layers.values()
         }
         if any(crs not in valid_crss[layer] for layer in layers.values()):
-            raise ValueError(
-                "The crs argument is invalid."
-                + "\n".join(
-                    [
-                        f" Valid CRSs for {layer} layer are:\n"
-                        + ", ".join(c for c in crss)
-                        for layer, crss in valid_crss.items()
-                    ]
-                )
+            _valid_crss = (
+                f"{lyr}: {', '.join(c for c in cs)}\n" for lyr, cs in valid_crss.items()
             )
+            raise InvalidInputValue("CRS", _valid_crss)
 
     if not isinstance(geometry, Polygon):
-        raise ValueError("Geometry should be of type shapley's Polygon")
+        raise InvalidInputType("geometry", "Shapley's Polygon")
 
     if fill_holes:
         geometry = Polygon(geometry.exterior)
@@ -723,9 +691,9 @@ def wms_bygeom(
     if width is None and resolution is not None:
         width = int((east - west) * 3600 / resolution)
     elif width is None and resolution is None:
-        raise ValueError("Width or resolution should be provided.")
+        raise MissingInputs("Width or resolution should be provided.")
     elif width is not None and resolution is not None:
-        raise ValueError("Either width or resolution should be provided, not both.")
+        raise MissingInputs("Either width or resolution should be provided, not both.")
 
     height = int(abs(north - south) / abs(east - west) * width)
 
@@ -738,7 +706,7 @@ def wms_bygeom(
             )
         utils.check_dir(fpath.values())
     else:
-        raise ValueError("The fpath argument should be of type dict: {var_name : path}")
+        raise InvalidInputType("fpath", "dict", "{var_name : path}")
 
     mask, transform = utils.geom_mask(geometry, width, height)
     name_list = list(layers.keys())
@@ -829,50 +797,38 @@ class WFS:
             valid_layers = list(wfs.contents)
             valid_layers_lower = [layer.lower() for layer in valid_layers]
             if layer is None:
-                raise ValueError(
+                raise MissingInputs(
                     "The layer argument is missing."
                     + " The following layers are available:\n"
                     + ", ".join(layer for layer in valid_layers)
                 )
 
             if layer.lower() not in valid_layers_lower:
-                raise ValueError(
-                    "The given layers argument is invalid."
-                    + " Valid layers are:\n"
-                    + ", ".join(layer for layer in valid_layers)
-                )
+                raise InvalidInputValue("layers", valid_layers)
 
             valid_outFormats = wfs.getOperationByName("GetFeature").parameters[
                 "outputFormat"
             ]["values"]
             valid_outFormats = [f.lower() for f in valid_outFormats]
             if outFormat is None:
-                raise ValueError(
+                raise MissingInputs(
                     "The outFormat argument is missing."
                     + " The following output formats are available:\n"
                     + ", ".join(fmt for fmt in valid_outFormats)
                 )
 
             if outFormat.lower() not in valid_outFormats:
-                raise ValueError(
-                    "The outFormat argument is invalid."
-                    + " Valid output formats are:\n"
-                    + ", ".join(fmt for fmt in valid_outFormats)
-                )
+                raise InvalidInputValue("outFormat", valid_outFormats)
 
             valid_crss = [
                 f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions
             ]
             if crs.lower() not in valid_crss:
-                raise ValueError(
-                    "The crs argument is invalid."
-                    + "\n".join(
-                        [
-                            f" Valid CRSs for {layer} layer are:\n"
-                            + ", ".join(c for c in valid_crss)
-                        ]
-                    )
+                _valid_crss = (
+                    f"{lyr}: {', '.join(c for c in cs)}\n"
+                    for lyr, cs in valid_crss.items()
                 )
+                raise InvalidInputValue("crs", _valid_crss)
 
             self.session = RetrySession()
 
@@ -905,7 +861,7 @@ class WFS:
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
-            raise ValueError(root[0][0].text.strip())
+            raise ZeroMatched(root[0][0].text.strip())
         return r
 
     def getfeature_bybox(self, bbox, in_crs="epsg:4326"):
@@ -924,10 +880,9 @@ class WFS:
         requests.Response
         """
 
-        if not isinstance(bbox, (list, tuple)):
-            raise ValueError("The bbox should be of type list or tuple.")
-        if len(bbox) != 4:
-            raise ValueError("The bbox length should be 4")
+        if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+
         if in_crs != self.crs:
             prj = pyproj.Transformer.from_crs(in_crs, self.crs, always_xy=True)
             bbox = ops.transform(prj.transform, box(*bbox))
@@ -946,7 +901,7 @@ class WFS:
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
-            raise ValueError(root[0][0].text.strip())
+            raise ZeroMatched(root[0][0].text.strip())
         return r
 
     def getfeature_byid(self, featurename, featureids, filter_spec="1.1"):
@@ -956,7 +911,7 @@ class WFS:
         ----------
         featurename : str
             The name of the column for searching for feature IDs
-        featureids : int, str, or list
+        featureids : int or str or list
             The feature ID(s)
         filter_spec : str
             The OGC filter spec, defaults to "1.1". Supported vesions are
@@ -971,15 +926,13 @@ class WFS:
             featureids = [featureids]
 
         if len(featureids) == 0:
-            raise ValueError("The feature ID list is empty!")
+            raise InvalidInputType("featureids", "int or str or list")
 
         featureids = [str(i) for i in featureids]
 
         fspecs = ["2.0", "1.1"]
         if filter_spec not in fspecs:
-            raise ValueError(
-                "The supported filter specs are:\n" + ", ".join(fs for fs in fspecs)
-            )
+            raise InvalidInputValue("filter_spec", fspecs)
 
         def filter_xml1(pname, pid):
             fstart = '<ogc:Filter xmlns:ogc="http://www.opengis.net/ogc"><ogc:Or>'
@@ -1029,6 +982,6 @@ class WFS:
 
         if r.headers["Content-Type"] == "application/xml":
             root = ET.fromstring(r.text)
-            raise ValueError(root[0][0].text.strip())
+            raise ZeroMatched(root[0][0].text.strip())
 
         return r
