@@ -217,7 +217,7 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
 def pet_fao_byloc(clm, lon, lat):
     """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
-    The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+    The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
 
     Parameters
     ----------
@@ -319,7 +319,7 @@ def pet_fao_byloc(clm, lon, lat):
 def pet_fao_gridded(ds):
     """Compute Potential EvapoTranspiration using Daymet dataset.
 
-    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`.
+    The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
     The following variables are required:
     tmin (deg c), tmax (deg c), lat, lon, vp (Pa), srad (W/m2), dayl (s/day)
     The computed PET's unit is mm/day.
@@ -470,7 +470,7 @@ def prepare_nhdplus(
 ):
     """Cleaning up and fixing issue in NHDPlus flowline database.
 
-    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
 
     Parameters
     ----------
@@ -545,7 +545,7 @@ def prepare_nhdplus(
 def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
     """Remove small paths in NHDPlus flowline database.
 
-    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
 
     Parameters
     ----------
@@ -603,7 +603,7 @@ def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
 def add_tocomid(flw):
     """Find the downstream comid(s) of each comid in NHDPlus flowline database.
 
-    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`_
+    Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
 
     Parameters
     ----------
@@ -640,7 +640,7 @@ def traverse_json(obj, path):
 
     Notes
     -----
-    From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`_
+    From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`__
 
     Parameters
     ----------

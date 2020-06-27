@@ -13,9 +13,9 @@ def nlcd_helper():
     Notes
     -----
     The following references have been used:
-        * https://github.com/jzmiller1/nlcd
-        * https://www.mrlc.gov/data-services-page
-        * https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
+        - https://github.com/jzmiller1/nlcd
+        - https://www.mrlc.gov/data-services-page
+        - https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
     """
 
     url = (

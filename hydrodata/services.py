@@ -48,13 +48,13 @@ class ArcGISServer:
         Notes
         -----
         The general url form for a RESTful service is as follows:
-        https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/
-        https://<host>/<site>/rest/services/<serviceName>/<serviceType>/<layer>/
+        - https://<host>/<site>/rest/services/<folder>/<serviceName>/<serviceType>/<layer>/
+        - https://<host>/<site>/rest/services/<serviceName>/<serviceType>/<layer>/
         and for an OGC interface:
-        https://<host>/<site>/services/<serviceName>/<serviceType>/<OGCType>/
-        For more information visit `ArcGIS doc <https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm>`_
+        - https://<host>/<site>/services/<serviceName>/<serviceType>/<OGCType>/
+        For more information visit `ArcGIS doc <https://developers.arcgis.com/rest/services-reference/get-started-with-the-services-directory.htm>`__
         An example is:
-        https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
+        - https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
 
         Parameters
         ----------
