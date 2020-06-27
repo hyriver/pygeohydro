@@ -3,6 +3,24 @@
    :alt: hydrodata
    :align: left
 
+|
+
+.. image:: https://img.shields.io/pypi/v/hydrodata.svg
+    :target: https://pypi.python.org/pypi/hydrodata
+    :alt: PyPi
+
+.. image:: https://img.shields.io/conda/vn/conda-forge/hydrodata.svg
+    :target: https://anaconda.org/conda-forge/hydrodata
+    :alt: Conda Version
+
+.. image:: https://pepy.tech/badge/hydrodata
+    :target: https://pepy.tech/project/hydrodata
+    :alt: Downloads
+
+.. image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
+    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
 Hydrodata is a portal to access hydrology and climatology data in python and designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization.
 
 Introduction
