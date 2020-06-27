@@ -585,9 +585,7 @@ def wms_bygeom(
     Parameters
     ----------
     url : str
-        The base url for the WMS service. Some examples:
-        https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer
-        https://www.mrlc.gov/geoserver/mrlc_download/wms
+        The base url for the WMS service e.g., https://www.mrlc.gov/geoserver/mrlc_download/wms
     geometry : Polygon
         A shapely Polygon for getting the data
     width : int
