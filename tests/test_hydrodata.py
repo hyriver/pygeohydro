@@ -4,6 +4,8 @@
 import shutil
 from urllib.error import HTTPError
 
+import pytest
+
 import hydrodata.datasets as hds
 from hydrodata import (
     NLDI,
@@ -19,28 +21,42 @@ from hydrodata import (
 )
 
 
+@pytest.fixture
+def watershed_nat():
+    return Station(station_id="01031500")
+
+
+@pytest.fixture
+def watershed_urb():
+    return Station(station_id="11092450")
+
+
 def test_station():
+    shutil.rmtree("tests/data", ignore_errors=True)
     natural = Station(station_id="01031500", verbose=True)
     natural = Station(station_id="01031500", verbose=True)
     urban = Station(coords=(-118.47, 34.16), dates=("2000-01-01", "2010-01-21"))
     assert natural.hcdn and not urban.hcdn
 
 
-def test_nwis():
-    discharge = hds.nwis_streamflow("01031500", ("2000-01-01", "2000-01-31"))
+def test_nwis(watershed_nat):
+    discharge = hds.nwis_streamflow(
+        watershed_nat.station_id, ("2000-01-01", "2000-01-31")
+    )
     assert abs(discharge.sum().values[0] - 139.857) < 1e-3
 
 
-def test_daymet():
-    wshed = Station(station_id="01031500")
+def test_daymet(watershed_nat):
     coords = (-118.47, 34.16)
     dates = ("2000-01-01", "2000-01-12")
     variables = ["tmin"]
     st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
     yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
-    st_g = hds.daymet_bygeom(wshed.geometry, dates=dates, variables=variables, pet=True)
-    yr_g = hds.daymet_bygeom(wshed.geometry, years=2010, variables=variables)
+    st_g = hds.daymet_bygeom(
+        watershed_nat.geometry, dates=dates, variables=variables, pet=True
+    )
+    yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (
         abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.682) < 1e-3
         and abs(yr_g.isel(time=10, x=5, y=10).tmin.values.item() - (-18.0)) < 1e-1
@@ -49,25 +65,25 @@ def test_daymet():
     )
 
 
-def test_nldi():
-    station_id = "01031500"
+def test_nldi_urlonly():
+    nldi = NLDI()
+    fsource = "comid"
+    fid = "1722317"
+    url = nldi.getfeature_byid(fsource, fid, url_only=True)
+    assert url == "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid/1722317"
 
-    sid = NLDI.starting_comid(station_id)
-    ids = NLDI.comids(station_id)
-    trib = NLDI.tributaries(station_id)
-    main = NLDI.main(station_id)
-    st100 = NLDI.stations(station_id, navigation="upstreamTributaries", distance=100)
-    stm = NLDI.stations(station_id, navigation="upstreamMain")
-    pp = NLDI.pour_points(station_id)
-    fl = utils.prepare_nhdplus(
-        NLDI.flowlines(station_id), 0, 0, purge_non_dendritic=False
-    )
-    ct = NLDI.catchments(station_id)
+
+def test_nldi(watershed_nat):
+    trib = watershed_nat.flowlines()
+    main = watershed_nat.flowlines(navigation="upstreamMain")
+    st100 = watershed_nat.nwis_stations(navigation="upstreamTributaries", distance=100)
+    stm = watershed_nat.nwis_stations(navigation="upstreamMain")
+    pp = watershed_nat.pour_points()
+    fl = utils.prepare_nhdplus(trib, 0, 0, purge_non_dendritic=False)
+    ct = watershed_nat.catchments()
 
     assert (
-        sid == 1722317
-        and ids[-1] == 1723451
-        and trib.shape[0] == 432
+        trib.shape[0] == 432
         and main.shape[0] == 52
         and st100.shape[0] == 3
         and stm.shape[0] == 2
@@ -85,33 +101,24 @@ def test_nhdplus_bybox():
     assert abs(wb.areasqkm.sum() - 87.084) < 1e-3
 
 
-def test_nhdplus_byid():
-    wd = WaterData("catchmentsp")
-    ct = wd.getfeature_byid("featureid", NLDI().comids("01031500"))
-    assert abs(ct.areasqkm.sum() - 773.954) < 1e-3
-
-
-def test_ssebopeta():
-    wshed = Station(station_id="01031500")
+def test_ssebopeta(watershed_nat):
     dates = ("2000-01-01", "2000-01-05")
-    eta_p = hds.ssebopeta_byloc(wshed.coords, dates=dates)
-    eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
+    eta_p = hds.ssebopeta_byloc(watershed_nat.coords, dates=dates)
+    eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates)
     assert (
         abs(eta_p.mean().values[0] == 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.577) < 1e-3
     )
 
 
-def test_nlcd():
-    wshed = Station(station_id="01031500")
-    lulc = hds.nlcd(wshed.geometry, resolution=1)
+def test_nlcd(watershed_nat):
+    lulc = hds.nlcd(watershed_nat.geometry, resolution=1)
     st = utils.cover_statistics(lulc.cover)
     assert abs(st["categories"]["Forest"] - 43.094) < 1e-3
 
 
-def test_nm():
-    wshed = Station(station_id="01031500")
-    nm = NationalMap(wshed.geometry, resolution=1)
+def test_nm(watershed_nat):
+    nm = NationalMap(watershed_nat.geometry, resolution=1)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
     nm.get_slope(mpm=True)
     assert (
@@ -121,8 +128,7 @@ def test_nm():
     )
 
 
-def test_newdb():
-    wshed = Station(station_id="11092450")
+def test_newdb(watershed_urb):
 
     s = ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
     s.spatialRel = "esriSpatialRelIntersects"
@@ -136,8 +142,8 @@ def test_newdb():
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
     s = ArcGISREST(url_rest, verbose=True)
     s.n_threads = 10
-    s.get_featureids(wshed.geometry.bounds)
-    s.get_featureids(wshed.geometry)
+    s.get_featureids(watershed_urb.geometry.bounds)
+    s.get_featureids(watershed_urb.geometry)
     s.outFormat = "geojson"
     storm_pipes = s.get_features()
     s.outFormat = "json"
@@ -146,7 +152,7 @@ def test_newdb():
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     slope = services.wms_bygeom(
         url_wms,
-        geometry=wshed.geometry,
+        geometry=watershed_urb.geometry,
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
         outFormat="image/tiff",
@@ -159,7 +165,7 @@ def test_newdb():
 
     slope = services.wms_bygeom(
         url_wms,
-        geometry=wshed.geometry,
+        geometry=watershed_urb.geometry,
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
         outFormat="image/tiff",
@@ -178,7 +184,7 @@ def test_newdb():
     )
     print(wfs)
 
-    r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
+    r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
     shutil.rmtree("tmp", ignore_errors=True)
@@ -190,12 +196,11 @@ def test_newdb():
     )
 
 
-def test_plot():
+def test_plot(watershed_nat):
     hds.interactive_map([-70, 44, -69, 46])
-    wshed = Station(station_id="01031500")
     dates = ("2000-01-01", "2009-12-31")
-    qobs = hds.nwis_streamflow(wshed.station_id, dates)
-    clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=["prcp"])
+    qobs = hds.nwis_streamflow(watershed_nat.station_id, dates)
+    clm_p = hds.daymet_byloc(watershed_nat.coords, dates=dates, variables=["prcp"])
     plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100
@@ -210,8 +215,8 @@ def test_helpers():
         assert err.shape[0] == 7
 
 
-def test_acc():
-    flw = utils.prepare_nhdplus(NLDI.flowlines("11092450"), 1, 1, 1, True, True)
+def test_acc(watershed_urb):
+    flw = utils.prepare_nhdplus(watershed_urb.flowlines(), 1, 1, 1, True, True)
 
     def routing(qin, q):
         return qin + q
