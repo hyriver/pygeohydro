@@ -61,15 +61,17 @@ coverage: ## check code coverage quickly with the default Python
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
+docs: apidocs ## generate Sphinx HTML documentation, including API docs
+	$(MAKE) -C docs clean
+	$(MAKE) -C docs html
+	$(BROWSER) docs/_build/html/index.html
+
+apidocs: ## generate API docs
 	rm -f docs/hydrodata.rst
 	rm -f docs/modules.rst
 	sphinx-apidoc -o docs/ hydrodata
 	sed -i '0,/hydrodata/{s/hydrodata/Modules/}' docs/modules.rst
 	sed -i '0,/hydrodata/{s/hydrodata package/Hydrodata Package/}' docs/hydrodata.rst
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
 
 servedocs: docs ## compile the docs watching for changes
 	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
