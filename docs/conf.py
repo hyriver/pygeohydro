@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # hydrodata documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
