@@ -40,8 +40,6 @@ class MissingItems(Exception):
 class ZeroMatched(ValueError):
     """Exception raised when a function argument is missing"""
 
-    pass
-
 
 class InvalidInputValue(Exception):
     """Exception raised for invalid input
@@ -66,8 +64,6 @@ class InvalidInputValue(Exception):
 
 class InvalidInputRange(ValueError):
     """Exception raised when a function argument is not in the valid range"""
-
-    pass
 
 
 class InvalidInputType(Exception):
@@ -95,5 +91,3 @@ class InvalidInputType(Exception):
 
 class MissingInputs(ValueError):
     """Exception raised when there are missing function arguments"""
-
-    pass
