@@ -22,6 +22,7 @@ dependencies:
   - dask
   - netCDF4
   - bottleneck
+  - descartes
 
   - isort
   - black
@@ -48,4 +49,5 @@ dependencies:
   - sphinx
   - sphinx-copybutton
   - pip:
+    - flake8-use-fstring
     - git+https://github.com/bashtage/sphinx-material.git

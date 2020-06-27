@@ -17,6 +17,8 @@ dependencies:
   - simplejson
   - defusedxml
 
+  - descartes
+
   - numpydoc
   - ipykernel
   - ipython
@@ -25,6 +27,7 @@ dependencies:
   - pip:
     - geojson
     - folium
+
     - nbsphinx
     - sphinx-markdown-tables
     - sphinx-copybutton
