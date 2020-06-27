@@ -14,6 +14,13 @@ from shapely.geometry import Polygon, box
 
 from hydrodata import connection, helpers, services, utils
 from hydrodata.connection import RetrySession
+from hydrodata.exceptions import (
+    InvalidInputRange,
+    InvalidInputType,
+    InvalidInputValue,
+    MissingInputs,
+    ZeroMatched,
+)
 from hydrodata.services import WFS
 
 MARGINE = 15
@@ -40,13 +47,13 @@ def nwis_streamflow(station_ids, dates):
     elif isinstance(station_ids, list):
         station_ids = [str(i) for i in station_ids]
     else:
-        raise ValueError("the ids argument should be either a str or a list or str")
+        raise InvalidInputType("ids", "str or list")
 
     if isinstance(dates, tuple) and len(dates) == 2:
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
     else:
-        raise ValueError("dates argument should be tuple of length 2: (start, end)")
+        raise InvalidInputType("dates", "tuple", "(start, end)")
 
     siteinfo = nwis_siteinfo(station_ids)
     check_dates = siteinfo.loc[
@@ -57,12 +64,11 @@ def nwis_streamflow(station_ids, dates):
     ].tolist()
     nas = [s for s in station_ids if s in check_dates]
     if len(nas) > 0:
-        msg = (
+        raise InvalidInputRange(
             "Daily Mean data unavailable for the specified time "
             + "period for the following stations:\n"
             + ", ".join(str(s) for s in nas)
         )
-        raise ValueError(msg)
 
     url = "https://waterservices.usgs.gov/nwis/dv"
     payload = {
@@ -146,15 +152,9 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
             if len(bbox) == 4:
                 query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
             else:
-                raise TypeError(
-                    "The bounding box should be a list or tuple of length 4: "
-                    + "[west, south, east, north]"
-                )
+                raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
         else:
-            raise TypeError(
-                "The bounding box should be a list or tuple of length 4: "
-                + "[west, south, east, north]"
-            )
+            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     elif ids is not None and bbox is None:
         if isinstance(ids, str):
@@ -162,9 +162,9 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
         elif isinstance(ids, list):
             query = {"sites": ",".join(str(i) for i in ids)}
         else:
-            raise ValueError("the ids argument should be either a str or a list or str")
+            raise InvalidInputType("ids", "str or list")
     else:
-        raise ValueError("Either ids or bbox argument should be provided.")
+        raise MissingInputs("Either ids or bbox argument should be provided.")
 
     url = "https://waterservices.usgs.gov/nwis/site"
 
@@ -214,8 +214,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
 
 class WaterData:
-    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`_ service.
-    """
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`_ service."""
 
     def __init__(self, layer, crs="epsg:4269"):
         """Initialize the class
@@ -280,7 +279,7 @@ class WaterData:
         features = utils.json_togeodf(r.json(), self.crs, out_crs)
 
         if features.shape[0] == 0:
-            raise KeyError(
+            raise ZeroMatched(
                 f"No feature was found in bbox({', '.join(str(round(x, 3)) for x in bbox)})"
             )
 
@@ -310,16 +309,12 @@ class WaterData:
         valid_names = utils.json_togeodf(r.json(), self.crs, self.crs)
 
         if property_name not in valid_names:
-            raise ValueError(
-                "The given property name argument is invalid."
-                + f" Valid property names for {self.layer} layer are:\n"
-                + ", ".join(name for name in valid_names)
-            )
+            raise InvalidInputValue("property name", valid_names)
 
         r = self.wfs.getfeature_byid(property_name, property_ids, filter_spec="2.0")
         rjson = r.json()
         if rjson["numberMatched"] == 0:
-            raise ValueError(
+            raise ZeroMatched(
                 f"No feature was found in {self.layer} "
                 + "layer that matches the given ID(s)."
             )
@@ -330,174 +325,104 @@ class WaterData:
 class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
-    @staticmethod
-    def available_features():
-        url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
-        r = RetrySession().get(url)
-        return r.json()
+    def __init__(self):
+        """Initialize NLDI class"""
 
-    @classmethod
-    def starting_comid(cls, station_id):
-        """Find starting ComID based on the USGS station."""
-        return cls.navigate("nwissite", station_id, navigation=None).comid.tolist()[0]
+        self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+        self.session = RetrySession()
+        r = self.session.get(self.base_url).json()
+        self.valid_sources = [
+            el for sub in utils.traverse_json(r, ["source"]) for el in sub
+        ]
 
-    @classmethod
-    def comids(cls, station_id):
-        """Find ComIDs of all the flowlines."""
-        return cls.navigate("nwissite", station_id).comid.tolist()
-
-    @classmethod
-    def tributaries(cls, station_id):
-        """Get upstream tributaries of the watershed."""
-        return cls.navigate("nwissite", station_id)
-
-    @classmethod
-    def main(cls, station_id):
-        """Get upstream main channel of the watershed."""
-        return cls.navigate("nwissite", station_id, "upstreamMain")
-
-    @classmethod
-    def stations(cls, station_id, navigation="upstreamTributaries", distance=None):
-        """Get USGS stations up/downstream of a station.
+    def getfeature_byid(self, fsource, fid, basin=False, url_only=False):
+        """Get features of a single id
 
         Parameters
         ----------
-        station_id : str
-            The USGS station ID.
-        navigation : str, optional
-            The direction for navigating the NHDPlus database. The valid options are:
-            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
-            ``downstreamDiversions``. Defaults to upstreamTributaries.
-        distance : float, optional
-            The distance to limit the navigation in km. Defaults to None (all stations).
+        fsource : str
+            The name of feature source. The valid sources are:
+            comid, huc12pp, nwissite, wade, WQP
+        fid : str
+            The ID of the feature.
+        basin : bool
+            Whether to return the basin containing the feature.
+        url_only : bool
+            Whether to only return the generated url, defaults to False.
+            It's intended for preparing urls for batch download.
 
         Returns
         -------
         geopandas.GeoDataFrame
         """
-        return cls.navigate("nwissite", station_id, navigation, "nwissite", distance)
 
-    @classmethod
-    def pour_points(cls, station_id):
-        """Get upstream tributaries of the watershed."""
-        return cls.navigate("nwissite", station_id, dataSource="huc12pp")
+        if fsource not in self.valid_sources:
+            raise InvalidInputValue("feature source", self.valid_sources)
 
-    @classmethod
-    def flowlines(cls, station_id):
-        """Get flowlines for the entire watershed from NHDPlus V2"""
-        wd = WaterData("nhdflowline_network")
-        return wd.getfeature_byid("comid", cls.comids(station_id))
+        url = "/".join([self.base_url, fsource, fid])
+        if basin:
+            url += "/basin"
 
-    @classmethod
-    def catchments(cls, station_id):
-        """Get chatchments for the entire watershed from NHDPlus V2"""
-        wd = WaterData("catchmentsp")
-        return wd.getfeature_byid("featureid", cls.comids(station_id))
+        if url_only:
+            return url
 
-    @staticmethod
-    def basin(station_id):
-        """Get USGS stations basins using NLDI service."""
-        url = (
-            "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
-            + f"/nwissite/USGS-{station_id}/basin"
+        return utils.json_togeodf(
+            self.session.get(url).json(), "epsg:4269", "epsg:4326"
         )
-        r = RetrySession().get(url)
-        return utils.json_togeodf(r.json(), "epsg:4269", crs="epsg:4326")
 
-    @staticmethod
-    def navigate(
-        feature,
-        featureids,
-        navigation="upstreamTributaries",
-        dataSource="flowline",
-        distance=None,
+    def navigate_byid(
+        self, fsource, fid, navigation, source=None, distance=None, url_only=False
     ):
-        """Navigate NHDPlus V2 based on ComID(s).
+        """Navigate the NHDPlus databse from a single feature id
 
         Parameters
         ----------
-        feature : str
-            The requested feature. The valid features are ``nwissite`` and ``comid``.
-        featureids : str or list
-            The ID(s) of the requested feature.
-        navigation : str, optional
-            The direction for navigating the NHDPlus database. The valid options are:
-            None, ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
-            ``downstreamDiversions``. Defaults to upstreamTributaries.
-        distance : float, optional
-            The distance to limit the navigation in km. Defaults to None (limitless).
-        dataSource : str, optional
-            The data source to be navigated. Acceptable options are ``flowline`` for flowlines,
-            ``nwissite`` for USGS stations and ``huc12pp`` for HUC12 pour points.
-            Defaults to None.
+        fsource : str
+            The name of feature source. The valid sources are:
+            comid, huc12pp, nwissite, wade, WQP.
+        fid : str
+            The ID of the feature.
+        navigation : str
+            The navigation method.
+        source : str, optional
+            Return the data from another source after navigating
+            the features using fsource, defaults to None.
+        distance : int, optional
+            Limit the search for navigation up to a distance, defaults to None.
+        url_only : bool
+            Whether to only return the generated url, defaults to False.
+            It's intended for  preparing urls for batch download.
 
         Returns
         -------
         geopandas.GeoDataFrame
         """
-        valid_features = ["comid", "nwissite"]
-        if feature not in valid_features:
-            msg = (
-                "The acceptable feature options are:"
-                + f" {', '.join(x for x in valid_features)}"
-            )
-            raise ValueError(msg)
 
-        valid_dataSource = ["flowline", "nwissite", "huc12pp"]
-        if dataSource not in valid_dataSource:
-            msg = (
-                "The acceptable dataSource options are:"
-                + f"{', '.join(x for x in valid_dataSource)}"
-            )
-            raise ValueError(msg)
+        if fsource not in self.valid_sources:
+            raise InvalidInputValue("feature source", self.valid_sources)
 
-        if not isinstance(featureids, list):
-            featureids = [featureids]
+        url = "/".join([self.base_url, fsource, fid, "navigate"])
 
-        if feature == "nwissite":
-            featureids = ["USGS-" + str(f) for f in featureids]
+        valid_navigations = self.session.get(url).json()
+        if navigation not in valid_navigations.keys():
+            raise InvalidInputValue("navigation", valid_navigations.keys())
 
-        if len(featureids) == 0:
-            raise ValueError("The featureID list is empty!")
+        url = valid_navigations[navigation]
 
-        ds = "" if dataSource == "flowline" else f"/{dataSource}"
-        dis = "" if distance is None else f"?distance={distance}"
+        if source is not None:
+            if source not in self.valid_sources:
+                raise InvalidInputValue("source", self.valid_sources)
+            url += f"/{source}"
 
-        nav_options = {
-            "upstreamMain": "UM",
-            "upstreamTributaries": "UT",
-            "downstreamMain": "DM",
-            "downstreamDiversions": "DD",
-        }
+        if distance is not None:
+            url += f"?distance={int(distance)}"
 
-        if navigation is None:
-            nav = ""
-        elif navigation in nav_options.keys():
-            nav = f"navigate/{nav_options[navigation]}{ds}{dis}"
-        else:
-            raise ValueError(
-                "The acceptable navigation options are:"
-                + f" {', '.join(x for x in list(nav_options.keys()))}"
-            )
+        if url_only:
+            return url
 
-        base_url = f"https://labs.waterdata.usgs.gov/api/nldi/linked-data/{feature}"
-        crs = "epsg:4326"
-        session = RetrySession()
-
-        def get_url(fid):
-            url = f"{base_url}/{fid}/{nav}"
-
-            r = session.get(url)
-            return utils.json_togeodf(r.json(), "epsg:4269", crs=crs)
-
-        features = gpd.GeoDataFrame(pd.concat(get_url(fid) for fid in featureids))
-        comid = "nhdplus_comid" if dataSource == "flowline" else "comid"
-        features = features.rename(columns={comid: "comid"})
-        features = features[["comid", "geometry"]]
-        features["comid"] = features.comid.astype("int64")
-        features.crs = crs
-
-        return features
+        return utils.json_togeodf(
+            self.session.get(url).json(), "epsg:4269", "epsg:4326"
+        )
 
 
 def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
@@ -530,10 +455,10 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
     else:
-        raise ValueError("coords argument should be a tuple of length 2: (lon, lat)")
+        raise InvalidInputType("coords", "tuple", "(lon, lat)")
 
     if not ((14.5 < lat < 52.0) or (-131.0 < lon < -53.0)):
-        raise ValueError(
+        raise InvalidInputRange(
             "The location is outside the Daymet dataset. "
             + "The acceptable range is: "
             + "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
@@ -544,10 +469,10 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
             start = pd.to_datetime(dates[0])
             end = pd.to_datetime(dates[1])
         else:
-            raise ValueError("dates argument should be tuple of length 2: (start, end)")
+            raise InvalidInputType("dates", "tuple", "(start, end)")
 
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 to 2019.")
+            raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
 
         date_dict = {
             "start": start.strftime("%Y-%m-%d"),
@@ -557,7 +482,9 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
         years = years if isinstance(years, (list, tuple)) else [years]
         date_dict = {"years": ",".join(str(x) for x in years)}
     else:
-        raise ValueError("Either years or start and end arguments should be provided.")
+        raise MissingInputs(
+            "Either years or start and end arguments should be provided."
+        )
 
     vars_table = helpers.daymet_variables()
     valid_variables = vars_table.Abbr.to_list()
@@ -565,17 +492,12 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     if variables is not None:
         variables = variables if isinstance(variables, (list, tuple)) else [variables]
 
-        invalid = [v for v in variables if v not in valid_variables]
-        if invalid:
-            raise KeyError(
-                "These required variables are not in the dataset: "
-                + ", ".join(x for x in invalid)
-                + f'\nRequired variables are {", ".join(x for x in valid_variables)}'
-            )
+        if not all(v for v in variables if v not in valid_variables):
+            raise InvalidInputValue("variables", valid_variables)
 
         if pet:
-            reqs = ["tmin", "tmax", "vp", "srad", "dayl"]
-            variables = list(set(reqs) | set(variables))
+            reqs = ("tmin", "tmax", "vp", "srad", "dayl")
+            variables = tuple(set(reqs) | set(variables))
     else:
         variables = valid_variables
 
@@ -649,9 +571,9 @@ def daymet_bygeom(
             start = pd.to_datetime(dates[0]) + DateOffset(hour=12)
             end = pd.to_datetime(dates[1]) + DateOffset(hour=12)
         else:
-            raise ValueError("dates argument should be tuple of length 2: (start, end)")
+            raise InvalidInputType("dates", "tuple", "(start, end)")
         if start < pd.to_datetime("1980-01-01"):
-            raise ValueError("Daymet database ranges from 1980 till 2019.")
+            raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
         dates = utils.daymet_dates(start, end)
 
     elif years is not None and dates is None:
@@ -666,7 +588,7 @@ def daymet_bygeom(
                 end_list.append(pd.to_datetime(f"{year}1231") + DateOffset(hour=12))
         dates = zip(start_list, end_list)
     else:
-        raise ValueError("Either years or start and end arguments should be provided.")
+        raise MissingInputs("Either years or dates arguments should be provided.")
 
     vars_table = helpers.daymet_variables()
 
@@ -674,28 +596,19 @@ def daymet_bygeom(
     valid_variables = vars_table.Abbr.to_list()
 
     if variables is not None:
-        variables = variables if isinstance(variables, list) else [variables]
+        variables = variables if isinstance(variables, (list, tuple)) else [variables]
 
-        invalid = [v for v in variables if v not in valid_variables]
-        if len(invalid) > 0:
-            msg = (
-                "These required variables are not in the dataset: "
-                + ", ".join(x for x in invalid)
-                + f'\nRequired variables are {", ".join(x for x in valid_variables)}'
-            )
-            raise KeyError(msg)
+        if not all(v for v in variables if v not in valid_variables):
+            raise InvalidInputValue("variables", valid_variables)
 
         if pet:
-            reqs = ["tmin", "tmax", "vp", "srad", "dayl"]
-            variables = list(set(reqs) | set(variables))
+            reqs = ("tmin", "tmax", "vp", "srad", "dayl")
+            variables = tuple(set(reqs) | set(variables))
     else:
-        if pet:
-            variables = ["tmin", "tmax", "vp", "srad", "dayl"]
-        else:
-            variables = valid_variables
+        variables = valid_variables
 
     if not isinstance(geometry, Polygon):
-        raise TypeError("The geometry argument should be of Shapely's Polygon type.")
+        raise InvalidInputType("geometry", "Shapely's Polygon")
 
     if fill_holes:
         geometry = Polygon(geometry.exterior)
@@ -798,12 +711,12 @@ def ssebopeta_byloc(coords, dates=None, years=None):
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
     else:
-        raise ValueError("coords argument should be a tuple of length 2: (lon, lat)")
+        raise InvalidInputType("coords", "tuple", "(lon, lat)")
 
     if isinstance(dates, tuple) and len(dates) == 2:
         start, end = dates
     else:
-        raise ValueError("dates argument should be tuple of length 2: (start, end)")
+        raise InvalidInputType("dates", "tuple", "(start, end)")
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
@@ -861,7 +774,7 @@ def ssebopeta_bygeom(
     """
 
     if not isinstance(geometry, (Polygon, box)):
-        raise TypeError("Geometry should be of type Shapely Polygon.")
+        raise InvalidInputType("geometry", "Shapely's Polygon")
 
     if isinstance(geometry, Polygon) and fill_holes:
         geometry = Polygon(geometry.exterior)
@@ -877,7 +790,7 @@ def ssebopeta_bygeom(
     if isinstance(dates, tuple) and len(dates) == 2:
         start, end = dates
     else:
-        raise ValueError("dates argument should be tuple of length 2: (start, end)")
+        raise InvalidInputType("dates", "tuple", "(start, end)")
 
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
 
@@ -977,14 +890,14 @@ def nlcd(
     if isinstance(years, dict):
         for service in years.keys():
             if years[service] not in avail_years[service]:
-                msg = (
-                    f"{service.capitalize()} data for {years[service]} is not in the databse."
-                    + "Avaible years are:"
-                    + f"{' '.join(str(x) for x in avail_years[service])}"
+                raise InvalidInputValue(
+                    f"{service.capitalize()} data for {years[service]}",
+                    avail_years[service],
                 )
-                raise ValueError(msg)
     else:
-        raise TypeError("Years should be of type dict.")
+        raise InvalidInputType(
+            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
+        )
 
     url = "https://www.mrlc.gov/geoserver/mrlc_download/wms"
 
@@ -1207,11 +1120,10 @@ class Station:
             self.station_id = str(station_id)
             self.get_coords()
         else:
-            msg = (
+            raise MissingInputs(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "Either coordinates or station ID should be specified."
             )
-            raise ValueError(msg)
 
         self.lon, self.lat = self.coords
 
@@ -1226,6 +1138,7 @@ class Station:
                     + f"Input directory cannot be created: {self.data_dir}"
                 )
 
+        self.nldi = NLDI()
         self.get_watershed()
 
         info = nwis_siteinfo(ids=self.station_id, expanded=True)
@@ -1242,6 +1155,7 @@ class Station:
                 self.areasqkm = self.watershed.flowlines.areasqkm.sum()
 
         self.hcdn = info.hcdn_2009.to_numpy()[0]
+
         if self.verbose:
             print(self.__repr__())
 
@@ -1295,7 +1209,7 @@ class Station:
         sites = nwis_siteinfo(bbox=bbox)
         sites = sites[sites.stat_cd == "00003"]
         if len(sites) < 1:
-            raise ValueError(
+            raise ZeroMatched(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
                 + f"{int(self.srad * 111 / 10) * 10}-km radius "
@@ -1334,7 +1248,7 @@ class Station:
                     break
 
         if station_id is None:
-            raise ValueError(
+            raise ZeroMatched(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
                 + f"{int(self.srad * 111 / 10) * 10}-km radius.\n"
@@ -1370,7 +1284,9 @@ class Station:
                     f"[ID: {self.station_id}] ".ljust(MARGINE)
                     + "Downloading watershed geometry using NLDI service >>>"
                 )
-            self.basin = NLDI.basin(self.station_id)
+            self.basin = self.nldi.getfeature_byid(
+                "nwissite", f"USGS-{self.station_id}", basin=True
+            )
             self.basin.to_file(geom_file)
 
             if self.verbose:
@@ -1381,6 +1297,116 @@ class Station:
 
         self.geometry = self.basin.geometry.to_numpy()[0]
 
+    def comids(self, navigation="upstreamTributaries", distance=None):
+        """Find ComIDs of the flowlines within the watershed.
+
+        Parameters
+        ----------
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
+        distance : float, optional
+            The distance to limit the navigation in km, defaults to None.
+
+        Returns
+        -------
+        list
+        """
+        comids = self.nldi.navigate_byid(
+            "nwissite",
+            f"USGS-{self.station_id}",
+            navigation=navigation,
+            distance=distance,
+        )
+        return comids.nhdplus_comid.tolist()
+
+    def nwis_stations(self, navigation="upstreamTributaries", distance=None):
+        """Get USGS stations within the watershed.
+
+        Parameters
+        ----------
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (all stations).
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        return self.nldi.navigate_byid(
+            "nwissite",
+            f"USGS-{self.station_id}",
+            navigation=navigation,
+            source="nwissite",
+            distance=distance,
+        )
+
+    def pour_points(self, navigation="upstreamTributaries", distance=None):
+        """Get HUC12 pour point within the watershed.
+
+        Parameters
+        ----------
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (all stations).
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        return self.nldi.navigate_byid(
+            "nwissite",
+            f"USGS-{self.station_id}",
+            navigation=navigation,
+            source="huc12pp",
+            distance=distance,
+        )
+
+    def catchments(self, navigation="upstreamTributaries", distance=None):
+        """Get chatchments for the watershed from NHDPlus V2.
+
+        Parameters
+        ----------
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
+        distance : float, optional
+            The distance to limit the navigation in km. Defaults to None (all stations).
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        wd = WaterData("catchmentsp")
+        return wd.getfeature_byid("featureid", self.comids(navigation, distance))
+
+    def flowlines(self, navigation="upstreamTributaries", distance=None):
+        """Get flowlines for the watershed from NHDPlus V2.
+
+        Parameters
+        ----------
+        navigation : str, optional
+            The direction for navigating the NHDPlus database. The valid options are:
+            ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
+            ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
+        distance : float, optional
+            The distance to limit the navigation in km, defaults to None.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+        """
+        wd = WaterData("nhdflowline_network")
+        return wd.getfeature_byid("comid", self.comids(navigation, distance))
+
 
 def interactive_map(bbox):
     """An interactive map including all USGS stations within a bounding box.
@@ -1389,7 +1415,7 @@ def interactive_map(bbox):
 
     Parameters
     ----------
-    bbox : list
+    bbox : tuple
         List of corners in this order [west, south, east, north]
 
     Returns
@@ -1399,7 +1425,7 @@ def interactive_map(bbox):
     import folium
 
     if not isinstance(bbox, list):
-        raise ValueError("bbox should be a list: [west, south, east, north]")
+        raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     sites = nwis_siteinfo(bbox=bbox)
     sites = sites[

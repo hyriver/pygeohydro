@@ -18,6 +18,13 @@ from owslib.wms import WebMapService
 from shapely.geometry import LineString, Point, box, mapping
 
 from hydrodata.connection import RetrySession
+from hydrodata.exceptions import (
+    InvalidInputRange,
+    InvalidInputType,
+    MissingInputs,
+    MissingItems,
+    ZeroMatched,
+)
 
 
 def threading(func, iter_list, param_list=None, max_workers=8):
@@ -59,7 +66,7 @@ def check_dir(fpath_itr):
     if isinstance(fpath_itr, str):
         fpath_itr = [fpath_itr]
     elif not isinstance(fpath_itr, Iterable):
-        raise ValueError("Input should be either a string or an iterable object.")
+        raise InvalidInputType("fpath_itr", "str or iterable")
 
     for f in fpath_itr:
         parent = Path(f).parent
@@ -94,19 +101,21 @@ def get_ssebopeta_urls(start=None, end=None, years=None):
         start = pd.to_datetime(start)
         end = pd.to_datetime(end)
         if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
-            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
         dates = pd.date_range(start, end)
     elif years is not None and start is None and end is None:
         years = years if isinstance(years, list) else [years]
         seebop_yrs = np.arange(2000, 2019)
 
         if any(y not in seebop_yrs for y in years):
-            raise ValueError("SSEBop database ranges from 2000 till 2018.")
+            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         dates = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
     else:
-        raise ValueError("Either years or start and end arguments should be provided.")
+        raise MissingInputs(
+            "Either years or start and end arguments should be provided."
+        )
 
     base_url = (
         "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
@@ -142,7 +151,7 @@ def elevation_byloc(lon, lat):
     root = r.json()["USGS_Elevation_Point_Query_Service"]
     elevation = root["Elevation_Query"]["Elevation"]
     if elevation == -1000000:
-        raise ValueError(
+        raise ZeroMatched(
             f"The altitude of the requested coordinate ({lon}, {lat}) cannot be found."
         )
 
@@ -174,15 +183,8 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     import pyproj
     import shapely.ops as ops
 
-    if isinstance(bbox, (list, tuple)):
-        if len(bbox) != 4:
-            raise TypeError(
-                "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-            )
-    else:
-        raise TypeError(
-            "The bounding box should be a list or tuple of length 4: [west, south, east, north]"
-        )
+    if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+        raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     layers = ["3DEPElevation:None"]
@@ -235,7 +237,7 @@ def pet_fao_byloc(clm, lon, lat):
 
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
-    check_requirements(reqs, clm.columns)
+    check_requirements(reqs, clm)
 
     dtype = clm.dtypes[0]
     clm["tmean (deg c)"] = 0.5 * (clm["tmax (deg c)"] + clm["tmin (deg c)"])
@@ -449,35 +451,13 @@ def exceedance(daily):
     """
 
     if not isinstance(daily, pd.Series):
-        raise TypeError("The input should be of type pandas Series.")
+        raise InvalidInputType("daily", "pandas.Series")
 
     rank = daily.rank(ascending=False, pct=True) * 100
     fdc = pd.concat([daily, rank], axis=1)
     fdc.columns = ["Q", "rank"]
     fdc = fdc.sort_values(by=["rank"]).set_index("rank", drop=True)
     return fdc
-
-
-def check_columns(df, req_cols):
-    """Check if a dataframe has a list of required columns
-
-    Parameters
-    ----------
-    df : pandas.DataFrame
-        A Pandas DataFrame.
-    req_cols : list or tuple
-        A list of required column names
-
-    Raises
-    ------
-    ValueError
-        Shows the missing columns
-    """
-    missing = [c for c in req_cols if c not in df]
-    if missing:
-        raise ValueError(
-            "The following columns are missing:\n" + f"{', '.join(m for m in missing)}"
-        )
 
 
 def prepare_nhdplus(
@@ -533,14 +513,14 @@ def prepare_nhdplus(
         "ftype",
     ]
 
-    check_columns(flw, req_cols)
+    check_requirements(req_cols, flw)
     flw[req_cols[:-1]] = flw[req_cols[:-1]].astype("Int64")
 
     if not any(flw.terminalfl == 1):
         if all(flw.terminalpa == flw.terminalpa.iloc[0]):
             flw.loc[flw.hydroseq == flw.hydroseq.min(), "terminalfl"] = 1
         else:
-            raise ValueError("No terminal flag were found in the dataframe.")
+            raise ZeroMatched("No terminal flag were found in the dataframe.")
 
     if purge_non_dendritic:
         flw = flw[
@@ -595,7 +575,7 @@ def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
         "totdasqkm",
         "pathlength",
     ]
-    check_columns(flw, req_cols)
+    check_requirements(req_cols, flw)
 
     flw[req_cols[:-2]] = flw[req_cols[:-2]].astype("Int64")
 
@@ -638,7 +618,7 @@ def add_tocomid(flw):
     """
 
     req_cols = ["comid", "terminalpa", "fromnode", "tonode"]
-    check_columns(flw, req_cols)
+    check_requirements(req_cols, flw)
 
     flw[req_cols] = flw[req_cols].astype("Int64")
 
@@ -1096,19 +1076,17 @@ def check_requirements(reqs, cols):
     Parameters
     ----------
     reqs : Iterable
-        A list of required data names as strs
+        A list of required data names (str)
     cols : list
-        A list of data names as strs
+        A list of variable names (str)
     """
 
     if not isinstance(reqs, Iterable):
-        raise ValueError("Inputs should be list of strs")
+        raise InvalidInputType("reqs", "iterable")
 
     missing = [r for r in reqs if r not in cols]
     if missing:
-        raise ValueError(
-            "The following required data are missing:\n" + ", ".join(m for m in missing)
-        )
+        raise MissingItems(missing)
 
 
 def topoogical_sort(flowlines):

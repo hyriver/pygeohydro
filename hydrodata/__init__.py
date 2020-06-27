@@ -2,6 +2,14 @@
 
 from .connection import RetrySession
 from .datasets import NLDI, NationalMap, Station, WaterData
+from .exceptions import (
+    InvalidInputRange,
+    InvalidInputType,
+    InvalidInputValue,
+    MissingInputs,
+    ServerError,
+    ZeroMatched,
+)
 from .services import WFS, ArcGISREST
 
 __author__ = """Taher Chegini"""
