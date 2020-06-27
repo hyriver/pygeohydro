@@ -197,8 +197,9 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
     gii = WaterData("gagesii", "epsg:900913")
     hcdn = gii.getfeature_byid("staid", sites.site_no.tolist())
+    hcdn_dict = hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
     sites["hcdn_2009"] = sites.site_no.apply(
-        lambda x: hcdn.loc[hcdn.staid == x, "hcdn_2009"].to_numpy()
+        lambda x: len(hcdn_dict[x]) > 0 if x in hcdn_dict.keys() else False
     )
 
     return sites
