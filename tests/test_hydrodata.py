@@ -76,7 +76,7 @@ def test_nldi_urlonly():
 def test_nldi(watershed_nat):
     trib = watershed_nat.flowlines()
     main = watershed_nat.flowlines(navigation="upstreamMain")
-    st100 = watershed_nat.nwis_stations(navigation="upstreamTributaries", distance=100)
+    st100 = watershed_nat.nwis_stations(distance=100)
     stm = watershed_nat.nwis_stations(navigation="upstreamMain")
     pp = watershed_nat.pour_points()
     fl = utils.prepare_nhdplus(trib, 0, 0, purge_non_dendritic=False)
