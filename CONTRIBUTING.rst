@@ -61,13 +61,13 @@ Get Started!
 Ready to contribute? Here's how to set up `hydrodata` for local development.
 
 1. Fork the `hydrodata` repo on GitHub.
-2. Clone your fork locally::
+2. Clone your fork locally:
 
 .. code-block:: console
 
     $ git clone git@github.com:your_name_here/hydrodata.git
 
-3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you set up your fork for local development::
+3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you set up your fork for local development:
 
 .. code-block:: console
 
@@ -76,20 +76,20 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ conda activate hydrodata-dev
     $ python -m pip install . --no-deps
 
-4. Create a branch for local development::
+4. Create a branch for local development:
 
 .. code-block:: console
 
     $ git checkout -b name-of-your-bugfix-or-feature
 
-5. Before you first commit, pre-commit hooks needs to be setup::
+5. Before you first commit, pre-commit hooks needs to be setup:
 
 .. code-block:: console
 
     $ pre-commit install
     $ pre-commit run --all-files
 
-6. Now you can make your changes locally, make sure to add a discription of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterward, you can install and test the code::
+6. Now you can make your changes locally, make sure to add a discription of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterward, you can install and test the code:
 
 .. code-block:: console
 
@@ -98,7 +98,7 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ make install
     $ make coverage
 
-7. Commit your changes and push your branch to GitHub::
+7. Commit your changes and push your branch to GitHub:
 
 .. code-block:: console
 
@@ -126,7 +126,7 @@ Before you submit a pull request, check that it meets these guidelines:
 Tips
 ----
 
-To run a subset of tests::
+To run a subset of tests:
 
 .. code-block:: console
 
@@ -137,7 +137,7 @@ Deploying
 
 A reminder for the maintainers on how to deploy.
 Make sure all your changes are committed (including an entry in HISTORY.rst).
-Then run::
+Then run:
 
 .. code-block:: console
 
