@@ -10,19 +10,23 @@ Breaking changes
 - Unified function names for getting feature by ID and by box.
 - Combined ``start`` and ``end`` arguments into a ``tuple`` argument
   called ``dates`` across the codebase.
+- Re-wrote NLDI function and moved most of its classmethods to Station
+  so now Station class has more cohesion.
 
 Enhancements
 ~~~~~~~~~~~~
-- Remove soft requirements from the env files
-- Refactored ``requests`` functions into a single class and a separate file
-- Made all the classes available directly from ``hydrodata``
+- Remove soft requirements from the env files.
+- Refactored ``requests`` functions into a single class and a separate file.
+- Made all the classes available directly from ``hydrodata``.
 - Added CodeFactor to the Github pipline and addressed the some of issues
-  that CodeFactor found
-- Improve docstrings and documentations
+  that CodeFactor found.
+- Improve docstrings and documentations.
+- Add customized exceptions for better exception handling.
+- Add ``pytest`` fixture to increase the test speed.
 
 New Features
 ~~~~~~~~~~~~
-- Added access to all Water Data's Geoserver databases
+- Added access to all Water Data's Geoserver databases.
 
 Bug fixes
 ~~~~~~~~~
