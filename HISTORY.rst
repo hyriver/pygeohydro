@@ -23,6 +23,8 @@ Enhancements
 - Improve docstrings and documentations.
 - Add customized exceptions for better exception handling.
 - Add ``pytest`` fixture to increase the test speed.
+- Refactor ``daymet`` and ``nwis_siteinfo`` function to reduce complexity
+  and improve readability
 
 New Features
 ~~~~~~~~~~~~
