@@ -46,8 +46,7 @@
     :target: https://zenodo.org/badge/latestdoi/237573928
     :alt: Zenodo
 
-
------------------
+|
 
 Features
 --------
@@ -124,12 +123,10 @@ The generated ``wshed`` object has a property that shows whether the station is 
 
 .. code-block:: python
 
-    from hydrodata import NLDI
-
-    tributaries = NLDI.tributaries(wshed.station_id)
-    main = NLDI.main(wshed.station_id)
-    stations = NLDI.stations(wshed.station_id)
-    stations_m150 = NLDI.stations(wshed.station_id, navigation="upstreamMain", distance=150)
+    tributaries = wshed.flowlines()
+    main_channel = wshed.flowlines(navigation="upstreamMain")
+    catchments = wshed.catchments()
+    stations = wshed.nwis_stations(navigation="upstreamMain", distance=150)
 
 For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
 
@@ -137,8 +134,7 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
 
     from hydrodata import utils
 
-    flowlines = NLDI.flowlines(wshed.station_id)
-    flw = utils.prepare_nhdplus(flowlines, 0, 0, purge_non_dendritic=False)
+    flw = utils.prepare_nhdplus(tributaries, 0, 0, purge_non_dendritic=False)
 
     def routing(qin, q):
         return qin + q
@@ -198,7 +194,7 @@ All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stabl
 Some example plots are shown below:
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
-        :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
 The ``services`` module can be used to access some other web services as well. For example, we can access `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
