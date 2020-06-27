@@ -21,6 +21,8 @@
     :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
     :alt: Github Actions
 
+|
+
 Hydrodata is a portal to access hydrology and climatology data in python and designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization.
 
 Introduction
