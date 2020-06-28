@@ -21,5 +21,7 @@ jobs:
 
       - run: isort --recursive --diff hydrodata tests
       - run: black -t py36 --diff hydrodata tests
-      - run: pyupgrade --py36-plus
+      - run: blackdoc --check .
       - run: flake8 hydrodata tests
+      - run: bandit -lll --recursive hydrodata
+      - run: pyupgrade --py36-plus
