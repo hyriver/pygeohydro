@@ -6,8 +6,9 @@ flake8-blind-except
 flake8-bugbear
 flake8-use-fstring
 pycodestyle
-mypy
 numpydoc
 black
+blackdoc
+bandit
 pyupgrade
 isort

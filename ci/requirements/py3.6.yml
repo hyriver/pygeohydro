@@ -9,7 +9,6 @@ dependencies:
   - matplotlib-base
   - xarray
   - scipy
-  - lxml
   - geopandas
   - geojson
   - folium

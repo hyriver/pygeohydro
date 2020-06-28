@@ -9,7 +9,6 @@ dependencies:
   - matplotlib-base
   - xarray
   - scipy
-  - lxml
   - geopandas
   - geojson
   - folium
@@ -24,18 +23,6 @@ dependencies:
   - bottleneck
   - descartes
 
-  - isort
-  - black
-  - flake8
-  - flake8-comprehensions
-  - flake8-builtins
-  - flake8-rst-docstrings
-  - flake8-blind-except
-  - flake8-bugbear
-  - pyupgrade
-  - pycodestyle
-  - numpydoc
-
   - bump2version
   - pytest-cov
   - pytest-xdist
@@ -48,6 +35,8 @@ dependencies:
   - nbsphinx
   - sphinx
   - sphinx-copybutton
+  - pycodestyle
+  - numpydoc
   - pip:
     - flake8-use-fstring
     - git+https://github.com/bashtage/sphinx-material.git
