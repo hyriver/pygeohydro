@@ -13,7 +13,6 @@ dependencies:
   - geojson
   - folium
   - rasterio
-  - pyproj
   - networkx
   - simplejson
   - defusedxml

@@ -11,7 +11,6 @@ dependencies:
   - scipy
   - geopandas
   - rasterio
-  - pyproj
   - networkx
   - simplejson
   - defusedxml
