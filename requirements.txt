@@ -7,12 +7,10 @@ pandas
 matplotlib-base
 xarray
 scipy
-lxml
 geopandas
 geojson
 folium
 rasterio
-pyproj
 networkx
 simplejson
 defusedxml
