@@ -14,3 +14,4 @@ rasterio
 networkx
 simplejson
 defusedxml
+lxml

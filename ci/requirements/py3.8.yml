@@ -16,3 +16,4 @@ dependencies:
   - networkx
   - simplejson
   - defusedxml
+  - lxml

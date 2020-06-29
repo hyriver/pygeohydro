@@ -16,6 +16,7 @@ dependencies:
   - defusedxml
 
   - descartes
+  - lxml
 
   - numpydoc
   - ipykernel

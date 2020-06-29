@@ -21,6 +21,7 @@ dependencies:
   - netCDF4
   - bottleneck
   - descartes
+  - lxml
 
   - bump2version
   - pytest-cov
