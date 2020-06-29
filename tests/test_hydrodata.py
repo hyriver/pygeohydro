@@ -40,9 +40,7 @@ def test_station():
 
 
 def test_nwis(watershed_nat):
-    discharge = hds.nwis_streamflow(
-        watershed_nat.station_id, ("2000-01-01", "2000-01-31")
-    )
+    discharge = hds.nwis_streamflow(watershed_nat.station_id, ("2000-01-01", "2000-01-31"))
     assert abs(discharge.sum().values[0] - 139.857) < 1e-3
 
 
@@ -53,9 +51,7 @@ def test_daymet(watershed_nat):
     st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
     yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
-    st_g = hds.daymet_bygeom(
-        watershed_nat.geometry, dates=dates, variables=variables, pet=True
-    )
+    st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (
         abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.682) < 1e-3
@@ -95,9 +91,7 @@ def test_nldi(watershed_nat):
 
 def test_nhdplus_bybox():
     wd = WaterData("nhdwaterbody")
-    wb = wd.getfeature_bybox(
-        (-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),
-    )
+    wb = wd.getfeature_bybox((-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),)
     assert abs(wb.areasqkm.sum() - 87.084) < 1e-3
 
 
@@ -141,7 +135,9 @@ def test_newdb(watershed_urb):
     s.outFormat = "json"
     storm_pipes = s.get_features()
 
-    url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    url_wms = (
+        "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    )
     slope = services.wms_bygeom(
         url_wms,
         geometry=watershed_urb.geometry,
@@ -164,9 +160,7 @@ def test_newdb(watershed_urb):
         resolution=1,
     )
 
-    url_wfs = (
-        "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-    )
+    url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
 
     wfs = WFS(
         url_wfs,
@@ -232,12 +226,7 @@ def test_ring():
                 [-97.06127, 32.832],
                 [-97.06138, 32.837],
             ],
-            [
-                [-97.06326, 32.759],
-                [-97.06298, 32.755],
-                [-97.06153, 32.749],
-                [-97.06326, 32.759],
-            ],
+            [[-97.06326, 32.759], [-97.06298, 32.755], [-97.06153, 32.749], [-97.06326, 32.759]],
         ],
         "spatialReference": {"wkid": 4326},
     }
@@ -254,14 +243,7 @@ def test_ring():
                     [-97.06138, 32.837],
                 ]
             ],
-            [
-                [
-                    [-97.06326, 32.759],
-                    [-97.06298, 32.755],
-                    [-97.06153, 32.749],
-                    [-97.06326, 32.759],
-                ]
-            ],
+            [[[-97.06326, 32.759], [-97.06298, 32.755], [-97.06153, 32.749], [-97.06326, 32.759]]],
         ],
     }
     assert _ring == res
@@ -327,9 +309,7 @@ def test_path():
 
 
 def test_wbd():
-    wbd = ArcGISREST(
-        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1"
-    )
+    wbd = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
     wbd.max_nrecords = 5
     wbd.featureids = [str(n) for n in range(1, 21)]
     wbd.outFields = ["HUC2", "NAME", "SHAPE_Area"]
@@ -353,6 +333,4 @@ def test_fspec1():
 def test_match_crs(watershed_urb):
     geom = utils.match_crs(watershed_urb.geometry, "epsg:4326", "epsg:2149")
     bbox = utils.match_crs(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
-    assert (
-        abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
-    )
+    assert abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
