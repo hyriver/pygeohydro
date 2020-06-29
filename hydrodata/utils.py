@@ -488,7 +488,7 @@ def prepare_nhdplus(
     Returns
     -------
     geopandas.GeoDataFrame
-        Note that all column names are converted to lower case.
+        Cleaned up flowlines. Note that all column names are converted to lower case.
     """
 
     flw.columns = flw.columns.str.lower()
@@ -559,6 +559,7 @@ def remove_tinynetworks(
     Returns
     -------
     geopandas.GeoDataFrame
+        Flowlines with small paths removed.
     """
     req_cols = [
         "levelpathi",
@@ -644,6 +645,7 @@ def traverse_json(obj: Dict[str, Any], path: Union[str, List[str]]) -> List[str]
     Returns
     -------
     list
+        The items founds in the JSON
     """
 
     def extract(obj, path, ind, arr):
@@ -696,6 +698,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     Returns
     -------
     dict
+        Statistics of NLCD cover data
     """
     from hydrodata.helpers import nlcd_helper
 
@@ -755,6 +758,7 @@ def create_dataset(
     Returns
     -------
     xarray.Dataset
+        Gnerated xarray data set or data array
     """
     import xarray as xr
 
@@ -811,6 +815,7 @@ def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -
     Returns
     -------
     geopandas.GeoDataFrame
+        Generated geo-data frame from a GeoJSON
     """
     try:
         geodf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
@@ -1044,7 +1049,7 @@ def geom_mask(
     Returns
     -------
     (numpy.ndarray, tuple)
-        mask, transform
+        mask, transform of a geometry within its bounds
     """
 
     if not isinstance(geometry, Polygon):

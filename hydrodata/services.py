@@ -29,7 +29,7 @@ from hydrodata.exceptions import (
 class ArcGISREST:
     """Access to an ArcGIS REST sercive.
 
-    Attributes
+    Parameters
     ----------
     base_url : str, optional
         The url as a whole rather than in parts, defaults to None. Instead of passing this
@@ -343,6 +343,7 @@ def wms_bygeom(
     Returns
     -------
     xarray.Dataset
+        Requested layer within a geometry
     """
     for _ in range(3):
         try:
@@ -435,7 +436,7 @@ def wms_bygeom(
 class WFS:
     """Data from any WFS service within a geometry or by featureid
 
-    Attributes
+    Parameters
     ----------
     url : str
         The base url for the WFS service, for examples:
@@ -561,6 +562,7 @@ class WFS:
         Returns
         -------
         requests.Response
+            WFS Query response within a bounding box.
         """
 
         if not isinstance(bbox, tuple) or len(bbox) != 4:
@@ -602,6 +604,7 @@ class WFS:
         Returns
         -------
         requests.Response
+            WMS query response
         """
 
         featureids = featureids if isinstance(featureids, list) else [featureids]
