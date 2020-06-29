@@ -106,7 +106,7 @@ def test_ssebopeta(watershed_nat):
     eta_p = hds.ssebopeta_byloc(watershed_nat.coords, dates=dates)
     eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates)
     assert (
-        abs(eta_p.mean().values[0] == 0.575) < 1e-3
+        abs(eta_p.mean().values[0] - 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.577) < 1e-3
     )
 
@@ -129,19 +129,11 @@ def test_nm(watershed_nat):
 
 
 def test_newdb(watershed_urb):
-
-    s = ArcGISREST(host="maps.lacity.org", site="lahub", verbose=True)
-    s.spatialRel = "esriSpatialRelIntersects"
-    s.folder = "Utilities"
-    s.folder = None
-    s.get_fs()
-    s.serviceName = "Stormwater_Information"
-    s.get_layers()
-    s.layer = 10
-    s.generate_url()
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = ArcGISREST(url_rest, verbose=True)
-    s.n_threads = 10
+    s = ArcGISREST(url_rest)
+    s.n_threads = 8
+    s.spatialRel = "esriSpatialRelIntersects"
+    s.outFields = "*"
     s.get_featureids(watershed_urb.geometry.bounds)
     s.get_featureids(watershed_urb.geometry)
     s.outFormat = "geojson"
@@ -153,13 +145,13 @@ def test_newdb(watershed_urb):
     slope = services.wms_bygeom(
         url_wms,
         geometry=watershed_urb.geometry,
+        geo_crs="epsg:4326",
         version="1.3.0",
         layers={"slope": "3DEPElevation:Slope Degrees"},
         outFormat="image/tiff",
         fpath={"slope": "tmp/slope.tiff"},
         width=2000,
         fill_holes=True,
-        in_crs="epsg:4326",
         crs="epsg:3857",
     )
 
@@ -184,15 +176,15 @@ def test_newdb(watershed_urb):
     )
     print(wfs)
 
-    r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, in_crs="epsg:4326")
+    r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
     shutil.rmtree("tmp", ignore_errors=True)
 
     assert (
-        abs(storm_pipes.length.sum() - 9.636) < 1e-3
-        and abs(slope.mean().values.item() == 118.972) < 1e-3
-        and abs(flood.length.sum() == 0.192) < 1e-3
+        abs(storm_pipes["LENGTH"].sum() - 3186880.443) < 1e-3
+        and abs(slope.mean().values.item() - 118.971) < 1e-3
+        and flood["ELEV"].sum() == 450331
     )
 
 
@@ -356,3 +348,11 @@ def test_fspec1():
 
     st = wfs.getfeature_byid("staid", "01031500", "1.1")
     assert st.json()["numberMatched"] == 1
+
+
+def test_match_crs(watershed_urb):
+    geom = utils.match_crs(watershed_urb.geometry, "epsg:4326", "epsg:2149")
+    bbox = utils.match_crs(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
+    assert (
+        abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
+    )
