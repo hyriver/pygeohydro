@@ -30,8 +30,8 @@
     :target: https://pepy.tech/project/hydrodata
     :alt: Downloads
 
-.. image:: https://www.codefactor.io/repository/github/cheginit/hydrodata/badge
-    :target: https://www.codefactor.io/repository/github/cheginit/hydrodata
+.. image:: https://www.codefactor.io/repository/github/cheginit/hydrodata/badge/develop
+    :target: https://www.codefactor.io/repository/github/cheginit/hydrodata/overview/develop
     :alt: CodeFactor
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
