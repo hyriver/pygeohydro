@@ -8,7 +8,6 @@ Dependencies
 ------------
 
 - `Python 3.6+ <https://www.python.org/downloads>`_
-- `Lxml <https://lxml.de>`_
 - `NumPy <http://www.numpy.org>`_
 - `Pandas <http://pandas.pydata.org>`_
 - `Xarray <https://xarray.pydata.org>`_
@@ -21,7 +20,6 @@ Dependencies
 - `Shapely <https://shapely.readthedocs.io>`_
 - `SimpleJSON <https://simplejson.readthedocs.io>`_
 - `Folium <https://python-visualization.github.io/folium/>`_
-- `PyPROJ <https://pyproj4.github.io/pyproj/stable/>`_
 - `Requests <https://requests.readthedocs.io>`_
 - `DefusedXML <https://github.com/tiran/defusedxml>`_
 - `NetworkX <https://networkx.github.io>`_

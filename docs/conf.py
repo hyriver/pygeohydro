@@ -83,6 +83,7 @@ release = LooseVersion(hydrodata.__version__).vstring
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "sphinx.ext.autosectionlabel",
     "sphinx.ext.intersphinx",
     "sphinx.ext.extlinks",
     "sphinx.ext.mathjax",
@@ -258,9 +259,7 @@ html_last_updated_fmt = today_fmt
 # html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    "**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]
-}
+html_sidebars = {"**": ["logo-text.html", "globaltoc.html", "localtoc.html", "searchbox.html"]}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -311,13 +310,7 @@ htmlhelp_basename = "hydrodatadoc"
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (
-        "index",
-        "hydrodata.tex",
-        "hydrodata Documentation",
-        "hydrodata Developers",
-        "manual",
-    )
+    ("index", "hydrodata.tex", "hydrodata Documentation", "hydrodata Developers", "manual",)
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -345,9 +338,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    ("index", "hydrodata", "hydrodata Documentation", ["hydrodata Developers"], 1)
-]
+man_pages = [("index", "hydrodata", "hydrodata Documentation", ["hydrodata Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
