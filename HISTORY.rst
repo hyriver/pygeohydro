@@ -12,6 +12,10 @@ Breaking changes
   called ``dates`` across the codebase.
 - Re-wrote NLDI function and moved most of its classmethods to Station
   so now Station class has more cohesion.
+- Remove exploratory functionality of ``ArcGISREST``, since it's more convinient
+  to do from a broweser. Now, ``base_url`` is mandatory.
+- Rename ``in_crs`` in ``datasets`` function to ``geo_crs`` for geometry and
+  ``box_crs`` for bounding box inputs.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -24,15 +28,19 @@ Enhancements
 - Add customized exceptions for better exception handling.
 - Add ``pytest`` fixture to increase the test speed.
 - Refactor ``daymet`` and ``nwis_siteinfo`` function to reduce complexity
-  and improve readability
+  and improve readability.
+- Major refactoring the code base to add type hinting.
+- The input geometry (or bounding box) can be provided in any projection
+  and neccessary re-projections are done under the hood.
 
 New Features
 ~~~~~~~~~~~~
-- Added access to all Water Data's Geoserver databases.
+- Added access to WaterData's Geoserver databases.
+- Added access to the remaining NLDI database (Water Quality Portal and Water Data Exchange)
 
 Bug fixes
 ~~~~~~~~~
--
+- Fix re-projection issues
 
 0.6.0 (2020-06-23)
 ------------------
