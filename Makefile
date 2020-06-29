@@ -53,10 +53,10 @@ lint: ## check style with flake8
 	pre-commit run --all-files
 
 test: ## run tests quickly with the default Python
-	pytest --cov=hydrodata -n 2
+	pytest --cov=hydrodata -n 2 -v
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source hydrodata -m pytest
+	coverage run --source hydrodata -m pytest -v
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
