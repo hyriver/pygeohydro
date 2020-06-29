@@ -169,8 +169,6 @@ def signatures(
     plt.suptitle(title, size=16, y=1.02)
 
     if output is not None:
-        from pathlib import Path
-
         output = Path(output)
         if not output.parent.is_dir():
             try:

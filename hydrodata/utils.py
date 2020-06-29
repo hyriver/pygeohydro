@@ -760,7 +760,6 @@ def create_dataset(
     xarray.Dataset
         Gnerated xarray data set or data array
     """
-    import xarray as xr
 
     with rio.MemoryFile() as memfile:
         memfile.write(content)
