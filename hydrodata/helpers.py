@@ -1,5 +1,7 @@
 """Some helper function for Hydrodata"""
 
+from typing import Any, Dict
+
 import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
@@ -7,7 +9,7 @@ import pandas as pd
 from hydrodata.connection import RetrySession
 
 
-def nlcd_helper():
+def nlcd_helper() -> Dict[str, Any]:
     """Helper for NLCD cover data
 
     Notes
@@ -26,9 +28,9 @@ def nlcd_helper():
 
     root = ET.fromstring(r.content)
 
-    colors = root[4][1][1].text.split("\n")[2:]
-    colors = [i.split() for i in colors]
-    colors = {int(c): (float(r), float(g), float(b)) for c, r, g, b in colors}
+    clist = root[4][1][1].text.split("\n")[2:]
+    _colors = [i.split() for i in clist]
+    colors = {int(c): (float(r), float(g), float(b)) for c, r, g, b in _colors}
 
     classes = {
         root[4][0][3][i][0][0].text: root[4][0][3][i][0][1].text.split("-")[0].strip()
@@ -79,24 +81,20 @@ def nlcd_helper():
     return nlcd_meta
 
 
-def nhdplus_fcodes():
+def nhdplus_fcodes() -> pd.DataFrame:
     """Get NHDPlus FCode lookup table"""
     url = (
         "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
         + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
     )
-    return (
-        pd.concat(pd.read_html(url, header=0))
-        .drop_duplicates("FCode")
-        .set_index("FCode")
-    )
+    return pd.concat(pd.read_html(url, header=0)).drop_duplicates("FCode").set_index("FCode")
 
 
-def nwis_errors():
+def nwis_errors() -> pd.DataFrame:
     """Get error code lookup table for USGS sites that have daily values"""
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
 
-def daymet_variables():
+def daymet_variables() -> pd.DataFrame:
     """Get Daymet variables table"""
     return pd.read_html("https://daymet.ornl.gov/overview")[1]

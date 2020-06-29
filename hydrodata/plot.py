@@ -3,7 +3,11 @@
 Plots includes  daily, monthly and annual hydrograph as well as
 regime curve (monthly mean) and flow duration curve.
 """
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
+
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
@@ -11,15 +15,15 @@ from hydrodata import helpers, utils
 
 
 def signatures(
-    daily_dict,
-    daily_unit="cms",
-    prcp=None,
-    prcp_unit="mm/day",
-    title=None,
-    figsize=(13, 13),
-    threshold=1e-3,
-    output=None,
-):
+    daily_dict: Dict[str, pd.Series],
+    daily_unit: str = "cms",
+    prcp: Optional[pd.Series] = None,
+    prcp_unit: str = "mm/day",
+    title: Optional[str] = None,
+    figsize: Tuple[int, int] = (13, 13),
+    threshold: float = 1e-3,
+    output: Union[str, Path] = None,
+) -> None:
     """Plot hydrological signatures with w/ or w/o precipitation.
 
     Plots includes daily, monthly and annual hydrograph as well as
@@ -105,11 +109,7 @@ def signatures(
     if prcp is not None:
         ax22 = ax2.twinx()
         ax22.bar(
-            month_P.index.to_pydatetime(),
-            month_P.values,
-            alpha=0.7,
-            width=30,
-            color="g",
+            month_P.index.to_pydatetime(), month_P.values, alpha=0.7, width=30, color="g",
         )
         ax22.set_ylim(0, month_P.max() * 2.5)
         ax22.set_ylim(ax22.get_ylim()[::-1])
@@ -148,9 +148,7 @@ def signatures(
 
     if prcp is not None:
         ax42 = ax4.twinx()
-        ax42.bar(
-            year_P.index.to_pydatetime(), year_P.values, alpha=0.7, width=365, color="g"
-        )
+        ax42.bar(year_P.index.to_pydatetime(), year_P.values, alpha=0.7, width=365, color="g")
         ax42.set_xlim(dates[0], dates[-1])
         ax42.set_ylim(0, year_P.max() * 2.5)
         ax42.set_ylim(ax42.get_ylim()[::-1])
@@ -183,18 +181,16 @@ def signatures(
                 print(f"output directory cannot be created: {output.parent}")
 
         plt.savefig(output, dpi=300, bbox_inches="tight")
-        return
 
 
-def get_daterange(Q_dict):
+def get_daterange(Q_dict: pd.Series) -> np.ndarray:
     """Find data range of several data series."""
     return pd.date_range(
-        min(q.index[0] for q in Q_dict.values()),
-        max(q.index[-1] for q in Q_dict.values()),
+        min(q.index[0] for q in Q_dict.values()), max(q.index[-1] for q in Q_dict.values()),
     ).to_pydatetime()
 
 
-def cover_legends():
+def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"].keys())

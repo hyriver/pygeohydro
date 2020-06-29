@@ -9,6 +9,7 @@ repos:
     rev: 19.10b0
     hooks:
       - id: black
+        args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/keewis/blackdoc
     rev: v0.1.1
@@ -32,8 +33,7 @@ repos:
     rev: v2.6.2
     hooks:
       - id: pyupgrade
-        args:
-          - "--py36-plus"
+        args: [--py36-plus]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.6.2

@@ -4,18 +4,22 @@ import numbers
 import os
 from concurrent import futures
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, ValuesView
 from warnings import warn
 
 import geopandas as gpd
+import networkx as nx
 import numpy as np
 import pandas as pd
 import rasterio as rio
 import rasterio.features as rio_features
 import rasterio.warp as rio_warp
 import simplejson as json
+import xarray as xr
 from owslib.wms import WebMapService
-from shapely.geometry import LineString, Point, box, mapping
+from pandas._libs.missing import NAType
+from rasterio import Affine
+from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
 from hydrodata.connection import RetrySession
 from hydrodata.exceptions import (
@@ -27,7 +31,12 @@ from hydrodata.exceptions import (
 )
 
 
-def threading(func, iter_list, param_list=None, max_workers=8):
+def threading(
+    func: Callable,
+    iter_list: Iterable,
+    param_list: Optional[List[Any]] = None,
+    max_workers: int = 8,
+) -> List[Any]:
     """Run a function using threading
 
     Parameters
@@ -35,7 +44,7 @@ def threading(func, iter_list, param_list=None, max_workers=8):
     func : function
         The function to be ran in threads
     iter_list : list
-        The iterator for the function
+        The Iterable for the function
     param_list : list, optional
         List of other parameters, defaults to an empty list
     max_workers : int, optional
@@ -44,14 +53,12 @@ def threading(func, iter_list, param_list=None, max_workers=8):
     Returns
     -------
     list
-        A list of function returns for each iterator. The list is not ordered.
+        A list of function returns for each Iterable. The list is not ordered.
     """
     data = []
     param_list = [] if param_list is None else param_list
     with futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_to_itr = {
-            executor.submit(func, itr, *param_list): itr for itr in iter_list
-        }
+        future_to_itr = {executor.submit(func, itr, *param_list): itr for itr in iter_list}
         for future in futures.as_completed(future_to_itr):
             itr = future_to_itr[future]
             try:
@@ -61,7 +68,9 @@ def threading(func, iter_list, param_list=None, max_workers=8):
     return data
 
 
-def check_dir(fpath_itr):
+def check_dir(
+    fpath_itr: Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]]]
+) -> None:
     """Create parent directory for a file if doesn't exist"""
     if isinstance(fpath_itr, str):
         fpath_itr = [fpath_itr]
@@ -69,6 +78,8 @@ def check_dir(fpath_itr):
         raise InvalidInputType("fpath_itr", "str or iterable")
 
     for f in fpath_itr:
+        if f is None:
+            continue
         parent = Path(f).parent
         if not parent.is_dir():
             try:
@@ -77,7 +88,9 @@ def check_dir(fpath_itr):
                 raise OSError(f"Parent directory cannot be created: {parent}")
 
 
-def daymet_dates(start, end):
+def daymet_dates(
+    start: Union[pd.DatetimeIndex, str], end: Union[pd.DatetimeIndex, str]
+) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
     """Correct dates for Daymet when leap years.
 
     Daymet doesn't account for leap years and removes
@@ -87,15 +100,17 @@ def daymet_dates(start, end):
 
     period = pd.date_range(start, end)
     nl = period[~period.is_leap_year]
-    lp = period[
-        (period.is_leap_year) & (~period.strftime("%Y-%m-%d").str.endswith("12-31"))
-    ]
-    period = period[(period.isin(nl)) | (period.isin(lp))]
-    years = [period[period.year == y] for y in period.year.unique()]
+    lp = period[(period.is_leap_year) & (~period.strftime("%Y-%m-%d").str.endswith("12-31"))]
+    _period = period[(period.isin(nl)) | (period.isin(lp))]
+    years = [_period[_period.year == y] for y in _period.year.unique()]
     return [(y[0], y[-1]) for y in years]
 
 
-def get_ssebopeta_urls(start=None, end=None, years=None):
+def get_ssebopeta_urls(
+    start: Optional[Union[pd.DatetimeIndex, str]] = None,
+    end: Optional[Union[pd.DatetimeIndex, str]] = None,
+    years: Optional[Union[int, List[int]]] = None,
+) -> List[Tuple[pd.DatetimeIndex, str]]:
     """Get list of URLs for SSEBop dataset within a period"""
     if years is None and start is not None and end is not None:
         start = pd.to_datetime(start)
@@ -113,23 +128,18 @@ def get_ssebopeta_urls(start=None, end=None, years=None):
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         dates = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
     else:
-        raise MissingInputs(
-            "Either years or start and end arguments should be provided."
-        )
+        raise MissingInputs("Either years or start and end arguments should be provided.")
 
     base_url = (
         "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
         + "shared/uswem/web/conus/eta/modis_eta/daily/downloads"
     )
-    f_list = [
-        (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip")
-        for d in dates
-    ]
+    f_list = [(d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip") for d in dates]
 
     return f_list
 
 
-def elevation_byloc(lon, lat):
+def elevation_byloc(lon: float, lat: float) -> float:
     """Get elevation from USGS 3DEP service for a coordinate.
 
     Parameters
@@ -158,21 +168,26 @@ def elevation_byloc(lon, lat):
     return elevation
 
 
-def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
+def elevation_bybbox(
+    bbox: Tuple[float, float, float, float],
+    resolution: float,
+    coords: List[Tuple[float, float]],
+    box_crs: str = "epsg:4326",
+) -> np.ndarray:
     """Get elevation from DEM data for a list of coordinates.
 
     This function is intended for getting elevations for a gridded dataset.
 
     Parameters
     ----------
-    bbox : list or tuple
+    bbox : tuple
         Bounding box with coordinates in [west, south, east, north] format.
     resolution : float
         Gridded data resolution in arc-second
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
-    crs : str, optional
-        The spatial reference system of the input region, defaults to
+    box_crs : str, optional
+        The spatial reference system of the input bbox, defaults to
         epsg:4326.
 
     Returns
@@ -180,30 +195,21 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     numpy.ndarray
         An array of elevations in meters
     """
-    import pyproj
-    import shapely.ops as ops
 
-    if not isinstance(bbox, (list, tuple)) or len(bbox) != 4:
+    if not isinstance(bbox, tuple) or len(bbox) != 4:
         raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     layers = ["3DEPElevation:None"]
     version = "1.3.0"
 
-    if crs != "epsg:4326":
-        prj = pyproj.Transformer.from_crs(crs, "epsg:4326", always_xy=True)
-        _bbox = ops.transform(prj.transform, box(*bbox))
-        res_bbox = _bbox.bounds
-    else:
-        res_bbox = bbox
-
-    west, south, east, north = res_bbox
+    west, south, east, north = match_crs(bbox, box_crs, "epsg:4326")
     width = int((east - west) * 3600 / resolution)
     height = int(abs(north - south) / abs(east - west) * width)
 
     wms = WebMapService(url, version=version)
     img = wms.getmap(
-        layers=layers, srs=crs, bbox=bbox, size=(width, height), format="image/geotiff",
+        layers=layers, srs=box_crs, bbox=bbox, size=(width, height), format="image/geotiff",
     )
 
     with rio.MemoryFile() as memfile:
@@ -214,7 +220,7 @@ def elevation_bybbox(bbox, resolution, coords, crs="epsg:4326"):
     return elevations
 
 
-def pet_fao_byloc(clm, lon, lat):
+def pet_fao_byloc(clm: pd.DataFrame, lon: float, lat: float) -> pd.DataFrame:
     """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
     The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
@@ -245,10 +251,7 @@ def pet_fao_byloc(clm, lon, lat):
         4098
         * (
             0.6108
-            * np.exp(
-                17.27 * clm["tmean (deg c)"] / (clm["tmean (deg c)"] + 237.3),
-                dtype=dtype,
-            )
+            * np.exp(17.27 * clm["tmean (deg c)"] / (clm["tmean (deg c)"] + 237.3), dtype=dtype,)
         )
         / ((clm["tmean (deg c)"] + 237.3) ** 2)
     )
@@ -289,34 +292,28 @@ def pet_fao_byloc(clm, lon, lat):
         * d_r
         * (
             w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
-            + np.cos(phi, dtype=dtype)
-            * np.cos(delta, dtype=dtype)
-            * np.sin(w_s, dtype=dtype)
+            + np.cos(phi, dtype=dtype) * np.cos(delta, dtype=dtype) * np.sin(w_s, dtype=dtype)
         )
     )
     R_so = (0.75 + 2e-5 * elevation) * R_a
     R_ns = (1.0 - alb) * R_s
     R_nl = (
         4.903e-9
-        * (
-            ((clm["tmax (deg c)"] + 273.16) ** 4 + (clm["tmin (deg c)"] + 273.16) ** 4)
-            * 0.5
-        )
+        * (((clm["tmax (deg c)"] + 273.16) ** 4 + (clm["tmin (deg c)"] + 273.16) ** 4) * 0.5)
         * (0.34 - 0.14 * np.sqrt(clm["vp (Pa)"]))
         * ((1.35 * R_s / R_so) - 0.35)
     )
     R_n = R_ns - R_nl
 
     clm["pet (mm/day)"] = (
-        0.408 * Delta * (R_n - G)
-        + gamma * 900.0 / (clm["tmean (deg c)"] + 273.0) * u_2 * e_def
+        0.408 * Delta * (R_n - G) + gamma * 900.0 / (clm["tmean (deg c)"] + 273.0) * u_2 * e_def
     ) / (Delta + gamma * (1 + 0.34 * u_2))
     clm["vp (Pa)"] = clm["vp (Pa)"] * 1.0e3
 
     return clm
 
 
-def pet_fao_gridded(ds):
+def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
     """Compute Potential EvapoTranspiration using Daymet dataset.
 
     The method is based on `FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
@@ -360,16 +357,14 @@ def pet_fao_gridded(ds):
             )
         ]
         margine = 0.05
-        bbox = [
+        bbox = (
             ds.lon.min().values - margine,
             ds.lat.min().values - margine,
             ds.lon.max().values + margine,
             ds.lat.max().values + margine,
-        ]
-        resolution = (3600.0 * 180.0) / (6371000.0 * np.pi) * ds.res[0] * 1e3
-        elevation = elevation_bybbox(bbox, resolution, coords).reshape(
-            ds.dims["y"], ds.dims["x"]
         )
+        resolution = (3600.0 * 180.0) / (6371000.0 * np.pi) * ds.res[0] * 1e3
+        elevation = elevation_bybbox(bbox, resolution, coords).reshape(ds.dims["y"], ds.dims["x"])
         ds["elevation"] = ({"y": ds.dims["y"], "x": ds.dims["x"]}, elevation)
         ds["elevation"].attrs["units"] = "m"
 
@@ -405,9 +400,7 @@ def pet_fao_gridded(ds):
         * d_r
         * (
             w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
-            + np.cos(phi, dtype=dtype)
-            * np.cos(delta, dtype=dtype)
-            * np.sin(w_s, dtype=dtype)
+            + np.cos(phi, dtype=dtype) * np.cos(delta, dtype=dtype) * np.sin(w_s, dtype=dtype)
         )
     )
     R_so = (0.75 + 2e-5 * ds["elevation"]) * R_a
@@ -434,7 +427,7 @@ def pet_fao_gridded(ds):
     return ds
 
 
-def mean_monthly(daily):
+def mean_monthly(daily: pd.Series) -> pd.Series:
     """Compute monthly mean for the regime curve."""
     import calendar
 
@@ -444,7 +437,7 @@ def mean_monthly(daily):
     return mean_month
 
 
-def exceedance(daily):
+def exceedance(daily: pd.Series) -> pd.Series:
     """Compute Flow duration (rank, sorted obs).
 
     The zero discharges are handled by dropping since log 0 is undefined.
@@ -461,13 +454,13 @@ def exceedance(daily):
 
 
 def prepare_nhdplus(
-    flw,
-    min_network_size,
-    min_path_length,
-    min_path_size=0,
-    purge_non_dendritic=False,
-    verbose=False,
-):
+    flw: gpd.GeoDataFrame,
+    min_network_size: float,
+    min_path_length: float,
+    min_path_size: float = 0,
+    purge_non_dendritic: bool = False,
+    verbose: bool = False,
+) -> gpd.GeoDataFrame:
     """Cleaning up and fixing issue in NHDPlus flowline database.
 
     Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
@@ -524,8 +517,7 @@ def prepare_nhdplus(
 
     if purge_non_dendritic:
         flw = flw[
-            ((flw.ftype != "Coastline") | (flw.ftype != 566))
-            & (flw.streamorde == flw.streamcalc)
+            ((flw.ftype != "Coastline") | (flw.ftype != 566)) & (flw.streamorde == flw.streamcalc)
         ]
     else:
         flw = flw[(flw.ftype != "Coastline") | (flw.ftype != 566)]
@@ -542,7 +534,9 @@ def prepare_nhdplus(
     return flw
 
 
-def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
+def remove_tinynetworks(
+    flw: gpd.GeoDataFrame, min_path_size: float, min_path_length: float, min_network_size: float,
+) -> gpd.GeoDataFrame:
     """Remove small paths in NHDPlus flowline database.
 
     Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
@@ -585,9 +579,7 @@ def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
             & (x.totdasqkm < min_path_size)
             & (x.totdasqkm >= 0)
         )
-        short_paths = short_paths.index.get_level_values("levelpathi")[
-            short_paths
-        ].tolist()
+        short_paths = short_paths.index.get_level_values("levelpathi")[short_paths].tolist()
         flw = flw[~flw.levelpathi.isin(short_paths)]
 
     terminal_filter = (flw.terminalfl == 1) & (flw.totdasqkm < min_network_size)
@@ -600,7 +592,7 @@ def remove_tinynetworks(flw, min_path_size, min_path_length, min_network_size):
     return flw
 
 
-def add_tocomid(flw):
+def add_tocomid(flw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Find the downstream comid(s) of each comid in NHDPlus flowline database.
 
     Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
@@ -635,12 +627,12 @@ def add_tocomid(flw):
     return flw
 
 
-def traverse_json(obj, path):
+def traverse_json(obj: Dict[str, Any], path: Union[str, List[str]]) -> List[str]:
     """Extracts an element from a JSON file along a specified path.
 
     Notes
     -----
-    From `bcmullins <https://bcmullins.github.io/parsing-json-python/>`__
+    Taken from `bcmullins <https://bcmullins.github.io/parsing-json-python/>`__
 
     Parameters
     ----------
@@ -691,9 +683,10 @@ def traverse_json(obj, path):
         for item in obj:
             outer_arr.append(extract(item, path, 0, []))
         return outer_arr
+    return []
 
 
-def cover_statistics(ds):
+def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
     """Percentages of the categorical NLCD cover data
 
     Parameters
@@ -731,7 +724,15 @@ def cover_statistics(ds):
     return {"classes": class_percentage, "categories": category_percentage}
 
 
-def create_dataset(content, mask, transform, width, height, name, fpath):
+def create_dataset(
+    content: bytes,
+    mask: np.ndarray,
+    transform: Affine,
+    width: int,
+    height: int,
+    name: str,
+    fpath: Optional[Union[str, Path]],
+) -> Union[xr.Dataset, xr.DataArray]:
     """Create dataset from a response clipped by a geometry
 
     Parameters
@@ -770,12 +771,7 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
 
             meta = src.meta
             meta.update(
-                {
-                    "width": width,
-                    "height": height,
-                    "transform": transform,
-                    "nodata": nodata,
-                }
+                {"width": width, "height": height, "transform": transform, "nodata": nodata}
             )
 
             if fpath is not None:
@@ -800,7 +796,7 @@ def create_dataset(content, mask, transform, width, height, name, fpath):
     return ds
 
 
-def json_togeodf(content, in_crs, crs="epsg:4326"):
+def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -> gpd.GeoDataFrame:
     """Create GeoDataFrame from (Geo)JSON
 
     Parameters
@@ -827,7 +823,7 @@ def json_togeodf(content, in_crs, crs="epsg:4326"):
     return geodf
 
 
-def arcgis_togeojson(arcgis, idAttribute=None):
+def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) -> Dict[str, Any]:
     """Convert ESRIGeoJSON format to GeoJSON.
 
     Notes
@@ -854,9 +850,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
         if "features" in arcgis and arcgis["features"]:
             geojson["type"] = "FeatureCollection"
             geojson["features"] = []
-            geojson["features"] = [
-                convert(feature, idAttribute) for feature in arcgis["features"]
-            ]
+            geojson["features"] = [convert(feature, idAttribute) for feature in arcgis["features"]]
 
         if (
             "x" in arcgis
@@ -916,11 +910,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
                 geojson["properties"] = arcgis["attributes"]
                 try:
                     attributes = arcgis["attributes"]
-                    keys = (
-                        [idAttribute, "OBJECTID", "FID"]
-                        if idAttribute
-                        else ["OBJECTID", "FID"]
-                    )
+                    keys = [idAttribute, "OBJECTID", "FID"] if idAttribute else ["OBJECTID", "FID"]
                     for key in keys:
                         if key in attributes and (
                             isinstance(attributes[key], (numbers.Number, str))
@@ -942,7 +932,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
 
         outerRings = []
         holes = []
-        x = None  # iterator
+        x = None  # Iterable
         outerRing = None  # current outer ring being evaluated
         hole = None  # current hole being evaluated
 
@@ -954,8 +944,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
                 continue
 
             total = sum(
-                (pt2[0] - pt1[0]) * (pt2[1] + pt1[1])
-                for pt1, pt2 in zip(ring[:-1], ring[1:])
+                (pt2[0] - pt1[0]) * (pt2[1] + pt1[1]) for pt1, pt2 in zip(ring[:-1], ring[1:])
             )
             # Clock-wise check
             if total >= 0:
@@ -963,9 +952,7 @@ def arcgis_togeojson(arcgis, idAttribute=None):
                     [ring[::-1]]
                 )  # wind outer rings counterclockwise for RFC 7946 compliance
             else:
-                holes.append(
-                    ring[::-1]
-                )  # wind inner rings clockwise for RFC 7946 compliance
+                holes.append(ring[::-1])  # wind inner rings clockwise for RFC 7946 compliance
 
         uncontainedHoles = []
 
@@ -1029,8 +1016,13 @@ def arcgis_togeojson(arcgis, idAttribute=None):
 
 
 def geom_mask(
-    geometry, width, height, geo_crs="epsg:4326", ds_crs="epsg:4326", all_touched=True
-):
+    geometry: Polygon,
+    width: int,
+    height: int,
+    geo_crs: str = "epsg:4326",
+    ds_crs: str = "epsg:4326",
+    all_touched: bool = True,
+) -> Tuple[np.ndarray, Affine]:
     """Create a mask array and transform for a given geometry.
 
     Parameters
@@ -1054,23 +1046,21 @@ def geom_mask(
     (numpy.ndarray, tuple)
         mask, transform
     """
-    if geo_crs != ds_crs:
-        geom = rio_warp.transform_geom(geo_crs, ds_crs, mapping(geometry))
-        bnds = rio_warp.transform_bounds(geo_crs, ds_crs, *geometry.bounds)
-    else:
-        geom = geometry
-        bnds = geometry.bounds
 
-    transform, _, _ = rio_warp.calculate_default_transform(
-        ds_crs, ds_crs, width, height, *bnds
-    )
-    mask = rio_features.geometry_mask(
-        [geom], (height, width), transform, all_touched=all_touched
-    )
+    if not isinstance(geometry, Polygon):
+        raise InvalidInputType("geometry", "Shapley's Polygon")
+
+    geom = match_crs(geometry, geo_crs, ds_crs)
+    left, bottom, right, top = match_crs(geometry.bounds, geo_crs, ds_crs)
+
+    transform = rio_warp.calculate_default_transform(
+        ds_crs, ds_crs, height=height, width=width, left=left, bottom=bottom, right=right, top=top,
+    )[0]
+    mask = rio_features.geometry_mask([geom], (height, width), transform, all_touched=all_touched)
     return mask, transform
 
 
-def check_requirements(reqs, cols):
+def check_requirements(reqs: Iterable, cols: List[str]) -> None:
     """Check for all the required data.
 
     Parameters
@@ -1089,7 +1079,9 @@ def check_requirements(reqs, cols):
         raise MissingItems(missing)
 
 
-def topoogical_sort(flowlines):
+def topoogical_sort(
+    flowlines: pd.DataFrame,
+) -> Tuple[List[Union[str, NAType]], Dict[Union[str, NAType], List[str]], nx.DiGraph]:
     """Topological sorting of a river network.
 
     Parameters
@@ -1105,11 +1097,8 @@ def topoogical_sort(flowlines):
         and the generated networkx object. Note that the
         terminal node ID is set to pd.NA.
     """
-    import networkx as nx
 
-    upstream_nodes = {
-        i: flowlines[flowlines.toID == i].ID.tolist() for i in flowlines.ID.tolist()
-    }
+    upstream_nodes = {i: flowlines[flowlines.toID == i].ID.tolist() for i in flowlines.ID.tolist()}
     upstream_nodes[pd.NA] = flowlines[flowlines.toID.isna()].ID.tolist()
 
     G = nx.from_pandas_edgelist(
@@ -1120,8 +1109,13 @@ def topoogical_sort(flowlines):
 
 
 def vector_accumulation(
-    flowlines, func, attr_col, arg_cols, id_col="comid", toid_col="tocomid",
-):
+    flowlines: pd.DataFrame,
+    func: Callable,
+    attr_col: str,
+    arg_cols: List[str],
+    id_col: str = "comid",
+    toid_col: str = "tocomid",
+) -> pd.Series:
     """Flow accumulation using vector river network data.
 
     Parameters
@@ -1169,15 +1163,13 @@ def vector_accumulation(
 
     init = flowlines.iloc[0][attr_col]
     if isinstance(init, numbers.Number):
-        outflow[0] = 0.0
+        outflow["0"] = 0.0
     elif isinstance(init, (np.ndarray, list)):
-        outflow[0] = np.zeros_like(init)
+        outflow["0"] = np.zeros_like(init)
     else:
-        raise ValueError(
-            "The elements in the attribute column can be either scalars or arrays"
-        )
+        raise ValueError("The elements in the attribute column can be either scalars or arrays")
 
-    upstream_nodes.update({k: [0] for k, v in upstream_nodes.items() if len(v) == 0})
+    upstream_nodes.update({k: ["0"] for k, v in upstream_nodes.items() if len(v) == 0})
 
     for i in topo_sorted:
         outflow[i] = func(
@@ -1185,7 +1177,18 @@ def vector_accumulation(
             *flowlines.loc[flowlines[id_col] == i, arg_cols].to_numpy()[0],
         )
 
-    outflow.pop(0)
-    qsim = pd.Series(outflow).loc[sorted_nodes[:-1]]
-    qsim = qsim.rename_axis("comid").rename("acc")
-    return qsim
+    outflow.pop("0")
+    acc = pd.Series(outflow).loc[sorted_nodes[:-1]]
+    acc = acc.rename_axis("comid").rename("acc")
+    return acc
+
+
+def match_crs(
+    geometry: Union[Polygon, Tuple[float, float, float, float]], in_crs: str, out_crs: str,
+) -> Union[Polygon, Tuple[float, float, float, float]]:
+    if in_crs != out_crs:
+        if isinstance(geometry, Polygon):
+            return shape(rio_warp.transform_geom(in_crs, out_crs, mapping(geometry)))
+        if isinstance(geometry, tuple):
+            return rio_warp.transform_bounds(in_crs, out_crs, *geometry)
+    return geometry

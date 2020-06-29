@@ -1,4 +1,5 @@
 """Customized Hydrodata exceptions"""
+from typing import Generator, List, Optional, Union
 
 
 class ServerError(Exception):
@@ -10,11 +11,11 @@ class ServerError(Exception):
         The server url
     """
 
-    def __init__(self, url):
+    def __init__(self, url: str) -> None:
         self.message = f"The requested server is no available in the URL:\n{url}"
         super().__init__(self.message)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
@@ -27,13 +28,11 @@ class MissingItems(Exception):
         The server url
     """
 
-    def __init__(self, missing):
-        self.message = (
-            "The following items are missing:\n" + f"{', '.join(m for m in missing)}"
-        )
+    def __init__(self, missing: List[str]) -> None:
+        self.message = "The following items are missing:\n" + f"{', '.join(m for m in missing)}"
         super().__init__(self.message)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
@@ -52,13 +51,15 @@ class InvalidInputValue(Exception):
         List of valid inputs
     """
 
-    def __init__(self, inp, valid_inputs):
+    def __init__(
+        self, inp: str, valid_inputs: Union[List[str], Generator[str, None, None]]
+    ) -> None:
         self.message = f"Given {inp} is invalid. Valid {inp}s are:\n" + ", ".join(
             str(i) for i in valid_inputs
         )
         super().__init__(self.message)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
@@ -79,13 +80,13 @@ class InvalidInputType(Exception):
         An example of a valid form of the argument, defaults to None.
     """
 
-    def __init__(self, arg, valid_type, example=None):
+    def __init__(self, arg: str, valid_type: str, example: Optional[str] = None) -> None:
         self.message = f"The {arg} argument should be of type {valid_type}"
         if example is not None:
             self.message += f":\n{example}"
         super().__init__(self.message)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 

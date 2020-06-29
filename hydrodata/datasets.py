@@ -4,13 +4,15 @@ import io
 import os
 import zipfile
 from pathlib import Path
+from typing import Dict, List, Optional, Tuple, Union
 
+import folium
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
 import xarray as xr
-from shapely.geometry import Polygon, box
+from shapely.geometry import Polygon
 
 from hydrodata import connection, helpers, services, utils
 from hydrodata.connection import RetrySession
@@ -26,7 +28,7 @@ from hydrodata.services import WFS
 MARGINE = 15
 
 
-def nwis_streamflow(station_ids, dates):
+def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) -> pd.DataFrame:
     """Get daily streamflow observations from USGS.
 
     Parameters
@@ -57,9 +59,7 @@ def nwis_streamflow(station_ids, dates):
 
     siteinfo = nwis_siteinfo(station_ids)
     check_dates = siteinfo.loc[
-        (siteinfo.stat_cd == "00003")
-        & (start < siteinfo.begin_date)
-        & (end > siteinfo.end_date),
+        (siteinfo.stat_cd == "00003") & (start < siteinfo.begin_date) & (end > siteinfo.end_date),
         "site_no",
     ].tolist()
     nas = [s for s in station_ids if s in check_dates]
@@ -84,9 +84,7 @@ def nwis_streamflow(station_ids, dates):
     r = RetrySession().post(url, payload)
 
     ts = r.json()["value"]["timeSeries"]
-    r_ts = {
-        t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in ts
-    }
+    r_ts = {t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in ts}
 
     def to_df(col, dic):
         q = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
@@ -99,7 +97,11 @@ def nwis_streamflow(station_ids, dates):
     return qobs
 
 
-def nwis_siteinfo(ids=None, bbox=None, expanded=False):
+def nwis_siteinfo(
+    ids: Optional[Union[str, List[str]]] = None,
+    bbox: Optional[Tuple[float, float, float, float]] = None,
+    expanded: bool = False,
+) -> pd.DataFrame:
     """Get NWIS stations by a list of IDs or within a bounding box.
 
     Only stations that record(ed) daily streamflow data are returned.
@@ -136,7 +138,7 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
     Parameters
     ----------
-    ids : str or list of str
+    ids : str or list
         Station ID(s)
     bbox : list
         List of corners in this order [west, south, east, north]
@@ -206,23 +208,22 @@ def nwis_siteinfo(ids=None, bbox=None, expanded=False):
 
 
 class WaterData:
-    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service."""
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service.
 
-    def __init__(self, layer, crs="epsg:4269"):
-        """Initialize the class
+    Attributes
+    ----------
+    layer : str
+        A valid layer from the WaterData service. Valid layers are:
+        ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, ``nhdflowline_network``
+        ``gagesii``, ``huc08``, ``huc12``, ``huc12agg``, and ``huc12all``. Note that
+        the layers' worksapce for the Water Data service is ``wmadata`` which will
+        be added to the given ``layer`` argument if it is not provided.
+    crs : str, optional
+        The spatial reference system for requesting the data. Each layer support
+        a limited number of CRSs, defaults to ``epsg:4269``.
+    """
 
-        Parameters
-        ----------
-        layer : str
-            A valid layer from the WaterData service. Valid layers are:
-            ``nhdarea``, ``nhdwaterbody``, ``catchmentsp``, ``nhdflowline_network``
-            ``gagesii``, ``huc08``, ``huc12``, ``huc12agg``, and ``huc12all``. Note that
-            the layers' worksapce for the Water Data service is ``wmadata`` which will
-            be added to the given ``layer`` argument if it is not provided.
-        crs : str, optional
-            The spatial reference system for requesting the data. Each layer support
-            a limited number of CRSs, defaults to ``epsg:4269``.
-        """
+    def __init__(self, layer: str, crs: str = "epsg:4269") -> None:
 
         self.layer = layer if ":" in layer else f"wmadata:{layer}"
         self.crs = crs
@@ -235,7 +236,7 @@ class WaterData:
             crs=self.crs,
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Print the services properties."""
         return (
             "Connected to the WFS service with the following properties:\n"
@@ -246,7 +247,9 @@ class WaterData:
             + f"Output CRS: {self.wfs.crs}"
         )
 
-    def getfeature_bybox(self, bbox, in_crs="epsg:4326", out_crs="epsg:4326"):
+    def getfeature_bybox(
+        self, bbox: Tuple[float, float, float, float], box_crs: str = "epsg:4326",
+    ) -> gpd.GeoDataFrame:
         """Get NHDPlus flowline database within a bounding box.
 
         Parameters
@@ -255,11 +258,8 @@ class WaterData:
             The bounding box for the region of interest in WGS 83, defaults to None.
             The list should provide the corners in this order:
             [west, south, east, north]
-        in_crs : str, optional
+        box_crs : str, optional
             The spatial reference system of the input bbox, defaults to
-            epsg:4326.
-        out_crs: str, optional
-            The spatial reference system to be used for the returned data, defaults to
             epsg:4326.
 
         Returns
@@ -267,8 +267,8 @@ class WaterData:
         geopandas.GeoDataFrame
         """
 
-        r = self.wfs.getfeature_bybox(bbox, in_crs=in_crs)
-        features = utils.json_togeodf(r.json(), self.crs, out_crs)
+        r = self.wfs.getfeature_bybox(bbox, box_crs=box_crs)
+        features = utils.json_togeodf(r.json(), self.crs, self.crs)
 
         if features.shape[0] == 0:
             raise ZeroMatched(
@@ -277,7 +277,9 @@ class WaterData:
 
         return features
 
-    def getfeature_byid(self, property_name, property_ids, out_crs="epsg:4326"):
+    def getfeature_byid(
+        self, property_name: str, property_ids: Union[List[str], str],
+    ) -> gpd.GeoDataFrame:
         """Get flowlines or catchments from NHDPlus V2 based on ComIDs.
 
         Parameters
@@ -288,9 +290,6 @@ class WaterData:
             the available column names for a specific layer.
         property_ids : str or list
             The ID(s) of the requested property name.
-        crs: str, optional
-            The spatial reference system to be used for the returned data, defaults to
-            ``epsg:4326``.
 
         Returns
         -------
@@ -307,27 +306,25 @@ class WaterData:
         rjson = r.json()
         if rjson["numberMatched"] == 0:
             raise ZeroMatched(
-                f"No feature was found in {self.layer} "
-                + "layer that matches the given ID(s)."
+                f"No feature was found in {self.layer} " + "layer that matches the given ID(s)."
             )
 
-        return utils.json_togeodf(rjson, self.crs, out_crs)
+        return utils.json_togeodf(rjson, self.crs, self.crs)
 
 
 class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
-    def __init__(self):
-        """Initialize NLDI class"""
+    def __init__(self) -> None:
 
         self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
         self.session = RetrySession()
         r = self.session.get(self.base_url).json()
-        self.valid_sources = [
-            el for sub in utils.traverse_json(r, ["source"]) for el in sub
-        ]
+        self.valid_sources = [el for sub in utils.traverse_json(r, ["source"]) for el in sub]
 
-    def getfeature_byid(self, fsource, fid, basin=False, url_only=False):
+    def getfeature_byid(
+        self, fsource: str, fid: str, basin: bool = False, url_only: bool = False
+    ) -> gpd.GeoDataFrame:
         """Get features of a single id
 
         Parameters
@@ -358,13 +355,17 @@ class NLDI:
         if url_only:
             return url
 
-        return utils.json_togeodf(
-            self.session.get(url).json(), "epsg:4269", "epsg:4326"
-        )
+        return utils.json_togeodf(self.session.get(url).json(), "epsg:4269", "epsg:4326")
 
     def navigate_byid(
-        self, fsource, fid, navigation, source=None, distance=None, url_only=False
-    ):
+        self,
+        fsource: str,
+        fid: str,
+        navigation: str,
+        source: Optional[str] = None,
+        distance: Optional[int] = None,
+        url_only: bool = False,
+    ) -> gpd.GeoDataFrame:
         """Navigate the NHDPlus databse from a single feature id
 
         Parameters
@@ -412,33 +413,36 @@ class NLDI:
         if url_only:
             return url
 
-        return utils.json_togeodf(
-            self.session.get(url).json(), "epsg:4269", "epsg:4326"
-        )
+        return utils.json_togeodf(self.session.get(url).json(), "epsg:4269", "epsg:4326")
 
 
 class Daymet:
-    """Base class for Daymet requests"""
+    """Base class for Daymet requests
 
-    def __init__(self, dates=None, years=None, variables=None, pet=False):
-        """Initialize Daymet class
+    Attributes
+    ----------
+    dates : tuple, optional
+        Start and end dates as a tuple (start, end), default to None.
+    years : int or list or tuple, optional
+        List of year(s), default to None.
+    variables : str or list or tuple, optional
+        List of variables to be downloaded. The acceptable variables are:
+        ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
+        Descriptions can be found in https://daymet.ornl.gov/overview.
+        Defaults to None i.e., all the variables are downloaded.
+    pet : bool, optional
+        Whether to compute evapotranspiration based on
+        `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
+        The default is False
+    """
 
-        Parameters
-        ----------
-        dates : tuple, optional
-            Start and end dates as a tuple (start, end), default to None.
-        years : int or list or tuple, optional
-            List of year(s), default to None.
-        variables : str or list or tuple, optional
-            List of variables to be downloaded. The acceptable variables are:
-            ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
-            Descriptions can be found in https://daymet.ornl.gov/overview.
-            Defaults to None i.e., all the variables are downloaded.
-        pet : bool, optional
-            Whether to compute evapotranspiration based on
-            `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
-            The default is False
-        """
+    def __init__(
+        self,
+        dates: Optional[Tuple[str, str]] = None,
+        years: Optional[Union[List[int], int]] = None,
+        variables: Optional[Union[List[str], str]] = None,
+        pet: bool = False,
+    ) -> None:
         self.session = RetrySession()
 
         if years is None and dates is not None:
@@ -459,30 +463,32 @@ class Daymet:
             years = years if isinstance(years, (list, tuple)) else [years]
             self.date_dict = {"years": ",".join(str(x) for x in years)}
         else:
-            raise MissingInputs(
-                "Either years or start and end arguments should be provided."
-            )
+            raise MissingInputs("Either years or start and end arguments should be provided.")
 
         vars_table = helpers.daymet_variables()
         self.units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
         valid_variables = vars_table.Abbr.to_list()
 
         if variables is not None:
-            self.variables = (
-                variables if isinstance(variables, (list, tuple)) else [variables]
-            )
+            self.variables = variables if isinstance(variables, (list, tuple)) else [variables]
 
             if not all(v for v in variables if v not in valid_variables):
                 raise InvalidInputValue("variables", valid_variables)
 
             if pet:
                 reqs = ("tmin", "tmax", "vp", "srad", "dayl")
-                self.variables = tuple(set(reqs) | set(variables))
+                self.variables = list(set(reqs) | set(variables))
         else:
             self.variables = valid_variables
 
 
-def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
+def daymet_byloc(
+    coords: Tuple[float, float],
+    dates: Optional[Tuple[str, str]] = None,
+    years: Optional[List[int]] = None,
+    variables: Optional[Union[List[str], str]] = None,
+    pet: bool = False,
+) -> pd.DataFrame:
     """Get daily climate data from Daymet for a single point.
 
     Parameters
@@ -506,7 +512,6 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
     Returns
     -------
     pandas.DataFrame
-        Climate data for the requested location and variables
     """
     daymet = Daymet(dates, years, variables, pet)
 
@@ -544,14 +549,15 @@ def daymet_byloc(coords, dates=None, years=None, variables=None, pet=False):
 
 
 def daymet_bygeom(
-    geometry,
-    dates=None,
-    years=None,
-    variables=None,
-    pet=False,
-    fill_holes=False,
-    n_threads=8,
-):
+    geometry: Polygon,
+    geo_crs: str = "epsg:4326",
+    dates: Optional[Tuple[str, str]] = None,
+    years: Optional[List[int]] = None,
+    variables: Optional[List[str]] = None,
+    pet: bool = False,
+    fill_holes: bool = False,
+    n_threads: int = 8,
+) -> xr.Dataset:
     """Gridded data from the Daymet database as 1-km resolution.
 
     The data is clipped using netCDF Subset Service.
@@ -559,7 +565,9 @@ def daymet_bygeom(
     Parameters
     ----------
     geometry : shapely.geometry.Polygon
-        The geometry of the region of interest
+        The geometry of the region of interest.
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
     dates : tuple, optional
         Start and end dates as a tuple (start, end), default to None.
     years : list
@@ -575,12 +583,11 @@ def daymet_bygeom(
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
-        Number of threads for simultanious download, defaults to 4 and max is 8.
+        Number of threads for simultanious download, defaults to 8.
 
     Returns
     -------
-    xarray.DataArray
-        The climate data within the requested geometery.
+    xarray.Dataset
     """
     from pandas.tseries.offsets import DateOffset
 
@@ -589,7 +596,7 @@ def daymet_bygeom(
     if years is None:
         start = pd.to_datetime(daymet.date_dict["start"]) + DateOffset(hour=12)
         end = pd.to_datetime(daymet.date_dict["end"]) + DateOffset(hour=12)
-        dates = utils.daymet_dates(start, end)
+        dates_itr = utils.daymet_dates(start, end)
 
     else:
         start_list, end_list = [], []
@@ -600,7 +607,7 @@ def daymet_bygeom(
                 end_list.append(pd.to_datetime(f"{year}1230") + DateOffset(hour=12))
             else:
                 end_list.append(pd.to_datetime(f"{year}1231") + DateOffset(hour=12))
-        dates = zip(start_list, end_list)
+        dates_itr = list(zip(start_list, end_list))
 
     if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapely's Polygon")
@@ -608,13 +615,13 @@ def daymet_bygeom(
     if fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    n_threads = min(n_threads, 8)
+    geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
 
     west, south, east, north = np.round(geometry.bounds, 6)
     base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
     urls = []
 
-    for s, e in dates:
+    for s, e in dates_itr:
         for v in daymet.variables:
             urls.append(
                 base_url
@@ -643,29 +650,22 @@ def daymet_bygeom(
     data = xr.merge(utils.threading(getter, urls, max_workers=n_threads))
 
     for k, v in daymet.units.items():
-        if k in variables:
+        if k in daymet.variables:
             data[k].attrs["units"] = v
 
     data = data.drop_vars(["lambert_conformal_conic"])
     data.attrs["crs"] = " ".join(
-        [
-            "+proj=lcc",
-            "+lon_0=-100",
-            "+lat_0=42.5",
-            "+lat_1=25",
-            "+lat_2=60",
-            "+ellps=WGS84",
-        ]
+        ["+proj=lcc", "+lon_0=-100", "+lat_0=42.5", "+lat_1=25", "+lat_2=60", "+ellps=WGS84"]
     )
 
-    x_res, y_res = float(data.x.diff("x").min()), float(data.y.diff("y").min())
+    x_res, y_res = data.x.diff("x").min().item(), data.y.diff("y").min().item()
     x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
     y_origin = data.y.values[0] - y_res / 2.0  # PixelAsArea Convention
 
     transform = (x_res, 0, x_origin, 0, y_res, y_origin)
 
-    x_end = x_origin + data.dims.get("x") * x_res
-    y_end = y_origin + data.dims.get("y") * y_res
+    x_end = x_origin + data.dims["x"] * x_res
+    y_end = y_origin + data.dims["y"] * y_res
     x_options = np.array([x_origin, x_end])
     y_options = np.array([y_origin, y_end])
 
@@ -681,14 +681,16 @@ def daymet_bygeom(
     if pet:
         data = utils.pet_fao_gridded(data)
 
-    mask, transform = utils.geom_mask(
-        geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs,
-    )
+    mask, transform = utils.geom_mask(geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs,)
     data = data.where(~xr.DataArray(mask, dims=("y", "x")), drop=True)
     return data
 
 
-def ssebopeta_byloc(coords, dates=None, years=None):
+def ssebopeta_byloc(
+    coords: Tuple[float, float],
+    dates: Optional[Tuple[str, str]] = None,
+    years: Optional[List[int]] = None,
+) -> pd.DataFrame:
     """Daily actual ET for a location from SSEBop database in mm/day.
 
     Parameters
@@ -717,7 +719,6 @@ def ssebopeta_byloc(coords, dates=None, years=None):
     f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
 
-    elevations = {}
     with connection.onlyIPv4():
 
         def _ssebop(urls):
@@ -741,8 +742,13 @@ def ssebopeta_byloc(coords, dates=None, years=None):
 
 
 def ssebopeta_bygeom(
-    geometry, dates=None, years=None, resolution=None, fill_holes=False,
-):
+    geometry: Polygon,
+    geo_crs: str = "epsg:4326",
+    dates: Optional[Tuple[str, str]] = None,
+    years: Optional[List[int]] = None,
+    resolution: Optional[float] = None,
+    fill_holes: bool = False,
+) -> xr.DataArray:
     """Daily actual ET for a region from SSEBop database in mm/day at 1 km resolution.
 
     Notes
@@ -754,25 +760,29 @@ def ssebopeta_bygeom(
 
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon or shapely.geometry.box
-        The geometry for downloading clipping the data. For a box geometry,
-        the order should be (minx, miny, maxx, maxy).
+    geometry : shapely.geometry.Polygon
+        The geometry for downloading clipping the data. For a tuple bbox,
+        the order should be (west, south, east, north).
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
     dates : tuple, optional
         Start and end dates as a tuple (start, end), default to None.
     years : list
         List of years
     fill_holes : bool, optional
-        Whether to fill the holes in the geometry's interior, defaults to False.
+        Whether to fill the holes in the geometry's interior (Polygon type), defaults to False.
 
     Returns
     -------
     xarray.DataArray
     """
 
-    if not isinstance(geometry, (Polygon, box)):
+    if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapely's Polygon")
 
-    if isinstance(geometry, Polygon) and fill_holes:
+    geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
+
+    if fill_holes:
         geometry = Polygon(geometry.exterior)
 
     resolution = 1.0e3 / 6371000.0 * 3600.0 / np.pi * 180.0
@@ -802,16 +812,12 @@ def ssebopeta_bygeom(
 
         resp = utils.threading(_ssebop, f_list, max_workers=4,)
 
-        data = utils.create_dataset(
-            resp[0][1], mask, transform, width, height, "eta", None
-        )
+        data = utils.create_dataset(resp[0][1], mask, transform, width, height, "eta", None)
         data = data.expand_dims({"time": [resp[0][0]]})
 
         if len(resp) > 1:
             for dt, r in resp:
-                ds = utils.create_dataset(
-                    r, mask, transform, width, height, "eta", None
-                )
+                ds = utils.create_dataset(r, mask, transform, width, height, "eta", None)
                 ds = ds.expand_dims({"time": [dt]})
                 data = xr.merge([data, ds])
 
@@ -823,15 +829,15 @@ def ssebopeta_bygeom(
 
 
 def nlcd(
-    geometry,
-    years=None,
-    width=None,
-    resolution=None,
-    file_path=None,
-    fill_holes=False,
-    in_crs="epsg:4326",
-    out_crs="epsg:4326",
-):
+    geometry: Polygon,
+    geo_crs: str = "epsg:4326",
+    years: Optional[Dict[str, int]] = None,
+    width: Optional[int] = None,
+    resolution: Optional[float] = None,
+    file_path: Optional[Union[str, Path]] = None,
+    fill_holes: bool = False,
+    crs: str = "epsg:4326",
+) -> xr.Dataset:
     """Get data from NLCD database (2016).
 
     Download land use, land cover data from NLCD2016 database within
@@ -845,6 +851,8 @@ def nlcd(
     ----------
     geometry : shapely.geometry.Polygon
         The geometry for extracting the data.
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
     years : dict, optional
         The years for NLCD data as a dictionary, defaults to
         {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
@@ -863,18 +871,13 @@ def nlcd(
         the path to save to the file.
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
-    in_crs : str, optional
-        The spatial reference system of the input geometry, defaults to
-        epsg:4326.
-    out_crs : str, optional
+    crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
 
     Returns
     -------
-     xarray.DataArray (optional), tuple (optional)
-         The data as a single DataArray and or the statistics in form of
-         three dicts (imprevious, canopy, cover) in a tuple
+     xarray.DataArray
     """
     nlcd_meta = helpers.nlcd_helper()
 
@@ -887,8 +890,7 @@ def nlcd(
         for service in years.keys():
             if years[service] not in avail_years[service]:
                 raise InvalidInputValue(
-                    f"{service.capitalize()} data for {years[service]}",
-                    avail_years[service],
+                    f"{service.capitalize()} data for {years[service]}", avail_years[service],
                 )
     else:
         raise InvalidInputType(
@@ -911,8 +913,8 @@ def nlcd(
         layers=layers,
         outFormat="image/geotiff",
         fill_holes=fill_holes,
-        in_crs=in_crs,
-        crs=out_crs,
+        geo_crs=geo_crs,
+        crs=crs,
     )
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -932,93 +934,86 @@ class NationalMap:
     There are three functions available for getting DEM ("3DEPElevation:None" layer),
     slope ("3DEPElevation:Slope Degrees" layer), and
     aspect ("3DEPElevation:Aspect Degrees" layer). If other layers from the 3DEP
-    service is desired they can be passes directly to ``get_map``
-    function.
+    service is desired use ``get_map`` function. The layer should be pass to this function
+    as a dict where the key is the desired variable name to be used in the returned DataArray
+    and the value should be a valid Nationl Map layer e.g, {"elevation": "3DEPElevation:None"}.
+    The following layers are available:
+    - "3DEPElevation:Hillshade Gray"
+    - "3DEPElevation:Aspect Degrees"
+    - "3DEPElevation:Aspect Map"
+    - "3DEPElevation:GreyHillshade_elevationFill"
+    - "3DEPElevation:Hillshade Multidirectional"
+    - "3DEPElevation:Slope Map"
+    - "3DEPElevation:Slope Degrees"
+    - "3DEPElevation:Hillshade Elevation Tinted"
+    - "3DEPElevation:Height Ellipsoidal"
+    - "3DEPElevation:Contour 25"
+    - "3DEPElevation:Contour Smoothed 25"
+    - "3DEPElevation:None" (for DEM)
+
+    Attributes
+    ----------
+    geometry : shapely.geometry.Polygon
+        A shapely Polygon in WGS 84 (epsg:4326).
+    geo_crs : str, optional
+        The spatial reference system of the input geometry, defaults to
+        epsg:4326.
+    width : int
+        The width of the output image in pixels. The height is computed
+        automatically from the geometry's bounding box aspect ratio. Either width
+        or resolution should be provided.
+    resolution : float
+        The data resolution in arc-seconds. The width and height are computed in pixel
+        based on the geometry bounds and the given resolution. Either width or
+        resolution should be provided.
+    fill_holes : bool, optional
+        Whether to fill the holes in the geometry's interior, defaults to False.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    fpath : str or Path
+        Path to save the output as a ``tiff`` file, defaults to None.
     """
 
     def __init__(
         self,
-        geometry,
-        layer=None,
-        width=None,
-        resolution=None,
-        fill_holes=False,
-        in_crs="epsg:4326",
-        out_crs="epsg:4326",
-        fpath=None,
-    ):
-        """
-
-        Parameters
-        ----------
-        geometry : shapely.geometry.Polygon
-            A shapely Polygon in WGS 84 (epsg:4326).
-        layer : str, optional
-            The national map 3DEP layer. Available layers are:
-            "3DEPElevation:Hillshade Gray",
-            "3DEPElevation:Aspect Degrees",
-            "3DEPElevation:Aspect Map",
-            "3DEPElevation:GreyHillshade_elevationFill",
-            "3DEPElevation:Hillshade Multidirectional",
-            "3DEPElevation:Slope Map",
-            "3DEPElevation:Slope Degrees",
-            "3DEPElevation:Hillshade Elevation Tinted",
-            "3DEPElevation:Height Ellipsoidal",
-            "3DEPElevation:Contour 25",
-            "3DEPElevation:Contour Smoothed 25", and
-            "3DEPElevation:None" (for DEM)
-            Layer can be passed directly to ``get_map`` function.
-        width : int
-            The width of the output image in pixels. The height is computed
-            automatically from the geometry's bounding box aspect ratio. Either width
-            or resolution should be provided.
-        resolution : float
-            The data resolution in arc-seconds. The width and height are computed in pixel
-            based on the geometry bounds and the given resolution. Either width or
-            resolution should be provided.
-        fill_holes : bool, optional
-            Whether to fill the holes in the geometry's interior, defaults to False.
-        in_crs : str, optional
-            The spatial reference system of the input geometry, defaults to
-            epsg:4326.
-        out_crs : str, optional
-            The spatial reference system to be used for requesting the data, defaults to
-            epsg:4326.
-        fpath : str or Path
-            Path to save the output as a ``tiff`` file, defaults to None.
-        """
-        self.url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-        self.layer = layer
+        geometry: Polygon,
+        geo_crs: str = "epsg:4326",
+        width: Optional[int] = None,
+        resolution: Optional[float] = None,
+        fill_holes: bool = False,
+        crs: str = "epsg:4326",
+        fpath: Optional[Union[str, Path]] = None,
+    ) -> None:
+        self.url = (
+            "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+        )
         self.geometry = geometry
         self.width = width
         self.resolution = resolution
         self.fill_holes = fill_holes
-        self.in_crs = in_crs
-        self.out_crs = out_crs
+        self.geo_crs = geo_crs
+        self.crs = crs
         self.fpath = fpath
 
-    def get_dem(self):
+    def get_dem(self) -> xr.DataArray:
         """DEM as an ``xarray.DataArray`` in meters"""
 
-        self.layer = {"elevation": "3DEPElevation:None"}
-
-        dem = self.get_map()
+        dem = self.get_map({"elevation": "3DEPElevation:None"})
         dem.attrs["units"] = "meters"
         return dem
 
-    def get_aspect(self):
+    def get_aspect(self) -> xr.DataArray:
         """Aspect map as an ``xarray.DataArray`` in degrees"""
 
-        self.layer = {"aspect": "3DEPElevation:Aspect Degrees"}
-
-        aspect = self.get_map()
+        aspect = self.get_map({"aspect": "3DEPElevation:Aspect Degrees"})
         aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
         aspect.attrs["nodatavals"] = (np.nan,)
         aspect.attrs["units"] = "degrees"
         return aspect
 
-    def get_slope(self, mpm=False):
-        """Slope from 3DEP service
+    def get_slope(self, mpm: bool = False) -> xr.DataArray:
+        """Slope from 3DEP service in degrees or meters/meters
 
         Parameters
         ----------
@@ -1028,29 +1023,26 @@ class NationalMap:
         Returns
         -------
         xarray.DataArray
-            Slope in degrees or meters/meters
         """
 
-        self.layer = {"slope": "3DEPElevation:Slope Degrees"}
-
-        slope = self.get_map()
+        slope = self.get_map({"slope": "3DEPElevation:Slope Degrees"})
         slope = slope.where(slope < slope.nodatavals[0], drop=True)
         slope.attrs["nodatavals"] = (np.nan,)
         if mpm:
             attrs = slope.attrs
-            slope = xr.ufuncs.tan(xr.ufuncs.deg2rad(slope))
+            slope = np.tan(np.deg2rad(slope))
             slope.attrs = attrs
             slope.attrs["units"] = "meters/meters"
         else:
             slope.attrs["units"] = "degrees"
         return slope
 
-    def get_map(self, layer=None):
+    def get_map(self, layer: Dict[str, str]) -> Union[xr.DataArray, xr.Dataset]:
         """Get requested map using the national map's WMS service"""
 
-        layer = self.layer if layer is None else layer
         name = str(list(layer.keys())[0]).replace(" ", "_")
-        fpath = None if self.fpath is None else {name: self.fpath}
+        _fpath: Optional[Dict[str, Optional[Union[str, Path]]]]
+        _fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
             self.url,
             self.geometry,
@@ -1059,9 +1051,9 @@ class NationalMap:
             layers=layer,
             outFormat="image/tiff",
             fill_holes=self.fill_holes,
-            fpath=fpath,
-            in_crs=self.in_crs,
-            crs=self.out_crs,
+            fpath=_fpath,
+            geo_crs=self.geo_crs,
+            crs=self.crs,
         )
 
 
@@ -1071,36 +1063,34 @@ class Station:
     Download climate and streamflow observation data from Daymet and USGS,
     respectively. The data is saved to an NetCDF file. Either coords or station_id
     argument should be specified.
+
+    Attributes
+    ----------
+    station_id : str, optional
+        USGS station ID, defaults to None
+    coords : tuple, optional
+        Longitude and latitude of the point of interest, defaults to None
+    dates : tuple, optional
+        Limit the search for stations with daily mean discharge available within
+        a date interval when coords is specified, defaults to None
+    srad : float, optional
+        Search radius in degrees for finding the closest station
+        when coords is given, default to 0.5 degrees
+    data_dir : str or Path, optional
+        Path to the location of climate data, defaults to 'data'
+    verbose : bool
+        Whether to show messages
     """
 
     def __init__(
         self,
-        station_id=None,
-        coords=None,
-        dates=None,
-        srad=0.5,
-        data_dir="data",
-        verbose=False,
-    ):
-        """Initialize the instance.
-
-        Parameters
-        ----------
-        station_id : str, optional
-            USGS station ID, defaults to None
-        coords : tuple, optional
-            Longitude and latitude of the point of interest, defaults to None
-        dates : tuple, optional
-            Limit the search for stations with daily mean discharge available within
-            a date interval when coords is specified, defaults to None
-        srad : float, optional
-            Search radius in degrees for finding the closest station
-            when coords is given, default to 0.5 degrees
-        data_dir : str or Path, optional
-            Path to the location of climate data, defaults to 'data'
-        verbose : bool
-            Whether to show messages
-        """
+        station_id: Optional[str] = None,
+        coords: Optional[Tuple[float, float]] = None,
+        dates: Optional[Tuple[str, str]] = None,
+        srad: float = 0.5,
+        data_dir: Union[str, Path] = "data",
+        verbose: bool = False,
+    ) -> None:
         if dates is not None:
             start, end = dates
             self.start = pd.to_datetime(start)
@@ -1139,23 +1129,19 @@ class Station:
 
         info = nwis_siteinfo(ids=self.station_id, expanded=True)
         try:
-            self.areasqkm = (
-                info["contrib_drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
-            )
+            self.areasqkm = info["contrib_drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
         except ValueError:
             try:
-                self.areasqkm = (
-                    info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
-                )
+                self.areasqkm = info["drain_area_va"].astype("float64").to_numpy()[0] * 2.5899
             except ValueError:
-                self.areasqkm = self.watershed.flowlines.areasqkm.sum()
+                self.areasqkm = self.flowlines().areasqkm.sum()
 
         self.hcdn = info.hcdn_2009.to_numpy()[0]
 
         if self.verbose:
             print(self.__repr__())
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Print the characteristics of the watershed."""
         return (
             f"[ID: {self.station_id}] ".ljust(MARGINE)
@@ -1174,7 +1160,7 @@ class Station:
             + f"{np.datetime_as_string(self.st_end, 'D')}."
         )
 
-    def get_coords(self):
+    def get_coords(self) -> None:
         """Get coordinates of the station from station ID."""
         siteinfo = nwis_siteinfo(ids=self.station_id)
         st = siteinfo[siteinfo.stat_cd == "00003"]
@@ -1185,22 +1171,20 @@ class Station:
             st["dec_long_va"].astype("float64").to_numpy()[0],
             st["dec_lat_va"].astype("float64").to_numpy()[0],
         )
-        self.altitude = (
-            st["alt_va"].astype("float64").to_numpy()[0] * 0.3048
-        )  # convert ft to meter
+        self.altitude = st["alt_va"].astype("float64").to_numpy()[0] * 0.3048  # convert ft to meter
         self.datum = st["alt_datum_cd"].to_numpy()[0]
         self.name = st.station_nm.to_numpy()[0]
 
-    def get_id(self):
+    def get_id(self) -> None:
         """Get station ID based on the specified coordinates."""
         import shapely.geometry as geom
 
-        bbox = [
+        bbox = (
             self.coords[0] - self.srad,
             self.coords[1] - self.srad,
             self.coords[0] + self.srad,
             self.coords[1] + self.srad,
-        ]
+        )
 
         sites = nwis_siteinfo(bbox=bbox)
         sites = sites[sites.stat_cd == "00003"]
@@ -1215,9 +1199,9 @@ class Station:
         point = geom.Point(self.coords)
         pts = {
             sid: geom.Point(lon, lat)
-            for sid, lon, lat in sites[
-                ["site_no", "dec_long_va", "dec_lat_va"]
-            ].itertuples(name=None, index=False)
+            for sid, lon, lat in sites[["site_no", "dec_long_va", "dec_lat_va"]].itertuples(
+                name=None, index=False
+            )
         }
 
         stations = gpd.GeoSeries(pts)
@@ -1262,7 +1246,7 @@ class Station:
         self.datum = station["alt_datum_cd"].to_numpy()[0]
         self.name = station.station_nm.to_numpy()[0]
 
-    def get_watershed(self):
+    def get_watershed(self) -> None:
         """Download the watershed geometry from the NLDI service."""
 
         geom_file = self.data_dir.joinpath("geometry.gpkg")
@@ -1293,7 +1277,9 @@ class Station:
 
         self.geometry = self.basin.geometry.to_numpy()[0]
 
-    def comids(self, navigation="upstreamTributaries", distance=None):
+    def comids(
+        self, navigation: str = "upstreamTributaries", distance: Optional[int] = None
+    ) -> list:
         """Find ComIDs of the flowlines within the watershed.
 
         Parameters
@@ -1302,7 +1288,7 @@ class Station:
             The direction for navigating the NHDPlus database. The valid options are:
             ``upstreamMain``, ``upstreamTributaries``, ``downstreamMain``,
             ``downstreamDiversions``. Defaults to ``upstreamTributaries``.
-        distance : float, optional
+        distance : int, optional
             The distance to limit the navigation in km, defaults to None.
 
         Returns
@@ -1310,14 +1296,13 @@ class Station:
         list
         """
         comids = self.nldi.navigate_byid(
-            "nwissite",
-            f"USGS-{self.station_id}",
-            navigation=navigation,
-            distance=distance,
+            "nwissite", f"USGS-{self.station_id}", navigation=navigation, distance=distance,
         )
         return comids.nhdplus_comid.tolist()
 
-    def nwis_stations(self, navigation="upstreamTributaries", distance=None):
+    def nwis_stations(
+        self, navigation: str = "upstreamTributaries", distance: Optional[int] = None
+    ) -> gpd.GeoDataFrame:
         """Get USGS stations within the watershed.
 
         Parameters
@@ -1341,7 +1326,9 @@ class Station:
             distance=distance,
         )
 
-    def pour_points(self, navigation="upstreamTributaries", distance=None):
+    def pour_points(
+        self, navigation: str = "upstreamTributaries", distance: Optional[int] = None
+    ) -> gpd.GeoDataFrame:
         """Get HUC12 pour point within the watershed.
 
         Parameters
@@ -1365,7 +1352,9 @@ class Station:
             distance=distance,
         )
 
-    def catchments(self, navigation="upstreamTributaries", distance=None):
+    def catchments(
+        self, navigation: str = "upstreamTributaries", distance: Optional[int] = None
+    ) -> gpd.GeoDataFrame:
         """Get chatchments for the watershed from NHDPlus V2.
 
         Parameters
@@ -1384,7 +1373,9 @@ class Station:
         wd = WaterData("catchmentsp")
         return wd.getfeature_byid("featureid", self.comids(navigation, distance))
 
-    def flowlines(self, navigation="upstreamTributaries", distance=None):
+    def flowlines(
+        self, navigation: str = "upstreamTributaries", distance: Optional[int] = None
+    ) -> gpd.GeoDataFrame:
         """Get flowlines for the watershed from NHDPlus V2.
 
         Parameters
@@ -1404,7 +1395,7 @@ class Station:
         return wd.getfeature_byid("comid", self.comids(navigation, distance))
 
 
-def interactive_map(bbox):
+def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     """An interactive map including all USGS stations within a bounding box.
 
     Only stations that record(ed) daily streamflow data are included.
@@ -1412,42 +1403,24 @@ def interactive_map(bbox):
     Parameters
     ----------
     bbox : tuple
-        List of corners in this order [west, south, east, north]
+        List of corners in this order (west, south, east, north)
 
     Returns
     -------
     folium.Map
     """
-    import folium
 
-    if not isinstance(bbox, list):
+    if not isinstance(bbox, tuple) and len(bbox) != 4:
         raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     sites = nwis_siteinfo(bbox=bbox)
-    sites = sites[
-        [
-            "site_no",
-            "station_nm",
-            "dec_lat_va",
-            "dec_long_va",
-            "alt_va",
-            "alt_datum_cd",
-            "huc_cd",
-            "begin_date",
-            "end_date",
-            "hcdn_2009",
-        ]
-    ]
     sites["coords"] = [
         (lat, lon)
-        for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(
-            name=None, index=False
-        )
+        for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False)
     ]
     sites["altitude"] = (
         sites["alt_va"].astype(str) + " ft above " + sites["alt_datum_cd"].astype(str)
     )
-    sites = sites.drop(columns=["dec_lat_va", "dec_long_va", "alt_va", "alt_datum_cd"])
 
     drain_area = nwis_siteinfo(bbox=bbox, expanded=True)[
         ["site_no", "drain_area_va", "contrib_drain_area_va"]
@@ -1455,25 +1428,22 @@ def interactive_map(bbox):
     sites = sites.merge(drain_area, on="site_no").dropna()
 
     sites["drain_area_va"] = sites["drain_area_va"].astype(str) + " square miles"
-    sites["contrib_drain_area_va"] = (
-        sites["contrib_drain_area_va"].astype(str) + " square miles"
-    )
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype(str) + " square miles"
 
-    sites = sites[
-        [
-            "site_no",
-            "station_nm",
-            "coords",
-            "altitude",
-            "huc_cd",
-            "drain_area_va",
-            "contrib_drain_area_va",
-            "begin_date",
-            "end_date",
-            "hcdn_2009",
-        ]
+    cols_old = [
+        "site_no",
+        "station_nm",
+        "coords",
+        "altitude",
+        "huc_cd",
+        "drain_area_va",
+        "contrib_drain_area_va",
+        "begin_date",
+        "end_date",
+        "hcdn_2009",
     ]
-    sites.columns = [
+
+    cols_new = [
         "Site No.",
         "Station Name",
         "Coordinate",
@@ -1485,23 +1455,18 @@ def interactive_map(bbox):
         "End data",
         "HCDN 2009",
     ]
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
 
     msgs = []
     for row in sites.itertuples(index=False):
         msg = ""
-        for col in sites.columns:
+        for col in sites:
             msg += "".join(
-                [
-                    "<strong>",
-                    col,
-                    "</strong> : ",
-                    f"{row[sites.columns.get_loc(col)]}<br>",
-                ]
+                ["<strong>", col, "</strong> : ", f"{row[sites.columns.get_loc(col)]}<br>"]
             )
         msgs.append(msg[:-4])
 
     sites["msg"] = msgs
-    sites = sites[["Coordinate", "msg"]]
 
     west, south, east, north = bbox
     lon = (west + east) * 0.5
@@ -1509,7 +1474,7 @@ def interactive_map(bbox):
 
     imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=12)
 
-    for coords, msg in sites.itertuples(name=None, index=False):
+    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
             location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
         ).add_to(imap)
