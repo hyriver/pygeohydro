@@ -116,7 +116,7 @@ Then, we can either specify a station ID or coordinates to the ``Station`` funct
 
     from hydrodata import Station
 
-    dates = ('2000-01-01', '2010-01-21')
+    dates = ("2000-01-01", "2010-01-21")
     wshed = Station(coords=(-69.32, 45.17), dates=dates)
 
 The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases within the watershed geometry. For example, we can get the main river channel and its tributaries, the USGS stations upstream (or downstream) of the main river channel (or the tributatires) up to a certain distance, say 150 km or all the stations:
@@ -136,14 +136,13 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
 
     flw = utils.prepare_nhdplus(tributaries, 0, 0, purge_non_dendritic=False)
 
+
     def routing(qin, q):
         return qin + q
 
+
     acc = utils.vector_accumulation(
-        flw[["comid", "tocomid", "lengthkm"]],
-        routing,
-        "lengthkm",
-        ["lengthkm"]
+        flw[["comid", "tocomid", "lengthkm"]], routing, "lengthkm", ["lengthkm"]
     )
     flw = flw.merge(acc, on="comid")
     diff = flw.arbolatesu - flw.acc
@@ -162,24 +161,16 @@ The climate data and streamflow observations for a location of interest can be r
 .. code-block:: python
 
     variables = ["tmin", "tmax", "prcp"]
-    clm_p = hds.daymet_byloc(
-        wshed.coords,
-        dates=dates,
-        variables=variables,
-        pet=True
-    )
-    clm_p['Q (cms)'] = hds.nwis_streamflow(wshed.station_id, dates)
+    clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=variables, pet=True)
+    clm_p["Q (cms)"] = hds.nwis_streamflow(wshed.station_id, dates)
 
 Other than point-based data, we can get data from gridded databases. The retrieved data are masked with the watershed geometry:
 
 .. code-block:: python
 
-    dates = ('2005-01-01', '2005-01-31')
+    dates = ("2005-01-01", "2005-01-31")
     clm_g = hds.daymet_bygeom(
-        wshed.geometry,
-        dates=dates,
-        variables=variables,
-        pet=True
+        wshed.geometry, dates=dates, variables=variables, pet=True
     )
     eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
 
@@ -189,7 +180,7 @@ All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stabl
 
     from hydrodata import plot
 
-    plot.signatures({"Q": clm_p['Q (cms)']}, prcp=clm_p["prcp (mm/day)"])
+    plot.signatures({"Q": clm_p["Q (cms)"]}, prcp=clm_p["prcp (mm/day)"])
 
 Some example plots are shown below:
 
@@ -202,7 +193,7 @@ The ``services`` module can be used to access some other web services as well. F
 
     from hydrodata import ArcGISREST, WFS, services
 
-    la_wshed = Station(station_id='11092450')
+    la_wshed = Station(station_id="11092450")
 
     url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
     s = ArcGISREST(url_rest, outFormat="json")
@@ -216,17 +207,19 @@ The ``services`` module can be used to access some other web services as well. F
         version="1.3.0",
         layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
         outFormat="image/tiff",
-        resolution=1
+        resolution=1,
     )
 
-    url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+    url_wfs = (
+        "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+    )
     wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
-    r = wfs.getfeature_bybox(la_wshed.geometry.bounds, in_crs="epsg:4326")
+    r = wfs.getfeature_bybox(la_wshed.geometry.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
@@ -237,7 +230,6 @@ Hydrodata offers some limited statistical analysis. It could be more useful to t
 Credits
 -------
 
-This package was created with Cookiecutter_ and the `audreyr/cookiecutter-pypackage`_ project template.
+This package was created based on the `audreyr/cookiecutter-pypackage`_ project template.
 
-.. _Cookiecutter: https://github.com/audreyr/cookiecutter
 .. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
