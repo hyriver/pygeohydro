@@ -148,6 +148,7 @@ def nwis_siteinfo(
     Returns
     -------
     pandas.DataFrame
+        NWIS stations
     """
     if bbox is not None and ids is None:
         if not isinstance(bbox, (list, tuple)) and len(bbox) != 4:
@@ -210,7 +211,7 @@ def nwis_siteinfo(
 class WaterData:
     """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service.
 
-    Attributes
+    Parameters
     ----------
     layer : str
         A valid layer from the WaterData service. Valid layers are:
@@ -250,7 +251,7 @@ class WaterData:
     def getfeature_bybox(
         self, bbox: Tuple[float, float, float, float], box_crs: str = "epsg:4326",
     ) -> gpd.GeoDataFrame:
-        """Get NHDPlus flowline database within a bounding box.
+        """Get NHDPlus flowlines database within a bounding box.
 
         Parameters
         ----------
@@ -265,6 +266,7 @@ class WaterData:
         Returns
         -------
         geopandas.GeoDataFrame
+            NHDPlus features
         """
 
         r = self.wfs.getfeature_bybox(bbox, box_crs=box_crs)
@@ -294,6 +296,7 @@ class WaterData:
         Returns
         -------
         geopandas.GeoDataFrame
+            NHDPlus features
         """
 
         r = self.wfs.get_validnames()
@@ -343,6 +346,7 @@ class NLDI:
         Returns
         -------
         geopandas.GeoDataFrame
+            NLDI indexed features
         """
 
         if fsource not in self.valid_sources:
@@ -389,6 +393,7 @@ class NLDI:
         Returns
         -------
         geopandas.GeoDataFrame
+            NLDI indexed features
         """
 
         if fsource not in self.valid_sources:
@@ -419,7 +424,7 @@ class NLDI:
 class Daymet:
     """Base class for Daymet requests
 
-    Attributes
+    Parameters
     ----------
     dates : tuple, optional
         Start and end dates as a tuple (start, end), default to None.
@@ -512,6 +517,7 @@ def daymet_byloc(
     Returns
     -------
     pandas.DataFrame
+        Daily climate data for a location
     """
     daymet = Daymet(dates, years, variables, pet)
 
@@ -588,6 +594,7 @@ def daymet_bygeom(
     Returns
     -------
     xarray.Dataset
+        Daily climate data within a geometry
     """
     from pandas.tseries.offsets import DateOffset
 
@@ -705,6 +712,7 @@ def ssebopeta_byloc(
     Returns
     -------
     pandas.DataFrame
+        Daily actual ET for a location
     """
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
@@ -775,6 +783,7 @@ def ssebopeta_bygeom(
     Returns
     -------
     xarray.DataArray
+        Daily actual ET within a geometry
     """
 
     if not isinstance(geometry, Polygon):
@@ -878,6 +887,7 @@ def nlcd(
     Returns
     -------
      xarray.DataArray
+         NLCD within a geometry
     """
     nlcd_meta = helpers.nlcd_helper()
 
@@ -951,7 +961,7 @@ class NationalMap:
     - "3DEPElevation:Contour Smoothed 25"
     - "3DEPElevation:None" (for DEM)
 
-    Attributes
+    Parameters
     ----------
     geometry : shapely.geometry.Polygon
         A shapely Polygon in WGS 84 (epsg:4326).
@@ -1023,6 +1033,7 @@ class NationalMap:
         Returns
         -------
         xarray.DataArray
+            Slope within a geometry in degrees or meters/meters
         """
 
         slope = self.get_map({"slope": "3DEPElevation:Slope Degrees"})
@@ -1064,7 +1075,7 @@ class Station:
     respectively. The data is saved to an NetCDF file. Either coords or station_id
     argument should be specified.
 
-    Attributes
+    Parameters
     ----------
     station_id : str, optional
         USGS station ID, defaults to None
@@ -1294,6 +1305,7 @@ class Station:
         Returns
         -------
         list
+            ComID(s) within a geometry
         """
         comids = self.nldi.navigate_byid(
             "nwissite", f"USGS-{self.station_id}", navigation=navigation, distance=distance,
@@ -1317,6 +1329,7 @@ class Station:
         Returns
         -------
         geopandas.GeoDataFrame
+            USGS stations within a geometry
         """
         return self.nldi.navigate_byid(
             "nwissite",
@@ -1343,6 +1356,7 @@ class Station:
         Returns
         -------
         geopandas.GeoDataFrame
+            Pour points within a geometry
         """
         return self.nldi.navigate_byid(
             "nwissite",
@@ -1369,6 +1383,7 @@ class Station:
         Returns
         -------
         geopandas.GeoDataFrame
+            Catchments within a geometry
         """
         wd = WaterData("catchmentsp")
         return wd.getfeature_byid("featureid", self.comids(navigation, distance))
@@ -1390,6 +1405,7 @@ class Station:
         Returns
         -------
         geopandas.GeoDataFrame
+            Flowlines within a geometry
         """
         wd = WaterData("nhdflowline_network")
         return wd.getfeature_byid("comid", self.comids(navigation, distance))
@@ -1408,6 +1424,7 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     Returns
     -------
     folium.Map
+        Interative map within a bounding box.
     """
 
     if not isinstance(bbox, tuple) and len(bbox) != 4:

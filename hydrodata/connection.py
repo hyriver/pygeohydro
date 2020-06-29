@@ -16,6 +16,17 @@ class RetrySession:
     The fails can be due to connection errors, specific HTTP response
     codes and 30X redirections. The original code is taken from:
     https://github.com/bustawin/retry-requests
+
+    Parameters
+    ----------
+    retries : int, optional
+        The number of maximum retries before raising an exception, defaults to 5.
+    backoff_factor : float, optional
+        A factor used to compute the waiting time between retries, defaults to 0.5.
+    status_to_retry : tuple, optional
+        A tuple of status codes that trigger the reply behaviour, defaults to (500, 502, 504).
+    prefixes : tuple, optional
+        The prefixes to consider, defaults to ("http://", "https://")
     """
 
     def __init__(
@@ -25,22 +36,6 @@ class RetrySession:
         status_to_retry: Tuple[int, ...] = (500, 502, 504),
         prefixes: Tuple[str, ...] = ("http://", "https://"),
     ) -> None:
-        """Initialize the clss
-
-        Parameters
-        ----------
-        retries : int
-            The number of maximum retries before raising an exception.
-        backoff_factor : float
-            A factor used to compute the waiting time between retries.
-        status_to_retry : tuple of ints
-            A tuple of status codes that trigger the reply behaviour.
-
-        Returns
-        -------
-        requests.Session
-            A session object with retry configurations.
-        """
 
         self.session = Session()
 
@@ -58,14 +53,14 @@ class RetrySession:
         self.session.hooks = {"response": [lambda r, *args, **kwargs: r.raise_for_status()]}
 
     def get(self, url: str, payload: Optional[Mapping[str, Any]] = None,) -> Response:
-        """Retrieve data from a url by GET using a requests session"""
+        """Retrieve data from a url by GET and return the Response"""
         try:
             return self.session.get(url, params=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
             raise
 
     def post(self, url: str, payload: Optional[MutableMapping[str, Any]] = None,) -> Response:
-        """Retrieve data from a url by POST using a requests session"""
+        """Retrieve data from a url by POST and return the Response"""
         try:
             return self.session.post(url, data=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
