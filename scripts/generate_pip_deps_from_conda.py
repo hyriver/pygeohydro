@@ -108,13 +108,9 @@ def main(conda_fname, pip_fname, compare=False):
 
 
 if __name__ == "__main__":
-    argparser = argparse.ArgumentParser(
-        description="convert (or compare) conda file to pip"
-    )
+    argparser = argparse.ArgumentParser(description="convert (or compare) conda file to pip")
     argparser.add_argument(
-        "--compare",
-        action="store_true",
-        help="compare whether the two files are equivalent",
+        "--compare", action="store_true", help="compare whether the two files are equivalent",
     )
     args = argparser.parse_args()
 
@@ -130,8 +126,6 @@ if __name__ == "__main__":
             "`environment.yml` is modified.\n"
         )
         if args.azure:
-            msg = (
-                f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
-            )
+            msg = f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
         sys.stderr.write(msg)
     sys.exit(res)
