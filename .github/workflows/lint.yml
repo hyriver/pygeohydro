@@ -8,20 +8,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
         with:
           python-version: 3.8
 
-      - name: Install Python dependencies
-        run: pip install -r ci/requirements/requirements_lint.txt
+      - uses: pre-commit/action@v2.0.0
 
-      - run: isort --recursive --diff hydrodata tests
-      - run: black -t py36 --diff hydrodata tests
-      - run: blackdoc --check .
-      - run: flake8 hydrodata tests
-      - run: bandit -lll --recursive hydrodata
-      - run: pyupgrade --py36-plus

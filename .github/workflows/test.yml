@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup Miniconda
-        uses: goanpeca/setup-miniconda@v1.5.0
+        uses: goanpeca/setup-miniconda@v1.6.0
         with:
           activate-environment: hydrodata
           python-version: ${{ matrix.python-version }}
