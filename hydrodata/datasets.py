@@ -536,8 +536,8 @@ def daymet_byloc(
     url = "https://daymet.ornl.gov/single-pixel/api/data"
 
     payload = {
-        "lat": round(lat, 6),
-        "lon": round(lon, 6),
+        "lat": f"{lat:.6f}",
+        "lon": f"{lon:.6f}",
         "vars": ",".join(v for v in daymet.variables),
         "format": "json",
         **daymet.date_dict,
@@ -550,7 +550,7 @@ def daymet_byloc(
     clm = clm.drop(["year", "yday"], axis=1)
 
     if pet:
-        clm = utils.pet_fao_byloc(clm, lon, lat)
+        clm = utils.pet_fao_byloc(clm, coords)
     return clm
 
 
@@ -566,7 +566,7 @@ def daymet_bygeom(
 ) -> xr.Dataset:
     """Gridded data from the Daymet database as 1-km resolution.
 
-    The data is clipped using netCDF Subset Service.
+    The data is clipped using NetCDF Subset Service.
 
     Parameters
     ----------
@@ -589,7 +589,7 @@ def daymet_bygeom(
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
     n_threads : int, optional
-        Number of threads for simultanious download, defaults to 8.
+        Number of threads for simultaneous download, defaults to 8.
 
     Returns
     -------
@@ -849,7 +849,7 @@ def nlcd(
 ) -> xr.Dataset:
     """Get data from NLCD database (2016).
 
-    Download land use, land cover data from NLCD2016 database within
+    Download land use, land cover data from NLCD (2016) database within
     a given geometry in epsg:4326.
 
     Notes
@@ -935,7 +935,7 @@ def nlcd(
 class NationalMap:
     """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ service.
 
-    The 3DEP service has multi-resolution sources so depeneding on the user
+    The 3DEP service has multi-resolution sources so depending on the user
     provided resolution (or width) the data is resampled on server-side based
     on all the available data sources.
 
@@ -946,7 +946,7 @@ class NationalMap:
     aspect ("3DEPElevation:Aspect Degrees" layer). If other layers from the 3DEP
     service is desired use ``get_map`` function. The layer should be pass to this function
     as a dict where the key is the desired variable name to be used in the returned DataArray
-    and the value should be a valid Nationl Map layer e.g, {"elevation": "3DEPElevation:None"}.
+    and the value should be a valid National Map layer e.g, {"elevation": "3DEPElevation:None"}.
     The following layers are available:
     - "3DEPElevation:Hillshade Gray"
     - "3DEPElevation:Aspect Degrees"
@@ -1072,7 +1072,7 @@ class Station:
     """Download data from the databases.
 
     Download climate and streamflow observation data from Daymet and USGS,
-    respectively. The data is saved to an NetCDF file. Either coords or station_id
+    respectively. The data is saved to a NetCDF file. Either coords or station_id
     argument should be specified.
 
     Parameters
@@ -1424,7 +1424,7 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     Returns
     -------
     folium.Map
-        Interative map within a bounding box.
+        Interactive map within a bounding box.
     """
 
     if not isinstance(bbox, tuple) and len(bbox) != 4:

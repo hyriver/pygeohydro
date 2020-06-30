@@ -27,26 +27,24 @@ from hydrodata.exceptions import (
 
 
 class ArcGISREST:
-    """Access to an ArcGIS REST sercive.
+    """Access to an ArcGIS REST service.
 
     Parameters
     ----------
     base_url : str, optional
-        The url as a whole rather than in parts, defaults to None. Instead of passing this
-        argument you can pass host and site arguments and explor available folders, service,
-        and layers, then set them separately.
+        The ArcGIS RESTful service url.
     outFormat : str, optional
         One of the output formats offered by the selected layer. If not correct
         a list of available formats is shown, defaults to ``geojson``.
     outFields : str or list
         The output fields to be requested. Setting ``*`` as outFields requests
-        all the available fields. Defaults to ``*``.
+        all the available fields which is the default behaviour.
     spatialRel : str, optional
         The spatial relationship to be applied on the input geometry
         while performing the query. If not correct a list of available options is shown.
         Defaults to ``esriSpatialRelIntersects``.
     n_threads : int, optional
-        Number of simultanious download, default to 4.
+        Number of simultaneous download, default to 4.
     """
 
     def __init__(
@@ -317,12 +315,12 @@ def wms_bygeom(
         resolution should be provided.
     layers : dict
         The layer from the service to be downloaded, defaults to None which throws
-        an error and includes all the avialable layers offered by the service. The
+        an error and includes all the available layers offered by the service. The
         argument should be a dict with keys as the variable name in the output
         dataframe and values as the complete name of the layer in the service.
     outFormat : str
         The data format to request for data from the service, defaults to None which
-         throws an error and includes all the avialable format offered by the service.
+         throws an error and includes all the available format offered by the service.
     fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
@@ -443,10 +441,10 @@ class WFS:
         https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
     layer : str
         The layer from the service to be downloaded, defaults to None which throws
-        an error and includes all the avialable layers offered by the service.
+        an error and includes all the available layers offered by the service.
     outFormat : str
         The data format to request for data from the service, defaults to None which
-         throws an error and includes all the avialable format offered by the service.
+         throws an error and includes all the available format offered by the service.
     version : str, optional
         The WFS service version which should be either 1.1.1, 1.3.0, or 2.0.0.
         Defaults to 2.0.0.
@@ -456,7 +454,7 @@ class WFS:
     validation : bool
         Validate the input arguments from the WFS service, defaults to True. Set this
         to False if you are sure all the WFS settings such as layer and crs are correct
-        to avoid sending extra requestes.
+        to avoid sending extra requests.
     """
 
     def __init__(
@@ -562,7 +560,7 @@ class WFS:
         Returns
         -------
         requests.Response
-            WFS Query response within a bounding box.
+            WFS query response within a bounding box.
         """
 
         if not isinstance(bbox, tuple) or len(bbox) != 4:
@@ -598,7 +596,7 @@ class WFS:
         featureids : str or list
             The feature ID(s)
         filter_spec : str
-            The OGC filter spec, defaults to "1.1". Supported vesions are
+            The OGC filter spec, defaults to "1.1". Supported versions are
             1.1 and 2.0.
 
         Returns
