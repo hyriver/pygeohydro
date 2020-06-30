@@ -68,7 +68,7 @@ class InvalidInputRange(ValueError):
 
 
 class InvalidInputType(Exception):
-    """xception raised when a function argument type is invalid
+    """Exception raised when a function argument type is invalid
 
     Parameters
     ----------

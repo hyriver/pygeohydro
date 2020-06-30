@@ -44,7 +44,7 @@ def threading(
     func : function
         The function to be ran in threads
     iter_list : list
-        The Iterable for the function
+        The iterable for the function
     param_list : list, optional
         List of other parameters, defaults to an empty list
     max_workers : int, optional
@@ -53,7 +53,7 @@ def threading(
     Returns
     -------
     list
-        A list of function returns for each Iterable. The list is not ordered.
+        A list of function returns for each iterable. The list is not ordered.
     """
     data = []
     param_list = [] if param_list is None else param_list
@@ -220,7 +220,7 @@ def elevation_bybbox(
     return elevations
 
 
-def pet_fao_byloc(clm: pd.DataFrame, lon: float, lat: float) -> pd.DataFrame:
+def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFrame:
     """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
     The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
@@ -241,6 +241,7 @@ def pet_fao_byloc(clm: pd.DataFrame, lon: float, lat: float) -> pd.DataFrame:
         The input DataFrame with an additional column named ``pet (mm/day)``
     """
 
+    lon, lat = coords
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
     check_requirements(reqs, clm)
@@ -602,7 +603,7 @@ def add_tocomid(flw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     ----------
     flw : geopandas.GeoDataFrame
         NHDPlus flowlines with at least the following columns:
-        comid, terminalpa, fromnode, tonode
+        ``comid``, ``terminalpa``, ``fromnode``, ``tonode``
 
     Returns
     -------
@@ -639,7 +640,7 @@ def traverse_json(obj: Dict[str, Any], path: Union[str, List[str]]) -> List[str]
     ----------
     obj : dict
         The input json dictionary
-    path : list of strs
+    path : list
         The path to the requested element
 
     Returns
@@ -748,7 +749,7 @@ def create_dataset(
         Transform of the mask
     width : int
         x-dimension of the data
-    heigth : int
+    height : int
         y-dimension of the data
     name : str
         Variable name in the dataset
@@ -758,7 +759,7 @@ def create_dataset(
     Returns
     -------
     xarray.Dataset
-        Gnerated xarray data set or data array
+        Generated xarray DataSet or DataArray
     """
 
     with rio.MemoryFile() as memfile:
@@ -832,7 +833,7 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
 
     Notes
     -----
-    Based on https://github.com/chris48s/arcgis_togeojson
+    Based on https://github.com/chris48s/arcgis2geojson
 
     Parameters
     ----------
@@ -936,7 +937,7 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
 
         outerRings = []
         holes = []
-        x = None  # Iterable
+        x = None  # iterable
         outerRing = None  # current outer ring being evaluated
         hole = None  # current hole being evaluated
 
@@ -1042,7 +1043,7 @@ def geom_mask(
     ds_crs : str, CRS
         CRS of the dataset to be masked, defaults to epsg:4326
     all_touched : bool
-        Wether to include all the elements where the geometry touchs
+        Wether to include all the elements where the geometry touches
         rather than only the element's center, defaults to True
 
     Returns
@@ -1069,7 +1070,7 @@ def check_requirements(reqs: Iterable, cols: List[str]) -> None:
 
     Parameters
     ----------
-    reqs : Iterable
+    reqs : iterable
         A list of required data names (str)
     cols : list
         A list of variable names (str)
@@ -1128,13 +1129,13 @@ def vector_accumulation(
         A dataframe containing comid, tocomid, attr_col and all the columns
         that ara required for passing to ``func``.
     func : function
-        The function that routes the flow in a signle river segment.
+        The function that routes the flow in a single river segment.
         Positions of the arguments in the function should be as follows:
         ``func(qin, *arg_cols)``
         ``qin`` is computed in this function and the rest are in the order
         of the ``arg_cols``. For example, if ``arg_cols = ["slope", "roughness"]``
         then the functions is called this way:
-        func(qin, slope, roughness)
+        ``func(qin, slope, roughness)``
         where slope and roughness are elemental values read from the flowlines.
     attr_col : str
         The column name of the attribute being accumulated in the network.
@@ -1145,16 +1146,16 @@ def vector_accumulation(
         data for a routing a single river segment such as slope, length,
         lateral flow, etc.
     id_name : str, optional
-        Name of the flowlines column containing IDs, defaults to comid
+        Name of the flowlines column containing IDs, defaults to ``comid``
     toid_name : str, optional
-        Name of the flowlines column containing toIDs, defaults to tocomid
+        Name of the flowlines column containing ``toIDs``, defaults to ``tocomid``
 
     Returns
     -------
     pandas.Series
         Accumulated flow for all the nodes. The dataframe is sorted from upstream
         to downstream (topological sorting). Depending on the given initial
-        condition in the attr_col, the outflow for each river segment can be
+        condition in the ``attr_col``, the outflow for each river segment can be
         a scalar or an array.
     """
 

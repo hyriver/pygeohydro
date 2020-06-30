@@ -160,7 +160,7 @@ def signatures(
         ax5.plot(Q_fdc.index.values, Q_fdc, label=label)
     ax5.set_yscale("log")
     ax5.set_xlim(0, 100)
-    ax5.set_xlabel("% Exceedence")
+    ax5.set_xlabel("% Exceedance")
     ax5.set_ylabel(fr"$\log(Q)$ ({daily_unit})")
     ax5.set_title("Flow Duration Curve")
 
