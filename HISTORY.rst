@@ -12,9 +12,9 @@ Breaking changes
   called ``dates`` across the codebase.
 - Re-wrote NLDI function and moved most of its classmethods to Station
   so now Station class has more cohesion.
-- Remove exploratory functionality of ``ArcGISREST``, since it's more convinient
-  to do from a broweser. Now, ``base_url`` is mandatory.
-- Rename ``in_crs`` in ``datasets`` function to ``geo_crs`` for geometry and
+- Removed exploratory functionality of ``ArcGISREST``, since it's more convinient
+  to do so from a broweser. Now, ``base_url`` is a required arguments.
+- Renamed ``in_crs`` in ``datasets`` and ``services`` functions to ``geo_crs`` for geometry and
   ``box_crs`` for bounding box inputs.
 
 Enhancements
@@ -22,16 +22,17 @@ Enhancements
 - Remove soft requirements from the env files.
 - Refactored ``requests`` functions into a single class and a separate file.
 - Made all the classes available directly from ``hydrodata``.
-- Added CodeFactor to the Github pipline and addressed the some of issues
+- Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipline and addressed the some of issues
   that CodeFactor found.
-- Improve docstrings and documentations.
-- Add customized exceptions for better exception handling.
-- Add ``pytest`` fixture to increase the test speed.
-- Refactor ``daymet`` and ``nwis_siteinfo`` function to reduce complexity
+- Added `Bandit <https://bandit.readthedocs.io/en/latest/>`_ to check the code for secutiry issue.
+- Improved docstrings and documentations.
+- Added customized exceptions for better exception handling.
+- Added ``pytest`` fixtures to improve the tests speed.
+- Refactored ``daymet`` and ``nwis_siteinfo`` functions to reduce code complexity
   and improve readability.
-- Major refactoring the code base to add type hinting.
+- Major refactoring of the codebase while adding type hinting.
 - The input geometry (or bounding box) can be provided in any projection
-  and neccessary re-projections are done under the hood.
+  and the neccessary re-projections are done under the hood.
 
 New Features
 ~~~~~~~~~~~~
