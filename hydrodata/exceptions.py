@@ -1,4 +1,4 @@
-"""Customized Hydrodata exceptions"""
+"""Customized Hydrodata exceptions."""
 from typing import Generator, List, Optional, Union
 
 
@@ -37,11 +37,11 @@ class MissingItems(Exception):
 
 
 class ZeroMatched(ValueError):
-    """Exception raised when a function argument is missing"""
+    """Exception raised when a function argument is missing."""
 
 
 class InvalidInputValue(Exception):
-    """Exception raised for invalid input
+    """Exception raised for invalid input.
 
     Parameters
     ----------
@@ -64,11 +64,11 @@ class InvalidInputValue(Exception):
 
 
 class InvalidInputRange(ValueError):
-    """Exception raised when a function argument is not in the valid range"""
+    """Exception raised when a function argument is not in the valid range."""
 
 
 class InvalidInputType(Exception):
-    """Exception raised when a function argument type is invalid
+    """Exception raised when a function argument type is invalid.
 
     Parameters
     ----------
@@ -91,4 +91,4 @@ class InvalidInputType(Exception):
 
 
 class MissingInputs(ValueError):
-    """Exception raised when there are missing function arguments"""
+    """Exception raised when there are missing function arguments."""

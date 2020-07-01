@@ -210,7 +210,8 @@ def nwis_siteinfo(
 
 
 class WaterData:
-    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service.
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wic
+    ket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service.
 
     Parameters
     ----------
@@ -329,7 +330,7 @@ class NLDI:
     def getfeature_byid(
         self, fsource: str, fid: str, basin: bool = False, url_only: bool = False
     ) -> gpd.GeoDataFrame:
-        """Get features of a single id
+        """Get features of a single id.
 
         Parameters
         ----------
@@ -371,7 +372,7 @@ class NLDI:
         distance: Optional[int] = None,
         url_only: bool = False,
     ) -> gpd.GeoDataFrame:
-        """Navigate the NHDPlus databse from a single feature id
+        """Navigate the NHDPlus databse from a single feature id.
 
         Parameters
         ----------
@@ -423,7 +424,7 @@ class NLDI:
 
 
 class Daymet:
-    """Base class for Daymet requests
+    """Base class for Daymet requests.
 
     Parameters
     ----------
@@ -760,7 +761,8 @@ def ssebopeta_bygeom(
     resolution: Optional[float] = None,
     fill_holes: bool = False,
 ) -> xr.DataArray:
-    """Daily actual ET for a region from SSEBop database in mm/day at 1 km resolution.
+    """Daily actual ET for a region from SSEBop database in mm/day at 1 km
+    resolution.
 
     Notes
     -----
@@ -936,7 +938,8 @@ def nlcd(
 
 
 class NationalMap:
-    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ service.
+    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__
+    service.
 
     The 3DEP service has multi-resolution sources so depending on the user
     provided resolution (or width) the data is resampled on server-side based
@@ -1010,14 +1013,14 @@ class NationalMap:
         self.fpath = fpath
 
     def get_dem(self) -> xr.DataArray:
-        """DEM as an ``xarray.DataArray`` in meters"""
+        """DEM as an ``xarray.DataArray`` in meters."""
 
         dem = self.get_map({"elevation": "3DEPElevation:None"})
         dem.attrs["units"] = "meters"
         return dem
 
     def get_aspect(self) -> xr.DataArray:
-        """Aspect map as an ``xarray.DataArray`` in degrees"""
+        """Aspect map as an ``xarray.DataArray`` in degrees."""
 
         aspect = self.get_map({"aspect": "3DEPElevation:Aspect Degrees"})
         aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
@@ -1026,7 +1029,7 @@ class NationalMap:
         return aspect
 
     def get_slope(self, mpm: bool = False) -> xr.DataArray:
-        """Slope from 3DEP service in degrees or meters/meters
+        """Slope from 3DEP service in degrees or meters/meters.
 
         Parameters
         ----------
@@ -1052,7 +1055,7 @@ class NationalMap:
         return slope
 
     def get_map(self, layer: Dict[str, str]) -> Union[xr.DataArray, xr.Dataset]:
-        """Get requested map using the national map's WMS service"""
+        """Get requested map using the national map's WMS service."""
 
         name = str(list(layer.keys())[0]).replace(" ", "_")
         _fpath: Optional[Dict[str, Optional[Union[str, Path]]]]

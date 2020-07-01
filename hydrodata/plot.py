@@ -1,7 +1,7 @@
 """Plot hydrological signatures.
 
-Plots includes  daily, monthly and annual hydrograph as well as
-regime curve (monthly mean) and flow duration curve.
+Plots includes  daily, monthly and annual hydrograph as well as regime
+curve (monthly mean) and flow duration curve.
 """
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
@@ -119,7 +119,7 @@ def signatures(
 
 
 class PlotDataType(NamedTuple):
-    """Data structure for plotting hydrologic signatures"""
+    """Data structure for plotting hydrologic signatures."""
 
     daily: pd.DataFrame
     monthly: pd.DataFrame
@@ -167,7 +167,8 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
 
 
 def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
-    """Colormap (cmap) and their respective values (norm) for land cover data legends."""
+    """Colormap (cmap) and their respective values (norm) for land cover data
+    legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"].keys())
 
