@@ -188,7 +188,7 @@ def test_plot(watershed_nat, watershed_urb):
     qobs = hds.nwis_streamflow([watershed_nat.station_id, watershed_urb.station_id], dates)
     clm_p = hds.daymet_byloc(watershed_nat.coords, dates=dates, variables=["prcp"])
     plot.signatures(qobs, precipitation=clm_p["prcp (mm/day)"])
-    plot.signatures(qobs[watershed_nat.station_id], precipitation=clm_p["prcp (mm/day)"])
+    plot.signatures(qobs[f"USGS-{watershed_nat.station_id}"], precipitation=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100
 
