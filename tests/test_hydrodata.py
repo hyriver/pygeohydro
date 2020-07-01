@@ -313,7 +313,7 @@ def test_wbd():
     wbd = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
     wbd.max_nrecords = 5
     wbd.featureids = [str(n) for n in range(1, 21)]
-    wbd.outFields = ["HUC2", "NAME", "SHAPE_Area"]
+    wbd.outFields = ["huc2", "name", "areaacres"]
     f = wbd.get_features()
     assert f.shape[0] == len([x for y in wbd.featureids for x in y])
 
