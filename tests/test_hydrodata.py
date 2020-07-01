@@ -182,12 +182,13 @@ def test_newdb(watershed_urb):
     )
 
 
-def test_plot(watershed_nat):
+def test_plot(watershed_nat, watershed_urb):
     hds.interactive_map((-70, 44, -69, 46))
     dates = ("2000-01-01", "2009-12-31")
-    qobs = hds.nwis_streamflow(watershed_nat.station_id, dates)
+    qobs = hds.nwis_streamflow([watershed_nat.station_id, watershed_urb.station_id], dates)
     clm_p = hds.daymet_byloc(watershed_nat.coords, dates=dates, variables=["prcp"])
-    plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
+    plot.signatures(qobs, precipitation=clm_p["prcp (mm/day)"])
+    plot.signatures(qobs[watershed_nat.station_id], precipitation=clm_p["prcp (mm/day)"])
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100
 
