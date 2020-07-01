@@ -180,7 +180,7 @@ All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stabl
 
     from hydrodata import plot
 
-    plot.signatures({"Q": clm_p["Q (cms)"]}, prcp=clm_p["prcp (mm/day)"])
+    plot.signatures(clm_p["Q (cms)"], precipitation=clm_p["prcp (mm/day)"])
 
 Some example plots are shown below:
 
