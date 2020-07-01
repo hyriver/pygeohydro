@@ -140,11 +140,11 @@ def test_newdb(watershed_urb):
     )
     slope = services.wms_bygeom(
         url_wms,
-        geometry=watershed_urb.geometry,
+        {"slope": "3DEPElevation:Slope Degrees"},
+        "image/tiff",
+        watershed_urb.geometry,
         geo_crs="epsg:4326",
         version="1.3.0",
-        layers={"slope": "3DEPElevation:Slope Degrees"},
-        outFormat="image/tiff",
         fpath={"slope": "tmp/slope.tiff"},
         width=2000,
         fill_holes=True,
@@ -153,10 +153,10 @@ def test_newdb(watershed_urb):
 
     slope = services.wms_bygeom(
         url_wms,
-        geometry=watershed_urb.geometry,
+        {"slope": "3DEPElevation:Slope Degrees"},
+        "image/tiff",
+        watershed_urb.geometry,
         version="1.3.0",
-        layers={"slope": "3DEPElevation:Slope Degrees"},
-        outFormat="image/tiff",
         resolution=1,
     )
 
@@ -183,7 +183,7 @@ def test_newdb(watershed_urb):
 
 
 def test_plot(watershed_nat):
-    hds.interactive_map([-70, 44, -69, 46])
+    hds.interactive_map((-70, 44, -69, 46))
     dates = ("2000-01-01", "2009-12-31")
     qobs = hds.nwis_streamflow(watershed_nat.station_id, dates)
     clm_p = hds.daymet_byloc(watershed_nat.coords, dates=dates, variables=["prcp"])

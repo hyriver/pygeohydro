@@ -9,6 +9,8 @@ import geopandas as gpd
 import pandas as pd
 import simplejson as json
 import xarray as xr
+from owslib.map.wms111 import WebMapService_1_1_1
+from owslib.map.wms130 import WebMapService_1_3_0
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from requests import Response
@@ -282,17 +284,16 @@ class ArcGISREST:
 
 def wms_bygeom(
     url: str,
+    layers: Dict[str, str],
+    outFormat: str,
     geometry: Polygon,
     geo_crs: str = "epsg:4326",
     width: Optional[int] = None,
     resolution: Optional[float] = None,
-    layers: Optional[Dict[str, str]] = None,
-    outFormat: Optional[str] = None,
     fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
     version: str = "1.3.0",
     crs: str = "epsg:4326",
     fill_holes: bool = False,
-    validation: bool = True,
 ) -> Union[xr.DataArray, xr.Dataset]:
     """Data from a WMS service within a geometry
 
@@ -300,6 +301,14 @@ def wms_bygeom(
     ----------
     url : str
         The base url for the WMS service e.g., https://www.mrlc.gov/geoserver/mrlc_download/wms
+    layers : dict
+        The layer from the service to be downloaded. The argument should be a
+        dict with keys as the variable name in the output dataframe and values
+        as the complete name of the layer in the service. You can pass an empty
+        string to get a list of available layers.
+    outFormat : str
+        The data format to request for data from the service. You can pass an empty
+        string to get a list of available output formats.
     geometry : Polygon
         A shapely Polygon for getting the data.
     geo_crs : str, optional
@@ -313,14 +322,6 @@ def wms_bygeom(
         The data resolution in arc-seconds. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
-    layers : dict
-        The layer from the service to be downloaded, defaults to None which throws
-        an error and includes all the available layers offered by the service. The
-        argument should be a dict with keys as the variable name in the output
-        dataframe and values as the complete name of the layer in the service.
-    outFormat : str
-        The data format to request for data from the service, defaults to None which
-         throws an error and includes all the available format offered by the service.
     fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
@@ -333,10 +334,6 @@ def wms_bygeom(
         epsg:4326.
     fill_holes : bool, optional
         Wether to fill the holes in the geometry's interior, defaults to False.
-    validation : bool
-        Validate the input arguments from the WFS service, defaults to True. Set this
-        to False if you are sure all the WMS settings such as layer and crs are correct
-        to avoid sending extra requestes.
 
     Returns
     -------
@@ -350,39 +347,7 @@ def wms_bygeom(
         except ConnectionError:
             continue
 
-    if validation:
-        valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
-        if layers is None:
-            raise MissingInputs(
-                "The layers argument is missing."
-                + " The following layers are available:\n"
-                + "\n".join(f"{name}: {title}" for name, title in valid_layers.items())
-            )
-
-        if isinstance(layers, dict):
-            _layers = layers
-            if any(str(layer) not in valid_layers.keys() for layer in _layers.values()):
-                raise InvalidInputValue("layer", (f"{n}: {t}\n" for n, t in valid_layers.items()))
-        else:
-            raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
-
-        valid_outFormats = wms.getOperationByName("GetMap").formatOptions
-        if outFormat is None:
-            raise MissingInputs(
-                "The outFormat argument is missing."
-                + " The following output formats are available:\n"
-                + ", ".join(fmt for fmt in valid_outFormats)
-            )
-
-        if outFormat not in valid_outFormats:
-            raise InvalidInputValue("outFormat", valid_outFormats)
-
-        valid_crss = {
-            layer: [s.lower() for s in wms[layer].crsOptions] for layer in _layers.values()
-        }
-        if any(crs not in valid_crss[layer] for layer in _layers.values()):
-            _valid_crss = (f"{lyr}: {', '.join(c for c in cs)}\n" for lyr, cs in valid_crss.items())
-            raise InvalidInputValue("CRS", _valid_crss)
+    validate_wms(wms, layers, outFormat, crs)
 
     if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapley's Polygon")
@@ -399,13 +364,12 @@ def wms_bygeom(
     _width = int((east - west) * 3600 / resolution) if width is None else width
     height = int(abs(north - south) / abs(east - west) * _width)
 
-    if isinstance(fpath, dict):
-        _fpath = fpath
-        if not all(layer in _layers.keys() for layer in _fpath.keys()):
+    if fpath is None:
+        fpath = {k: None for k in layers.keys()}
+    elif isinstance(fpath, dict):
+        if not all(layer in layers.keys() for layer in fpath.keys()):
             raise ValueError("Keys of ``fpath`` and ``layers`` dictionaries should be the same.")
-        utils.check_dir(_fpath.values())
-    elif fpath is None:
-        _fpath = {k: None for k in _layers.keys()}
+        utils.check_dir(fpath.values())
     else:
         raise InvalidInputType("fpath", "dict", "{var_name : path}")
 
@@ -418,17 +382,50 @@ def wms_bygeom(
         )
         return (name, img.read())
 
-    resp = utils.threading(_wms, _layers.items(), max_workers=len(_layers),)
+    resp = utils.threading(_wms, layers.items(), max_workers=len(layers),)
 
     data = utils.create_dataset(
-        resp[0][1], mask, transform, _width, height, resp[0][0], _fpath[resp[0][0]]
+        resp[0][1], mask, transform, _width, height, resp[0][0], fpath[resp[0][0]]
     )
 
     if len(resp) > 1:
         for name, r in resp:
-            da = utils.create_dataset(r, mask, transform, _width, height, name, _fpath[name])
+            da = utils.create_dataset(r, mask, transform, _width, height, name, fpath[name])
             data = xr.merge([data, da])
     return data
+
+
+def validate_wms(
+    wms: Union[WebMapService_1_3_0, WebMapService_1_1_1],
+    layers: Union[str, Dict[str, str]],
+    outFormat: str,
+    crs: str,
+):
+    """Validate query inputs for a WMS request"""
+
+    valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
+
+    if isinstance(layers, dict):
+        if any(layer not in valid_layers.keys() for layer in layers.values()):
+            raise InvalidInputValue("layer", (f"{n}: {t}\n" for n, t in valid_layers.items()))
+    else:
+        raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
+
+    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
+    if outFormat is None:
+        raise MissingInputs(
+            "The outFormat argument is missing."
+            + " The following output formats are available:\n"
+            + ", ".join(fmt for fmt in valid_outFormats)
+        )
+
+    if outFormat not in valid_outFormats:
+        raise InvalidInputValue("outFormat", valid_outFormats)
+
+    valid_crss = {layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()}
+    if any(crs not in valid_crss[layer] for layer in layers.values()):
+        _valid_crss = (f"{lyr}: {', '.join(c for c in cs)}\n" for lyr, cs in valid_crss.items())
+        raise InvalidInputValue("CRS", _valid_crss)
 
 
 class WFS:
