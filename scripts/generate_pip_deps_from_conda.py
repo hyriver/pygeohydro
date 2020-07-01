@@ -1,9 +1,8 @@
-#!/usr/bin/env python3
-"""
-Convert the conda environment.yml to the pip requirements-dev.txt,
-or check that they have the same packages (for the CI). The original
-script is taken from Pandas github repository.
-https://github.com/pandas-dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py
+#!/usr/bin/env python
+"""Convert the conda environment.yml to the pip requirements-dev.txt, or check
+that they have the same packages (for the CI). The original script is taken
+from Pandas github repository. https://github.com/pandas-
+dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py.
 
 Usage:
 
@@ -26,8 +25,7 @@ RENAME = {"pytables": "tables", "pyqt": "pyqt5", "dask-core": "dask"}
 
 
 def conda_package_to_pip(package):
-    """
-    Convert a conda package to its pip equivalent.
+    """Convert a conda package to its pip equivalent.
 
     In most cases they are the same, those are the exceptions:
     - Packages that should be excluded (in `EXCLUDE`)
@@ -57,8 +55,7 @@ def conda_package_to_pip(package):
 
 
 def main(conda_fname, pip_fname, compare=False):
-    """
-    Generate the pip dependencies file from the conda file, or compare that
+    """Generate the pip dependencies file from the conda file, or compare that
     they are synchronized (``compare=True``).
 
     Parameters
