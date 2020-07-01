@@ -30,13 +30,12 @@ dependencies:
   - codecov
   - coverage
 
-  - jupyterlab
   - recommonmark
   - nbsphinx
   - sphinx
   - sphinx-copybutton
   - pycodestyle
   - numpydoc
+  - beautifulsoup4
   - pip:
-    - flake8-use-fstring
     - git+https://github.com/bashtage/sphinx-material.git
