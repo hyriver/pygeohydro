@@ -1,4 +1,4 @@
-"""Some utilities for Hydrodata"""
+"""Some utilities for Hydrodata."""
 
 import numbers
 import os
@@ -37,7 +37,7 @@ def threading(
     param_list: Optional[List[Any]] = None,
     max_workers: int = 8,
 ) -> List[Any]:
-    """Run a function using threading
+    """Run a function using threading.
 
     Parameters
     ----------
@@ -73,7 +73,7 @@ def check_dir(
         Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]], str, Path]
     ]
 ) -> None:
-    """Create parent directory for a file if doesn't exist"""
+    """Create parent directory for a file if doesn't exist."""
     if isinstance(fpath_itr, str):
         fpath_itr = [fpath_itr]
     elif not isinstance(fpath_itr, Iterable):
@@ -95,9 +95,9 @@ def daymet_dates(
 ) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
     """Correct dates for Daymet when leap years.
 
-    Daymet doesn't account for leap years and removes
-    Dec 31 when it's leap year. This function returns all
-    the dates in the Daymet database within the provided date range.
+    Daymet doesn't account for leap years and removes Dec 31 when it's
+    leap year. This function returns all the dates in the Daymet
+    database within the provided date range.
     """
 
     period = pd.date_range(start, end)
@@ -113,7 +113,7 @@ def get_ssebopeta_urls(
     end: Optional[Union[pd.DatetimeIndex, str]] = None,
     years: Optional[Union[int, List[int]]] = None,
 ) -> List[Tuple[pd.DatetimeIndex, str]]:
-    """Get list of URLs for SSEBop dataset within a period"""
+    """Get list of URLs for SSEBop dataset within a period."""
     if years is None and start is not None and end is not None:
         start = pd.to_datetime(start)
         end = pd.to_datetime(end)
@@ -223,7 +223,8 @@ def elevation_bybbox(
 
 
 def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFrame:
-    """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
+    """Compute Potential EvapoTranspiration using Daymet dataset for a single
+    location.
 
     The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
 
@@ -692,7 +693,7 @@ def traverse_json(obj: Dict[str, Any], path: Union[str, List[str]]) -> List[str]
 
 
 def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
-    """Percentages of the categorical NLCD cover data
+    """Percentages of the categorical NLCD cover data.
 
     Parameters
     ----------
@@ -739,7 +740,7 @@ def create_dataset(
     name: str,
     fpath: Optional[Union[str, Path]],
 ) -> Union[xr.Dataset, xr.DataArray]:
-    """Create dataset from a response clipped by a geometry
+    """Create dataset from a response clipped by a geometry.
 
     Parameters
     ----------
@@ -803,7 +804,7 @@ def create_dataset(
 
 
 def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -> gpd.GeoDataFrame:
-    """Create GeoDataFrame from (Geo)JSON
+    """Create GeoDataFrame from (Geo)JSON.
 
     Parameters
     ----------
@@ -851,7 +852,7 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
     """
 
     def convert(arcgis, idAttribute=None):
-        """Convert an ArcGIS JSON object to a GeoJSON object"""
+        """Convert an ArcGIS JSON object to a GeoJSON object."""
         geojson = {}
 
         if "features" in arcgis and arcgis["features"]:
@@ -935,7 +936,7 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
         return geojson
 
     def rings_togeojson(rings):
-        """Checks for holes in the ring and fill them"""
+        """Checks for holes in the ring and fill them."""
 
         outerRings = []
         holes = []

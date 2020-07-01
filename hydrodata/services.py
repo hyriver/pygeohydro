@@ -112,7 +112,8 @@ class ArcGISREST:
         self._spatialRel = value
 
     def test_url(self) -> None:
-        """Test the generated url and get the required parameters from the service"""
+        """Test the generated url and get the required parameters from the
+        service."""
         try:
             r = self.session.get(self.base_url, {"f": "json"}).json()
             try:
@@ -180,7 +181,7 @@ class ArcGISREST:
     def get_featureids(
         self, geom: Union[Polygon, Tuple[float, float, float, float]], geo_crs: str = "epsg:4326",
     ) -> None:
-        """Get feature IDs withing a geometry"""
+        """Get feature IDs withing a geometry."""
 
         if not isinstance(geom, (Polygon, tuple)):
             raise InvalidInputType("geometry", "tuple or Polygon")
@@ -224,7 +225,7 @@ class ArcGISREST:
         self.featureids = oids
 
     def get_features(self) -> gpd.GeoDataFrame:
-        """Get features based on the feature IDs"""
+        """Get features based on the feature IDs."""
 
         if not all(f in self.valid_fields for f in self.outFields):
             raise InvalidInputValue("outFields", self.valid_fields)
@@ -295,7 +296,7 @@ def wms_bygeom(
     crs: str = "epsg:4326",
     fill_holes: bool = False,
 ) -> Union[xr.DataArray, xr.Dataset]:
-    """Data from a WMS service within a geometry
+    """Data from a WMS service within a geometry.
 
     Parameters
     ----------
@@ -401,7 +402,7 @@ def validate_wms(
     outFormat: str,
     crs: str,
 ):
-    """Validate query inputs for a WMS request"""
+    """Validate query inputs for a WMS request."""
 
     valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
 
@@ -429,7 +430,7 @@ def validate_wms(
 
 
 class WFS:
-    """Data from any WFS service within a geometry or by featureid
+    """Data from any WFS service within a geometry or by featureid.
 
     Parameters
     ----------
@@ -521,7 +522,7 @@ class WFS:
         )
 
     def get_validnames(self) -> Response:
-        """Get valid column names for a layer"""
+        """Get valid column names for a layer."""
 
         max_features = "count" if self.version == "2.0.0" else "maxFeatures"
 
@@ -544,7 +545,7 @@ class WFS:
     def getfeature_bybox(
         self, bbox: Tuple[float, float, float, float], box_crs: str = "epsg:4326"
     ) -> Response:
-        """Data from any WMS service within a geometry
+        """Data from any WMS service within a geometry.
 
         Parameters
         ----------
@@ -584,7 +585,7 @@ class WFS:
     def getfeature_byid(
         self, featurename: str, featureids: Union[List[str], str], filter_spec: str = "1.1",
     ) -> Response:
-        """Get features based on feature IDs
+        """Get features based on feature IDs.
 
         Parameters
         ----------

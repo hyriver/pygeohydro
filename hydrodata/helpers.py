@@ -1,4 +1,4 @@
-"""Some helper function for Hydrodata"""
+"""Some helper function for Hydrodata."""
 
 from typing import Any, Dict
 
@@ -10,7 +10,7 @@ from hydrodata.connection import RetrySession
 
 
 def nlcd_helper() -> Dict[str, Any]:
-    """Helper for NLCD cover data
+    """Helper for NLCD cover data.
 
     Notes
     -----
@@ -82,7 +82,7 @@ def nlcd_helper() -> Dict[str, Any]:
 
 
 def nhdplus_fcodes() -> pd.DataFrame:
-    """Get NHDPlus FCode lookup table"""
+    """Get NHDPlus FCode lookup table."""
     url = (
         "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
         + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
@@ -91,10 +91,10 @@ def nhdplus_fcodes() -> pd.DataFrame:
 
 
 def nwis_errors() -> pd.DataFrame:
-    """Get error code lookup table for USGS sites that have daily values"""
+    """Get error code lookup table for USGS sites that have daily values."""
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
 
 def daymet_variables() -> pd.DataFrame:
-    """Get Daymet variables table"""
+    """Get Daymet variables table."""
     return pd.read_html("https://daymet.ornl.gov/overview")[1]

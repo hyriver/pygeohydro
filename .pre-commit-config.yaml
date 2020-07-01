@@ -11,10 +11,11 @@ repos:
       - id: black
         args: [-t, py38, -l, "100"]
 
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.1.1
+  - repo: https://github.com/myint/docformatter
+    rev: v1.3.1
     hooks:
-      - id: blackdoc
+        - id: docformatter
+          args: [--in-place]
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3

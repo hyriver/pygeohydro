@@ -1,4 +1,4 @@
-"""requests wrapper with retry"""
+"""requests wrapper with retry."""
 
 import socket
 from typing import Any, Mapping, MutableMapping, Optional, Tuple
@@ -53,14 +53,14 @@ class RetrySession:
         self.session.hooks = {"response": [lambda r, *args, **kwargs: r.raise_for_status()]}
 
     def get(self, url: str, payload: Optional[Mapping[str, Any]] = None,) -> Response:
-        """Retrieve data from a url by GET and return the Response"""
+        """Retrieve data from a url by GET and return the Response."""
         try:
             return self.session.get(url, params=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
             raise
 
     def post(self, url: str, payload: Optional[MutableMapping[str, Any]] = None,) -> Response:
-        """Retrieve data from a url by POST and return the Response"""
+        """Retrieve data from a url by POST and return the Response."""
         try:
             return self.session.post(url, data=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
@@ -68,7 +68,7 @@ class RetrySession:
 
 
 def onlyIPv4() -> _patch:
-    """disable IPv6 and only use IPv4"""
+    """disable IPv6 and only use IPv4."""
 
     orig_getaddrinfo = socket.getaddrinfo
 
