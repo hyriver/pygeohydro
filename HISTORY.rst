@@ -10,12 +10,15 @@ Breaking changes
 - Unified function names for getting feature by ID and by box.
 - Combined ``start`` and ``end`` arguments into a ``tuple`` argument
   called ``dates`` across the codebase.
-- Re-wrote NLDI function and moved most of its classmethods to Station
+- Rewrote NLDI function and moved most of its classmethods to Station
   so now Station class has more cohesion.
 - Removed exploratory functionality of ``ArcGISREST``, since it's more convinient
   to do so from a broweser. Now, ``base_url`` is a required arguments.
 - Renamed ``in_crs`` in ``datasets`` and ``services`` functions to ``geo_crs`` for geometry and
   ``box_crs`` for bounding box inputs.
+- Re-wrote the ``signatures`` function from scratch using ``NamedTuple`` to improve readability
+  and efficiency. Now, the ``daily`` argument should be just a ``pandas.DataFrame`` or ``pandas.Series``
+  and the column names are used for legends.
 
 Enhancements
 ~~~~~~~~~~~~
