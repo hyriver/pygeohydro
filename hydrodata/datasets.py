@@ -140,8 +140,8 @@ def nwis_siteinfo(
     ----------
     ids : str or list
         Station ID(s)
-    bbox : list
-        List of corners in this order [west, south, east, north]
+    bbox : tuple
+        Coordinates of bounding box in this order (west, south, east, north)
     expanded : bool, optional
         Whether to get expanded sit information for example drainage area.
 
@@ -150,20 +150,21 @@ def nwis_siteinfo(
     pandas.DataFrame
         NWIS stations
     """
-    if bbox is not None and ids is None:
-        if not isinstance(bbox, (list, tuple)) and len(bbox) != 4:
-            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+    if (bbox is None and ids is None) or (bbox is not None and ids is not None):
+        raise MissingInputs("Either ids or bbox argument should be provided.")
 
-        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-    elif ids is not None and bbox is None:
+    if ids is None:
+        if isinstance(bbox, tuple) and len(bbox) == 4:
+            query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+        else:
+            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+    else:
         if isinstance(ids, str):
             query = {"sites": ids}
-        elif isinstance(ids, (list, tuple)):
+        elif isinstance(ids, list):
             query = {"sites": ",".join(str(i) for i in ids)}
         else:
             raise InvalidInputType("ids", "str or list")
-    else:
-        raise MissingInputs("Either ids or bbox argument should be provided.")
 
     url = "https://waterservices.usgs.gov/nwis/site"
 
@@ -427,7 +428,7 @@ class Daymet:
     Parameters
     ----------
     dates : tuple, optional
-        Start and end dates as a tuple (start, end), default to None.
+        Start and end dates as a tuple, (start, end), default to None.
     years : int or list or tuple, optional
         List of year(s), default to None.
     variables : str or list or tuple, optional
@@ -450,7 +451,10 @@ class Daymet:
     ) -> None:
         self.session = RetrySession()
 
-        if years is None and dates is not None:
+        if (years is None and dates is None) or (years is not None and dates is not None):
+            raise MissingInputs("Either years or dates arguments should be provided.")
+
+        if years is None:
             if isinstance(dates, tuple) and len(dates) == 2:
                 start = pd.to_datetime(dates[0])
                 end = pd.to_datetime(dates[1])
@@ -464,18 +468,19 @@ class Daymet:
                 "start": start.strftime("%Y-%m-%d"),
                 "end": end.strftime("%Y-%m-%d"),
             }
-        elif years is not None and dates is None:
+        elif dates is None:
             years = years if isinstance(years, (list, tuple)) else [years]
             self.date_dict = {"years": ",".join(str(x) for x in years)}
-        else:
-            raise MissingInputs("Either years or start and end arguments should be provided.")
 
         vars_table = helpers.daymet_variables()
-        self.units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
-        valid_variables = vars_table.Abbr.to_list()
 
-        if variables is not None:
-            self.variables = variables if isinstance(variables, (list, tuple)) else [variables]
+        self.units = dict(zip(vars_table["Abbr"], vars_table["Units"]))
+
+        valid_variables = vars_table.Abbr.to_list()
+        if variables is None:
+            self.variables = valid_variables
+        else:
+            self.variables = variables if isinstance(variables, list) else [variables]
 
             if not all(v for v in variables if v not in valid_variables):
                 raise InvalidInputValue("variables", valid_variables)
@@ -483,8 +488,6 @@ class Daymet:
             if pet:
                 reqs = ("tmin", "tmax", "vp", "srad", "dayl")
                 self.variables = list(set(reqs) | set(variables))
-        else:
-            self.variables = valid_variables
 
 
 def daymet_byloc(
@@ -917,11 +920,11 @@ def nlcd(
 
     ds = services.wms_bygeom(
         url,
+        layers,
+        "image/geotiff",
         geometry,
         width=width,
         resolution=resolution,
-        layers=layers,
-        outFormat="image/geotiff",
         fill_holes=fill_holes,
         geo_crs=geo_crs,
         crs=crs,
@@ -1056,11 +1059,11 @@ class NationalMap:
         _fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
             self.url,
+            layer,
+            "image/tiff",
             self.geometry,
             width=self.width,
             resolution=self.resolution,
-            layers=layer,
-            outFormat="image/tiff",
             fill_holes=self.fill_holes,
             fpath=_fpath,
             geo_crs=self.geo_crs,
@@ -1427,7 +1430,10 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
         Interactive map within a bounding box.
     """
 
-    if not isinstance(bbox, tuple) and len(bbox) != 4:
+    if isinstance(bbox, tuple):
+        if len(bbox) != 4:
+            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+    else:
         raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
     sites = nwis_siteinfo(bbox=bbox)

@@ -69,7 +69,9 @@ def threading(
 
 
 def check_dir(
-    fpath_itr: Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]]]
+    fpath_itr: Optional[
+        Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]], str, Path]
+    ]
 ) -> None:
     """Create parent directory for a file if doesn't exist"""
     if isinstance(fpath_itr, str):
@@ -438,20 +440,20 @@ def mean_monthly(daily: pd.Series) -> pd.Series:
     return mean_month
 
 
-def exceedance(daily: pd.Series) -> pd.Series:
-    """Compute Flow duration (rank, sorted obs).
+def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
+    """Compute Flow duration (rank, sorted obs)"""
 
-    The zero discharges are handled by dropping since log 0 is undefined.
-    """
+    if isinstance(daily, pd.Series):
+        daily = daily.to_frame()
 
-    if not isinstance(daily, pd.Series):
-        raise InvalidInputType("daily", "pandas.Series")
-
-    rank = daily.rank(ascending=False, pct=True) * 100
-    fdc = pd.concat([daily, rank], axis=1)
-    fdc.columns = ["Q", "rank"]
-    fdc = fdc.sort_values(by=["rank"]).set_index("rank", drop=True)
-    return fdc
+    ranks = daily.rank(ascending=False, pct=True) * 100
+    fdc = [
+        pd.DataFrame({c: daily[c], f"{c}_rank": ranks[c]})
+        .sort_values(by=f"{c}_rank")
+        .reset_index(drop=True)
+        for c in daily
+    ]
+    return pd.concat(fdc, axis=1)
 
 
 def prepare_nhdplus(
