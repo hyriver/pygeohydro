@@ -73,7 +73,7 @@ class ArcGISREST:
 
     @outFormat.setter
     def outFormat(self, value: str) -> None:
-        if self.base_url is not None and value not in self.queryFormats:
+        if self.base_url is not None and value.lower() not in self.queryFormats:
             raise InvalidInputValue("outFormat", self.queryFormats)
 
         self._outFormat = value
@@ -220,6 +220,7 @@ class ArcGISREST:
             "f": self.outFormat,
         }
         r = self.session.post(f"{self.base_url}/query", payload)
+        print(self.outFormat)
         try:
             oids = r.json()["objectIds"]
         except (KeyError, TypeError, IndexError, JSONDecodeError):
@@ -486,6 +487,7 @@ class WFS:
             raise InvalidInputValue("layers", valid_layers)
 
         valid_outFormats = wfs.getOperationByName("GetFeature").parameters["outputFormat"]["values"]
+        valid_outFormats = [v.lower() for v in valid_outFormats]
         if self.outFormat is None:
             raise MissingInputs(
                 "The outFormat argument is missing."

@@ -132,6 +132,7 @@ def test_newdb(watershed_urb):
     s.get_featureids(watershed_urb.geometry)
     s.outFormat = "geojson"
     storm_pipes = s.get_features()
+    print(storm_pipes.columns)
     s.outFormat = "json"
     storm_pipes = s.get_features()
 
@@ -168,7 +169,6 @@ def test_newdb(watershed_urb):
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
-    print(wfs)
 
     r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
