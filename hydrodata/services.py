@@ -122,7 +122,13 @@ class ArcGISREST:
                 self.units = None
             self.maxRecordCount = r["maxRecordCount"]
             self.queryFormats = r["supportedQueryFormats"].replace(" ", "").lower().split(",")
-            self.valid_fields = utils.traverse_json(r, ["fields", "name"]) + ["*"]
+            self.valid_fields = list(
+                set(
+                    utils.traverse_json(r, ["fields", "name"])
+                    + utils.traverse_json(r, ["fields", "alias"])
+                    + ["*"]
+                )
+            )
         except KeyError:
             raise ServerError(self.base_url)
 
@@ -339,14 +345,10 @@ def wms_bygeom(
     Returns
     -------
     xarray.Dataset
-        Requested layer within a geometry
+        Requested layer data within a geometry
     """
-    for _ in range(3):
-        try:
-            wms = WebMapService(url, version=version)
-            break
-        except ConnectionError:
-            continue
+
+    wms = WebMapService(url, version=version)
 
     validate_wms(wms, layers, outFormat, crs)
 
@@ -365,14 +367,15 @@ def wms_bygeom(
     _width = int((east - west) * 3600 / resolution) if width is None else width
     height = int(abs(north - south) / abs(east - west) * _width)
 
+    if fpath is not None and not isinstance(fpath, dict):
+        raise InvalidInputType("fpath", "dict", "{var_name : path}")
+
     if fpath is None:
         fpath = {k: None for k in layers.keys()}
-    elif isinstance(fpath, dict):
-        if not all(layer in layers.keys() for layer in fpath.keys()):
-            raise ValueError("Keys of ``fpath`` and ``layers`` dictionaries should be the same.")
-        utils.check_dir(fpath.values())
     else:
-        raise InvalidInputType("fpath", "dict", "{var_name : path}")
+        if layers.keys() != fpath.keys():
+            raise ValueError("Keys of fpath and layers dictionaries should be the same.")
+        utils.check_dir(fpath.values())
 
     mask, transform = utils.geom_mask(geometry, _width, height)
 
@@ -383,7 +386,7 @@ def wms_bygeom(
         )
         return (name, img.read())
 
-    resp = utils.threading(_wms, layers.items(), max_workers=len(layers),)
+    resp = utils.threading(_wms, layers.items(), max_workers=len(layers))
 
     data = utils.create_dataset(
         resp[0][1], mask, transform, _width, height, resp[0][0], fpath[resp[0][0]]
@@ -393,6 +396,7 @@ def wms_bygeom(
         for name, r in resp:
             da = utils.create_dataset(r, mask, transform, _width, height, name, fpath[name])
             data = xr.merge([data, da])
+
     return data
 
 
@@ -406,21 +410,14 @@ def validate_wms(
 
     valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
 
-    if isinstance(layers, dict):
-        if any(layer not in valid_layers.keys() for layer in layers.values()):
-            raise InvalidInputValue("layer", (f"{n}: {t}\n" for n, t in valid_layers.items()))
-    else:
+    if not isinstance(layers, dict):
         raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
 
-    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
-    if outFormat is None:
-        raise MissingInputs(
-            "The outFormat argument is missing."
-            + " The following output formats are available:\n"
-            + ", ".join(fmt for fmt in valid_outFormats)
-        )
+    if any(layer not in valid_layers.keys() for layer in layers.values()):
+        raise InvalidInputValue("layer", (f"{n}: {t}\n" for n, t in valid_layers.items()))
 
-    if outFormat not in valid_outFormats:
+    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
+    if outFormat is None or outFormat not in valid_outFormats:
         raise InvalidInputValue("outFormat", valid_outFormats)
 
     valid_crss = {layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()}
@@ -469,46 +466,10 @@ class WFS:
         self.outFormat = outFormat
         self.version = version
         self.crs = crs
+        self.session = RetrySession()
 
         if validation:
-            for _ in range(3):
-                try:
-                    wfs = WebFeatureService(url, version=version)
-                    break
-                except ConnectionError:
-                    continue
-
-            valid_layers = list(wfs.contents)
-            valid_layers_lower = [layer.lower() for layer in valid_layers]
-            if layer is None:
-                raise MissingInputs(
-                    "The layer argument is missing."
-                    + " The following layers are available:\n"
-                    + ", ".join(layer for layer in valid_layers)
-                )
-
-            if layer.lower() not in valid_layers_lower:
-                raise InvalidInputValue("layers", valid_layers)
-
-            valid_outFormats = wfs.getOperationByName("GetFeature").parameters["outputFormat"][
-                "values"
-            ]
-            valid_outFormats = [f.lower() for f in valid_outFormats]
-            if outFormat is None:
-                raise MissingInputs(
-                    "The outFormat argument is missing."
-                    + " The following output formats are available:\n"
-                    + ", ".join(fmt for fmt in valid_outFormats)
-                )
-
-            if outFormat.lower() not in valid_outFormats:
-                raise InvalidInputValue("outFormat", valid_outFormats)
-
-            valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[layer].crsOptions]
-            if crs.lower() not in valid_crss:
-                raise InvalidInputValue("crs", valid_crss)
-
-            self.session = RetrySession()
+            self.validate_wfs()
 
     def __repr__(self) -> str:
         """Print the services properties."""
@@ -520,6 +481,35 @@ class WFS:
             + f"Output Format: {self.outFormat}\n"
             + f"Output CRS: {self.crs}"
         )
+
+    def validate_wfs(self):
+        wfs = WebFeatureService(self.url, version=self.version)
+
+        valid_layers = list(wfs.contents)
+        if self.layer is None:
+            raise MissingInputs(
+                "The layer argument is missing."
+                + " The following layers are available:\n"
+                + ", ".join(ly for ly in valid_layers)
+            )
+
+        if self.layer not in valid_layers:
+            raise InvalidInputValue("layers", valid_layers)
+
+        valid_outFormats = wfs.getOperationByName("GetFeature").parameters["outputFormat"]["values"]
+        if self.outFormat is None:
+            raise MissingInputs(
+                "The outFormat argument is missing."
+                + " The following output formats are available:\n"
+                + ", ".join(fmt for fmt in valid_outFormats)
+            )
+
+        if self.outFormat not in valid_outFormats:
+            raise InvalidInputValue("outFormat", valid_outFormats)
+
+        valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[self.layer].crsOptions]
+        if self.crs.lower() not in valid_crss:
+            raise InvalidInputValue("crs", valid_crss)
 
     def get_validnames(self) -> Response:
         """Get valid column names for a layer."""
