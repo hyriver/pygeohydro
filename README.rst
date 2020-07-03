@@ -103,7 +103,7 @@ With just a few lines of code, Hydrodata provides easy access to a handful of da
 
     import hydrodata.datasets as hds
 
-    hds.interactive_map([-70, 44, -69, 46])
+    hds.interactive_map((-70, 44, -69, 46))
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
