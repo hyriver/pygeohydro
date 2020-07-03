@@ -236,39 +236,28 @@ class ArcGISREST:
         if not all(f in self.valid_fields for f in self.outFields):
             raise InvalidInputValue("outFields", self.valid_fields)
 
-        def get_geojson(ids: Tuple[str, ...]) -> Union[Response, Tuple[str, ...]]:
-            payload = {
-                "objectIds": ",".join(str(i) for i in ids),
-                "returnGeometry": "true",
-                "outSR": "4326",
-                "outFields": ",".join(str(i) for i in self.outFields),
-                "f": self.outFormat,
-            }
+        payload = {
+            "returnGeometry": "true",
+            "outSR": "4326",
+            "outFields": ",".join(self.outFields),
+            "f": self.outFormat,
+        }
+
+        def getter(ids: Tuple[str, ...]) -> Union[Response, Tuple[str, ...]]:
+            payload.update({"objectIds": ",".join(ids)})
             r = self.session.post(f"{self.base_url}/query", payload)
             try:
                 return utils.json_togeodf(r.json(), "epsg:4326")
             except TypeError:
                 return ids
             except AssertionError:
-                raise ZeroMatched(
-                    "There was a problem processing GeoJSON, " + "try setting outFormat to json"
-                )
-
-        def get_json(ids: Tuple[str, ...]) -> Union[Response, Tuple[str, ...]]:
-            payload = {
-                "objectIds": ",".join(str(i) for i in ids),
-                "returnGeometry": "true",
-                "outSR": "4326",
-                "outFields": ",".join(str(i) for i in self.outFields),
-                "f": self.outFormat,
-            }
-            r = self.session.post(f"{self.base_url}/query", payload)
-            try:
-                return utils.json_togeodf(r.json(), "epsg:4326")
-            except TypeError:
-                return ids
-
-        getter = get_json if self.outFormat == "json" else get_geojson
+                if self.outFormat == "geojson":
+                    raise ZeroMatched(
+                        "There was a problem processing the request with geojson outFormat. "
+                        + "Your can set the outFormat to json and retry."
+                    )
+                else:
+                    raise ZeroMatched("No matching data was found on the server.")
 
         feature_list = utils.threading(getter, self.featureids, max_workers=self.n_threads,)
 
@@ -422,7 +411,7 @@ def validate_wms(
 
     valid_crss = {layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()}
     if any(crs not in valid_crss[layer] for layer in layers.values()):
-        _valid_crss = (f"{lyr}: {', '.join(c for c in cs)}\n" for lyr, cs in valid_crss.items())
+        _valid_crss = (f"{lyr}: {', '.join(cs)}\n" for lyr, cs in valid_crss.items())
         raise InvalidInputValue("CRS", _valid_crss)
 
 
@@ -490,7 +479,7 @@ class WFS:
             raise MissingInputs(
                 "The layer argument is missing."
                 + " The following layers are available:\n"
-                + ", ".join(ly for ly in valid_layers)
+                + ", ".join(valid_layers)
             )
 
         if self.layer not in valid_layers:
@@ -501,7 +490,7 @@ class WFS:
             raise MissingInputs(
                 "The outFormat argument is missing."
                 + " The following output formats are available:\n"
-                + ", ".join(fmt for fmt in valid_outFormats)
+                + ", ".join(valid_outFormats)
             )
 
         if self.outFormat not in valid_outFormats:

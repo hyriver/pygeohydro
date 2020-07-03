@@ -29,7 +29,7 @@ class MissingItems(Exception):
     """
 
     def __init__(self, missing: List[str]) -> None:
-        self.message = "The following items are missing:\n" + f"{', '.join(m for m in missing)}"
+        self.message = "The following items are missing:\n" + f"{', '.join(missing)}"
         super().__init__(self.message)
 
     def __str__(self) -> str:

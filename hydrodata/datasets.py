@@ -44,18 +44,16 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
         Streamflow data observations in cubic meter per second (cms)
     """
 
-    if isinstance(station_ids, str):
-        station_ids = [station_ids]
-    elif isinstance(station_ids, list):
-        station_ids = [str(i) for i in station_ids]
-    else:
+    if not isinstance(station_ids, (str, list)):
         raise InvalidInputType("ids", "str or list")
 
-    if isinstance(dates, tuple) and len(dates) == 2:
-        start = pd.to_datetime(dates[0])
-        end = pd.to_datetime(dates[1])
-    else:
+    station_ids = station_ids if isinstance(station_ids, list) else [station_ids]
+
+    if not isinstance(dates, tuple) or len(dates) != 2:
         raise InvalidInputType("dates", "tuple", "(start, end)")
+
+    start = pd.to_datetime(dates[0])
+    end = pd.to_datetime(dates[1])
 
     siteinfo = nwis_siteinfo(station_ids)
     check_dates = siteinfo.loc[
@@ -67,13 +65,13 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
         raise InvalidInputRange(
             "Daily Mean data unavailable for the specified time "
             + "period for the following stations:\n"
-            + ", ".join(str(s) for s in nas)
+            + ", ".join(nas)
         )
 
     url = "https://waterservices.usgs.gov/nwis/dv"
     payload = {
         "format": "json",
-        "sites": ",".join(str(s) for s in station_ids),
+        "sites": ",".join(station_ids),
         "startDT": start.strftime("%Y-%m-%d"),
         "endDT": end.strftime("%Y-%m-%d"),
         "parameterCd": "00060",
@@ -154,17 +152,16 @@ def nwis_siteinfo(
         raise MissingInputs("Either ids or bbox argument should be provided.")
 
     if ids is None:
-        if isinstance(bbox, tuple) and len(bbox) == 4:
-            query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-        else:
+        if not isinstance(bbox, tuple) or len(bbox) != 4:
             raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+
+        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
     else:
-        if isinstance(ids, str):
-            query = {"sites": ids}
-        elif isinstance(ids, list):
-            query = {"sites": ",".join(str(i) for i in ids)}
-        else:
+        if not isinstance(ids, (str, list)):
             raise InvalidInputType("ids", "str or list")
+
+        ids = ids if isinstance(ids, list) else [ids]
+        query = {"sites": ",".join(ids)}
 
     url = "https://waterservices.usgs.gov/nwis/site"
 
@@ -456,11 +453,11 @@ class Daymet:
             raise MissingInputs("Either years or dates arguments should be provided.")
 
         if years is None:
-            if isinstance(dates, tuple) and len(dates) == 2:
-                start = pd.to_datetime(dates[0])
-                end = pd.to_datetime(dates[1])
-            else:
+            if not isinstance(dates, tuple) or len(dates) != 2:
                 raise InvalidInputType("dates", "tuple", "(start, end)")
+
+            start = pd.to_datetime(dates[0])
+            end = pd.to_datetime(dates[1])
 
             if start < pd.to_datetime("1980-01-01"):
                 raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
@@ -469,9 +466,9 @@ class Daymet:
                 "start": start.strftime("%Y-%m-%d"),
                 "end": end.strftime("%Y-%m-%d"),
             }
-        elif dates is None:
-            years = years if isinstance(years, (list, tuple)) else [years]
-            self.date_dict = {"years": ",".join(str(x) for x in years)}
+        else:
+            years = years if isinstance(years, list) else [years]
+            self.date_dict = {"years": ",".join(str(y) for y in years)}
 
         vars_table = helpers.daymet_variables()
 
@@ -542,7 +539,7 @@ def daymet_byloc(
     payload = {
         "lat": f"{lat:.6f}",
         "lon": f"{lon:.6f}",
-        "vars": ",".join(v for v in daymet.variables),
+        "vars": ",".join(daymet.variables),
         "format": "json",
         **daymet.date_dict,
     }
