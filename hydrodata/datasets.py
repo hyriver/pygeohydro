@@ -1093,10 +1093,11 @@ class Station:
         data_dir: Union[str, Path] = "data",
         verbose: bool = False,
     ) -> None:
+
+        self.dates = dates
         if dates is not None:
-            start, end = dates
-            self.start = pd.to_datetime(start)
-            self.end = pd.to_datetime(end)
+            self.start = pd.to_datetime(dates[0])
+            self.end = pd.to_datetime(dates[1])
 
         self.verbose = verbose
 
@@ -1211,7 +1212,7 @@ class Station:
 
         if distance.shape[0] == 0:
             station_id = None
-        elif self.start is None and self.end is None:
+        elif self.dates is None:
             station = sites[sites.site_no == distance.index[0]]
             self.st_begin = station.begin_date.to_numpy()[0]
             self.st_end = station.end_date.to_numpy()[0]
