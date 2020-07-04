@@ -125,11 +125,13 @@ def test_nm(watershed_nat):
 def test_restful(watershed_urb):
     wbd2 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
     wbd2.max_nrecords = 5
+    wbd2.outFormat = "geojson"
     wbd2.featureids = list(range(1, 21))
     wbd2.outFields = ["huc2", "name", "areaacres"]
     huc2 = wbd2.get_features()
 
     wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8.n_threads = 4
     wbd8.get_featureids(watershed_urb.geometry.bounds)
     wbd8.get_featureids(watershed_urb.geometry)
     huc8 = wbd8.get_features()
