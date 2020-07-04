@@ -94,6 +94,7 @@ extensions = [
     "IPython.sphinxext.ipython_directive",
     "IPython.sphinxext.ipython_console_highlighting",
     "nbsphinx",
+    "nbsphinx_link",
     "recommonmark",
     "sphinx_copybutton",
 ]
@@ -106,8 +107,22 @@ extlinks = {
 nbsphinx_timeout = 600
 nbsphinx_execute = "always"
 nbsphinx_prolog = """
-{% set docname = env.doc2path(env.docname, base=None) %}
-You can run, download, or view this notebook `on Github <https://github.com/cheginit/hydrodata/blob/master/docs/{{ docname }}>`_.
+{% set docname = env.doc2path(env.docname, base=None).replace("nblink","ipynb") %}
+{% set fullpath = env.doc2path(env.docname, base='tree/master/docs/').replace("nblink","ipynb") %}
+
+.. only:: html
+
+    .. role:: raw-html(raw)
+        :format: html
+
+    .. nbinfo::
+
+        This page was generated from `{{ docname }}`__.
+        Interactive online version:
+        :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/develop?filepath={{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
+
+    __ https://github.com/cheginit/hydrodata/{{ fullpath }}
+
 """
 
 autosummary_generate = True
@@ -144,7 +159,7 @@ today_fmt = "%Y-%m-%d"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ["_build", "**.ipynb_checkpoints"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "tests/*", "**.ipynb_checkpoints"]
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
