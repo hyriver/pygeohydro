@@ -33,8 +33,9 @@ def watershed_urb():
 
 def test_station():
     shutil.rmtree("tests/data", ignore_errors=True)
+    natural = Station(station_id="01031500")
     natural = Station(station_id="01031500", verbose=True)
-    natural = Station(station_id="01031500", verbose=True)
+    urban = Station(coords=(-118.47, 34.16))
     urban = Station(coords=(-118.47, 34.16), dates=("2000-01-01", "2010-01-21"))
     assert natural.hcdn and not urban.hcdn
 
@@ -48,9 +49,12 @@ def test_daymet(watershed_nat):
     coords = (-118.47, 34.16)
     dates = ("2000-01-01", "2000-01-12")
     variables = ["tmin"]
+
+    st_p = hds.daymet_byloc(coords, dates=dates)
     st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
     yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
+    st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
     st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (
@@ -65,8 +69,13 @@ def test_nldi_urlonly():
     nldi = NLDI()
     fsource = "comid"
     fid = "1722317"
-    url = nldi.getfeature_byid(fsource, fid, url_only=True)
-    assert url == "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid/1722317"
+    url_box = nldi.getfeature_byid(fsource, fid, url_only=True)
+    url_nav = nldi.navigate_byid(fsource, fid, navigation="upstreamMain", url_only=True)
+    assert (
+        url_box == "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid/1722317"
+        and url_nav
+        == "https://labs.waterdata.usgs.gov/api/nldi/linked-data/comid/1722317/navigate/UM"
+    )
 
 
 def test_nldi(watershed_nat):
@@ -91,6 +100,7 @@ def test_nldi(watershed_nat):
 
 def test_nhdplus_bybox():
     wd = WaterData("nhdwaterbody")
+    print(wd)
     wb = wd.getfeature_bybox((-69.7718294059999, 45.074243489, -69.314140401, 45.4533586220001),)
     assert abs(wb.areasqkm.sum() - 87.084) < 1e-3
 
@@ -98,7 +108,7 @@ def test_nhdplus_bybox():
 def test_ssebopeta(watershed_nat):
     dates = ("2000-01-01", "2000-01-05")
     eta_p = hds.ssebopeta_byloc(watershed_nat.coords, dates=dates)
-    eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates)
+    eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
     assert (
         abs(eta_p.mean().values[0] - 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.577) < 1e-3
@@ -124,6 +134,7 @@ def test_nm(watershed_nat):
 
 def test_restful(watershed_urb):
     wbd2 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
+    print(wbd2)
     wbd2.max_nrecords = 5
     wbd2.outFormat = "geojson"
     wbd2.featureids = list(range(1, 21))
@@ -182,6 +193,7 @@ def test_wfs(watershed_urb):
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
+    print(wfs)
 
     r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
