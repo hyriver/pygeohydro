@@ -37,6 +37,7 @@ def test_station():
     natural = Station(station_id="01031500", verbose=True)
     urban = Station(coords=(-118.47, 34.16))
     urban = Station(coords=(-118.47, 34.16), dates=("2000-01-01", "2010-01-21"))
+    print(urban)
     assert natural.hcdn and not urban.hcdn
 
 
