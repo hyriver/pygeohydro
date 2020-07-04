@@ -58,16 +58,17 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up `hydrodata` for local development.
+Ready to contribute? Here's how to set up Hydrodata for local development.
 
-1. Fork the `hydrodata` repo through the GitHub website.
-2. Clone your fork locally:
+1. Fork the Hydrodata repo through the GitHub website.
+2. Clone your fork locally and add the main Hydrodata as the upstream remote:
 
 .. code-block:: console
 
     $ git clone git@github.com:your_name_here/hydrodata.git
+    $ git remote add upstream git@github.com:cheginit/hydrodata.git
 
-3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you can set up your fork for local development:
+3. Install your local copy into a virtualenv. Assuming you have Conda installed, this is how you can set up your fork for local development:
 
 .. code-block:: console
 
@@ -76,11 +77,13 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ conda activate hydrodata-dev
     $ python -m pip install . --no-deps
 
-4. Create a branch for local development:
+4. Check out the ``develop`` branch and create a branch for local development:
 
 .. code-block:: console
 
-    $ git checkout -b name-of-your-bugfix-or-feature
+    $ git checkout develop
+    $ git checkout -b bugfix-or-feature/name-of-your-bugfix-or-feature
+    $ git push
 
 5. Before you first commit, pre-commit hooks needs to be setup:
 
@@ -89,7 +92,14 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ pre-commit install
     $ pre-commit run --all-files
 
-6. Now you can make your changes locally, make sure to add a discription of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards, you can install and test the code:
+6. Now you can make your changes locally, make sure to add a description of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards, fetch the latest updates from the remote and resolve any merge conflicts:
+
+.. code-block:: console
+
+    $ git fetch upstream
+    $ git merge upstream/develop
+
+7. Then lint and test the code:
 
 .. code-block:: console
 
@@ -98,9 +108,9 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ make install
     $ make coverage
 
-7. If you are making breaking changes make sure to change ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if neccessary.
+8. If you are making breaking changes make sure to reflect them in ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if necessary.
 
-8. Commit your changes and push your branch to GitHub:
+9. Commit your changes and push your branch to GitHub:
 
 .. code-block:: console
 
@@ -108,7 +118,7 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-9. Submit a pull request through the GitHub website.
+10. Submit a pull request through the GitHub website.
 
 Pull Request Guidelines
 -----------------------
