@@ -122,20 +122,24 @@ def test_nm(watershed_nat):
     )
 
 
-def test_newdb(watershed_urb):
-    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = ArcGISREST(url_rest)
-    s.n_threads = 8
-    s.spatialRel = "esriSpatialRelIntersects"
-    s.outFields = "*"
-    s.get_featureids(watershed_urb.geometry.bounds)
-    s.get_featureids(watershed_urb.geometry)
-    s.outFormat = "geojson"
-    storm_pipes = s.get_features()
-    print(storm_pipes.columns)
-    s.outFormat = "json"
-    storm_pipes = s.get_features()
+def test_restful(watershed_urb):
+    wbd2 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
+    wbd2.max_nrecords = 5
+    wbd2.featureids = list(range(1, 21))
+    wbd2.outFields = ["huc2", "name", "areaacres"]
+    huc2 = wbd2.get_features()
 
+    wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8.get_featureids(watershed_urb.geometry.bounds)
+    wbd8.get_featureids(watershed_urb.geometry)
+    huc8 = wbd8.get_features()
+    assert (
+        huc2.shape[0] == len([x for y in wbd2.featureids for x in y])
+        and abs(huc8.areaacres.sum() - 2283406.92) < 1e-2
+    )
+
+
+def test_wms(watershed_urb):
     url_wms = (
         "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     )
@@ -161,6 +165,13 @@ def test_newdb(watershed_urb):
         resolution=1,
     )
 
+    shutil.rmtree("tmp", ignore_errors=True)
+
+    assert abs(slope.mean().values.item() - 118.971) < 1e-3
+
+
+def test_wfs(watershed_urb):
+
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
 
     wfs = WFS(
@@ -175,11 +186,7 @@ def test_newdb(watershed_urb):
 
     shutil.rmtree("tmp", ignore_errors=True)
 
-    assert (
-        abs(storm_pipes["LENGTH"].sum() - 3186880.443) < 1e-3
-        and abs(slope.mean().values.item() - 118.971) < 1e-3
-        and flood["ELEV"].sum() == 450331
-    )
+    assert flood["ELEV"].sum() == 450331
 
 
 def test_plot(watershed_nat, watershed_urb):
@@ -307,15 +314,6 @@ def test_path():
         ],
     }
     assert _path == res
-
-
-def test_wbd():
-    wbd = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
-    wbd.max_nrecords = 5
-    wbd.featureids = [str(n) for n in range(1, 21)]
-    wbd.outFields = ["huc2", "name", "areaacres"]
-    f = wbd.get_features()
-    assert f.shape[0] == len([x for y in wbd.featureids for x in y])
 
 
 def test_fspec1():
