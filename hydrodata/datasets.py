@@ -148,23 +148,10 @@ def nwis_siteinfo(
     pandas.DataFrame
         NWIS stations
     """
-    if (bbox is None and ids is None) or (bbox is not None and ids is not None):
-        raise MissingInputs("Either ids or bbox argument should be provided.")
-
-    if ids is None:
-        if not isinstance(bbox, tuple) or len(bbox) != 4:
-            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
-
-        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-    else:
-        if not isinstance(ids, (str, list)):
-            raise InvalidInputType("ids", "str or list")
-
-        ids = ids if isinstance(ids, list) else [ids]
-        query = {"sites": ",".join(ids)}
 
     url = "https://waterservices.usgs.gov/nwis/site"
 
+    query = utils.generate_nwis_query(ids, bbox)
     outputType = {"siteOutput": "expanded"} if expanded else {"outputDataTypeCd": "dv"}
 
     payload = {
@@ -176,14 +163,14 @@ def nwis_siteinfo(
         "hasDataTypeCd": "dv",
     }
 
-    r = RetrySession().post(url, payload)
+    r = RetrySession().post(url, payload).text.split("\n")
 
-    r_text = r.text.split("\n")
-    r_list = [txt.split("\t") for txt in r_text if "#" not in txt]
+    r_list = [txt.split("\t") for txt in r if "#" not in txt]
     r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
 
     sites = pd.DataFrame.from_dict(r_dict).dropna()
     sites = sites.drop(sites[sites.alt_va == ""].index)
+
     try:
         sites = sites[sites.parm_cd == "00060"]
         sites["begin_date"] = pd.to_datetime(sites["begin_date"])
@@ -191,8 +178,8 @@ def nwis_siteinfo(
     except AttributeError:
         pass
 
-    int_cols = ["dec_lat_va", "dec_long_va", "alt_va"]
-    sites[int_cols] = sites[int_cols].astype("float64")
+    float_cols = ["dec_lat_va", "dec_long_va", "alt_va"]
+    sites[float_cols] = sites[float_cols].astype("float64")
 
     sites = sites[sites.site_no.apply(len) == 8]
 
@@ -425,10 +412,6 @@ class Daymet:
 
     Parameters
     ----------
-    dates : tuple, optional
-        Start and end dates as a tuple, (start, end), default to None.
-    years : int or list or tuple, optional
-        List of year(s), default to None.
     variables : str or list or tuple, optional
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
@@ -441,34 +424,10 @@ class Daymet:
     """
 
     def __init__(
-        self,
-        dates: Optional[Tuple[str, str]] = None,
-        years: Optional[Union[List[int], int]] = None,
-        variables: Optional[Union[List[str], str]] = None,
-        pet: bool = False,
+        self, variables: Optional[Union[List[str], str]] = None, pet: bool = False,
     ) -> None:
+
         self.session = RetrySession()
-
-        if (years is None and dates is None) or (years is not None and dates is not None):
-            raise MissingInputs("Either years or dates arguments should be provided.")
-
-        if years is None:
-            if not isinstance(dates, tuple) or len(dates) != 2:
-                raise InvalidInputType("dates", "tuple", "(start, end)")
-
-            start = pd.to_datetime(dates[0])
-            end = pd.to_datetime(dates[1])
-
-            if start < pd.to_datetime("1980-01-01"):
-                raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
-
-            self.date_dict = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            }
-        else:
-            years = years if isinstance(years, list) else [years]
-            self.date_dict = {"years": ",".join(str(y) for y in years)}
 
         vars_table = helpers.daymet_variables()
 
@@ -480,18 +439,41 @@ class Daymet:
         else:
             self.variables = variables if isinstance(variables, list) else [variables]
 
-            if not all(v for v in variables if v not in valid_variables):
+            if not set(self.variables).issubset(set(valid_variables)):
                 raise InvalidInputValue("variables", valid_variables)
 
             if pet:
                 reqs = ("tmin", "tmax", "vp", "srad", "dayl")
                 self.variables = list(set(reqs) | set(variables))
 
+    def date_bydates(self, dates: Tuple[str, str]) -> None:
+        """Set dates by start and end dates as a tuple, (start, end)"""
+
+        if not isinstance(dates, tuple) or len(dates) != 2:
+            raise InvalidInputType("dates", "tuple", "(start, end)")
+
+        start = pd.to_datetime(dates[0])
+        end = pd.to_datetime(dates[1])
+
+        if start < pd.to_datetime("1980-01-01"):
+            raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
+
+        self.date_dict = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
+        }
+
+    def date_byyears(self, years: Union[List[int], int]) -> None:
+        """Set date by list of year(s)"""
+
+        years = years if isinstance(years, list) else [years]
+        self.date_dict = {"years": ",".join(str(y) for y in years)}
+
 
 def daymet_byloc(
     coords: Tuple[float, float],
     dates: Optional[Tuple[str, str]] = None,
-    years: Optional[List[int]] = None,
+    years: Optional[Union[List[int], int]] = None,
     variables: Optional[Union[List[str], str]] = None,
     pet: bool = False,
 ) -> pd.DataFrame:
@@ -520,7 +502,16 @@ def daymet_byloc(
     pandas.DataFrame
         Daily climate data for a location
     """
-    daymet = Daymet(dates, years, variables, pet)
+
+    daymet = Daymet(variables, pet)
+
+    if (years is None and dates is None) or (years is not None and dates is not None):
+        raise MissingInputs("Either years or dates arguments should be provided.")
+
+    if dates is not None:
+        daymet.date_bydates(dates)
+    elif years is not None:
+        daymet.date_byyears(years)
 
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
@@ -599,7 +590,15 @@ def daymet_bygeom(
     """
     from pandas.tseries.offsets import DateOffset
 
-    daymet = Daymet(dates, years, variables, pet)
+    daymet = Daymet(variables, pet)
+
+    if (years is None and dates is None) or (years is not None and dates is not None):
+        raise MissingInputs("Either years or dates arguments should be provided.")
+
+    if dates is not None:
+        daymet.date_bydates(dates)
+    elif years is not None:
+        daymet.date_byyears(years)
 
     if years is None:
         start = pd.to_datetime(daymet.date_dict["start"]) + DateOffset(hour=12)
