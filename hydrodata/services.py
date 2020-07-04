@@ -225,8 +225,8 @@ class ArcGISREST:
             try:
                 if "error" in r_json:
                     return ids
-                else:
-                    return r_json
+
+                return r_json
             except AssertionError:
                 if self.outFormat == "geojson":
                     raise ZeroMatched(
@@ -529,9 +529,7 @@ class WFS:
             WFS query response within a bounding box.
         """
 
-        if not isinstance(bbox, tuple) or len(bbox) != 4:
-            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
-
+        utils.check_bbox(bbox)
         bbox = utils.match_crs(bbox, box_crs, self.crs)
 
         payload = {

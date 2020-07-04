@@ -198,8 +198,7 @@ def elevation_bybbox(
         An array of elevations in meters
     """
 
-    if not isinstance(bbox, tuple) or len(bbox) != 4:
-        raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+    check_bbox(bbox)
 
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     layers = ["3DEPElevation:None"]
@@ -1199,3 +1198,28 @@ def match_crs(
         if isinstance(geometry, tuple):
             return rio_warp.transform_bounds(in_crs, out_crs, *geometry)
     return geometry
+
+
+def check_bbox(bbox: Tuple[float, float, float, float]) -> None:
+    if not isinstance(bbox, tuple) or len(bbox) != 4:
+        raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+
+
+def generate_nwis_query(
+    ids: Optional[Union[str, List[str]]] = None,
+    bbox: Optional[Tuple[float, float, float, float]] = None,
+) -> Dict[str, str]:
+    if (bbox is None and ids is None) or (bbox is not None and ids is not None):
+        raise MissingInputs("Either ids or bbox argument should be provided.")
+
+    if bbox is not None:
+        check_bbox(bbox)
+        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+    else:
+        if not isinstance(ids, (str, list)):
+            raise InvalidInputType("ids", "str or list")
+
+        ids = [str(i) for i in ids] if isinstance(ids, list) else [str(ids)]
+        query = {"sites": ",".join(ids)}
+
+    return query
