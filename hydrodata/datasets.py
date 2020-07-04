@@ -588,7 +588,6 @@ def daymet_bygeom(
     xarray.Dataset
         Daily climate data within a geometry
     """
-    from pandas.tseries.offsets import DateOffset
 
     daymet = Daymet(variables, pet)
 
@@ -601,20 +600,10 @@ def daymet_bygeom(
         daymet.date_byyears(years)
 
     if years is None:
-        start = pd.to_datetime(daymet.date_dict["start"]) + DateOffset(hour=12)
-        end = pd.to_datetime(daymet.date_dict["end"]) + DateOffset(hour=12)
-        dates_itr = utils.daymet_dates(start, end)
+        dates_itr = utils.daymet_dates(daymet.date_dict["start"], daymet.date_dict["end"])
 
     else:
-        start_list, end_list = [], []
-        for year in daymet.date_dict["years"].split(","):
-            s = pd.to_datetime(f"{year}0101")
-            start_list.append(s + DateOffset(hour=12))
-            if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0):
-                end_list.append(pd.to_datetime(f"{year}1230") + DateOffset(hour=12))
-            else:
-                end_list.append(pd.to_datetime(f"{year}1231") + DateOffset(hour=12))
-        dates_itr = list(zip(start_list, end_list))
+        dates_itr = utils.daymet_years(daymet.date_dict["years"].split(","))
 
     if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapely's Polygon")

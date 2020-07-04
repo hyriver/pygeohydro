@@ -90,22 +90,42 @@ def check_dir(
                 raise OSError(f"Parent directory cannot be created: {parent}")
 
 
-def daymet_dates(
-    start: Union[pd.DatetimeIndex, str], end: Union[pd.DatetimeIndex, str]
-) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
-    """Correct dates for Daymet when leap years.
+def daymet_dates(start: str, end: str) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
+    """Correct dates for Daymet accounting for leap years.
 
     Daymet doesn't account for leap years and removes Dec 31 when it's
     leap year. This function returns all the dates in the Daymet
     database within the provided date range.
     """
 
-    period = pd.date_range(start, end)
+    _start = pd.to_datetime(start) + pd.DateOffset(hour=12)
+    _end = pd.to_datetime(end) + pd.DateOffset(hour=12)
+
+    period = pd.date_range(_start, _end)
     nl = period[~period.is_leap_year]
     lp = period[(period.is_leap_year) & (~period.strftime("%Y-%m-%d").str.endswith("12-31"))]
     _period = period[(period.isin(nl)) | (period.isin(lp))]
     years = [_period[_period.year == y] for y in _period.year.unique()]
     return [(y[0], y[-1]) for y in years]
+
+
+def daymet_years(years: List[str]) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
+    """Correct dates for Daymet accounting for leap years.
+
+    Daymet doesn't account for leap years and removes Dec 31 when it's
+    leap year. This function returns all the dates in the Daymet
+    database for the provided years.
+    """
+
+    start_list, end_list = [], []
+    for year in years:
+        s = pd.to_datetime(f"{year}0101")
+        start_list.append(s + pd.DateOffset(hour=12))
+        if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0):
+            end_list.append(pd.to_datetime(f"{year}1230") + pd.DateOffset(hour=12))
+        else:
+            end_list.append(pd.to_datetime(f"{year}1231") + pd.DateOffset(hour=12))
+    return list(zip(start_list, end_list))
 
 
 def get_ssebopeta_urls(
