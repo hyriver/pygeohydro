@@ -107,4 +107,4 @@ ENV/
 # logs
 .nvimlog
 data/
-tags
+tags*
