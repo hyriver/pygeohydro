@@ -7,6 +7,8 @@ Installation
 Dependencies
 ------------
 
+Dependencies of Hydrodata are as listed below:
+
 - `Python 3.6+ <https://www.python.org/downloads>`_
 - `NumPy <http://www.numpy.org>`_
 - `Pandas <http://pandas.pydata.org>`_
@@ -21,30 +23,35 @@ Dependencies
 - `SimpleJSON <https://simplejson.readthedocs.io>`_
 - `Folium <https://python-visualization.github.io/folium/>`_
 - `Requests <https://requests.readthedocs.io>`_
+- `LXML <https://lxml.de/>`_
 - `DefusedXML <https://github.com/tiran/defusedxml>`_
 - `NetworkX <https://networkx.github.io>`_
 
-Recommended
------------
+The following optional libraries are recommended to improve performance of ``xarray``:
 
 - `Dask <https://dask.org>`_
 - `NetCDF4 <https://unidata.github.io/netcdf4-python/netCDF4/index.html>`_
 - `Bottleneck <https://pypi.org/project/Bottleneck>`_
 
-Optional
---------
-- `CartoPy <http://scitools.org.uk/cartopy>`_ for plotting in various projections
+Additionally, `CartoPy`_ can be installed to support more projections when plotting
+geospatial data with ``matplotlib``. This library is specifically
+useful for plotting `Daymet`_ data.
 
 Stable release
 --------------
 
-You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu):
+You can install Hydrodata using ``pip``:
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed from ``conda-forge`` using `Conda`_:
+Please note that installationa with ``pip`` fails if ``libgdal`` is not installed on your system.
+You should install this package manually beforehand. For example, on Ubuntu-based distros
+the required package is ``libgdal-dev``. If this package is installed on your system
+you should be able to run ``gdal-config --version`` successfully.
+
+Alternatively, Hydrodata and all its dependencies can be installed from ``conda-forge`` using `Conda`_:
 
 .. code-block:: console
 
@@ -53,13 +60,13 @@ Alternatively, it can be installed from ``conda-forge`` using `Conda`_:
 From sources
 ------------
 
-The sources for Hydrodata can be downloaded from the Github `repo`_.
+The sources for Hydrodata can be downloaded from its Github `repo`_.
 
-You can either clone the public repository:
+You can either clone this public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/cheginit/hydrodata
+    $ git clone https://github.com/cheginit/hydrodata.git
 
 Or download the `tarball`_:
 
@@ -71,9 +78,12 @@ Once you have a copy of the source, you can install it with:
 
 .. code-block:: console
 
-    $ python -m pip install . --no-deps
+    $ python -m pip install .
+    
+Please refer to the note for installation with ``pip`` above, regarding the ``libgdal`` requirement.
 
-
+.. _CartoPy: http://scitools.org.uk/cartopy
+.. _Daymet: https://daymet.ornl.gov/overview
 .. _Conda: https://docs.conda.io/en/latest
 .. _repo: https://github.com/cheginit/hydrodata
 .. _tarball: https://github.com/cheginit/hydrodata/tarball/master

@@ -60,14 +60,14 @@ Get Started!
 
 Ready to contribute? Here's how to set up `hydrodata` for local development.
 
-1. Fork the `hydrodata` repo on GitHub.
+1. Fork the `hydrodata` repo through the GitHub website.
 2. Clone your fork locally:
 
 .. code-block:: console
 
     $ git clone git@github.com:your_name_here/hydrodata.git
 
-3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you set up your fork for local development:
+3. Install your local copy into a virtualenv. Assuming you have conda installed, this is how you can set up your fork for local development:
 
 .. code-block:: console
 
@@ -89,7 +89,7 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ pre-commit install
     $ pre-commit run --all-files
 
-6. Now you can make your changes locally, make sure to add a discription of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterward, you can install and test the code:
+6. Now you can make your changes locally, make sure to add a discription of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards, you can install and test the code:
 
 .. code-block:: console
 
@@ -98,7 +98,9 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ make install
     $ make coverage
 
-7. Commit your changes and push your branch to GitHub:
+7. If you are making breaking changes make sure to change ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if neccessary.
+
+8. Commit your changes and push your branch to GitHub:
 
 .. code-block:: console
 
@@ -106,7 +108,7 @@ Ready to contribute? Here's how to set up `hydrodata` for local development.
     $ git commit -m "Your detailed description of your changes."
     $ git push origin name-of-your-bugfix-or-feature
 
-8. Submit a pull request through the GitHub website.
+9. Submit a pull request through the GitHub website.
 
 Pull Request Guidelines
 -----------------------
@@ -145,4 +147,4 @@ Then run:
     $ git push
     $ git push --follow-tags
 
-Then release the tag and Github Actions will deploy it to PyPi.
+Then release the tag from Github and Github Actions will deploy it to PyPi.
