@@ -187,7 +187,7 @@ Some example plots are shown below:
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
-The ``services`` module can be used to access some other web services as well. For example, we can access `Los Angeles GeoHub <http://geohub.lacity.org/>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
+The ``services`` module can be used to access some other web services as well. For example, we can access `Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`_ RESTful service, NationalMap's `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ via WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
 .. code-block:: python
 
@@ -195,10 +195,9 @@ The ``services`` module can be used to access some other web services as well. F
 
     la_wshed = Station(station_id="11092450")
 
-    url_rest = "https://maps.lacity.org/lahub/rest/services/Stormwater_Information/MapServer/10"
-    s = ArcGISREST(url_rest, outFormat="json")
-    s.get_featureids(la_wshed.geometry)
-    storm_pipes = s.get_features()
+    wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8.get_featureids(la_wshed.geometry)
+    huc8 = wbd8.get_features()
 
     url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
     hillshade = services.wms_bygeom(
