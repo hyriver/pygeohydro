@@ -1,12 +1,13 @@
 """Base classes and function for REST, WMS, and WMF services."""
 
+from collections import defaultdict
 from itertools import zip_longest
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
+from warnings import warn
 
 import defusedxml.cElementTree as ET
 import geopandas as gpd
-import pandas as pd
 import simplejson as json
 import xarray as xr
 from owslib.map.wms111 import WebMapService_1_1_1
@@ -41,10 +42,6 @@ class ArcGISREST:
     outFields : str or list
         The output fields to be requested. Setting ``*`` as outFields requests
         all the available fields which is the default behaviour.
-    spatialRel : str, optional
-        The spatial relationship to be applied on the input geometry
-        while performing the query. If not correct a list of available options is shown.
-        Defaults to ``esriSpatialRelIntersects``.
     n_threads : int, optional
         Number of simultaneous download, default to 4.
     """
@@ -54,7 +51,6 @@ class ArcGISREST:
         base_url: str,
         outFormat: str = "geojson",
         outFields: Union[List[str], str] = "*",
-        spatialRel: str = "esriSpatialRelIntersects",
         n_threads: int = 4,
     ) -> None:
 
@@ -64,8 +60,8 @@ class ArcGISREST:
 
         self._outFormat = outFormat
         self._outFields = outFields if isinstance(outFields, list) else [outFields]
-        self._spatialRel = spatialRel
         self._n_threads = n_threads
+        self.nfeatures = 0
 
     @property
     def outFormat(self) -> str:
@@ -88,28 +84,6 @@ class ArcGISREST:
             raise InvalidInputType("outFields", "str or list")
 
         self._outFields = value if isinstance(value, list) else [value]
-
-    @property
-    def spatialRel(self) -> str:
-        return self._spatialRel
-
-    @spatialRel.setter
-    def spatialRel(self, value: str) -> None:
-        valid_spatialRels = [
-            "esriSpatialRelIntersects",
-            "esriSpatialRelContains",
-            "esriSpatialRelCrosses",
-            "esriSpatialRelEnvelopeIntersects",
-            "esriSpatialRelIndexIntersects",
-            "esriSpatialRelOverlaps",
-            "esriSpatialRelTouches",
-            "esriSpatialRelWithin",
-            "esriSpatialRelRelation",
-        ]
-        if value not in valid_spatialRels:
-            raise InvalidInputValue("spatialRel", valid_spatialRels)
-
-        self._spatialRel = value
 
     def test_url(self) -> None:
         """Test the generated url and get the required parameters from the
@@ -165,14 +139,19 @@ class ArcGISREST:
         return self._featureids
 
     @featureids.setter
-    def featureids(self, value: Union[List[str], str]) -> None:
-        if isinstance(value, (list, str)):
-            oids = [value] if isinstance(value, str) else value
-            oid_list = list(zip_longest(*[iter(oids)] * self.max_nrecords))
-            oid_list[-1] = tuple(i for i in oid_list[-1] if i is not None)
-            self._featureids = oid_list
-        else:
-            raise InvalidInputType("featureids", "str or list")
+    def featureids(self, value: Union[List[int], int]) -> None:
+        if not isinstance(value, (list, int)):
+            raise InvalidInputType("featureids", "int or list")
+
+        oids = [str(value)] if isinstance(value, int) else [str(v) for v in value]
+
+        self.nfeatures = len(oids)
+        if self.nfeatures == 0:
+            ZeroMatched("No feature ID were found within the requested region.")
+
+        oid_list = list(zip_longest(*[iter(oids)] * self.max_nrecords))
+        oid_list[-1] = tuple(i for i in oid_list[-1] if i is not None)
+        self._featureids = oid_list
 
     def __repr__(self) -> str:
         """Print the service configuration."""
@@ -214,22 +193,17 @@ class ArcGISREST:
             "geometryType": geometryType,
             "geometry": geometry,
             "inSR": "4326",
-            "spatialRel": self.spatialRel,
+            "spatialRel": "esriSpatialRelIntersects",
             "returnGeometry": "false",
             "returnIdsOnly": "true",
             "f": self.outFormat,
         }
         r = self.session.post(f"{self.base_url}/query", payload)
-        print(self.outFormat)
-        try:
-            oids = r.json()["objectIds"]
-        except (KeyError, TypeError, IndexError, JSONDecodeError):
-            raise ZeroMatched(
-                "No feature ID were found within the requested "
-                + f"region using the spatial relationship {self.spatialRel}."
-            )
 
-        self.featureids = oids
+        try:
+            self.featureids = r.json()["objectIds"]
+        except (KeyError, TypeError, IndexError, JSONDecodeError):
+            raise ZeroMatched("No feature ID were found within the requested region.")
 
     def get_features(self) -> gpd.GeoDataFrame:
         """Get features based on the feature IDs."""
@@ -247,36 +221,49 @@ class ArcGISREST:
         def getter(ids: Tuple[str, ...]) -> Union[Response, Tuple[str, ...]]:
             payload.update({"objectIds": ",".join(ids)})
             r = self.session.post(f"{self.base_url}/query", payload)
+            r_json = r.json()
             try:
-                return utils.json_togeodf(r.json(), "epsg:4326")
-            except TypeError:
-                return ids
+                if "error" in r_json:
+                    return ids
+                else:
+                    return r_json
             except AssertionError:
                 if self.outFormat == "geojson":
                     raise ZeroMatched(
                         "There was a problem processing the request with geojson outFormat. "
                         + "Your can set the outFormat to json and retry."
                     )
-                else:
-                    raise ZeroMatched("No matching data was found on the server.")
 
-        feature_list = utils.threading(getter, self.featureids, max_workers=self.n_threads,)
+                raise ZeroMatched("No matching data was found on the server.")
 
-        # Find the failed batches and retry
-        fails = [ids for ids in feature_list if isinstance(ids, tuple)]
-        success = [ids for ids in feature_list if isinstance(ids, gpd.GeoDataFrame)]
+        feature_list = utils.threading(getter, self.featureids, max_workers=self.n_threads)
 
-        if len(fails) > 0:
-            failed = [tuple(x) for y in fails for x in y]
-            retry = utils.threading(getter, failed, max_workers=self.n_threads,)
-            success += [ids for ids in retry if isinstance(ids, gpd.GeoDataFrame)]
+        # Split the list based on type which are tuple and dict
+        feature_types = defaultdict(list)
+        for f in feature_list:
+            feature_types[type(f)].append(f)
 
-        if len(success) == 0:
+        features = feature_types[dict]
+
+        if len(feature_types[tuple]) > 0:
+            failed = [tuple(x) for y in feature_types[tuple] for x in y]
+            retry = utils.threading(getter, failed, max_workers=self.n_threads * 2)
+            fixed = [resp for resp in retry if not isinstance(resp, tuple)]
+
+            nfailed = len(failed) - len(fixed)
+            if nfailed > 0:
+                warn(
+                    f"From {self.nfeatures} requetsed features, {nfailed} were not available on the server."
+                )
+
+            features += fixed
+
+        if len(features) == 0:
             raise ZeroMatched("No valid feature was found.")
 
-        data = gpd.GeoDataFrame(pd.concat(success)).reset_index(drop=True)
-        data.crs = "epsg:4326"
-        return data
+        data = utils.json_togeodf(features[0], "epsg:4326")
+
+        return data.append([utils.json_togeodf(f, "epsg:4326") for f in features[1:]])
 
 
 def wms_bygeom(

@@ -825,7 +825,6 @@ def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -
     except TypeError:
         geodf = gpd.GeoDataFrame.from_features(arcgis_togeojson(content), crs=in_crs)
 
-    geodf.crs = in_crs
     if in_crs != crs:
         geodf = geodf.to_crs(crs)
     return geodf
