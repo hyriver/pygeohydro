@@ -25,9 +25,11 @@ Enhancements
 - Remove soft requirements from the env files.
 - Refactored ``requests`` functions into a single class and a separate file.
 - Made all the classes available directly from ``hydrodata``.
-- Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipline and addressed the some of issues
+- Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipline and addressed
+  the some of issues
   that CodeFactor found.
-- Added `Bandit <https://bandit.readthedocs.io/en/latest/>`_ to check the code for secutiry issue.
+- Added `Bandit <https://bandit.readthedocs.io/en/latest/>`_ to check the code for
+  secutiry issue.
 - Improved docstrings and documentations.
 - Added customized exceptions for better exception handling.
 - Added ``pytest`` fixtures to improve the tests speed.
@@ -36,6 +38,9 @@ Enhancements
 - Major refactoring of the codebase while adding type hinting.
 - The input geometry (or bounding box) can be provided in any projection
   and the neccessary re-projections are done under the hood.
+- Refactored the method for getting object IDs in ``ArcGISREST`` class to improve
+  robustness and efficiency.
+- Refactored ``Daymet`` class to improve readability.
 
 New Features
 ~~~~~~~~~~~~
