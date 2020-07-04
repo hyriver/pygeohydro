@@ -28,6 +28,7 @@ dependencies:
     - folium
 
     - nbsphinx
+    - nbsphinx_link
     - sphinx-markdown-tables
     - sphinx-copybutton
     - git+https://github.com/bashtage/sphinx-material.git

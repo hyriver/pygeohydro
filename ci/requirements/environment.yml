@@ -42,4 +42,5 @@ dependencies:
   - css-html-js-minify
   - unidecode
   - pip:
+    - nbsphinx_link
     - git+https://github.com/bashtage/sphinx-material.git
