@@ -21,14 +21,22 @@
     :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
     :alt: Github Actions
 
+.. image:: https://mybinder.org/badge_logo.svg
+    :target: https://mybinder.org/v2/gh/cheginit/hydrodata/develop
+    :alt: Binder
+
+.. image:: https://zenodo.org/badge/237573928.svg
+    :target: https://zenodo.org/badge/latestdoi/237573928
+    :alt: Zenodo
+
 |
 
-Hydrodata is a portal to access hydrology and climatology data in python and designed to aid in watershed analysis. It provides access to hydrology and climatology databases with some helper functions for visualization.
+Hydrodata is a python library designed to aid in watershed analysis. It provides easy and consistent access to a handful of hydrology and climatology databases with some helper functions for visualization.
 
 Introduction
 ============
 
-Currently, the following data retrieval services are supported directly:
+Currently, the following data retrieval services are supported:
 
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
@@ -47,6 +55,8 @@ Additionally, the following functionalities are offered:
 * High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
 * Helpers for plotting land cover data based on **official NLCD cover legends**,
 * A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing among other applications.
+
+You can try using Hydrodata without installing it by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
 
 .. image:: _static/example_plots.png
     :align: center
