@@ -45,11 +45,13 @@ Enhancements
 New Features
 ~~~~~~~~~~~~
 - Added access to WaterData's Geoserver databases.
-- Added access to the remaining NLDI database (Water Quality Portal and Water Data Exchange)
+- Added access to the remaining NLDI database (Water Quality Portal and Water Data Exchange).
+- Created a Binder for launching a computing environment on the cloud and testing Hydrodata.
 
 Bug fixes
 ~~~~~~~~~
-- Fix re-projection issues
+- Re-projection issues for function with input geometry.
+- Start and end variables not being initialized when coords was used in ``Station``.
 
 0.6.0 (2020-06-23)
 ------------------
