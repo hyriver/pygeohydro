@@ -75,7 +75,9 @@ Additionally, the following functionalities are offered:
 * Helpers for plotting land cover data based on **official NLCD cover legends**,
 * A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing among other applications.
 
-Requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
+You can try using Hydrodata without installing it by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
+
+Moreover, requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
 
 Documentation
 -------------
@@ -132,7 +134,7 @@ The generated ``wshed`` object has a property that shows whether the station is 
     catchments = wshed.catchments()
     stations = wshed.nwis_stations(navigation="upstreamMain", distance=150)
 
-For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to the length of the river segment. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
+For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to its length. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
 
 .. code-block:: python
 
@@ -151,7 +153,7 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
     flw = flw.merge(acc, on="comid")
     diff = flw.arbolatesu - flw.acc
 
-We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution as follows:
+We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution:
 
 .. code-block:: python
 
@@ -160,7 +162,7 @@ We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Fur
     nm = NationalMap(wshed.geometry, resolution=30)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
 
-The climate data and streamflow observations for a location of interest can be retrieved as well. Note the use of ``pet`` flag for computing PET:
+The point-based climate data and streamflow observations can be retrieved as well. Note the use of ``pet`` flag for computing PET:
 
 .. code-block:: python
 
@@ -168,7 +170,7 @@ The climate data and streamflow observations for a location of interest can be r
     clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=variables, pet=True)
     clm_p["Q (cms)"] = hds.nwis_streamflow(wshed.station_id, dates)
 
-Other than point-based data, we can get data from gridded databases. The retrieved data are masked with the watershed geometry:
+In addition to point-based data, we can get gridded data. The retrieved data are masked with the watershed geometry:
 
 .. code-block:: python
 
@@ -178,18 +180,18 @@ Other than point-based data, we can get data from gridded databases. The retriev
     )
     eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ datasets that has efficient data processing tools. Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures graphs in one plot:
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ ``Dataset`` (or ``DataArray``) that offers efficient data processing tools. Some example plots are shown below:
+
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+
+Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures graphs in one plot:
 
 .. code-block:: python
 
     from hydrodata import plot
 
     plot.signatures(clm_p["Q (cms)"], precipitation=clm_p["prcp (mm/day)"])
-
-Some example plots are shown below:
-
-.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
-    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
 The ``services`` module can be used to access some other web services as well. For example, we can access `Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`_ via RESTful service, `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
 
