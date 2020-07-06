@@ -1,24 +1,13 @@
 #!/usr/bin/env python
 """Tests for `hydrodata` package."""
-
 import shutil
 from urllib.error import HTTPError
 
 import pytest
 
-import hydrodata.datasets as hds
-from hydrodata import (
-    NLDI,
-    WFS,
-    ArcGISREST,
-    NationalMap,
-    Station,
-    WaterData,
-    helpers,
-    plot,
-    services,
-    utils,
-)
+from hydrodata import NLDI, WFS, ArcGISREST, NationalMap, Station, WaterData
+from hydrodata import datasets as hds
+from hydrodata import helpers, plot, services, utils
 
 
 @pytest.fixture

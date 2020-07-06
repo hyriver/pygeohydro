@@ -6,8 +6,8 @@ curve (monthly mean) and flow duration curve.
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
-import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib import pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from hydrodata import helpers, utils

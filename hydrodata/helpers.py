@@ -1,10 +1,9 @@
 """Some helper function for Hydrodata."""
-
 from typing import Any, Dict
 
-import defusedxml.cElementTree as ET
 import numpy as np
 import pandas as pd
+from defusedxml import cElementTree as ET
 
 from hydrodata.connection import RetrySession
 

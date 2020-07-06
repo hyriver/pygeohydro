@@ -1,8 +1,8 @@
 """Accessing data from the supported databases through their APIs."""
-
 import io
 import os
 import zipfile
+from dataclasses import dataclass  # for python 3.6 compatibility
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -954,6 +954,7 @@ def nlcd(
     return ds
 
 
+@dataclass
 class NationalMap:
     """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__
     service.
@@ -1008,26 +1009,13 @@ class NationalMap:
         Path to save the output as a ``tiff`` file, defaults to None.
     """
 
-    def __init__(
-        self,
-        geometry: Polygon,
-        geo_crs: str = "epsg:4326",
-        width: Optional[int] = None,
-        resolution: Optional[float] = None,
-        fill_holes: bool = False,
-        crs: str = "epsg:4326",
-        fpath: Optional[Union[str, Path]] = None,
-    ) -> None:
-        self.url = (
-            "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-        )
-        self.geometry = geometry
-        self.width = width
-        self.resolution = resolution
-        self.fill_holes = fill_holes
-        self.geo_crs = geo_crs
-        self.crs = crs
-        self.fpath = fpath
+    geometry: Polygon
+    geo_crs: str = "epsg:4326"
+    width: Optional[int] = None
+    resolution: Optional[float] = None
+    fill_holes: bool = False
+    crs: str = "epsg:4326"
+    fpath: Optional[Union[str, Path]] = None
 
     def get_dem(self) -> xr.DataArray:
         """DEM as an ``xarray.DataArray`` in meters."""
@@ -1074,11 +1062,15 @@ class NationalMap:
     def get_map(self, layer: Dict[str, str]) -> Union[xr.DataArray, xr.Dataset]:
         """Get requested map using the national map's WMS service."""
 
+        url = (
+            "https://elevation.nationalmap.gov/arcgis/services/"
+            + "3DEPElevation/ImageServer/WMSServer"
+        )
         name = str(list(layer.keys())[0]).replace(" ", "_")
         _fpath: Optional[Dict[str, Optional[Union[str, Path]]]]
         _fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
-            self.url,
+            url,
             layer,
             "image/tiff",
             self.geometry,
@@ -1212,7 +1204,7 @@ class Station:
 
     def get_id(self) -> None:
         """Get station ID based on the specified coordinates."""
-        import shapely.geometry as geom
+        from shapely import geometry as geom
 
         bbox = (
             self.coords[0] - self.srad,
