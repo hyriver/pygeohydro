@@ -1,15 +1,13 @@
 """Base classes and function for REST, WMS, and WMF services."""
-
 from collections import defaultdict
 from itertools import zip_longest
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 from warnings import warn
 
-import defusedxml.cElementTree as ET
 import geopandas as gpd
-import simplejson as json
 import xarray as xr
+from defusedxml import cElementTree as ET
 from owslib.map.wms111 import WebMapService_1_1_1
 from owslib.map.wms130 import WebMapService_1_3_0
 from owslib.wfs import WebFeatureService
@@ -174,25 +172,12 @@ class ArcGISREST:
         geom = utils.match_crs(geom, geo_crs, "epsg:4326")
 
         if isinstance(geom, tuple):
-            if len(geom) != 4:
-                raise InvalidInputType("geom (bounding box)", "tuple", "(west, south, east, north)")
-
-            geometryType = "esriGeometryEnvelope"
-            bbox = dict(zip(("xmin", "ymin", "xmax", "ymax"), geom))
-            bbox_json = {**bbox, "spatialRelference": {"wkid": 4326}}
-            geometry = json.dumps(bbox_json)
+            geom_query = utils.ESRIGeomQuery(geom, 4326).bbox()
         elif isinstance(geom, Polygon):
-            geometryType = "esriGeometryPolygon"
-            geometry_json = {
-                "rings": [[[x, y] for x, y in zip(*geom.exterior.coords.xy)]],
-                "spatialRelference": {"wkid": 4326},
-            }
-            geometry = json.dumps(geometry_json)
+            geom_query = utils.ESRIGeomQuery(geom, 4326).polygon()
 
         payload = {
-            "geometryType": geometryType,
-            "geometry": geometry,
-            "inSR": "4326",
+            **geom_query,
             "spatialRel": "esriSpatialRelIntersects",
             "returnGeometry": "false",
             "returnIdsOnly": "true",

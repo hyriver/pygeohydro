@@ -1,8 +1,8 @@
 """Some utilities for Hydrodata."""
-
 import numbers
 import os
 from concurrent import futures
+from dataclasses import dataclass  # for python 3.6 compatibility
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, ValuesView
 from warnings import warn
@@ -12,13 +12,13 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 import rasterio as rio
-import rasterio.features as rio_features
-import rasterio.warp as rio_warp
 import simplejson as json
 import xarray as xr
 from owslib.wms import WebMapService
 from pandas._libs.missing import NAType
 from rasterio import Affine
+from rasterio import features as rio_features
+from rasterio import warp as rio_warp
 from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
 from hydrodata.connection import RetrySession
@@ -1206,3 +1206,58 @@ def generate_nwis_query(
         query = {"sites": ",".join(ids)}
 
     return query
+
+
+@dataclass
+class ESRIGeomQuery:
+    """Generate input geometry query for ArcGIS RESTful services.
+
+    Parameters
+    ----------
+    geometry : tuple or Polygon
+        The input geometry which can be a point (x, y),
+        bbox (xmin, ymin, xmax, ymax), or a Shapely's Polygon.
+    wkid : int
+        The Well-known ID (WKID) of the geometry's spatial reference e.g., for EPSG:4326,
+        4326 should be passed. Check
+        `ArcGIS https://developers.arcgis.com/rest/services-reference/geographic-coordinate-systems.htm`__
+        for reference.
+    """
+
+    geometry: Union[Tuple[float, float], Tuple[float, float, float, float], Polygon]
+    wkid: int
+
+    def point(self) -> Dict[str, str]:
+        """Query for a point."""
+        if len(self.geometry) != 2:
+            raise InvalidInputType("geometry (point)", "tuple", "(x, y)")
+
+        self.type = "esriGeometryPoint"
+        self.json = dict(zip(("x", "y"), self.geometry))
+        return self.get_payload()
+
+    def bbox(self) -> Dict[str, str]:
+        """Query for a bbox."""
+        if len(self.geometry) != 4:
+            raise InvalidInputType("geometry (bbox)", "tuple", "(west, south, east, north)")
+
+        self.type = "esriGeometryEnvelope"
+        self.json = dict(zip(("xmin", "ymin", "xmax", "ymax"), self.geometry))
+        return self.get_payload()
+
+    def polygon(self) -> Dict[str, str]:
+        """Query for a polygon."""
+        if not isinstance(self.geometry, Polygon):
+            raise InvalidInputType("geomtry", "Shapely's Polygon")
+
+        self.type = "esriGeometryPolygon"
+        self.json = {"rings": [[[x, y] for x, y in zip(*self.geometry.exterior.coords.xy)]]}
+        return self.get_payload()
+
+    def get_payload(self) -> Dict[str, str]:
+        esri_json = json.dumps({**self.json, "spatialRelference": {"wkid": str(self.wkid)}})
+        return {
+            "geometryType": self.type,
+            "geometry": esri_json,
+            "inSR": str(self.wkid),
+        }
