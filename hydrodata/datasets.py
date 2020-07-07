@@ -553,8 +553,8 @@ def daymet_byloc(
 
     if dates is not None:
         date_dict = daymet.dates_todict(dates)
-    elif years is not None:
-        date_dict = daymet.years_todict(years)
+    else:
+        date_dict = daymet.years_todict(years)  # type: ignore
 
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
@@ -588,7 +588,7 @@ def daymet_byloc(
 
 
 def daymet_bygeom(
-    geometry: Polygon,
+    geometry: Union[Polygon, Tuple[float, float, float, float]],
     geo_crs: str = "epsg:4326",
     dates: Optional[Tuple[str, str]] = None,
     years: Optional[List[int]] = None,
@@ -603,7 +603,7 @@ def daymet_bygeom(
 
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon
+    geometry : shapely.geometry.Polygon or bbox
         The geometry of the region of interest.
     geo_crs : str, optional
         The CRS of the input geometry, defaults to epsg:4326.
@@ -637,18 +637,19 @@ def daymet_bygeom(
 
     if dates is not None:
         dates_itr = daymet.dates_tolist(dates)
-    elif years is not None:
-        dates_itr = daymet.years_tolist(years)
-
-    if not isinstance(geometry, Polygon):
-        raise InvalidInputType("geometry", "Shapely's Polygon")
-
-    if fill_holes:
-        geometry = Polygon(geometry.exterior)
+    else:
+        dates_itr = daymet.years_tolist(years)  # type: ignore
 
     crs = "epsg:4326"
-    geometry = utils.match_crs(geometry, geo_crs, crs)
-    bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
+
+    if isinstance(geometry, Polygon):
+        if fill_holes:
+            geometry = Polygon(geometry.exterior)
+        geometry = utils.match_crs(geometry, geo_crs, crs)
+        bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
+    else:
+        geometry = utils.match_crs(geometry, geo_crs, crs)
+        bounds = geometry
 
     west, south, east, north = np.round(bounds, 6)
     base_url = ServiceURL().restful.daymet_grid
@@ -822,9 +823,6 @@ def ssebopeta_bygeom(
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
 
-    if not isinstance(geometry, Polygon):
-        raise InvalidInputType("geometry", "Shapely's Polygon")
-
     geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
 
     if fill_holes:
@@ -897,13 +895,12 @@ def _get_ssebopeta_urls(
 
 def nlcd(
     geometry: Polygon,
-    geo_crs: str = "epsg:4326",
+    resolution: float,
     years: Optional[Dict[str, int]] = None,
-    width: Optional[int] = None,
-    resolution: Optional[float] = None,
+    geo_crs: str = "epsg:4326",
+    crs: str = "epsg:4326",
     fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
     fill_holes: bool = False,
-    crs: str = "epsg:4326",
 ) -> xr.Dataset:
     """Get data from NLCD database (2016).
 
@@ -918,19 +915,17 @@ def nlcd(
     ----------
     geometry : shapely.geometry.Polygon
         The geometry for extracting the data.
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
+    resolution : float
+        The data resolution in meters. The width and height of the output are computed in pixel
+        based on the geometry bounds and the given resolution.
     years : dict, optional
         The years for NLCD data as a dictionary, defaults to
         {'impervious': 2016, 'cover': 2016, 'canopy': 2016}.
-    width : int
-        The width of the output image in pixels. The height is computed
-        automatically from the geometry's bounding box aspect ratio. Either width
-        or resolution should be provided.
-    resolution : float
-        The data resolution in meters. The width and height are computed in pixel
-        based on the geometry bounds and the given resolution. Either width or
-        resolution should be provided.
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
     fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
@@ -938,9 +933,6 @@ def nlcd(
         the path to save to the file.
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
 
     Returns
     -------
@@ -976,12 +968,11 @@ def nlcd(
         layers,
         "image/geotiff",
         geometry,
-        width=width,
-        resolution=resolution,
-        fpath=fpath,
+        resolution,
         geo_crs=geo_crs,
         crs=crs,
         fill_holes=fill_holes,
+        fpath=fpath,
     )
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -995,7 +986,7 @@ class NationalMap:
     service.
 
     The 3DEP service has multi-resolution sources so depending on the user
-    provided resolution (or width) the data is resampled on server-side based
+    provided resolution the data is resampled on server-side based
     on all the available data sources.
 
     Notes
@@ -1024,17 +1015,12 @@ class NationalMap:
     ----------
     geometry : shapely.geometry.Polygon
         A shapely Polygon in WGS 84 (epsg:4326).
+    resolution : float
+        The data resolution in meters. The width and height of the output are computed in pixel
+        based on the geometry bounds and the given resolution.
     geo_crs : str, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    width : int
-        The width of the output image in pixels. The height is computed
-        automatically from the geometry's bounding box aspect ratio. Either width
-        or resolution should be provided.
-    resolution : float
-        The data resolution in meters. The width and height are computed in pixel
-        based on the geometry bounds and the given resolution. Either width or
-        resolution should be provided.
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
     crs : str, optional
@@ -1045,9 +1031,8 @@ class NationalMap:
     """
 
     geometry: Polygon
+    resolution: float
     geo_crs: str = "epsg:4326"
-    width: Optional[int] = None
-    resolution: Optional[float] = None
     fill_holes: bool = False
     crs: str = "epsg:4326"
     fpath: Optional[Union[str, Path]] = None
@@ -1105,12 +1090,11 @@ class NationalMap:
             layer,
             "image/tiff",
             self.geometry,
-            width=self.width,
-            resolution=self.resolution,
-            fill_holes=self.fill_holes,
-            fpath=_fpath,
+            self.resolution,
             geo_crs=self.geo_crs,
             crs=self.crs,
+            fill_holes=self.fill_holes,
+            fpath=_fpath,
         )
 
 
@@ -1266,25 +1250,6 @@ class Station:
         distance = stations.apply(lambda x: x.distance(point)).sort_values()
 
         if distance.shape[0] == 0:
-            station_id = None
-        elif self.dates is None:
-            station = sites[sites.site_no == distance.index[0]]
-            self.st_begin = station.begin_date.to_numpy()[0]
-            self.st_end = station.end_date.to_numpy()[0]
-            station_id = station.site_no.to_numpy()[0]
-        else:
-            station_id = None
-            for sid in distance.index:
-                station = sites[sites.site_no == sid]
-                self.st_begin = station.begin_date.to_numpy()[0]
-                self.st_end = station.end_date.to_numpy()[0]
-
-                if self.start < self.st_begin or self.end > self.st_end:
-                    continue
-                station_id = sid
-                break
-
-        if station_id is None:
             raise ZeroMatched(
                 f"[ID: {self.coords}] ".ljust(MARGINE)
                 + "No USGS station were found within a "
@@ -1293,7 +1258,22 @@ class Station:
                 + "the available stations within a bounding box."
             )
 
-        self.station_id = station_id
+        station = sites[sites.site_no == distance.index[0]]
+        self.st_begin = station.begin_date.to_numpy()[0]
+        self.st_end = station.end_date.to_numpy()[0]
+        self.station_id = station.site_no.to_numpy()[0]
+
+        if self.dates is not None:
+            if self.start < self.st_begin or self.end > self.st_end:
+                for sid in distance.index[1:]:
+                    self.st_begin = station.begin_date.to_numpy()[0]
+                    self.st_end = station.end_date.to_numpy()[0]
+
+                    if self.start < self.st_begin or self.end > self.st_end:
+                        continue
+                    self.station_id = sid
+                    break
+
         self.coords = (
             station.dec_long_va.astype("float64").to_numpy()[0],
             station.dec_lat_va.astype("float64").to_numpy()[0],

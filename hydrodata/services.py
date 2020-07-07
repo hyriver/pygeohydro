@@ -166,15 +166,12 @@ class ArcGISREST:
     ) -> None:
         """Get feature IDs withing a geometry."""
 
-        if not isinstance(geom, (Polygon, tuple)):
-            raise InvalidInputType("geometry", "tuple or Polygon")
-
         geom = utils.match_crs(geom, geo_crs, "epsg:4326")
 
         if isinstance(geom, tuple):
             geom_query = utils.ESRIGeomQuery(geom, 4326).bbox()
-        elif isinstance(geom, Polygon):
-            geom_query = utils.ESRIGeomQuery(geom, 4326).polygon()
+        else:
+            geom_query = utils.ESRIGeomQuery(geom, 4326).polygon()  # type: ignore
 
         payload = {
             **geom_query,
@@ -256,13 +253,12 @@ def wms_bygeom(
     layers: Dict[str, str],
     outFormat: str,
     geometry: Polygon,
+    resolution: float,
     geo_crs: str = "epsg:4326",
-    width: Optional[int] = None,
-    resolution: Optional[float] = None,
-    fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
-    version: str = "1.3.0",
     crs: str = "epsg:4326",
+    version: str = "1.3.0",
     fill_holes: bool = False,
+    fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
 ) -> Union[xr.DataArray, xr.Dataset]:
     """Data from a WMS service within a geometry.
 
@@ -280,29 +276,24 @@ def wms_bygeom(
         string to get a list of available output formats.
     geometry : Polygon
         A shapely Polygon for getting the data.
+    resolution : float
+        The output resolution in meters. The width and height of output are computed in pixel
+        based on the geometry bounds and the given resolution.
     geo_crs : str, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    width : int
-        The width of the output image in pixels. The height is computed
-        automatically from the geometry's bounding box aspect ratio. Either width
-        or resolution should be provided.
-    resolution : float
-        The output resolution in meters. The width and height are computed in pixel
-        based on the geometry bounds and the given resolution. Either width or
-        resolution should be provided.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    version : str, optional
+        The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
+    fill_holes : bool, optional
+        Wether to fill the holes in the geometry's interior, defaults to False.
     fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
         a dict with keys as the variable name in the output dataframe and values as
         the path to save to the file.
-    version : str, optional
-        The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-    fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
@@ -323,15 +314,7 @@ def wms_bygeom(
     geom = utils.match_crs(geometry, geo_crs, crs)
     bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
 
-    if (width is None and resolution is None) or (width is not None and resolution is not None):
-        raise MissingInputs("Either width or resolution should be provided.")
-
-    if width is not None:
-        west, south, east, north = bounds
-        _width = width
-        height = int(abs(north - south) / abs(east - west) * _width)
-    elif resolution is not None:
-        _width, height = utils.bbox_resolution(bounds, resolution)
+    width, height = utils.bbox_resolution(bounds, resolution, crs)
 
     if fpath is not None and not isinstance(fpath, dict):
         raise InvalidInputType("fpath", "dict", "{var_name : path}")
@@ -346,7 +329,7 @@ def wms_bygeom(
     def _wms(inp):
         name, layer = inp
         img = wms.getmap(
-            layers=[layer], srs=crs, bbox=bounds, size=(_width, height), format=outFormat,
+            layers=[layer], srs=crs, bbox=bounds, size=(width, height), format=outFormat,
         )
         return (name, img.read())
 
