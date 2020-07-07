@@ -113,7 +113,7 @@ if __name__ == "__main__":
 
     repo_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     res = main(
-        os.path.join(repo_path, "ci/requirements/py3.8.yml"),
+        os.path.join(repo_path, "ci/requirements/py3.6.yml"),
         os.path.join(repo_path, "requirements.txt"),
         compare=args.compare,
     )
