@@ -17,4 +17,4 @@ dependencies:
   - simplejson
   - defusedxml
   - lxml
-  - dataclass
+  - dataclasses
