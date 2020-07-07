@@ -11,7 +11,7 @@ from .exceptions import (
     ServerError,
     ZeroMatched,
 )
-from .services import WFS, ArcGISREST
+from .services import WFS, ArcGISREST, ServiceURL
 
 __author__ = """Taher Chegini"""
 __email__ = "cheginit@gmail.com"
