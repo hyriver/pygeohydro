@@ -5,7 +5,7 @@ from urllib.error import HTTPError
 
 import pytest
 
-from hydrodata import NLDI, WFS, ArcGISREST, NationalMap, Station, WaterData
+from hydrodata import NLDI, WFS, ArcGISREST, NationalMap, ServiceURL, Station, WaterData
 from hydrodata import datasets as hds
 from hydrodata import helpers, plot, services, utils
 
@@ -101,24 +101,24 @@ def test_ssebopeta(watershed_nat):
     eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
     assert (
         abs(eta_p.mean().values[0] - 0.575) < 1e-3
-        and abs(eta_g.mean().values.item() - 0.577) < 1e-3
+        and abs(eta_g.mean().values.item() - 0.575) < 1e-3
     )
 
 
 def test_nlcd(watershed_nat):
-    lulc = hds.nlcd(watershed_nat.geometry, resolution=1)
+    lulc = hds.nlcd(watershed_nat.geometry, resolution=1e3)
     st = utils.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 43.094) < 1e-3
+    assert abs(st["categories"]["Forest"] - 45.304) < 1e-3
 
 
 def test_nm(watershed_nat):
-    nm = NationalMap(watershed_nat.geometry, resolution=1)
+    nm = NationalMap(watershed_nat.geometry, resolution=250)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
     nm.get_slope(mpm=True)
     assert (
-        abs(dem.mean().values.item() - 302.237) < 1e-3
-        and abs(slope.mean().values.item() - 4.180) < 1e-3
-        and abs(aspect.mean().values.item() - 168.891) < 1e-3
+        abs(dem.mean().values.item() - 312.865) < 1e-3
+        and abs(slope.mean().values.item() - 3.638) < 1e-3
+        and abs(aspect.mean().values.item() - 166.433) < 1e-3
     )
 
 
@@ -143,38 +143,35 @@ def test_restful(watershed_urb):
 
 
 def test_wms(watershed_urb):
-    url_wms = (
-        "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-    )
-    slope = services.wms_bygeom(
+    url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
+    wetlands = services.wms_bygeom(
         url_wms,
-        {"slope": "3DEPElevation:Slope Degrees"},
+        {"wetlands": "0"},
         "image/tiff",
-        watershed_urb.geometry,
+        watershed_nat.geometry,
         geo_crs="epsg:4326",
         version="1.3.0",
-        fpath={"slope": "tmp/slope.tiff"},
+        fpath={"wetlands": "tmp/wetlands.tiff"},
         width=2000,
         fill_holes=True,
         crs="epsg:3857",
     )
 
-    slope = services.wms_bygeom(
+    wetlands = services.wms_bygeom(
         url_wms,
-        {"slope": "3DEPElevation:Slope Degrees"},
+        {"wetlands": "0"},
         "image/tiff",
-        watershed_urb.geometry,
+        watershed_nat.geometry,
         version="1.3.0",
-        resolution=1,
+        resolution=1e3,
     )
 
     shutil.rmtree("tmp", ignore_errors=True)
 
-    assert abs(slope.mean().values.item() - 118.971) < 1e-3
+    assert abs(wetlands.isel(band=0).mean().values.item() - 124.037) < 1e-3
 
 
 def test_wfs(watershed_urb):
-
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
 
     wfs = WFS(
@@ -187,8 +184,6 @@ def test_wfs(watershed_urb):
 
     r = wfs.getfeature_bybox(watershed_urb.geometry.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
-
-    shutil.rmtree("tmp", ignore_errors=True)
 
     assert flood["ELEV"].sum() == 450331
 
@@ -337,3 +332,29 @@ def test_match_crs(watershed_urb):
     geom = utils.match_crs(watershed_urb.geometry, "epsg:4326", "epsg:2149")
     bbox = utils.match_crs(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
     assert abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
+
+
+def test_urls():
+    urls = ServiceURL()
+    assert (
+        urls.restful.nwis == "https://waterservices.usgs.gov/nwis"
+        and urls.restful.nldi == "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+        and urls.restful.daymet_point == "https://daymet.ornl.gov/single-pixel/api/data"
+        and urls.restful.daymet_grid == "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328"
+        and urls.restful.wbd == "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer"
+        and urls.restful.fws == "https://www.fws.gov/wetlands/arcgis/rest/services"
+        and urls.restful.fema
+        == "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer"
+        and urls.wms.mrlc == "https://www.mrlc.gov/geoserver/mrlc_download/wms"
+        and urls.wms.fema
+        == "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHLWMS/MapServer/WMSServer"
+        and urls.wms.nm_3dep
+        == "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+        and urls.wms.fws
+        == "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
+        and urls.wfs.waterdata == "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
+        and urls.wfs.fema
+        == "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+        and urls.http.ssebopeta
+        == "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/uswem/web/conus/eta/modis_eta/daily/downloads"
+    )
