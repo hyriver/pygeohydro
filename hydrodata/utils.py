@@ -17,8 +17,7 @@ import simplejson as json
 import xarray as xr
 from owslib.wms import WebMapService
 from pandas._libs.missing import NAType
-from rasterio import Affine
-from rasterio import features as rio_features
+from rasterio import mask as rio_mask
 from rasterio import warp as rio_warp
 from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
@@ -669,13 +668,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
 
 
 def create_dataset(
-    content: bytes,
-    mask: np.ndarray,
-    transform: Affine,
-    width: int,
-    height: int,
-    name: str,
-    fpath: Optional[Union[str, Path]],
+    content: bytes, geometry: Polygon, name: str, fpath: Optional[Union[str, Path]],
 ) -> Union[xr.Dataset, xr.DataArray]:
     """Create dataset from a response clipped by a geometry.
 
@@ -683,14 +676,8 @@ def create_dataset(
     ----------
     content : requests.Response
         The response to be processed
-    mask : numpy.ndarray
-        The mask to clip the data
-    transform : tuple
-        Transform of the mask
-    width : int
-        x-dimension of the data
-    height : int
-        y-dimension of the data
+    geometry : Polygon
+        The geometry for masking the data
     name : str
         Variable name in the dataset
     fpath : str or Path
@@ -713,23 +700,29 @@ def create_dataset(
             else:
                 nodata = np.dtype(src.dtypes[0]).type(src.nodata)
 
+            masked, transform = rio_mask.mask(src, [geometry], crop=True, nodata=nodata)
             meta = src.meta
             meta.update(
-                {"width": width, "height": height, "transform": transform, "nodata": nodata}
+                {
+                    "width": masked.shape[2],
+                    "height": masked.shape[1],
+                    "transform": transform,
+                    "nodata": nodata,
+                }
             )
 
             if fpath is not None:
                 with rio.open(fpath, "w", **meta) as dest:
-                    dest.write_mask(~mask)
-                    dest.write(src.read())
+                    dest.write(masked)
 
             with rio.vrt.WarpedVRT(src, **meta) as vrt:
                 ds = xr.open_rasterio(vrt)
+                ds.data = masked
                 try:
                     ds = ds.squeeze("band", drop=True)
                 except ValueError:
                     pass
-                ds = ds.where(~mask, other=vrt.nodata)
+                #                 ds = ds.where(~mask[0], other=vrt.nodata)
                 ds.name = name
 
                 ds.attrs["transform"] = transform
@@ -957,51 +950,6 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
         return json.dumps(convert(json.loads(arcgis), idAttribute))
 
     return convert(arcgis, idAttribute)
-
-
-def geom_mask(
-    geometry: Polygon,
-    width: int,
-    height: int,
-    geo_crs: str = "epsg:4326",
-    ds_crs: str = "epsg:4326",
-    all_touched: bool = True,
-) -> Tuple[np.ndarray, Affine]:
-    """Create a mask array and transform for a given geometry.
-
-    Parameters
-    ----------
-    geometry : Polygon
-        A shapely Polygon geometry
-    width : int
-        x-dimension of the data
-    heigth : int
-        y-dimension of the data
-    geo_crs : str, CRS
-        CRS of the geometry, defaults to epsg:4326
-    ds_crs : str, CRS
-        CRS of the dataset to be masked, defaults to epsg:4326
-    all_touched : bool
-        Wether to include all the elements where the geometry touches
-        rather than only the element's center, defaults to True
-
-    Returns
-    -------
-    (numpy.ndarray, tuple)
-        mask, transform of a geometry within its bounds
-    """
-
-    if not isinstance(geometry, Polygon):
-        raise InvalidInputType("geometry", "Shapley's Polygon")
-
-    geom = match_crs(geometry, geo_crs, ds_crs)
-    left, bottom, right, top = match_crs(geometry.bounds, geo_crs, ds_crs)
-
-    transform = rio_warp.calculate_default_transform(
-        ds_crs, ds_crs, height=height, width=width, left=left, bottom=bottom, right=right, top=top,
-    )[0]
-    mask = rio_features.geometry_mask([geom], (height, width), transform, all_touched=all_touched)
-    return mask, transform
 
 
 def check_requirements(reqs: Iterable, cols: List[str]) -> None:
