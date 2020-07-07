@@ -320,17 +320,18 @@ def wms_bygeom(
     if fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    geometry = utils.match_crs(geometry, geo_crs, crs)
+    geom = utils.match_crs(geometry, geo_crs, crs)
+    bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
 
     if (width is None and resolution is None) or (width is not None and resolution is not None):
         raise MissingInputs("Either width or resolution should be provided.")
 
     if width is not None:
-        west, south, east, north = geometry.bounds
+        west, south, east, north = bounds
         _width = width
         height = int(abs(north - south) / abs(east - west) * _width)
     elif resolution is not None:
-        _width, height = utils.bbox_resolution(geometry.bounds, resolution)
+        _width, height = utils.bbox_resolution(bounds, resolution)
 
     if fpath is not None and not isinstance(fpath, dict):
         raise InvalidInputType("fpath", "dict", "{var_name : path}")
@@ -342,24 +343,20 @@ def wms_bygeom(
             raise ValueError("Keys of fpath and layers dictionaries should be the same.")
         utils.check_dir(fpath.values())
 
-    mask, transform = utils.geom_mask(geometry, _width, height)
-
     def _wms(inp):
         name, layer = inp
         img = wms.getmap(
-            layers=[layer], srs=crs, bbox=geometry.bounds, size=(_width, height), format=outFormat,
+            layers=[layer], srs=crs, bbox=bounds, size=(_width, height), format=outFormat,
         )
         return (name, img.read())
 
     resp = utils.threading(_wms, layers.items(), max_workers=len(layers))
 
-    data = utils.create_dataset(
-        resp[0][1], mask, transform, _width, height, resp[0][0], fpath[resp[0][0]]
-    )
+    data = utils.create_dataset(resp[0][1], geom, resp[0][0], fpath[resp[0][0]])
 
     if len(resp) > 1:
         for name, r in resp:
-            da = utils.create_dataset(r, mask, transform, _width, height, name, fpath[name])
+            da = utils.create_dataset(r, geom, name, fpath[name])
             data = xr.merge([data, da])
 
     return data

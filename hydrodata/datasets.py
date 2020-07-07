@@ -12,6 +12,8 @@ import numpy as np
 import pandas as pd
 import rasterio as rio
 import xarray as xr
+from rasterio import features as rio_features
+from rasterio import warp as rio_warp
 from shapely.geometry import Polygon
 
 from hydrodata import connection, helpers, services, utils
@@ -638,9 +640,11 @@ def daymet_bygeom(
     if fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
+    crs = "epsg:4326"
+    geometry = utils.match_crs(geometry, geo_crs, crs)
+    bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
 
-    west, south, east, north = np.round(geometry.bounds, 6)
+    west, south, east, north = np.round(bounds, 6)
     base_url = ServiceURL().restful.daymet_grid
     urls = []
 
@@ -704,7 +708,17 @@ def daymet_bygeom(
     if pet:
         data = utils.pet_fao_gridded(data)
 
-    mask, transform = utils.geom_mask(geometry, data.dims["x"], data.dims["y"], ds_crs=data.crs,)
+    transform = rio_warp.calculate_default_transform(
+        crs,
+        crs,
+        width=data.dims["x"],
+        height=data.dims["y"],
+        left=bounds[0],
+        bottom=bounds[1],
+        right=bounds[2],
+        top=bounds[3],
+    )[0]
+    mask = rio_features.geometry_mask([geometry], (data.dims["y"], data.dims["x"]), transform)
     data = data.where(~xr.DataArray(mask, dims=("y", "x")), drop=True)
     return data
 
@@ -810,9 +824,6 @@ def ssebopeta_bygeom(
     if fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    width, height = utils.bbox_resolution(geometry.bounds, 1.0e3)
-    mask, transform = utils.geom_mask(geometry, width, height)
-
     if isinstance(dates, tuple) and len(dates) == 2:
         start, end = dates
     else:
@@ -832,12 +843,12 @@ def ssebopeta_bygeom(
 
         resp = utils.threading(_ssebop, f_list, max_workers=4,)
 
-        data = utils.create_dataset(resp[0][1], mask, transform, width, height, "eta", None)
+        data = utils.create_dataset(resp[0][1], geometry, "eta", None)
         data = data.expand_dims({"time": [resp[0][0]]})
 
         if len(resp) > 1:
             for dt, r in resp:
-                ds = utils.create_dataset(r, mask, transform, width, height, "eta", None)
+                ds = utils.create_dataset(r, geometry, "eta", None)
                 ds = ds.expand_dims({"time": [dt]})
                 data = xr.merge([data, ds])
 
