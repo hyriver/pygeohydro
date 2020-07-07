@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 """Tests for `hydrodata` package."""
 import shutil
 from urllib.error import HTTPError
