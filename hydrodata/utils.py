@@ -1078,6 +1078,10 @@ def vector_accumulation(
 def match_crs(
     geometry: Union[Polygon, Tuple[float, float, float, float]], in_crs: str, out_crs: str,
 ) -> Union[Polygon, Tuple[float, float, float, float]]:
+
+    if not isinstance(geometry, (Polygon, tuple)):
+        raise InvalidInputType("geometry", "tuple or Polygon")
+
     if in_crs != out_crs:
         if isinstance(geometry, Polygon):
             return shape(rio_warp.transform_geom(in_crs, out_crs, mapping(geometry)))
@@ -1166,7 +1170,9 @@ class ESRIGeomQuery:
         }
 
 
-def bbox_resolution(bbox: Tuple[float, float, float, float], resolution: float) -> Tuple[int, int]:
+def bbox_resolution(
+    bbox: Tuple[float, float, float, float], resolution: float, bbox_crs: str = "epsg:4326"
+) -> Tuple[int, int]:
     """Image size of a bounding box WGS84 for a given resolution in meters.
 
     Parameters
@@ -1175,6 +1181,8 @@ def bbox_resolution(bbox: Tuple[float, float, float, float], resolution: float) 
         A bounding box in WGS84 (west, south, east, north)
     resolution : float
         The resolution in meters
+    bbox_crs : str, optional
+        The spatial reference of the input bbox, default to EPSG:4326.
 
     Returns
     -------
@@ -1184,6 +1192,7 @@ def bbox_resolution(bbox: Tuple[float, float, float, float], resolution: float) 
 
     check_bbox(bbox)
 
+    bbox = match_crs(bbox, bbox_crs, "epsg:4326")
     west, south, east, north = bbox
     geod = pyproj.Geod(ellps="WGS84")
 
