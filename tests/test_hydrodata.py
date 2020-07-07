@@ -148,26 +148,17 @@ def test_wms(watershed_nat):
         {"wetlands": "0"},
         "image/tiff",
         watershed_nat.geometry,
-        geo_crs="epsg:4326",
-        version="1.3.0",
-        fpath={"wetlands": "tmp/wetlands.tiff"},
-        width=2000,
-        fill_holes=True,
-        crs="epsg:3857",
-    )
-
-    wetlands = services.wms_bygeom(
-        url_wms,
-        {"wetlands": "0"},
-        "image/tiff",
-        watershed_nat.geometry,
-        version="1.3.0",
         resolution=1e3,
+        geo_crs="epsg:4326",
+        crs="epsg:3857",
+        version="1.3.0",
+        fill_holes=True,
+        fpath={"wetlands": "tmp/wetlands.tiff"},
     )
 
     shutil.rmtree("tmp", ignore_errors=True)
 
-    assert abs(wetlands.isel(band=0).mean().values.item() - 132.858) < 1e-3
+    assert abs(wetlands.isel(band=0).mean().values.item() - 132.888) < 1e-3
 
 
 def test_wfs(watershed_urb):
