@@ -19,6 +19,9 @@ Breaking changes
 - Re-wrote the ``signatures`` function from scratch using ``NamedTuple`` to improve readability
   and efficiency. Now, the ``daily`` argument should be just a ``pandas.DataFrame`` or ``pandas.Series``
   and the column names are used for legends.
+- Removed ``utils.geom_mask`` function and replaced it with ``rasterio.mask.mask``.
+- Removed ``width`` as an input in functions with raster output since ``resolution`` is almost
+  always the preferred way to request for data. This change made the code more readable.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -41,17 +44,22 @@ Enhancements
 - Refactored the method for getting object IDs in ``ArcGISREST`` class to improve
   robustness and efficiency.
 - Refactored ``Daymet`` class to improve readability.
+- Add `Deepsource <https://deepsource.io/>`_ for further checking code quality.
 
 New Features
 ~~~~~~~~~~~~
 - Added access to WaterData's Geoserver databases.
 - Added access to the remaining NLDI database (Water Quality Portal and Water Data Exchange).
 - Created a Binder for launching a computing environment on the cloud and testing Hydrodata.
+- Added a URL repository for the supported services called ``ServiceURL``
+- Added support for `FEMA <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`_ web services
+  for flood maps and `FWS <https://www.fws.gov/wetlands/Data/Web-Map-Services.html>`_ for wetlands.
 
 Bug fixes
 ~~~~~~~~~
 - Re-projection issues for function with input geometry.
 - Start and end variables not being initialized when coords was used in ``Station``.
+- Geometry mask for ``xarray.DataArray``
 
 0.6.0 (2020-06-23)
 ------------------
