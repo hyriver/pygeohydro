@@ -108,7 +108,6 @@ nbsphinx_timeout = 600
 nbsphinx_execute = "always"
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None).replace("nblink","ipynb") %}
-{% set fullpath = env.doc2path(env.docname, base='tree/develop/docs/').replace("nblink","ipynb") %}
 
 .. only:: html
 
@@ -121,7 +120,7 @@ nbsphinx_prolog = """
         Interactive online version:
         :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/develop?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
 
-    __ https://github.com/cheginit/hydrodata/{{ fullpath }}
+    __https://github.com/cheginit/hydrodata/tree/develop/docs/{{ docname }}
 """
 
 autosummary_generate = True
