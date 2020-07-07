@@ -2,7 +2,7 @@
 from collections import defaultdict
 from itertools import zip_longest
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 from warnings import warn
 
 import geopandas as gpd
@@ -288,7 +288,7 @@ def wms_bygeom(
         automatically from the geometry's bounding box aspect ratio. Either width
         or resolution should be provided.
     resolution : float
-        The data resolution in arc-seconds. The width and height are computed in pixel
+        The output resolution in meters. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
     fpath : dict, optional
@@ -325,9 +325,12 @@ def wms_bygeom(
     if (width is None and resolution is None) or (width is not None and resolution is not None):
         raise MissingInputs("Either width or resolution should be provided.")
 
-    west, south, east, north = geometry.bounds
-    _width = int((east - west) * 3600 / resolution) if width is None else width
-    height = int(abs(north - south) / abs(east - west) * _width)
+    if width is not None:
+        west, south, east, north = geometry.bounds
+        _width = width
+        height = int(abs(north - south) / abs(east - west) * _width)
+    elif resolution is not None:
+        _width, height = utils.bbox_resolution(geometry.bounds, resolution)
 
     if fpath is not None and not isinstance(fpath, dict):
         raise InvalidInputType("fpath", "dict", "{var_name : path}")
@@ -376,7 +379,7 @@ def validate_wms(
         raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
 
     if any(layer not in valid_layers.keys() for layer in layers.values()):
-        raise InvalidInputValue("layer", (f"{n}: {t}\n" for n, t in valid_layers.items()))
+        raise InvalidInputValue("layer", (f"{n} for {t}" for n, t in valid_layers.items()))
 
     valid_outFormats = wms.getOperationByName("GetMap").formatOptions
     if outFormat is None or outFormat not in valid_outFormats:
@@ -614,3 +617,57 @@ class WFS:
             raise ZeroMatched(root[0][0].text.strip())
 
         return r
+
+
+class ServiceURL:
+    """Base URLs of the supported services."""
+
+    @property
+    def restful(self):
+        return RESTfulURLs()
+
+    @property
+    def wms(self):
+        return WMSURLs()
+
+    @property
+    def wfs(self):
+        return WFSURLs()
+
+    @property
+    def http(self):
+        return HTTPURLs()
+
+
+class RESTfulURLs(NamedTuple):
+    """A list of RESTful services URLs."""
+
+    nwis: str = "https://waterservices.usgs.gov/nwis"
+    nldi: str = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+    daymet_point: str = "https://daymet.ornl.gov/single-pixel/api/data"
+    daymet_grid: str = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328"
+    wbd: str = "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer"
+    fws: str = "https://www.fws.gov/wetlands/arcgis/rest/services"
+    fema: str = "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer"
+
+
+class WMSURLs(NamedTuple):
+    """A list of WMS services URLs."""
+
+    mrlc: str = "https://www.mrlc.gov/geoserver/mrlc_download/wms"
+    fema: str = "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHLWMS/MapServer/WMSServer"
+    nm_3dep: str = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
+    fws: str = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
+
+
+class WFSURLs(NamedTuple):
+    """A list of WFS services URLs."""
+
+    waterdata: str = "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
+    fema: str = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+
+
+class HTTPURLs(NamedTuple):
+    """A list of HTTP services URLs."""
+
+    ssebopeta: str = "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/uswem/web/conus/eta/modis_eta/daily/downloads"

@@ -11,6 +11,7 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pandas as pd
+import pyproj
 import rasterio as rio
 import simplejson as json
 import xarray as xr
@@ -21,14 +22,7 @@ from rasterio import features as rio_features
 from rasterio import warp as rio_warp
 from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
-from hydrodata.connection import RetrySession
-from hydrodata.exceptions import (
-    InvalidInputRange,
-    InvalidInputType,
-    MissingInputs,
-    MissingItems,
-    ZeroMatched,
-)
+from hydrodata.exceptions import InvalidInputType, MissingInputs, MissingItems, ZeroMatched
 
 
 def threading(
@@ -91,39 +85,6 @@ def check_dir(
                 raise OSError(f"Parent directory cannot be created: {parent}")
 
 
-def get_ssebopeta_urls(
-    start: Optional[Union[pd.DatetimeIndex, str]] = None,
-    end: Optional[Union[pd.DatetimeIndex, str]] = None,
-    years: Optional[Union[int, List[int]]] = None,
-) -> List[Tuple[pd.DatetimeIndex, str]]:
-    """Get list of URLs for SSEBop dataset within a period."""
-    if years is None and start is not None and end is not None:
-        start = pd.to_datetime(start)
-        end = pd.to_datetime(end)
-        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
-            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
-        dates = pd.date_range(start, end)
-    elif years is not None and start is None and end is None:
-        years = years if isinstance(years, list) else [years]
-        seebop_yrs = np.arange(2000, 2019)
-
-        if any(y not in seebop_yrs for y in years):
-            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
-
-        d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
-        dates = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
-    else:
-        raise MissingInputs("Either years or start and end arguments should be provided.")
-
-    base_url = (
-        "https://edcintl.cr.usgs.gov/downloads/sciweb1/"
-        + "shared/uswem/web/conus/eta/modis_eta/daily/downloads"
-    )
-    f_list = [(d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip") for d in dates]
-
-    return f_list
-
-
 def elevation_byloc(lon: float, lat: float) -> float:
     """Get elevation from USGS 3DEP service for a coordinate.
 
@@ -140,17 +101,10 @@ def elevation_byloc(lon: float, lat: float) -> float:
         Elevation in meter
     """
 
-    url = "https://nationalmap.gov/epqs/pqs.php"
-    payload = {"output": "json", "x": lon, "y": lat, "units": "Meters"}
-    r = RetrySession().get(url, payload)
-    root = r.json()["USGS_Elevation_Point_Query_Service"]
-    elevation = root["Elevation_Query"]["Elevation"]
-    if elevation == -1000000:
-        raise ZeroMatched(
-            f"The altitude of the requested coordinate ({lon}, {lat}) cannot be found."
-        )
+    rad = 1.0 / 3600.0
+    bbox = (lon - rad, lat - rad, lon + rad, lat + rad)
 
-    return elevation
+    return elevation_bybbox(bbox, 10, [(lon, lat)])[0]
 
 
 def elevation_bybbox(
@@ -168,7 +122,7 @@ def elevation_bybbox(
     bbox : tuple
         Bounding box with coordinates in [west, south, east, north] format.
     resolution : float
-        Gridded data resolution in arc-second
+        The smallest distance between the coordinates in meters
     coords : list of tuples
         A list of coordinates in (lon, lat) format to extract the elevations.
     box_crs : str, optional
@@ -183,17 +137,17 @@ def elevation_bybbox(
 
     check_bbox(bbox)
 
+    bbox = match_crs(bbox, box_crs, "epsg:4326")
+    width, height = bbox_resolution(bbox, resolution)
+
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-    layers = ["3DEPElevation:None"]
-    version = "1.3.0"
-
-    west, south, east, north = match_crs(bbox, box_crs, "epsg:4326")
-    width = int((east - west) * 3600 / resolution)
-    height = int(abs(north - south) / abs(east - west) * width)
-
-    wms = WebMapService(url, version=version)
+    wms = WebMapService(url, version="1.3.0")
     img = wms.getmap(
-        layers=layers, srs=box_crs, bbox=bbox, size=(width, height), format="image/geotiff",
+        layers=["3DEPElevation:None"],
+        srs=box_crs,
+        bbox=bbox,
+        size=(width, height),
+        format="image/geotiff",
     )
 
     with rio.MemoryFile() as memfile:
@@ -349,8 +303,9 @@ def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
             ds.lon.max().values + margine,
             ds.lat.max().values + margine,
         )
-        resolution = (3600.0 * 180.0) / (6371000.0 * np.pi) * ds.res[0] * 1e3
-        elevation = elevation_bybbox(bbox, resolution, coords).reshape(ds.dims["y"], ds.dims["x"])
+        elevation = elevation_bybbox(bbox, ds.res[0] * 1e3, coords).reshape(
+            ds.dims["y"], ds.dims["x"]
+        )
         ds["elevation"] = ({"y": ds.dims["y"], "x": ds.dims["x"]}, elevation)
         ds["elevation"].attrs["units"] = "m"
 
@@ -1261,3 +1216,33 @@ class ESRIGeomQuery:
             "geometry": esri_json,
             "inSR": str(self.wkid),
         }
+
+
+def bbox_resolution(bbox: Tuple[float, float, float, float], resolution: float) -> Tuple[int, int]:
+    """Image size of a bounding box WGS84 for a given resolution in meters.
+
+    Parameters
+    ----------
+    bbox : tuple
+        A bounding box in WGS84 (west, south, east, north)
+    resolution : float
+        The resolution in meters
+
+    Returns
+    -------
+    tuple
+        The width and height of the image
+    """
+
+    check_bbox(bbox)
+
+    west, south, east, north = bbox
+    geod = pyproj.Geod(ellps="WGS84")
+
+    linex = LineString([Point(west, south), Point(east, south)])
+    delx = geod.geometry_length(linex)
+
+    liney = LineString([Point(west, south), Point(west, north)])
+    dely = geod.geometry_length(liney)
+
+    return int(delx / resolution), int(dely / resolution)

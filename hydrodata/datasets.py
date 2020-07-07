@@ -23,7 +23,7 @@ from hydrodata.exceptions import (
     MissingInputs,
     ZeroMatched,
 )
-from hydrodata.services import WFS
+from hydrodata.services import WFS, ServiceURL
 
 MARGINE = 15
 
@@ -68,7 +68,6 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
             + ", ".join(nas)
         )
 
-    url = "https://waterservices.usgs.gov/nwis/dv"
     payload = {
         "format": "json",
         "sites": ",".join(station_ids),
@@ -79,7 +78,7 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
         "siteStatus": "all",
     }
 
-    r = RetrySession().post(url, payload)
+    r = RetrySession().post(f"{ServiceURL().restful.nwis}/dv", payload)
 
     ts = r.json()["value"]["timeSeries"]
     r_ts = {t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in ts}
@@ -149,8 +148,6 @@ def nwis_siteinfo(
         NWIS stations
     """
 
-    url = "https://waterservices.usgs.gov/nwis/site"
-
     query = utils.generate_nwis_query(ids, bbox)
     outputType = {"siteOutput": "expanded"} if expanded else {"outputDataTypeCd": "dv"}
 
@@ -163,7 +160,7 @@ def nwis_siteinfo(
         "hasDataTypeCd": "dv",
     }
 
-    r = RetrySession().post(url, payload).text.split("\n")
+    r = RetrySession().post(f"{ServiceURL().restful.nwis}/site", payload).text.split("\n")
 
     r_list = [txt.split("\t") for txt in r if "#" not in txt]
     r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
@@ -216,7 +213,7 @@ class WaterData:
         self.crs = crs
 
         self.wfs = WFS(
-            "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
+            ServiceURL().wfs.waterdata,
             layer=self.layer,
             outFormat="application/json",
             version="2.0.0",
@@ -306,7 +303,7 @@ class NLDI:
 
     def __init__(self) -> None:
 
-        self.base_url = "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
+        self.base_url = ServiceURL().restful.nldi
         self.session = RetrySession()
         r = self.session.get(self.base_url).json()
         self.valid_sources = [el for sub in utils.traverse_json(r, ["source"]) for el in sub]
@@ -561,8 +558,6 @@ def daymet_byloc(
             + "14.5 < lat < 52.0 and -131.0 < lon < -53.0"
         )
 
-    url = "https://daymet.ornl.gov/single-pixel/api/data"
-
     payload = {
         "lat": f"{lat:.6f}",
         "lon": f"{lon:.6f}",
@@ -571,7 +566,7 @@ def daymet_byloc(
         **daymet.date_dict,
     }
 
-    r = daymet.session.get(url, payload)
+    r = daymet.session.get(ServiceURL().restful.daymet_point, payload)
 
     clm = pd.DataFrame(r.json()["data"])
     clm.index = pd.to_datetime(clm.year * 1000.0 + clm.yday, format="%Y%j")
@@ -646,7 +641,7 @@ def daymet_bygeom(
     geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
 
     west, south, east, north = np.round(geometry.bounds, 6)
-    base_url = "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328/"
+    base_url = ServiceURL().restful.daymet_grid
     urls = []
 
     for s, e in dates_itr:
@@ -745,7 +740,7 @@ def ssebopeta_byloc(
     else:
         raise InvalidInputType("dates", "tuple", "(start, end)")
 
-    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
+    f_list = _get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
 
     with connection.onlyIPv4():
@@ -775,11 +770,10 @@ def ssebopeta_bygeom(
     geo_crs: str = "epsg:4326",
     dates: Optional[Tuple[str, str]] = None,
     years: Optional[List[int]] = None,
-    resolution: Optional[float] = None,
     fill_holes: bool = False,
 ) -> xr.DataArray:
     """Daily actual ET for a region from SSEBop database in mm/day at 1 km
-    resolution.
+    resolution resolution.
 
     Notes
     -----
@@ -798,14 +792,14 @@ def ssebopeta_bygeom(
     dates : tuple, optional
         Start and end dates as a tuple (start, end), default to None.
     years : list
-        List of years
+        List of yearsS
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior (Polygon type), defaults to False.
 
     Returns
     -------
     xarray.DataArray
-        Daily actual ET within a geometry
+        Daily actual ET within a geometry in mm/day at 1 km resolution
     """
 
     if not isinstance(geometry, Polygon):
@@ -816,12 +810,7 @@ def ssebopeta_bygeom(
     if fill_holes:
         geometry = Polygon(geometry.exterior)
 
-    resolution = 1.0e3 / 6371000.0 * 3600.0 / np.pi * 180.0
-    west, south, east, north = geometry.bounds
-
-    width = int((east - west) * 3600 / resolution)
-    height = int(abs(north - south) / abs(east - west) * width)
-
+    width, height = utils.bbox_resolution(geometry.bounds, 1.0e3)
     mask, transform = utils.geom_mask(geometry, width, height)
 
     if isinstance(dates, tuple) and len(dates) == 2:
@@ -829,7 +818,7 @@ def ssebopeta_bygeom(
     else:
         raise InvalidInputType("dates", "tuple", "(start, end)")
 
-    f_list = utils.get_ssebopeta_urls(start=start, end=end, years=years)
+    f_list = _get_ssebopeta_urls(start=start, end=end, years=years)
 
     session = RetrySession()
 
@@ -857,6 +846,36 @@ def ssebopeta_bygeom(
     eta *= 1e-3
     eta.attrs.update({"units": "mm/day", "nodatavals": (np.nan,)})
     return eta
+
+
+def _get_ssebopeta_urls(
+    start: Optional[Union[pd.DatetimeIndex, str]] = None,
+    end: Optional[Union[pd.DatetimeIndex, str]] = None,
+    years: Optional[Union[int, List[int]]] = None,
+) -> List[Tuple[pd.DatetimeIndex, str]]:
+    """Get list of URLs for SSEBop dataset within a period."""
+    if years is None and start is not None and end is not None:
+        start = pd.to_datetime(start)
+        end = pd.to_datetime(end)
+        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
+            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
+        dates = pd.date_range(start, end)
+    elif years is not None and start is None and end is None:
+        years = years if isinstance(years, list) else [years]
+        seebop_yrs = np.arange(2000, 2019)
+
+        if any(y not in seebop_yrs for y in years):
+            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
+
+        d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
+        dates = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
+    else:
+        raise MissingInputs("Either years or start and end arguments should be provided.")
+
+    base_url = ServiceURL().http.ssebopeta
+    f_list = [(d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip") for d in dates]
+
+    return f_list
 
 
 def nlcd(
@@ -892,7 +911,7 @@ def nlcd(
         automatically from the geometry's bounding box aspect ratio. Either width
         or resolution should be provided.
     resolution : float
-        The data resolution in arc-seconds. The width and height are computed in pixel
+        The data resolution in meters. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
     file_path : dict, optional
@@ -929,8 +948,6 @@ def nlcd(
             "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
         )
 
-    url = "https://www.mrlc.gov/geoserver/mrlc_download/wms"
-
     layers = {
         "canopy": f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
         "cover": f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
@@ -938,7 +955,7 @@ def nlcd(
     }
 
     ds = services.wms_bygeom(
-        url,
+        ServiceURL().wms.mrlc,
         layers,
         "image/geotiff",
         geometry,
@@ -997,7 +1014,7 @@ class NationalMap:
         automatically from the geometry's bounding box aspect ratio. Either width
         or resolution should be provided.
     resolution : float
-        The data resolution in arc-seconds. The width and height are computed in pixel
+        The data resolution in meters. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
     fill_holes : bool, optional
@@ -1062,15 +1079,11 @@ class NationalMap:
     def get_map(self, layer: Dict[str, str]) -> Union[xr.DataArray, xr.Dataset]:
         """Get requested map using the national map's WMS service."""
 
-        url = (
-            "https://elevation.nationalmap.gov/arcgis/services/"
-            + "3DEPElevation/ImageServer/WMSServer"
-        )
         name = str(list(layer.keys())[0]).replace(" ", "_")
         _fpath: Optional[Dict[str, Optional[Union[str, Path]]]]
         _fpath = None if self.fpath is None else {name: self.fpath}
         return services.wms_bygeom(
-            url,
+            ServiceURL().wms.nm_3dep,
             layer,
             "image/tiff",
             self.geometry,
