@@ -47,7 +47,7 @@ def test_daymet(watershed_nat):
     st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (
-        abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.682) < 1e-3
+        abs(st_g.isel(time=10, x=5, y=10).pet.values.item() - 0.596) < 1e-3
         and abs(yr_g.isel(time=10, x=5, y=10).tmin.values.item() - (-18.0)) < 1e-1
         and abs(st_p.iloc[10]["pet (mm/day)"] - 2.393) < 1e-3
         and abs(yr_p.iloc[10]["tmin (deg c)"] - 11.5) < 1e-1
@@ -100,14 +100,14 @@ def test_ssebopeta(watershed_nat):
     eta_g = hds.ssebopeta_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
     assert (
         abs(eta_p.mean().values[0] - 0.575) < 1e-3
-        and abs(eta_g.mean().values.item() - 0.575) < 1e-3
+        and abs(eta_g.mean().values.item() - 0.576) < 1e-3
     )
 
 
 def test_nlcd(watershed_nat):
     lulc = hds.nlcd(watershed_nat.geometry, resolution=1e3)
     st = utils.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 45.304) < 1e-3
+    assert abs(st["categories"]["Forest"] - 42.130) < 1e-3
 
 
 def test_nm(watershed_nat):
@@ -115,9 +115,9 @@ def test_nm(watershed_nat):
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
     nm.get_slope(mpm=True)
     assert (
-        abs(dem.mean().values.item() - 312.865) < 1e-3
-        and abs(slope.mean().values.item() - 3.638) < 1e-3
-        and abs(aspect.mean().values.item() - 166.433) < 1e-3
+        abs(dem.mean().values.item() - 302.026) < 1e-3
+        and abs(slope.mean().values.item() - 3.582) < 1e-3
+        and abs(aspect.mean().values.item() - 168.731) < 1e-3
     )
 
 
@@ -141,7 +141,7 @@ def test_restful(watershed_urb):
     )
 
 
-def test_wms(watershed_urb):
+def test_wms(watershed_nat):
     url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
     wetlands = services.wms_bygeom(
         url_wms,
@@ -167,7 +167,7 @@ def test_wms(watershed_urb):
 
     shutil.rmtree("tmp", ignore_errors=True)
 
-    assert abs(wetlands.isel(band=0).mean().values.item() - 124.037) < 1e-3
+    assert abs(wetlands.isel(band=0).mean().values.item() - 132.858) < 1e-3
 
 
 def test_wfs(watershed_urb):
