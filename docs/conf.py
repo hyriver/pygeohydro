@@ -120,7 +120,7 @@ nbsphinx_prolog = """
         Interactive online version:
         :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/develop?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
 
-    __https://github.com/cheginit/hydrodata/tree/develop/docs/{{ docname }}
+    ..__{{ docname }}: https://github.com/cheginit/hydrodata/tree/develop/docs/{{ docname }}
 """
 
 autosummary_generate = True
