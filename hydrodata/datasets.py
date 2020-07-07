@@ -719,7 +719,7 @@ def daymet_bygeom(
         top=bounds[3],
     )[0]
     mask = rio_features.geometry_mask([geometry], (data.dims["y"], data.dims["x"]), transform)
-    data = data.where(~xr.DataArray(mask, dims=("y", "x")), drop=True)
+    data = data.where(xr.DataArray(~mask, dims=("y", "x")), drop=True)
     return data
 
 
@@ -895,7 +895,7 @@ def nlcd(
     years: Optional[Dict[str, int]] = None,
     width: Optional[int] = None,
     resolution: Optional[float] = None,
-    file_path: Optional[Union[str, Path]] = None,
+    fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
     fill_holes: bool = False,
     crs: str = "epsg:4326",
 ) -> xr.Dataset:
@@ -925,7 +925,7 @@ def nlcd(
         The data resolution in meters. The width and height are computed in pixel
         based on the geometry bounds and the given resolution. Either width or
         resolution should be provided.
-    file_path : dict, optional
+    fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
         a dict with keys as the variable name in the output dataframe and values as
@@ -972,9 +972,10 @@ def nlcd(
         geometry,
         width=width,
         resolution=resolution,
-        fill_holes=fill_holes,
+        fpath=fpath,
         geo_crs=geo_crs,
         crs=crs,
+        fill_holes=fill_holes,
     )
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -1274,9 +1275,8 @@ class Station:
 
                 if self.start < self.st_begin or self.end > self.st_end:
                     continue
-                else:
-                    station_id = sid
-                    break
+                station_id = sid
+                break
 
         if station_id is None:
             raise ZeroMatched(

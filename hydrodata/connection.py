@@ -38,6 +38,7 @@ class RetrySession:
     ) -> None:
 
         self.session = Session()
+        self.retries = retries
 
         r = Retry(
             total=retries,
@@ -57,14 +58,14 @@ class RetrySession:
         try:
             return self.session.get(url, params=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
-            raise
+            raise ConnectionError(f"Connection failed after {self.retries} retries.")
 
     def post(self, url: str, payload: Optional[MutableMapping[str, Any]] = None,) -> Response:
         """Retrieve data from a url by POST and return the Response."""
         try:
             return self.session.post(url, data=payload)
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
-            raise
+            raise ConnectionError(f"Connection failed after {self.retries} retries.")
 
 
 def onlyIPv4() -> _patch:
@@ -72,9 +73,9 @@ def onlyIPv4() -> _patch:
 
     orig_getaddrinfo = socket.getaddrinfo
 
-    def getaddrinfoIPv4(host, port, family=0, ptype=0, proto=0, flags=0):
+    def getaddrinfoIPv4(host, port, family=socket.AF_INET, ptype=0, proto=0, flags=0):
         return orig_getaddrinfo(
-            host=host, port=port, family=socket.AF_INET, type=ptype, proto=proto, flags=flags,
+            host=host, port=port, family=family, type=ptype, proto=proto, flags=flags,
         )
 
     return patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4)

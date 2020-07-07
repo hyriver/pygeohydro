@@ -1135,32 +1135,32 @@ class ESRIGeomQuery:
         if len(self.geometry) != 2:
             raise InvalidInputType("geometry (point)", "tuple", "(x, y)")
 
-        self.type = "esriGeometryPoint"
-        self.json = dict(zip(("x", "y"), self.geometry))
-        return self.get_payload()
+        geo_type = "esriGeometryPoint"
+        geo_json = dict(zip(("x", "y"), self.geometry))
+        return self.get_payload(geo_type, geo_json)
 
     def bbox(self) -> Dict[str, str]:
         """Query for a bbox."""
         if len(self.geometry) != 4:
             raise InvalidInputType("geometry (bbox)", "tuple", "(west, south, east, north)")
 
-        self.type = "esriGeometryEnvelope"
-        self.json = dict(zip(("xmin", "ymin", "xmax", "ymax"), self.geometry))
-        return self.get_payload()
+        geo_type = "esriGeometryEnvelope"
+        geo_json = dict(zip(("xmin", "ymin", "xmax", "ymax"), self.geometry))
+        return self.get_payload(geo_type, geo_json)
 
     def polygon(self) -> Dict[str, str]:
         """Query for a polygon."""
         if not isinstance(self.geometry, Polygon):
             raise InvalidInputType("geomtry", "Shapely's Polygon")
 
-        self.type = "esriGeometryPolygon"
-        self.json = {"rings": [[[x, y] for x, y in zip(*self.geometry.exterior.coords.xy)]]}
-        return self.get_payload()
+        geo_type = "esriGeometryPolygon"
+        geo_json = {"rings": [[[x, y] for x, y in zip(*self.geometry.exterior.coords.xy)]]}
+        return self.get_payload(geo_type, geo_json)
 
-    def get_payload(self) -> Dict[str, str]:
-        esri_json = json.dumps({**self.json, "spatialRelference": {"wkid": str(self.wkid)}})
+    def get_payload(self, geo_type: str, geo_json: Dict[str, Any]) -> Dict[str, str]:
+        esri_json = json.dumps({**geo_json, "spatialRelference": {"wkid": str(self.wkid)}})
         return {
-            "geometryType": self.type,
+            "geometryType": geo_type,
             "geometry": esri_json,
             "inSR": str(self.wkid),
         }
