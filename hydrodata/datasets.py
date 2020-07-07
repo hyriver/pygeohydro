@@ -445,7 +445,8 @@ class Daymet:
                 reqs = ("tmin", "tmax", "vp", "srad", "dayl")
                 self.variables = list(set(reqs) | set(variables))
 
-    def date_bydates(self, dates: Tuple[str, str]) -> None:
+    @staticmethod
+    def dates_todict(dates: Tuple[str, str]) -> Dict[str, str]:
         """Set dates by start and end dates as a tuple, (start, end)"""
 
         if not isinstance(dates, tuple) or len(dates) != 2:
@@ -457,18 +458,21 @@ class Daymet:
         if start < pd.to_datetime("1980-01-01"):
             raise InvalidInputRange("Daymet database ranges from 1980 to 2019.")
 
-        self.date_dict = {
+        return {
             "start": start.strftime("%Y-%m-%d"),
             "end": end.strftime("%Y-%m-%d"),
         }
 
-    def date_byyears(self, years: Union[List[int], int]) -> None:
+    @staticmethod
+    def years_todict(years: Union[List[int], int]) -> Dict[str, str]:
         """Set date by list of year(s)"""
 
         years = years if isinstance(years, list) else [years]
-        self.date_dict = {"years": ",".join(str(y) for y in years)}
+        return {"years": ",".join(str(y) for y in years)}
 
-    def get_dates(self) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
+    def dates_tolist(
+        self, dates: Tuple[str, str]
+    ) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
         """Correct dates for Daymet accounting for leap years.
 
         Daymet doesn't account for leap years and removes Dec 31 when
@@ -476,8 +480,9 @@ class Daymet:
         Daymet database within the provided date range.
         """
 
-        start = pd.to_datetime(self.date_dict["start"]) + pd.DateOffset(hour=12)
-        end = pd.to_datetime(self.date_dict["end"]) + pd.DateOffset(hour=12)
+        date_dict = self.dates_todict(dates)
+        start = pd.to_datetime(date_dict["start"]) + pd.DateOffset(hour=12)
+        end = pd.to_datetime(date_dict["end"]) + pd.DateOffset(hour=12)
 
         period = pd.date_range(start, end)
         nl = period[~period.is_leap_year]
@@ -486,7 +491,9 @@ class Daymet:
         years = [_period[_period.year == y] for y in _period.year.unique()]
         return [(y[0], y[-1]) for y in years]
 
-    def get_years(self) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
+    def years_tolist(
+        self, years: Union[List[int], int]
+    ) -> List[Tuple[pd.DatetimeIndex, pd.DatetimeIndex]]:
         """Correct dates for Daymet accounting for leap years.
 
         Daymet doesn't account for leap years and removes Dec 31 when
@@ -494,8 +501,9 @@ class Daymet:
         Daymet database for the provided years.
         """
 
+        date_dict = self.years_todict(years)
         start_list, end_list = [], []
-        for year in self.date_dict["years"].split(","):
+        for year in date_dict["years"].split(","):
             s = pd.to_datetime(f"{year}0101")
             start_list.append(s + pd.DateOffset(hour=12))
             if int(year) % 4 == 0 and (int(year) % 100 != 0 or int(year) % 400 == 0):
@@ -544,9 +552,9 @@ def daymet_byloc(
         raise MissingInputs("Either years or dates arguments should be provided.")
 
     if dates is not None:
-        daymet.date_bydates(dates)
+        date_dict = daymet.dates_todict(dates)
     elif years is not None:
-        daymet.date_byyears(years)
+        date_dict = daymet.years_todict(years)
 
     if isinstance(coords, tuple) and len(coords) == 2:
         lon, lat = coords
@@ -565,7 +573,7 @@ def daymet_byloc(
         "lon": f"{lon:.6f}",
         "vars": ",".join(daymet.variables),
         "format": "json",
-        **daymet.date_dict,
+        **date_dict,
     }
 
     r = daymet.session.get(ServiceURL().restful.daymet_point, payload)
@@ -628,11 +636,9 @@ def daymet_bygeom(
         raise MissingInputs("Either years or dates arguments should be provided.")
 
     if dates is not None:
-        daymet.date_bydates(dates)
-        dates_itr = daymet.get_dates()
+        dates_itr = daymet.dates_tolist(dates)
     elif years is not None:
-        daymet.date_byyears(years)
-        dates_itr = daymet.get_years()
+        dates_itr = daymet.years_tolist(years)
 
     if not isinstance(geometry, Polygon):
         raise InvalidInputType("geometry", "Shapely's Polygon")
