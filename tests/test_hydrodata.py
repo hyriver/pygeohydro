@@ -179,6 +179,7 @@ def test_newdb():
         outFormat="esrigeojson",
         crs="epsg:4269",
     )
+    print(wfs)
 
     r = wfs.getfeature_bybox(wshed.geometry.bounds, in_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
@@ -198,7 +199,11 @@ def test_plot():
     start, end = "2000-01-01", "2009-12-31"
     qobs = hds.nwis_streamflow(wshed.station_id, start, end)
     clm_p = hds.daymet_byloc(*wshed.coords, start=start, end=end, variables=["prcp"])
-    plot.signatures({"Q": qobs["USGS-01031500"]}, prcp=clm_p["prcp (mm/day)"])
+    plot.signatures(
+        {"Q": qobs["USGS-01031500"]},
+        prcp=clm_p["prcp (mm/day)"],
+        output="data/plot.plot",
+    )
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100
 
