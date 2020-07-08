@@ -251,7 +251,7 @@ def wms_bygeom(
     url: str,
     layers: Dict[str, str],
     outFormat: str,
-    geometry: Polygon,
+    geometry: Union[Polygon, Tuple[float, float, float, float]],
     resolution: float,
     geo_crs: str = "epsg:4326",
     crs: str = "epsg:4326",
@@ -259,7 +259,7 @@ def wms_bygeom(
     fill_holes: bool = False,
     fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
 ) -> Union[xr.DataArray, xr.Dataset]:
-    """Data from a WMS service within a geometry.
+    """Data from a WMS service within a geometry or bounding box.
 
     Parameters
     ----------
@@ -273,8 +273,8 @@ def wms_bygeom(
     outFormat : str
         The data format to request for data from the service. You can pass an empty
         string to get a list of available output formats.
-    geometry : Polygon
-        A shapely Polygon for getting the data.
+    geometry : Polygon or tuple
+        A shapely Polygon or bounding box for getting the data.
     resolution : float
         The output resolution in meters. The width and height of output are computed in pixel
         based on the geometry bounds and the given resolution.
@@ -287,7 +287,7 @@ def wms_bygeom(
     version : str, optional
         The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
     fill_holes : bool, optional
-        Wether to fill the holes in the geometry's interior, defaults to False.
+        Wether to fill the holes in the Polygon's interior, defaults to False.
     fpath : dict, optional
         The path to save the downloaded images, defaults to None which will only return
         the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
@@ -297,21 +297,19 @@ def wms_bygeom(
     Returns
     -------
     xarray.Dataset
-        Requested layer data within a geometry
+        Requested layer data within a geometry or bounding box
     """
 
     wms = WebMapService(url, version=version)
 
     validate_wms(wms, layers, outFormat, crs)
 
-    if not isinstance(geometry, Polygon):
-        raise InvalidInputType("geometry", "Shapley's Polygon")
-
-    if fill_holes:
-        geometry = Polygon(geometry.exterior)
-
-    geom = utils.match_crs(geometry, geo_crs, crs)
-    bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
+    if isinstance(geometry, Polygon):
+        if fill_holes:
+            geometry = Polygon(geometry.exterior)
+        bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
+    else:
+        bounds = utils.match_crs(geometry, geo_crs, crs)
 
     width, height = utils.bbox_resolution(bounds, resolution, crs)
 
@@ -334,11 +332,12 @@ def wms_bygeom(
 
     resp = utils.threading(_wms, layers.items(), max_workers=len(layers))
 
-    data = utils.create_dataset(resp[0][1], geom, resp[0][0], fpath[resp[0][0]])
+    _geometry = utils.match_crs(geometry, geo_crs, crs)
+    data = utils.create_dataset(resp[0][1], _geometry, resp[0][0], fpath[resp[0][0]])
 
     if len(resp) > 1:
         for name, r in resp:
-            da = utils.create_dataset(r, geom, name, fpath[name])
+            da = utils.create_dataset(r, _geometry, name, fpath[name])
             data = xr.merge([data, da])
 
     return data

@@ -639,16 +639,12 @@ def daymet_bygeom(
     else:
         dates_itr = daymet.years_tolist(years)  # type: ignore
 
-    crs = "epsg:4326"
-
     if isinstance(geometry, Polygon):
         if fill_holes:
             geometry = Polygon(geometry.exterior)
-        geometry = utils.match_crs(geometry, geo_crs, crs)
-        bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
+        bounds = utils.match_crs(geometry.bounds, geo_crs, "epsg:4326")
     else:
-        geometry = utils.match_crs(geometry, geo_crs, crs)
-        bounds = geometry
+        bounds = utils.match_crs(geometry, geo_crs, "epsg:4326")
 
     west, south, east, north = np.round(bounds, 6)
     base_url = ServiceURL().restful.daymet_grid
@@ -687,9 +683,10 @@ def daymet_bygeom(
             data[k].attrs["units"] = v
 
     data = data.drop_vars(["lambert_conformal_conic"])
-    data.attrs["crs"] = " ".join(
+    crs = " ".join(
         ["+proj=lcc", "+lon_0=-100", "+lat_0=42.5", "+lat_1=25", "+lat_2=60", "+ellps=WGS84"]
     )
+    data.attrs["crs"] = crs
 
     x_res, y_res = data.x.diff("x").min().item(), data.y.diff("y").min().item()
     x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
@@ -714,6 +711,12 @@ def daymet_bygeom(
     if pet:
         data = utils.pet_fao_gridded(data)
 
+    _geometry = utils.match_crs(geometry, geo_crs, crs)
+    if isinstance(_geometry, Polygon):
+        bounds = _geometry.bounds
+    else:
+        bounds = _geometry
+
     transform = rio_warp.calculate_default_transform(
         crs,
         crs,
@@ -724,7 +727,7 @@ def daymet_bygeom(
         right=bounds[2],
         top=bounds[3],
     )[0]
-    mask = rio_features.geometry_mask([geometry], (data.dims["y"], data.dims["x"]), transform)
+    mask = rio_features.geometry_mask([_geometry], (data.dims["y"], data.dims["x"]), transform)
     data = data.where(xr.DataArray(~mask, dims=("y", "x")), drop=True)
     return data
 
