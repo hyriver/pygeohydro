@@ -202,7 +202,7 @@ def test_plot():
     plot.signatures(
         {"Q": qobs["USGS-01031500"]},
         prcp=clm_p["prcp (mm/day)"],
-        output="data/plot.plot",
+        output="data/plot.png",
     )
     cmap, norm, levels = plot.cover_legends()
     assert levels[-1] == 100
