@@ -17,8 +17,8 @@ Breaking changes
 - Renamed ``in_crs`` in ``datasets`` and ``services`` functions to ``geo_crs`` for geometry and
   ``box_crs`` for bounding box inputs.
 - Re-wrote the ``signatures`` function from scratch using ``NamedTuple`` to improve readability
-  and efficiency. Now, the ``daily`` argument should be just a ``pandas.DataFrame`` or ``pandas.Series``
-  and the column names are used for legends.
+  and efficiency. Now, the ``daily`` argument should be just a ``pandas.DataFrame`` or
+  ``pandas.Series`` and the column names are used for legends.
 - Removed ``utils.geom_mask`` function and replaced it with ``rasterio.mask.mask``.
 - Removed ``width`` as an input in functions with raster output since ``resolution`` is almost
   always the preferred way to request for data. This change made the code more readable.

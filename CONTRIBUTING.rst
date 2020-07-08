@@ -68,7 +68,8 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ git clone git@github.com:your_name_here/hydrodata.git
     $ git remote add upstream git@github.com:cheginit/hydrodata.git
 
-3. Install your local copy into a virtualenv. Assuming you have Conda installed, this is how you can set up your fork for local development:
+3. Install your local copy into a virtualenv. Assuming you have Conda installed, this is how you
+   can set up your fork for local development:
 
 .. code-block:: console
 
@@ -92,7 +93,9 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ pre-commit install
     $ pre-commit run --all-files
 
-6. Now you can make your changes locally, make sure to add a description of the changes to ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards, fetch the latest updates from the remote and resolve any merge conflicts:
+6. Now you can make your changes locally, make sure to add a description of the changes to
+   ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards,
+   fetch the latest updates from the remote and resolve any merge conflicts:
 
 .. code-block:: console
 
@@ -108,7 +111,8 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ make install
     $ make coverage
 
-8. If you are making breaking changes make sure to reflect them in ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if necessary.
+8. If you are making breaking changes make sure to reflect them in ``docs/usage.ipynb`` and
+   ``docs/quickguide.ipynb`` notebooks if necessary.
 
 9. Commit your changes and push your branch to GitHub:
 
