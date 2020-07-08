@@ -6,6 +6,7 @@ from hydrodata import (
     InvalidInputValue,
     MissingInputs,
     MissingItems,
+    RetrySession,
     ServerError,
     ZeroMatched,
 )
@@ -73,3 +74,25 @@ def missing_input():
 def test_missing_input():
     with pytest.raises(MissingInputs):
         missing_input()
+
+
+def get_connection_error():
+    url = "http://somefailedurl.com"
+    s = RetrySession(retries=2)
+    s.get(url)
+
+
+def test_get_connection_error():
+    with pytest.raises(ConnectionError):
+        get_connection_error()
+
+
+def post_connection_error():
+    url = "http://somefailedurl.com"
+    s = RetrySession(retries=2)
+    s.post(url)
+
+
+def test_post_connection_error():
+    with pytest.raises(ConnectionError):
+        post_connection_error()
