@@ -55,29 +55,44 @@
 Features
 --------
 
-Hydrodata is a python library designed to aid in watershed analysis. It provides easy and consistent access to a handful of hydrology and climatology databases with some helper functions for visualization. Currently, the following data retrieval services are supported:
+Hydrodata is a python library designed to aid in watershed analysis. It provides easy and
+consistent access to a handful of hydrology and climatology databases with some helper
+functions for visualization. Currently, the following data retrieval services are supported:
 
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
-* `WaterData GeoServer <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?1>`__ for catchments, HUC8, HUC12, GagesII, NHDPlus V2 flowlines, and water bodies,
+* `WaterData GeoServer <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?1>`__
+  for catchments, HUC8, HUC12, GagesII, NHDPlus V2 flowlines, and water bodies,
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations,
-* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse,
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data),
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from National Map service for getting data such as Digital Elevation Model, slope, and aspect,
-* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded.
+* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
+  where human activity affects the natural flow of the watercourse,
+* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for
+  analysing and plotting the cover data),
+* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from National Map service for
+  getting data such as Digital Elevation Model, slope, and aspect,
+* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
+  evapotranspiration, both single pixel and gridded.
 
 Additionally, the following functionalities are offered:
 
 * **Interactive map** for exploring USGS stations within a bounding box,
 * Efficient vector-based **flow accumulation** in a stream network,
-* Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
-* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
+* Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on
+  `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`__,
+* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-based
+  services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__- and
+  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__-based services,
 * Helpers for plotting land cover data based on **official NLCD cover legends**,
-* A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing among other applications.
+* A **roughness coefficients** lookup table for each land cover type which is useful for
+  overland flow routing among other applications.
 
-You can try using Hydrodata without installing it by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
+You can try using Hydrodata without installing it by clicking on the binder badge below
+the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be
+launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and
+``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
 
-Moreover, requests for additional databases or functionalities can be submitted via `issue tracker <https://github.com/cheginit/hydrodata/issues>`_.
+Moreover, requests for additional databases or functionalities can be submitted via
+`issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
 
 Documentation
 -------------
@@ -88,13 +103,15 @@ Learn more about Hydrodata in its official documentation at https://hydrodata.re
 Installation
 ------------
 
-You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system (for example ``libgdal-dev`` in Ubuntu):
+You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system
+(for example ``libgdal-dev`` in Ubuntu):
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed from ``conda-forge`` using `Conda <https://docs.conda.io/en/latest/>`_:
+Alternatively, it can be installed from ``conda-forge``
+using `Conda <https://docs.conda.io/en/latest/>`__:
 
 .. code-block:: console
 
@@ -103,7 +120,8 @@ Alternatively, it can be installed from ``conda-forge`` using `Conda <https://do
 Quickstart
 ----------
 
-With just a few lines of code, Hydrodata provides easy access to a handful of databases. We can start by exploring the available USGS stations within a bounding box:
+With just a few lines of code, Hydrodata provides easy access to a handful of databases.
+We can start by exploring the available USGS stations within a bounding box:
 
 .. code-block:: python
 
@@ -116,7 +134,9 @@ With just a few lines of code, Hydrodata provides easy access to a handful of da
     :align: center
 
 
-Then, we can either specify a station ID or coordinates to the ``Station`` function and gathers the USGS site information such as name, contributing drainage area, and watershed geometry.
+Then, we can either specify a station ID or coordinates to the ``Station`` function and
+gathers the USGS site information such as name, contributing drainage area,
+and watershed geometry.
 
 .. code-block:: python
 
@@ -125,7 +145,13 @@ Then, we can either specify a station ID or coordinates to the ``Station`` funct
     dates = ("2000-01-01", "2010-01-21")
     wshed = Station(coords=(-69.32, 45.17), dates=dates)
 
-The generated ``wshed`` object has a property that shows whether the station is in HCDN database i.e., whether it's a natural watershed or is affected by human activity. For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed. Moreover, using the retrieved information, ``datasets`` module provides access to other databases within the watershed geometry. For example, we can get the main river channel and its tributaries, the USGS stations upstream (or downstream) of the main river channel (or the tributatires) up to a certain distance, say 150 km or all the stations:
+The generated ``wshed`` object has a property that shows whether the station is in
+HCDN database i.e., whether it's a natural watershed or is affected by human activity.
+For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed.
+Moreover, using the retrieved information, ``datasets`` module provides access to other
+databases within the watershed geometry. For example, we can get the main river channel and its
+tributaries, the USGS stations upstream (or downstream) of the main river channel
+(or the tributatires) up to a certain distance, say 150 km or all the stations:
 
 .. code-block:: python
 
@@ -134,7 +160,9 @@ The generated ``wshed`` object has a property that shows whether the station is 
     catchments = wshed.catchments()
     stations = wshed.nwis_stations(navigation="upstreamMain", distance=150)
 
-For demonstrating the flow accumulation function, lets assume the flow in each river segment is equal to its length. Therefore, it should produce the same results as the ``arbolatesu`` variable in the NHDPlus database.
+For demonstrating the flow accumulation function, lets assume the flow in each river segment
+is equal to its length. Therefore, it should produce the same results as the ``arbolatesu``
+variable in the NHDPlus database.
 
 .. code-block:: python
 
@@ -153,16 +181,19 @@ For demonstrating the flow accumulation function, lets assume the flow in each r
     flw = flw.merge(acc, on="comid")
     diff = flw.arbolatesu - flw.acc
 
-We can check the validity of the results using ``diff.abs().sum() = 5e-14``. Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing watershed at 30 arc-second (~1 km) resolution:
+We can check the validity of the results using ``diff.abs().sum() = 5e-14``.
+Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing
+watershed at 1 km resolution:
 
 .. code-block:: python
 
     from hydrodata import NationalMap
 
-    nm = NationalMap(wshed.geometry, resolution=30)
+    nm = NationalMap(wshed.geometry, resolution=1e3)
     dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
 
-The point-based climate data and streamflow observations can be retrieved as well. Note the use of ``pet`` flag for computing PET:
+The point-based climate data and streamflow observations can be retrieved as well.
+Note the use of ``pet`` flag for computing PET:
 
 .. code-block:: python
 
@@ -170,7 +201,8 @@ The point-based climate data and streamflow observations can be retrieved as wel
     clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=variables, pet=True)
     clm_p["Q (cms)"] = hds.nwis_streamflow(wshed.station_id, dates)
 
-In addition to point-based data, we can get gridded data. The retrieved data are masked with the watershed geometry:
+In addition to point-based data, we can get gridded data. The retrieved data are masked
+with the watershed geometry:
 
 .. code-block:: python
 
@@ -180,12 +212,15 @@ In addition to point-based data, we can get gridded data. The retrieved data are
     )
     eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
 
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`_ ``Dataset`` (or ``DataArray``) that offers efficient data processing tools. Some example plots are shown below:
+All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`__
+``Dataset`` (or ``DataArray``) that offers efficient data processing tools.
+Some example plots are shown below:
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
-Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures graphs in one plot:
+Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures
+graphs in one plot:
 
 .. code-block:: python
 
@@ -193,7 +228,13 @@ Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatu
 
     plot.signatures(clm_p["Q (cms)"], precipitation=clm_p["prcp (mm/day)"])
 
-The ``services`` module can be used to access some other web services as well. For example, we can access `Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`_ via RESTful service, `3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from WMS and `FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`_ via WFS as follows:
+The ``services`` module can be used to access some other web services as well.
+For example, we can access
+`Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`__
+via RESTful service,
+`3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from WMS, and
+`FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`__
+via WFS as follows:
 
 .. code-block:: python
 
@@ -212,7 +253,7 @@ The ``services`` module can be used to access some other web services as well. F
         version="1.3.0",
         layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
         outFormat="image/tiff",
-        resolution=1,
+        resolution=30,
     )
 
     url_wfs = (
@@ -230,11 +271,16 @@ The ``services`` module can be used to access some other web services as well. F
 Contributing
 ------------
 
-Hydrodata offers some limited statistical analysis. It could be more useful to the watershed modeling community to integrate more data exploratory capabilities to the package. Additionally, adding support for more databases such as water quality, phenology, and water level, are very welcome. If you are interested please get in touch. You can find information about contributing to hydrodata at our `Contributing page <https://hydrodata.readthedocs.io/en/latest/contributing.html>`_.
+Hydrodata offers some limited statistical analysis. It could be more useful to
+the watershed modeling community to integrate more data exploratory capabilities to
+the package. Additionally, adding support for more databases such as water quality,
+phenology, and water level, are very welcome. If you are interested please get in touch.
+You can find information about contributing to hydrodata at our
+`Contributing page <https://hydrodata.readthedocs.io/en/latest/contributing.html>`__.
 
 Credits
 -------
 
-This package was created based on the `audreyr/cookiecutter-pypackage`_ project template.
+This package was created based on the `audreyr/cookiecutter-pypackage`__ project template.
 
-.. _`audreyr/cookiecutter-pypackage`: https://github.com/audreyr/cookiecutter-pypackage
+__ https://github.com/audreyr/cookiecutter-pypackage

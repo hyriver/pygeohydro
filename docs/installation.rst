@@ -51,7 +51,8 @@ You should install this package manually beforehand. For example, on Ubuntu-base
 the required package is ``libgdal-dev``. If this package is installed on your system
 you should be able to run ``gdal-config --version`` successfully.
 
-Alternatively, Hydrodata and all its dependencies can be installed from ``conda-forge`` using `Conda`_:
+Alternatively, Hydrodata and all its dependencies can be installed from ``conda-forge``
+using `Conda`_:
 
 .. code-block:: console
 
@@ -79,8 +80,9 @@ Once you have a copy of the source, you can install it with:
 .. code-block:: console
 
     $ python -m pip install .
-    
-Please refer to the note for installation with ``pip`` above, regarding the ``libgdal`` requirement.
+
+Please refer to the note for installation with ``pip`` above, regarding the
+``libgdal`` requirement.
 
 .. _CartoPy: http://scitools.org.uk/cartopy
 .. _Daymet: https://daymet.ornl.gov/overview

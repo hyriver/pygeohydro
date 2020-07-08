@@ -31,32 +31,41 @@
 
 |
 
-Hydrodata is a python library designed to aid in watershed analysis. It provides easy and consistent access to a handful of hydrology and climatology databases with some helper functions for visualization.
-
-Introduction
-============
-
-Currently, the following data retrieval services are supported:
+Hydrodata is a python library designed to aid in watershed analysis. It provides easy and
+consistent access to a handful of hydrology and climatology databases with some helper
+functions for visualization. Currently, the following data retrieval services are supported:
 
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
-* `WaterData GeoServer <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?1>`__ for catchments, HUC8, HUC12, GagesII, NHDPlus V2 flowlines, and water bodies,
+* `WaterData GeoServer <https://labs.waterdata.usgs.gov/geoserver/web/wicket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?1>`__
+  for catchments, HUC8, HUC12, GagesII, NHDPlus V2 flowlines, and water bodies,
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily streamflow observations,
-* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`_ for identifying sites where human activity affects the natural flow of the watercourse,
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for analysing and plotting the cover data),
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`_ from National Map service for getting data such as Digital Elevation Model, slope, and aspect,
-* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`_ for daily actual evapotranspiration, both single pixel and gridded.
+* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
+  where human activity affects the natural flow of the watercourse,
+* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for
+  analysing and plotting the cover data),
+* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from National Map service for
+  getting data such as Digital Elevation Model, slope, and aspect,
+* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
+  evapotranspiration, both single pixel and gridded.
 
 Additionally, the following functionalities are offered:
 
 * **Interactive map** for exploring USGS stations within a bounding box,
 * Efficient vector-based **flow accumulation** in a stream network,
-* Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`_,
-* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`_-based services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`_- and `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`_-based services,
+* Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on
+  `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`__,
+* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-based
+  services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__- and
+  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__-based services,
 * Helpers for plotting land cover data based on **official NLCD cover legends**,
-* A **roughness coefficients** lookup table for each land cover type which is useful for overland flow routing among other applications.
+* A **roughness coefficients** lookup table for each land cover type which is useful for
+  overland flow routing among other applications.
 
-You can try using Hydrodata without installing it by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
+You can try using Hydrodata without installing it by clicking on the binder badge below
+the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be
+launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and
+``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
 
 .. image:: _static/example_plots.png
     :align: center
