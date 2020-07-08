@@ -193,8 +193,7 @@ def nwis_siteinfo(
 
 
 class WaterData:
-    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver/web/wic
-    ket/bookmarkable/org.geoserver.web.demo.MapPreviewPage?2>`__ service.
+    """Access to `Water Data <https://labs.waterdata.usgs.gov/geoserver>`__ service.
 
     Parameters
     ----------
@@ -414,7 +413,7 @@ class Daymet:
     variables : str or list or tuple, optional
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
-        Descriptions can be found in https://daymet.ornl.gov/overview.
+        Descriptions can be found `here <https://daymet.ornl.gov/overview>`__.
         Defaults to None i.e., all the variables are downloaded.
     pet : bool, optional
         Whether to compute evapotranspiration based on
@@ -533,7 +532,7 @@ def daymet_byloc(
     variables : str or list or tuple, optional
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
-        Descriptions can be found in https://daymet.ornl.gov/overview.
+        Descriptions can be found `here <https://daymet.ornl.gov/overview>`__.
         Defaults to None i.e., all the variables are downloaded.
     pet : bool, optional
         Whether to compute evapotranspiration based on
@@ -597,7 +596,7 @@ def daymet_bygeom(
     fill_holes: bool = False,
     n_threads: int = 8,
 ) -> xr.Dataset:
-    """Gridded data from the Daymet database as 1-km resolution.
+    """Gridded data from the Daymet database at 1-km resolution.
 
     The data is clipped using NetCDF Subset Service.
 
@@ -614,7 +613,7 @@ def daymet_bygeom(
     variables : str or list
         List of variables to be downloaded. The acceptable variables are:
         ``tmin``, ``tmax``, ``prcp``, ``srad``, ``vp``, ``swe``, ``dayl``
-        Descriptions can be found in https://daymet.ornl.gov/overview
+        Descriptions can be found `here <https://daymet.ornl.gov/overview>`__.
     pet : bool
         Whether to compute evapotranspiration based on
         `UN-FAO 56 paper <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.

@@ -84,8 +84,7 @@ class ArcGISREST:
         self._outFields = value if isinstance(value, list) else [value]
 
     def test_url(self) -> None:
-        """Test the generated url and get the required parameters from the
-        service."""
+        """Test the generated url and get the required parameters from the service."""
         try:
             r = self.session.get(self.base_url, {"f": "json"}).json()
             try:
