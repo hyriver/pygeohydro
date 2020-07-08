@@ -11,11 +11,11 @@ repos:
       - id: black
         args: [-t, py38, -l, "100"]
 
-  - repo: https://github.com/myint/docformatter
-    rev: v1.3.1
+  - repo: https://github.com/PyCQA/doc8
+    rev: 0.8.1rc3
     hooks:
-        - id: docformatter
-          args: [--in-place]
+    - id: doc8
+      args: [--max-line-length, "100"]
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3
