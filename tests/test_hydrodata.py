@@ -136,7 +136,7 @@ def test_restful(watershed_urb):
     wbd8.get_featureids(watershed_urb.geometry)
     huc8 = wbd8.get_features()
     assert (
-        huc2.shape[0] == len([x for y in wbd2.featureids for x in y])
+        huc2.shape[0] == len([x for y in wbd2._featureids for x in y])
         and abs(huc8.areaacres.sum() - 2283406.92) < 1e-2
     )
 
