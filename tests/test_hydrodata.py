@@ -337,6 +337,6 @@ def test_wbd():
     )
     wbd.max_nrecords = 5
     wbd.featureids = [str(n) for n in range(1, 21)]
-    wbd.outFields = ["HUC2", "NAME", "SHAPE_Area"]
+    wbd.outFields = ["huc2", "name", "shape_Area"]
     f = wbd.get_features()
     assert f.shape[0] == len([x for y in wbd.featureids for x in y])
