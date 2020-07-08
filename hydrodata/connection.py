@@ -31,8 +31,8 @@ class RetrySession:
 
     def __init__(
         self,
-        retries: int = 5,
-        backoff_factor: float = 0.5,
+        retries: int = 3,
+        backoff_factor: float = 0.3,
         status_to_retry: Tuple[int, ...] = (500, 502, 504),
         prefixes: Tuple[str, ...] = ("http://", "https://"),
     ) -> None:
