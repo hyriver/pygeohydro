@@ -184,14 +184,10 @@ def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFram
 
     check_requirements(reqs, clm)
 
-    dtype = clm.dtypes[0]
     clm["tmean (deg c)"] = 0.5 * (clm["tmax (deg c)"] + clm["tmin (deg c)"])
     Delta = (
         4098
-        * (
-            0.6108
-            * np.exp(17.27 * clm["tmean (deg c)"] / (clm["tmean (deg c)"] + 237.3), dtype=dtype,)
-        )
+        * (0.6108 * np.exp(17.27 * clm["tmean (deg c)"] / (clm["tmean (deg c)"] + 237.3),))
         / ((clm["tmean (deg c)"] + 237.3) ** 2)
     )
     elevation = elevation_byloc(lon, lat)
@@ -202,12 +198,8 @@ def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFram
     G = 0.0  # recommended for daily data
     clm["vp (Pa)"] = clm["vp (Pa)"] * 1e-3
 
-    e_max = 0.6108 * np.exp(
-        17.27 * clm["tmax (deg c)"] / (clm["tmax (deg c)"] + 237.3), dtype=dtype
-    )
-    e_min = 0.6108 * np.exp(
-        17.27 * clm["tmin (deg c)"] / (clm["tmin (deg c)"] + 237.3), dtype=dtype
-    )
+    e_max = 0.6108 * np.exp(17.27 * clm["tmax (deg c)"] / (clm["tmax (deg c)"] + 237.3))
+    e_min = 0.6108 * np.exp(17.27 * clm["tmin (deg c)"] / (clm["tmin (deg c)"] + 237.3))
     e_s = (e_max + e_min) * 0.5
     e_def = e_s - clm["vp (Pa)"]
 
@@ -219,20 +211,17 @@ def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFram
     alb = 0.23
 
     jp = 2.0 * np.pi * jday / 365.0
-    d_r = 1.0 + 0.033 * np.cos(jp, dtype=dtype)
-    delta = 0.409 * np.sin(jp - 1.39, dtype=dtype)
+    d_r = 1.0 + 0.033 * np.cos(jp)
+    delta = 0.409 * np.sin(jp - 1.39)
     phi = lat * np.pi / 180.0
-    w_s = np.arccos(-np.tan(phi, dtype=dtype) * np.tan(delta, dtype=dtype))
+    w_s = np.arccos(-np.tan(phi) * np.tan(delta))
     R_a = (
         24.0
         * 60.0
         / np.pi
         * 0.082
         * d_r
-        * (
-            w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
-            + np.cos(phi, dtype=dtype) * np.cos(delta, dtype=dtype) * np.sin(w_s, dtype=dtype)
-        )
+        * (w_s * np.sin(phi) * np.sin(delta) + np.cos(phi) * np.cos(delta) * np.sin(w_s))
     )
     R_so = (0.75 + 2e-5 * elevation) * R_a
     R_ns = (1.0 - alb) * R_s
@@ -283,7 +272,7 @@ def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
     ds["tmean"].attrs["units"] = "degree C"
     ds["delta"] = (
         4098
-        * (0.6108 * np.exp(17.27 * ds["tmean"] / (ds["tmean"] + 237.3), dtype=dtype))
+        * (0.6108 * np.exp(17.27 * ds["tmean"] / (ds["tmean"] + 237.3)))
         / ((ds["tmean"] + 237.3) ** 2)
     )
 
@@ -314,8 +303,8 @@ def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
     G = 0.0  # recommended for daily data
     ds["vp"] *= 1e-3
 
-    e_max = 0.6108 * np.exp(17.27 * ds["tmax"] / (ds["tmax"] + 237.3), dtype=dtype)
-    e_min = 0.6108 * np.exp(17.27 * ds["tmin"] / (ds["tmin"] + 237.3), dtype=dtype)
+    e_max = 0.6108 * np.exp(17.27 * ds["tmax"] / (ds["tmax"] + 237.3))
+    e_min = 0.6108 * np.exp(17.27 * ds["tmin"] / (ds["tmin"] + 237.3))
     e_s = (e_max + e_min) * 0.5
     ds["e_def"] = e_s - ds["vp"]
 
@@ -328,20 +317,17 @@ def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
     alb = 0.23
 
     jp = 2.0 * np.pi * ds["time"] / 365.0
-    d_r = 1.0 + 0.033 * np.cos(jp, dtype=dtype)
-    delta = 0.409 * np.sin(jp - 1.39, dtype=dtype)
+    d_r = 1.0 + 0.033 * np.cos(jp)
+    delta = 0.409 * np.sin(jp - 1.39)
     phi = lat * np.pi / 180.0
-    w_s = np.arccos(-np.tan(phi, dtype=dtype) * np.tan(delta, dtype=dtype))
+    w_s = np.arccos(-np.tan(phi) * np.tan(delta))
     R_a = (
         24.0
         * 60.0
         / np.pi
         * 0.082
         * d_r
-        * (
-            w_s * np.sin(phi, dtype=dtype) * np.sin(delta, dtype=dtype)
-            + np.cos(phi, dtype=dtype) * np.cos(delta, dtype=dtype) * np.sin(w_s, dtype=dtype)
-        )
+        * (w_s * np.sin(phi) * np.sin(delta) + np.cos(phi) * np.cos(delta) * np.sin(w_s))
     )
     R_so = (0.75 + 2e-5 * ds["elevation"]) * R_a
     R_ns = (1.0 - alb) * R_s
