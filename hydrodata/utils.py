@@ -68,7 +68,7 @@ def check_dir(
     ]
 ) -> None:
     """Create parent directory for a file if doesn't exist."""
-    if isinstance(fpath_itr, str):
+    if isinstance(fpath_itr, (str, Path)):
         fpath_itr = [fpath_itr]
     elif not isinstance(fpath_itr, Iterable):
         raise InvalidInputType("fpath_itr", "str or iterable")
@@ -76,6 +76,7 @@ def check_dir(
     for f in fpath_itr:
         if f is None:
             continue
+
         parent = Path(f).parent
         if not parent.is_dir():
             try:
