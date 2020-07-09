@@ -4,7 +4,7 @@
 pip
 owslib
 pandas
-matplotlib-base
+matplotlib
 xarray
 scipy
 geopandas
