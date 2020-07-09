@@ -14,7 +14,7 @@ class RetrySession:
     """Configures the passed-in session to retry on failed requests.
 
     The fails can be due to connection errors, specific HTTP response
-    codes and 30X redirections. The original code is taken from:
+    codes and 30X redirections. The code is based on:
     https://github.com/bustawin/retry-requests
 
     Parameters
@@ -67,15 +67,15 @@ class RetrySession:
         except (ConnectionError, HTTPError, RequestException, RetryError, Timeout):
             raise ConnectionError(f"Connection failed after {self.retries} retries.")
 
+    @staticmethod
+    def onlyIPv4() -> _patch:
+        """disable IPv6 and only use IPv4."""
 
-def onlyIPv4() -> _patch:
-    """disable IPv6 and only use IPv4."""
+        orig_getaddrinfo = socket.getaddrinfo
 
-    orig_getaddrinfo = socket.getaddrinfo
+        def getaddrinfoIPv4(host, port, family=socket.AF_INET, ptype=0, proto=0, flags=0):
+            return orig_getaddrinfo(
+                host=host, port=port, family=family, type=ptype, proto=proto, flags=flags,
+            )
 
-    def getaddrinfoIPv4(host, port, family=socket.AF_INET, ptype=0, proto=0, flags=0):
-        return orig_getaddrinfo(
-            host=host, port=port, family=family, type=ptype, proto=proto, flags=flags,
-        )
-
-    return patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4)
+        return patch("socket.getaddrinfo", side_effect=getaddrinfoIPv4)

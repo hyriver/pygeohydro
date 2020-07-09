@@ -1,6 +1,5 @@
 """Accessing data from the supported databases through their APIs."""
 import io
-import os
 import zipfile
 from dataclasses import dataclass  # for python 3.6 compatibility
 from pathlib import Path
@@ -16,7 +15,7 @@ from rasterio import features as rio_features
 from rasterio import warp as rio_warp
 from shapely.geometry import Polygon
 
-from hydrodata import connection, helpers, services, utils
+from hydrodata import helpers, services, utils
 from hydrodata.connection import RetrySession
 from hydrodata.exceptions import (
     InvalidInputRange,
@@ -766,7 +765,7 @@ def ssebopeta_byloc(
     f_list = _get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
 
-    with connection.onlyIPv4():
+    with session.onlyIPv4():
 
         def _ssebop(urls):
             dt, url = urls
@@ -839,7 +838,7 @@ def ssebopeta_bygeom(
 
     session = RetrySession()
 
-    with connection.onlyIPv4():
+    with session.onlyIPv4():
 
         def _ssebop(url_stamped):
             dt, url = url_stamped
@@ -1158,15 +1157,7 @@ class Station:
         self.lon, self.lat = self.coords
 
         self.data_dir = Path(data_dir, self.station_id)
-
-        if not self.data_dir.is_dir():
-            try:
-                os.makedirs(self.data_dir)
-            except OSError:
-                print(
-                    f"[ID: {self.station_id}] ".ljust(MARGINE)
-                    + f"Input directory cannot be created: {self.data_dir}"
-                )
+        utils.check_dir(self.data_dir.joinpath("dummy"))
 
         self.nldi = NLDI()
         self.get_watershed()
