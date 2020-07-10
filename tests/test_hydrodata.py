@@ -125,16 +125,20 @@ def test_restful(watershed_urb):
     wbd2 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
     print(wbd2)
     wbd2.max_nrecords = 5
-    wbd2.outFormat = "geojson"
+    wbd2.outformat = "geojson"
     wbd2.featureids = list(range(1, 21))
-    wbd2.outFields = ["huc2", "name", "areaacres"]
-    huc2 = wbd2.get_features()
+    wbd2.outfields = ["huc2", "name", "areaacres"]
+    resp = wbd2.get_features()
+    _huc2 = utils.json_togeodf(resp[0])
+    huc2 = _huc2.append([utils.json_togeodf(r) for r in resp[1:]])
 
     wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
     wbd8.n_threads = 4
     wbd8.get_featureids(watershed_urb.geometry.bounds)
     wbd8.get_featureids(watershed_urb.geometry)
-    huc8 = wbd8.get_features()
+    resp = wbd8.get_features()
+    _huc8 = utils.json_togeodf(resp[0])
+    huc8 = _huc8.append([utils.json_togeodf(r) for r in resp[1:]])
     assert (
         huc2.shape[0] == len([x for y in wbd2._featureids for x in y])
         and abs(huc8.areaacres.sum() - 2283406.92) < 1e-2
@@ -143,19 +147,18 @@ def test_restful(watershed_urb):
 
 def test_wms(watershed_nat):
     url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
-    wetlands = services.wms_bygeom(
+    layer = "0"
+    r_dict = services.wms_bybox(
         url_wms,
-        {"wetlands": "0"},
+        layer,
+        watershed_nat.geometry.bounds,
+        1e3,
         "image/tiff",
-        watershed_nat.geometry,
-        resolution=1e3,
-        geo_crs="epsg:4326",
+        box_crs="epsg:4326",
         crs="epsg:3857",
-        version="1.3.0",
-        fill_holes=True,
-        fpath={"wetlands": "tmp/wetlands.tiff"},
     )
-
+    geom = utils.match_crs(watershed_nat.geometry, "epsg:4326", "epsg:3857")
+    wetlands = utils.create_dataset(r_dict[layer], geom, "wetland", "tmp/wetland.tiff")
     shutil.rmtree("tmp", ignore_errors=True)
 
     assert abs(wetlands.isel(band=0).mean().values.item() - 132.888) < 1e-3
@@ -167,7 +170,7 @@ def test_wfs(watershed_urb):
     wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
-        outFormat="esrigeojson",
+        outformat="esrigeojson",
         crs="epsg:4269",
     )
     print(wfs)
@@ -309,7 +312,7 @@ def test_fspec1():
     wfs = WFS(
         "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
         layer="wmadata:gagesii",
-        outFormat="application/json",
+        outformat="application/json",
         version="1.1.0",
         crs="epsg:900913",
     )
