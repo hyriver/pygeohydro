@@ -19,7 +19,7 @@ from .connection import RetrySession
 from .exceptions import InvalidInputType, InvalidInputValue, MissingInputs, ServerError, ZeroMatched
 
 
-class ArcGISREST:
+class ArcGISRESTful:
     """Access to an ArcGIS REST service.
 
     Parameters
