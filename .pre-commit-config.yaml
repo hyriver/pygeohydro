@@ -11,6 +11,14 @@ repos:
       - id: black
         args: [-t, py38, -l, "100"]
 
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.1.0
+    hooks:
+    - id: trailing-whitespace
+    - id: check-executables-have-shebangs
+    - id: requirements-txt-fixer
+    - id: double-quote-string-fixer
+
   - repo: https://github.com/PyCQA/doc8
     rev: 0.8.1rc3
     hooks:
