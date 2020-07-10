@@ -15,16 +15,16 @@ from rasterio import features as rio_features
 from rasterio import warp as rio_warp
 from shapely.geometry import Polygon
 
-from hydrodata import helpers, services, utils
-from hydrodata.connection import RetrySession
-from hydrodata.exceptions import (
+from . import helpers, services, utils
+from .connection import RetrySession
+from .exceptions import (
     InvalidInputRange,
     InvalidInputType,
     InvalidInputValue,
     MissingInputs,
     ZeroMatched,
 )
-from hydrodata.services import WFS, ServiceURL
+from .services import WFS, ServiceURL
 
 MARGINE = 15
 
@@ -88,7 +88,8 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
         q = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
         q.index = pd.to_datetime(q.index)
         q.columns = [col]
-        q[col] = q[col].astype("float64") * 0.028316846592  # Convert cfs to cms
+        # Convert cfs to cms
+        q[col] = q[col].astype("float64") * 0.028316846592
         return q
 
     qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
@@ -215,7 +216,7 @@ class WaterData:
         self.wfs = WFS(
             ServiceURL().wfs.waterdata,
             layer=self.layer,
-            outFormat="application/json",
+            outformat="application/json",
             version="2.0.0",
             crs=self.crs,
         )
@@ -227,7 +228,7 @@ class WaterData:
             + f"URL: {self.wfs.url}\n"
             + f"Version: {self.wfs.version}\n"
             + f"Layer: {self.wfs.layer}\n"
-            + f"Output Format: {self.wfs.outFormat}\n"
+            + f"Output Format: {self.wfs.outformat}\n"
             + f"Output CRS: {self.wfs.crs}"
         )
 
@@ -688,8 +689,9 @@ def daymet_bygeom(
     data.attrs["crs"] = crs
 
     x_res, y_res = data.x.diff("x").min().item(), data.y.diff("y").min().item()
-    x_origin = data.x.values[0] - x_res / 2.0  # PixelAsArea Convention
-    y_origin = data.y.values[0] - y_res / 2.0  # PixelAsArea Convention
+    # PixelAsArea Convention
+    x_origin = data.x.values[0] - x_res / 2.0
+    y_origin = data.y.values[0] - y_res / 2.0
 
     transform = (x_res, 0, x_origin, 0, y_res, y_origin)
 
@@ -895,12 +897,12 @@ def _get_ssebopeta_urls(
 
 
 def nlcd(
-    geometry: Polygon,
+    geometry: Union[Polygon, Tuple[float, float, float, float]],
     resolution: float,
     years: Optional[Dict[str, int]] = None,
     geo_crs: str = "epsg:4326",
     crs: str = "epsg:4326",
-    fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
+    data_dir: Optional[Union[str, Path]] = None,
     fill_holes: bool = False,
 ) -> xr.Dataset:
     """Get data from NLCD database (2016).
@@ -908,14 +910,10 @@ def nlcd(
     Download land use, land cover data from NLCD (2016) database within
     a given geometry in epsg:4326.
 
-    Notes
-    -----
-        NLCD data has a resolution of 1 arc-sec (~30 m).
-
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon
-        The geometry for extracting the data.
+    geometry : shapely.geometry.Polygon or tuple
+        The geometry or bounding box for extracting the data.
     resolution : float
         The data resolution in meters. The width and height of the output are computed in pixel
         based on the geometry bounds and the given resolution.
@@ -927,11 +925,9 @@ def nlcd(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    fpath : dict, optional
-        The path to save the downloaded images, defaults to None which will only return
-        the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
-        a dict with keys as the variable name in the output dataframe and values as
-        the path to save to the file.
+    data_dir : str or Path, optional
+        The directory to save the downloaded images, defaults to None which will only return
+        the data as ``xarray.Dataset`` and doesn't save them as ``geotiff`` images.
     fill_holes : bool, optional
         Whether to fill the holes in the geometry's interior, defaults to False.
 
@@ -958,23 +954,46 @@ def nlcd(
             "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
         )
 
-    layers = {
-        "canopy": f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
-        "cover": f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
-        "impervious": f'NLCD_{years["impervious"]}_Impervious_L48',
-    }
+    layers = [
+        f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
+        f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
+        f'NLCD_{years["impervious"]}_Impervious_L48',
+    ]
 
-    ds = services.wms_bygeom(
+    if fill_holes and isinstance(geometry, Polygon):
+        geometry = Polygon(geometry.exterior)
+
+    _geometry = utils.match_crs(geometry, geo_crs, crs)
+
+    bounds = _geometry if isinstance(_geometry, tuple) else _geometry.bounds
+
+    r_dict = services.wms_bybox(
         ServiceURL().wms.mrlc,
         layers,
-        "image/geotiff",
-        geometry,
+        bounds,
         resolution,
-        geo_crs=geo_crs,
+        "image/geotiff",
+        box_crs=geo_crs,
         crs=crs,
-        fill_holes=fill_holes,
-        fpath=fpath,
     )
+
+    _fpath: List[Optional[Path]]
+    if data_dir is not None:
+        _fpath = [
+            Path(data_dir, f'canopy_{years["canopy"]}.geotiff'),
+            Path(data_dir, f'cover_{years["cover"]}.geotiff'),
+            Path(data_dir, f'impervious_{years["impervious"]}.geotiff'),
+        ]
+    else:
+        _fpath = [None, None, None]
+
+    fpath = dict(zip(layers, _fpath))
+    var_name = dict(zip(layers, ["canopy", "cover", "impervious"]))
+
+    ds = xr.merge(
+        [utils.create_dataset(r, _geometry, var_name[lyr], fpath[lyr]) for lyr, r in r_dict.items()]
+    )
+
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
     ds.impervious.attrs["units"] = "%"
@@ -1022,33 +1041,34 @@ class NationalMap:
     geo_crs : str, optional
         The spatial reference system of the input geometry, defaults to
         epsg:4326.
-    fill_holes : bool, optional
-        Whether to fill the holes in the geometry's interior, defaults to False.
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    fpath : str or Path
-        Path to save the output as a ``tiff`` file, defaults to None.
+    data_dir : str or Path, optional
+        The directory to save the downloaded images, defaults to None which will only return
+        the data as ``xarray.Dataset`` and doesn't save them as ``tiff`` images.
+    fill_holes : bool, optional
+        Whether to fill the holes in the geometry's interior, defaults to False.
     """
 
     geometry: Polygon
     resolution: float
     geo_crs: str = "epsg:4326"
-    fill_holes: bool = False
     crs: str = "epsg:4326"
-    fpath: Optional[Union[str, Path]] = None
+    fill_holes: bool = False
+    data_dir: Optional[Union[str, Path]] = None
 
     def get_dem(self) -> xr.DataArray:
         """DEM as an ``xarray.DataArray`` in meters."""
 
-        dem = self.get_map({"elevation": "3DEPElevation:None"})
+        dem = self.get_map("3DEPElevation:None", "elevation")
         dem.attrs["units"] = "meters"
         return dem
 
     def get_aspect(self) -> xr.DataArray:
         """Aspect map as an ``xarray.DataArray`` in degrees."""
 
-        aspect = self.get_map({"aspect": "3DEPElevation:Aspect Degrees"})
+        aspect = self.get_map("3DEPElevation:Aspect Degrees", "aspect")
         aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
         aspect.attrs["nodatavals"] = (np.nan,)
         aspect.attrs["units"] = "degrees"
@@ -1068,7 +1088,7 @@ class NationalMap:
             Slope within a geometry in degrees or meters/meters
         """
 
-        slope = self.get_map({"slope": "3DEPElevation:Slope Degrees"})
+        slope = self.get_map("3DEPElevation:Slope Degrees", "slope")
         slope = slope.where(slope < slope.nodatavals[0], drop=True)
         slope.attrs["nodatavals"] = (np.nan,)
         if mpm:
@@ -1080,23 +1100,40 @@ class NationalMap:
             slope.attrs["units"] = "degrees"
         return slope
 
-    def get_map(self, layer: Dict[str, str]) -> Union[xr.DataArray, xr.Dataset]:
-        """Get requested map using the national map's WMS service."""
+    def get_map(self, layer: str, var_name: str) -> Union[xr.DataArray, xr.Dataset]:
+        """Get requested map using the national map's WMS service.
 
-        name = str(list(layer.keys())[0]).replace(" ", "_")
-        _fpath: Optional[Dict[str, Optional[Union[str, Path]]]]
-        _fpath = None if self.fpath is None else {name: self.fpath}
-        return services.wms_bygeom(
+        Parameters
+        ----------
+        layer : str
+            A valid 3DEP layer
+        var_name : str
+            The variable name in the returned ``xarray.DataArray``
+
+        Returns
+        -------
+        xarray.DataArray
+            The requeted data within the geometry
+        """
+
+        if self.fill_holes and isinstance(self.geometry, Polygon):
+            self.geometry = Polygon(self.geometry.exterior)
+
+        _geometry = utils.match_crs(self.geometry, self.geo_crs, self.crs)
+
+        bounds = _geometry if isinstance(_geometry, tuple) else _geometry.bounds
+
+        r_dict = services.wms_bybox(
             ServiceURL().wms.nm_3dep,
             layer,
-            "image/tiff",
-            self.geometry,
+            bounds,
             self.resolution,
-            geo_crs=self.geo_crs,
+            "image/tiff",
+            box_crs=self.geo_crs,
             crs=self.crs,
-            fill_holes=self.fill_holes,
-            fpath=_fpath,
         )
+        fpath = None if self.data_dir is None else Path(self.data_dir, f"{var_name}.tiff")
+        return utils.create_dataset(r_dict[layer], _geometry, var_name, fpath)
 
 
 class Station:
@@ -1206,7 +1243,8 @@ class Station:
             st["dec_long_va"].astype("float64").to_numpy()[0],
             st["dec_lat_va"].astype("float64").to_numpy()[0],
         )
-        self.altitude = st["alt_va"].astype("float64").to_numpy()[0] * 0.3048  # convert ft to meter
+        # convert ft to meters
+        self.altitude = st["alt_va"].astype("float64").to_numpy()[0] * 0.3048
         self.datum = st["alt_datum_cd"].to_numpy()[0]
         self.name = st.station_nm.to_numpy()[0]
 
@@ -1271,7 +1309,7 @@ class Station:
             station.dec_long_va.astype("float64").to_numpy()[0],
             station.dec_lat_va.astype("float64").to_numpy()[0],
         )
-        # convert ft to meter
+        # convert ft to meters
         self.altitude = station["alt_va"].astype("float64").to_numpy()[0] * 0.3048
         self.datum = station["alt_datum_cd"].to_numpy()[0]
         self.name = station.station_nm.to_numpy()[0]

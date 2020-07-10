@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from defusedxml import cElementTree as ET
 
-from hydrodata.connection import RetrySession
+from .connection import RetrySession
 
 
 def nlcd_helper() -> Dict[str, Any]:

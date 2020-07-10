@@ -10,8 +10,8 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
-from hydrodata import helpers, utils
-from hydrodata.exceptions import InvalidInputType
+from . import helpers, utils
+from .exceptions import InvalidInputType
 
 
 def signatures(
