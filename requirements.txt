@@ -1,18 +1,18 @@
 # This file is auto-generated from py3.6.yml, do not modify.
 # See that file for comments about the need/usage of each dependency.
 
-pip
+dataclasses
+defusedxml
+folium
+geojson
+geopandas
+lxml
+matplotlib
+networkx
 owslib
 pandas
-matplotlib
-xarray
-scipy
-geopandas
-geojson
-folium
+pip
 rasterio
-networkx
+scipy
 simplejson
-defusedxml
-lxml
-dataclasses
+xarray
