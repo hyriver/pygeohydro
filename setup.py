@@ -9,6 +9,7 @@ from setuptools import setup
 
 
 def parse_requirements(req):
+    """Read requirements file and return it as a list."""
     return distutils.text_file.TextFile(Path(__file__).with_name(req)).readlines()
 
 

@@ -22,6 +22,7 @@ from rasterio import warp as rio_warp
 from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
 from .exceptions import InvalidInputType, MissingInputs, MissingItems, ZeroMatched
+from .helpers import nlcd_helper
 
 
 def threading(
@@ -30,8 +31,11 @@ def threading(
     param_list: Optional[List[Any]] = None,
     max_workers: int = 8,
 ) -> List[Any]:
-    """Run a function in parallel with threading, suitable for IO intensive
-    functions.
+    """Run a function in parallel with threading.
+
+    Notes
+    -----
+    This function is suitable for IO intensive functions.
 
     Parameters
     ----------
@@ -100,7 +104,6 @@ def elevation_byloc(lon: float, lat: float) -> float:
     float
         Elevation in meter
     """
-
     rad = 1.0 / 3600.0
     bbox = (lon - rad, lat - rad, lon + rad, lat + rad)
 
@@ -134,7 +137,6 @@ def elevation_bybbox(
     numpy.ndarray
         An array of elevations in meters
     """
-
     check_bbox(bbox)
 
     bbox = match_crs(bbox, box_crs, "epsg:4326")
@@ -159,8 +161,7 @@ def elevation_bybbox(
 
 
 def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFrame:
-    """Compute Potential EvapoTranspiration using Daymet dataset for a single
-    location.
+    """Compute Potential EvapoTranspiration using Daymet dataset for a single location.
 
     The method is based on `FAO-56 <http://www.fao.org/docrep/X0490E/X0490E00.htm>`__.
 
@@ -179,7 +180,6 @@ def pet_fao_byloc(clm: pd.DataFrame, coords: Tuple[float, float]) -> pd.DataFram
     pandas.DataFrame
         The input DataFrame with an additional column named ``pet (mm/day)``
     """
-
     lon, lat = coords
     reqs = ["tmin (deg c)", "tmax (deg c)", "vp (Pa)", "srad (W/m^2)", "dayl (s)"]
 
@@ -261,7 +261,6 @@ def pet_fao_gridded(ds: xr.Dataset) -> xr.Dataset:
     xarray.DataArray
         The input dataset with an additional variable called ``pet``.
     """
-
     keys = list(ds.keys())
     reqs = ["tmin", "tmax", "lat", "lon", "vp", "srad", "dayl"]
 
@@ -365,8 +364,7 @@ def mean_monthly(daily: pd.Series) -> pd.Series:
 
 
 def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
-    """Compute Flow duration (rank, sorted obs)"""
-
+    """Compute Flow duration (rank, sorted obs)."""
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
 
@@ -388,7 +386,7 @@ def prepare_nhdplus(
     purge_non_dendritic: bool = False,
     verbose: bool = False,
 ) -> gpd.GeoDataFrame:
-    """Cleaning up and fixing issue in NHDPlus flowline database.
+    """Clean up and fix common issues of NHDPlus flowline database.
 
     Ported from `nhdplusTools <https://github.com/USGS-R/nhdplusTools>`__
 
@@ -417,7 +415,6 @@ def prepare_nhdplus(
     geopandas.GeoDataFrame
         Cleaned up flowlines. Note that all column names are converted to lower case.
     """
-
     flw.columns = flw.columns.str.lower()
     nrows = flw.shape[0]
 
@@ -536,7 +533,6 @@ def add_tocomid(flw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     geopandas.GeoDataFrame
         The input dataframe With an additional column named ``tocomid``.
     """
-
     req_cols = ["comid", "terminalpa", "fromnode", "tonode"]
     check_requirements(req_cols, flw)
 
@@ -558,7 +554,7 @@ def add_tocomid(flw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 def traverse_json(
     obj: Union[Dict[str, Any], List[Dict[str, Any]]], path: Union[str, List[str]]
 ) -> List[str]:
-    """Extracts an element from a JSON file along a specified path.
+    """Extract an element from a JSON file along a specified path.
 
     Notes
     -----
@@ -629,8 +625,6 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     dict
         Statistics of NLCD cover data
     """
-    from hydrodata.helpers import nlcd_helper
-
     nlcd_meta = nlcd_helper()
     cover_arr = ds.values
     total_pix = np.count_nonzero(~np.isnan(cover_arr))
@@ -677,7 +671,6 @@ def create_dataset(
     xarray.Dataset
         Generated xarray DataSet or DataArray
     """
-
     with rio.MemoryFile() as memfile:
         memfile.write(content)
         with memfile.open() as src:
@@ -856,8 +849,7 @@ def arcgis_togeojson(arcgis: Dict[str, Any], idAttribute: Optional[str] = None) 
         return geojson
 
     def rings_togeojson(rings):
-        """Checks for holes in the ring and fill them."""
-
+        """Check for holes in the ring and fill them."""
         outerRings = []
         holes = []
         x = None  # iterable
@@ -953,7 +945,6 @@ def check_requirements(reqs: Iterable, cols: List[str]) -> None:
     cols : list
         A list of variable names (str)
     """
-
     if not isinstance(reqs, Iterable):
         raise InvalidInputType("reqs", "iterable")
 
@@ -980,7 +971,6 @@ def topoogical_sort(
         and the generated networkx object. Note that the
         terminal node ID is set to pd.NA.
     """
-
     upstream_nodes = {i: flowlines[flowlines.toID == i].ID.tolist() for i in flowlines.ID.tolist()}
     upstream_nodes[pd.NA] = flowlines[flowlines.toID.isna()].ID.tolist()
 
@@ -1036,7 +1026,6 @@ def vector_accumulation(
         condition in the ``attr_col``, the outflow for each river segment can be
         a scalar or an array.
     """
-
     sorted_nodes, upstream_nodes, _ = topoogical_sort(
         flowlines[[id_col, toid_col]].rename(columns={id_col: "ID", toid_col: "toID"})
     )
@@ -1069,7 +1058,7 @@ def vector_accumulation(
 def match_crs(
     geometry: Union[Polygon, Tuple[float, float, float, float]], in_crs: str, out_crs: str,
 ) -> Union[Polygon, Tuple[float, float, float, float]]:
-
+    """Match CRS of a input geometry with the output CRS."""
     if not isinstance(geometry, (Polygon, tuple)):
         raise InvalidInputType("geometry", "tuple or Polygon")
 
@@ -1082,6 +1071,7 @@ def match_crs(
 
 
 def check_bbox(bbox: Tuple[float, float, float, float]) -> None:
+    """Check if an input inbox is a tuple of length 4."""
     if not isinstance(bbox, tuple) or len(bbox) != 4:
         raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
 
@@ -1090,6 +1080,7 @@ def generate_nwis_query(
     ids: Optional[Union[str, List[str]]] = None,
     bbox: Optional[Tuple[float, float, float, float]] = None,
 ) -> Dict[str, str]:
+    """Generate the geometry keys and values of an ArcGISRESTful query."""
     if (bbox is None and ids is None) or (bbox is not None and ids is not None):
         raise MissingInputs("Either ids or bbox argument should be provided.")
 
@@ -1180,7 +1171,6 @@ def bbox_resolution(
     tuple
         The width and height of the image
     """
-
     check_bbox(bbox)
 
     bbox = match_crs(bbox, bbox_crs, "epsg:4326")

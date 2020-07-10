@@ -13,7 +13,7 @@ import rasterio as rio
 import xarray as xr
 from rasterio import features as rio_features
 from rasterio import warp as rio_warp
-from shapely.geometry import Polygon
+from shapely.geometry import Point, Polygon
 
 from . import helpers, services, utils
 from .connection import RetrySession
@@ -44,7 +44,6 @@ def nwis_streamflow(station_ids: Union[List[str], str], dates: Tuple[str, str]) 
     pandas.DataFrame
         Streamflow data observations in cubic meter per second (cms)
     """
-
     if not isinstance(station_ids, (str, list)):
         raise InvalidInputType("ids", "str or list")
 
@@ -149,7 +148,6 @@ def nwis_siteinfo(
     pandas.DataFrame
         NWIS stations
     """
-
     query = utils.generate_nwis_query(ids, bbox)
     outputType = {"siteOutput": "expanded"} if expanded else {"outputDataTypeCd": "dv"}
 
@@ -209,7 +207,6 @@ class WaterData:
     """
 
     def __init__(self, layer: str, crs: str = "epsg:4269") -> None:
-
         self.layer = layer if ":" in layer else f"wmadata:{layer}"
         self.crs = crs
 
@@ -252,7 +249,6 @@ class WaterData:
         geopandas.GeoDataFrame
             NHDPlus features
         """
-
         r = self.wfs.getfeature_bybox(bbox, box_crs=box_crs)
         features = utils.json_togeodf(r.json(), self.crs, self.crs)
 
@@ -282,7 +278,6 @@ class WaterData:
         geopandas.GeoDataFrame
             NHDPlus features
         """
-
         r = self.wfs.get_validnames()
         valid_names = utils.json_togeodf(r.json(), self.crs, self.crs)
 
@@ -303,7 +298,6 @@ class NLDI:
     """Access to the Hydro Network-Linked Data Index (NLDI) service."""
 
     def __init__(self) -> None:
-
         self.base_url = ServiceURL().restful.nldi
         self.session = RetrySession()
         r = self.session.get(self.base_url).json()
@@ -332,7 +326,6 @@ class NLDI:
         geopandas.GeoDataFrame
             NLDI indexed features
         """
-
         if fsource not in self.valid_sources:
             raise InvalidInputValue("feature source", self.valid_sources)
 
@@ -379,7 +372,6 @@ class NLDI:
         geopandas.GeoDataFrame
             NLDI indexed features
         """
-
         if fsource not in self.valid_sources:
             raise InvalidInputValue("feature source", self.valid_sources)
 
@@ -424,7 +416,6 @@ class Daymet:
     def __init__(
         self, variables: Optional[Union[List[str], str]] = None, pet: bool = False,
     ) -> None:
-
         self.session = RetrySession()
 
         vars_table = helpers.daymet_variables()
@@ -446,8 +437,7 @@ class Daymet:
 
     @staticmethod
     def dates_todict(dates: Tuple[str, str]) -> Dict[str, str]:
-        """Set dates by start and end dates as a tuple, (start, end)"""
-
+        """Set dates by start and end dates as a tuple, (start, end)."""
         if not isinstance(dates, tuple) or len(dates) != 2:
             raise InvalidInputType("dates", "tuple", "(start, end)")
 
@@ -464,8 +454,7 @@ class Daymet:
 
     @staticmethod
     def years_todict(years: Union[List[int], int]) -> Dict[str, str]:
-        """Set date by list of year(s)"""
-
+        """Set date by list of year(s)."""
         years = years if isinstance(years, list) else [years]
         return {"years": ",".join(str(y) for y in years)}
 
@@ -478,7 +467,6 @@ class Daymet:
         it's leap year. This function returns all the dates in the
         Daymet database within the provided date range.
         """
-
         date_dict = self.dates_todict(dates)
         start = pd.to_datetime(date_dict["start"]) + pd.DateOffset(hour=12)
         end = pd.to_datetime(date_dict["end"]) + pd.DateOffset(hour=12)
@@ -499,7 +487,6 @@ class Daymet:
         it's leap year. This function returns all the dates in the
         Daymet database for the provided years.
         """
-
         date_dict = self.years_todict(years)
         start_list, end_list = [], []
         for year in date_dict["years"].split(","):
@@ -544,7 +531,6 @@ def daymet_byloc(
     pandas.DataFrame
         Daily climate data for a location
     """
-
     daymet = Daymet(variables, pet)
 
     if (years is None and dates is None) or (years is not None and dates is not None):
@@ -628,7 +614,6 @@ def daymet_bygeom(
     xarray.Dataset
         Daily climate data within a geometry
     """
-
     daymet = Daymet(variables, pet)
 
     if (years is None and dates is None) or (years is not None and dates is not None):
@@ -796,8 +781,7 @@ def ssebopeta_bygeom(
     years: Optional[List[int]] = None,
     fill_holes: bool = False,
 ) -> xr.DataArray:
-    """Daily actual ET for a region from SSEBop database in mm/day at 1 km
-    resolution resolution.
+    """Get daily actual ET for a region from SSEBop database.
 
     Notes
     -----
@@ -825,7 +809,6 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-
     geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
 
     if fill_holes:
@@ -1002,8 +985,7 @@ def nlcd(
 
 @dataclass
 class NationalMap:
-    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__
-    service.
+    """Access to `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ service.
 
     The 3DEP service has multi-resolution sources so depending on the user
     provided resolution the data is resampled on server-side based
@@ -1060,14 +1042,12 @@ class NationalMap:
 
     def get_dem(self) -> xr.DataArray:
         """DEM as an ``xarray.DataArray`` in meters."""
-
         dem = self.get_map("3DEPElevation:None", "elevation")
         dem.attrs["units"] = "meters"
         return dem
 
     def get_aspect(self) -> xr.DataArray:
         """Aspect map as an ``xarray.DataArray`` in degrees."""
-
         aspect = self.get_map("3DEPElevation:Aspect Degrees", "aspect")
         aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
         aspect.attrs["nodatavals"] = (np.nan,)
@@ -1087,7 +1067,6 @@ class NationalMap:
         xarray.DataArray
             Slope within a geometry in degrees or meters/meters
         """
-
         slope = self.get_map("3DEPElevation:Slope Degrees", "slope")
         slope = slope.where(slope < slope.nodatavals[0], drop=True)
         slope.attrs["nodatavals"] = (np.nan,)
@@ -1115,7 +1094,6 @@ class NationalMap:
         xarray.DataArray
             The requeted data within the geometry
         """
-
         if self.fill_holes and isinstance(self.geometry, Polygon):
             self.geometry = Polygon(self.geometry.exterior)
 
@@ -1170,7 +1148,6 @@ class Station:
         data_dir: Union[str, Path] = "data",
         verbose: bool = False,
     ) -> None:
-
         self.dates = dates
         if dates is not None:
             self.start = pd.to_datetime(dates[0])
@@ -1250,8 +1227,6 @@ class Station:
 
     def get_id(self) -> None:
         """Get station ID based on the specified coordinates."""
-        from shapely import geometry as geom
-
         bbox = (
             self.coords[0] - self.srad,
             self.coords[1] - self.srad,
@@ -1269,9 +1244,9 @@ class Station:
                 + f"of ({self.coords[0]}, {self.coords[1]}) with daily mean streamflow."
             )
 
-        point = geom.Point(self.coords)
+        point = Point(self.coords)
         pts = {
-            sid: geom.Point(lon, lat)
+            sid: Point(lon, lat)
             for sid, lon, lat in sites[["site_no", "dec_long_va", "dec_lat_va"]].itertuples(
                 name=None, index=False
             )
@@ -1316,7 +1291,6 @@ class Station:
 
     def get_watershed(self) -> None:
         """Download the watershed geometry from the NLDI service."""
-
         geom_file = self.data_dir.joinpath("geometry.gpkg")
 
         if geom_file.exists():
@@ -1469,8 +1443,10 @@ class Station:
 
 
 def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
-    """An interactive map including all USGS stations within a bounding box.
+    """Generate an interactive map including all USGS stations within a bounding box.
 
+    Notes
+    -----
     Only stations that record(ed) daily streamflow data are included.
 
     Parameters
@@ -1483,7 +1459,6 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     folium.Map
         Interactive map within a bounding box.
     """
-
     if isinstance(bbox, tuple):
         if len(bbox) != 4:
             raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")

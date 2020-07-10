@@ -168,7 +168,6 @@ class ArcGISRESTful:
         geo_crs : str
             The spatial reference of the input geometry, defaults to EPSG:4326
         """
-
         geom = utils.match_crs(geom, geo_crs, self.crs)
 
         if isinstance(geom, tuple):
@@ -192,7 +191,6 @@ class ArcGISRESTful:
 
     def get_features(self) -> gpd.GeoDataFrame:
         """Get features based on the feature IDs."""
-
         if not all(f in self.valid_fields for f in self.outfields):
             raise InvalidInputValue("outfields", self.valid_fields)
 
@@ -259,7 +257,7 @@ def wms_bybox(
     crs: str = "epsg:4326",
     version: str = "1.3.0",
 ) -> Dict[str, bytes]:
-    """Data from a WMS service within a geometry or bounding box.
+    """Get data from a WMS service within a geometry or bounding box.
 
     Parameters
     ----------
@@ -292,7 +290,6 @@ def wms_bybox(
         from the WMS service as bytes. You can use ``utils.create_dataset`` function
         to convert the responses to ``xarray.Dataset``.
     """
-
     wms = WebMapService(url, version=version)
 
     valid_layers = {wms[lyr].name: wms[lyr].title for lyr in list(wms.contents)}
@@ -374,6 +371,7 @@ class WFSBase:
         )
 
     def validate_wfs(self):
+        """Validate input arguments with the WFS service."""
         wfs = WebFeatureService(self.url, version=self.version)
 
         valid_layers = list(wfs.contents)
@@ -405,7 +403,6 @@ class WFSBase:
 
     def get_validnames(self) -> Response:
         """Get valid column names for a layer."""
-
         max_features = "count" if self.version == "2.0.0" else "maxFeatures"
 
         payload = {
@@ -468,7 +465,7 @@ class WFS(WFSBase):
     def getfeature_bybox(
         self, bbox: Tuple[float, float, float, float], box_crs: str = "epsg:4326"
     ) -> Response:
-        """Data from any WMS service within a geometry.
+        """Get data from a WMS service within a bounding box.
 
         Parameters
         ----------
@@ -483,7 +480,6 @@ class WFS(WFSBase):
         requests.Response
             WFS query response within a bounding box.
         """
-
         utils.check_bbox(bbox)
         bbox = utils.match_crs(bbox, box_crs, self.crs)
 
@@ -523,7 +519,6 @@ class WFS(WFSBase):
         requests.Response
             WMS query response
         """
-
         featureids = featureids if isinstance(featureids, list) else [featureids]
 
         if len(featureids) == 0:

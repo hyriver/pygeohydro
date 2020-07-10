@@ -22,6 +22,9 @@ Breaking changes
 - Removed ``utils.geom_mask`` function and replaced it with ``rasterio.mask.mask``.
 - Removed ``width`` as an input in functions with raster output since ``resolution`` is almost
   always the preferred way to request for data. This change made the code more readable.
+- Renamed two functions: ``ArcGISRESTful`` and ``wms_bybox``. These function now return
+  ``requests.Response`` type output.
+- ``onlyIPv4`` is now a class method in ``RetrySession``.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -44,7 +47,7 @@ Enhancements
 - Refactored the method for getting object IDs in ``ArcGISREST`` class to improve
   robustness and efficiency.
 - Refactored ``Daymet`` class to improve readability.
-- Add `Deepsource <https://deepsource.io/>`_ for further checking code quality.
+- Add `Deepsource <https://deepsource.io/>`_ for further code quality checking.
 
 New Features
 ~~~~~~~~~~~~

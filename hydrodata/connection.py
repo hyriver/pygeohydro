@@ -36,7 +36,6 @@ class RetrySession:
         status_to_retry: Tuple[int, ...] = (500, 502, 504),
         prefixes: Tuple[str, ...] = ("http://", "https://"),
     ) -> None:
-
         self.session = Session()
         self.retries = retries
 
@@ -69,8 +68,7 @@ class RetrySession:
 
     @staticmethod
     def onlyIPv4() -> _patch:
-        """disable IPv6 and only use IPv4."""
-
+        """Disable IPv6 and only use IPv4."""
         orig_getaddrinfo = socket.getaddrinfo
 
         def getaddrinfoIPv4(host, port, family=socket.AF_INET, ptype=0, proto=0, flags=0):

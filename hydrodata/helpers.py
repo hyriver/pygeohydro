@@ -9,7 +9,7 @@ from .connection import RetrySession
 
 
 def nlcd_helper() -> Dict[str, Any]:
-    """Helper for NLCD cover data.
+    """Get legends and properties of the NLCD cover dataset.
 
     Notes
     -----
@@ -18,7 +18,6 @@ def nlcd_helper() -> Dict[str, Any]:
         - https://www.mrlc.gov/data-services-page
         - https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
     """
-
     url = (
         "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/"
         + "NLCD_2016_Land_Cover_Science_product_L48.xml"
