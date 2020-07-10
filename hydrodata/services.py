@@ -1,30 +1,22 @@
 """Base classes and function for REST, WMS, and WMF services."""
 from collections import defaultdict
+from dataclasses import dataclass
 from itertools import zip_longest
-from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 from warnings import warn
 
 import geopandas as gpd
-import xarray as xr
-from defusedxml import cElementTree as ET
-from owslib.map.wms111 import WebMapService_1_1_1
-from owslib.map.wms130 import WebMapService_1_3_0
+import pyproj
+from defusedxml import cElementTree as etree
 from owslib.wfs import WebFeatureService
 from owslib.wms import WebMapService
 from requests import Response
 from shapely.geometry import Polygon
 from simplejson import JSONDecodeError
 
-from hydrodata import utils
-from hydrodata.connection import RetrySession
-from hydrodata.exceptions import (
-    InvalidInputType,
-    InvalidInputValue,
-    MissingInputs,
-    ServerError,
-    ZeroMatched,
-)
+from . import utils
+from .connection import RetrySession
+from .exceptions import InvalidInputType, InvalidInputValue, MissingInputs, ServerError, ZeroMatched
 
 
 class ArcGISREST:
@@ -34,12 +26,14 @@ class ArcGISREST:
     ----------
     base_url : str, optional
         The ArcGIS RESTful service url.
-    outFormat : str, optional
+    outformat : str, optional
         One of the output formats offered by the selected layer. If not correct
         a list of available formats is shown, defaults to ``geojson``.
-    outFields : str or list
-        The output fields to be requested. Setting ``*`` as outFields requests
+    outfields : str or list
+        The output fields to be requested. Setting ``*`` as outfields requests
         all the available fields which is the default behaviour.
+    crs : str, optional
+        The spatial reference of the output data, defaults to EPSG:4326
     n_threads : int, optional
         Number of simultaneous download, default to 4.
     """
@@ -47,8 +41,9 @@ class ArcGISREST:
     def __init__(
         self,
         base_url: str,
-        outFormat: str = "geojson",
-        outFields: Union[List[str], str] = "*",
+        outformat: str = "geojson",
+        outfields: Union[List[str], str] = "*",
+        crs: str = "epsg:4326",
         n_threads: int = 4,
     ) -> None:
 
@@ -56,54 +51,56 @@ class ArcGISREST:
         self.base_url = base_url
         self.test_url()
 
-        self._outFormat = outFormat
-        self._outFields = outFields if isinstance(outFields, list) else [outFields]
+        self._outformat = outformat
+        self._outfields = outfields if isinstance(outfields, list) else [outfields]
         self._n_threads = n_threads
         self.nfeatures = 0
+        self.crs = crs
+        self.out_sr = pyproj.CRS(self.crs).to_epsg()
 
     @property
-    def outFormat(self) -> str:
-        return self._outFormat
+    def outformat(self) -> str:
+        return self._outformat
 
-    @outFormat.setter
-    def outFormat(self, value: str) -> None:
-        if self.base_url is not None and value.lower() not in self.queryFormats:
-            raise InvalidInputValue("outFormat", self.queryFormats)
+    @outformat.setter
+    def outformat(self, value: str) -> None:
+        if self.base_url is not None and value.lower() not in self.query_formats:
+            raise InvalidInputValue("outformat", self.query_formats)
 
-        self._outFormat = value
+        self._outformat = value
 
     @property
-    def outFields(self) -> List[str]:
-        return self._outFields
+    def outfields(self) -> List[str]:
+        return self._outfields
 
-    @outFields.setter
-    def outFields(self, value: Union[List[str], str]) -> None:
+    @outfields.setter
+    def outfields(self, value: Union[List[str], str]) -> None:
         if not isinstance(value, (list, str)):
-            raise InvalidInputType("outFields", "str or list")
+            raise InvalidInputType("outfields", "str or list")
 
-        self._outFields = value if isinstance(value, list) else [value]
+        self._outfields = value if isinstance(value, list) else [value]
 
     def test_url(self) -> None:
         """Test the generated url and get the required parameters from the service."""
         try:
-            r = self.session.get(self.base_url, {"f": "json"}).json()
+            resp = self.session.get(self.base_url, {"f": "json"}).json()
             try:
-                self.units = r["units"].replace("esri", "").lower()
+                self.units = resp["units"].replace("esri", "").lower()
             except KeyError:
                 self.units = None
-            self.maxRecordCount = r["maxRecordCount"]
-            self.queryFormats = r["supportedQueryFormats"].replace(" ", "").lower().split(",")
+            self.maxrec_ount = resp["maxRecordCount"]
+            self.query_formats = resp["supportedQueryFormats"].replace(" ", "").lower().split(",")
             self.valid_fields = list(
                 set(
-                    utils.traverse_json(r, ["fields", "name"])
-                    + utils.traverse_json(r, ["fields", "alias"])
+                    utils.traverse_json(resp, ["fields", "name"])
+                    + utils.traverse_json(resp, ["fields", "alias"])
                     + ["*"]
                 )
             )
         except KeyError:
             raise ServerError(self.base_url)
 
-        self._max_nrecords = self.maxRecordCount
+        self._max_nrecords = self.maxrec_ount
 
     @property
     def n_threads(self) -> int:
@@ -121,10 +118,9 @@ class ArcGISREST:
 
     @max_nrecords.setter
     def max_nrecords(self, value: int) -> None:
-        if value > self.maxRecordCount:
+        if value > self.maxrec_ount:
             raise ValueError(
-                f"The server doesn't accept more than {self.maxRecordCount}"
-                + " records per request."
+                f"The server doesn't accept more than {self.maxrec_ount}" + " records per request."
             )
         if value > 0:
             self._max_nrecords = value
@@ -155,64 +151,72 @@ class ArcGISREST:
         return (
             "Service configurations:\n"
             + f"URL: {self.base_url}\n"
-            + f"Max Record Count: {self.maxRecordCount}\n"
-            + f"Supported Query Formats: {self.queryFormats}\n"
+            + f"Max Record Count: {self.maxrec_ount}\n"
+            + f"Supported Query Formats: {self.query_formats}\n"
             + f"Units: {self.units}"
         )
 
     def get_featureids(
-        self, geom: Union[Polygon, Tuple[float, float, float, float]], geo_crs: str = "epsg:4326",
+        self, geom: Union[Polygon, Tuple[float, float, float, float]], geo_crs: str = "epsg:4326"
     ) -> None:
-        """Get feature IDs withing a geometry."""
+        """Get feature IDs withing a geometry or bounding box.
 
-        geom = utils.match_crs(geom, geo_crs, "epsg:4326")
+        Parameters
+        ----------
+        geom : Polygon or tuple
+            A geometry or bounding box
+        geo_crs : str
+            The spatial reference of the input geometry, defaults to EPSG:4326
+        """
+
+        geom = utils.match_crs(geom, geo_crs, self.crs)
 
         if isinstance(geom, tuple):
-            geom_query = utils.ESRIGeomQuery(geom, 4326).bbox()
+            geom_query = utils.ESRIGeomQuery(geom, self.out_sr).bbox()
         else:
-            geom_query = utils.ESRIGeomQuery(geom, 4326).polygon()  # type: ignore
+            geom_query = utils.ESRIGeomQuery(geom, self.out_sr).polygon()  # type: ignore
 
         payload = {
             **geom_query,
             "spatialRel": "esriSpatialRelIntersects",
             "returnGeometry": "false",
             "returnIdsOnly": "true",
-            "f": self.outFormat,
+            "f": self.outformat,
         }
-        r = self.session.post(f"{self.base_url}/query", payload)
+        resp = self.session.post(f"{self.base_url}/query", payload)
 
         try:
-            self.featureids = r.json()["objectIds"]
+            self.featureids = resp.json()["objectIds"]
         except (KeyError, TypeError, IndexError, JSONDecodeError):
             raise ZeroMatched("No feature ID were found within the requested region.")
 
     def get_features(self) -> gpd.GeoDataFrame:
         """Get features based on the feature IDs."""
 
-        if not all(f in self.valid_fields for f in self.outFields):
-            raise InvalidInputValue("outFields", self.valid_fields)
+        if not all(f in self.valid_fields for f in self.outfields):
+            raise InvalidInputValue("outfields", self.valid_fields)
 
         payload = {
             "returnGeometry": "true",
-            "outSR": "4326",
-            "outFields": ",".join(self.outFields),
-            "f": self.outFormat,
+            "outSR": self.out_sr,
+            "outfields": ",".join(self.outfields),
+            "f": self.outformat,
         }
 
         def getter(ids: Tuple[str, ...]) -> Union[Response, Tuple[str, ...]]:
             payload.update({"objectIds": ",".join(ids)})
-            r = self.session.post(f"{self.base_url}/query", payload)
-            r_json = r.json()
+            resp = self.session.post(f"{self.base_url}/query", payload)
+            r_json = resp.json()
             try:
                 if "error" in r_json:
                     return ids
 
                 return r_json
             except AssertionError:
-                if self.outFormat == "geojson":
+                if self.outformat == "geojson":
                     raise ZeroMatched(
-                        "There was a problem processing the request with geojson outFormat. "
-                        + "Your can set the outFormat to json and retry."
+                        "There was a problem processing the request with geojson outformat. "
+                        + "Your can set the outformat to json and retry."
                     )
 
                 raise ZeroMatched("No matching data was found on the server.")
@@ -242,134 +246,186 @@ class ArcGISREST:
         if len(features) == 0:
             raise ZeroMatched("No valid feature was found.")
 
-        data = utils.json_togeodf(features[0], "epsg:4326")
-
-        return data.append([utils.json_togeodf(f, "epsg:4326") for f in features[1:]])
+        return features
 
 
-def wms_bygeom(
+def wms_bybox(
     url: str,
-    layers: Dict[str, str],
-    outFormat: str,
-    geometry: Union[Polygon, Tuple[float, float, float, float]],
+    layers: Union[str, List[str]],
+    bbox: Tuple[float, float, float, float],
     resolution: float,
-    geo_crs: str = "epsg:4326",
+    outformat: str,
+    box_crs: str = "epsg:4326",
     crs: str = "epsg:4326",
     version: str = "1.3.0",
-    fill_holes: bool = False,
-    fpath: Optional[Dict[str, Optional[Union[str, Path]]]] = None,
-) -> Union[xr.DataArray, xr.Dataset]:
+) -> Dict[str, bytes]:
     """Data from a WMS service within a geometry or bounding box.
 
     Parameters
     ----------
     url : str
         The base url for the WMS service e.g., https://www.mrlc.gov/geoserver/mrlc_download/wms
-    layers : dict
-        The layer from the service to be downloaded. The argument should be a
-        dict with keys as the variable name in the output dataframe and values
-        as the complete name of the layer in the service. You can pass an empty
+    layers : str or list
+        A layer or a list of layers from the service to be downloaded. You can pass an empty
         string to get a list of available layers.
-    outFormat : str
-        The data format to request for data from the service. You can pass an empty
-        string to get a list of available output formats.
-    geometry : Polygon or tuple
-        A shapely Polygon or bounding box for getting the data.
+    box : tuple
+        A bounding box for getting the data.
     resolution : float
         The output resolution in meters. The width and height of output are computed in pixel
         based on the geometry bounds and the given resolution.
-    geo_crs : str, optional
-        The spatial reference system of the input geometry, defaults to
+    outformat : str
+        The data format to request for data from the service. You can pass an empty
+        string to get a list of available output formats.
+    box_crs : str, optional
+        The spatial reference system of the input bbox, defaults to
         epsg:4326.
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
     version : str, optional
         The WMS service version which should be either 1.1.1 or 1.3.0, defaults to 1.3.0.
-    fill_holes : bool, optional
-        Wether to fill the holes in the Polygon's interior, defaults to False.
-    fpath : dict, optional
-        The path to save the downloaded images, defaults to None which will only return
-        the data as ``xarray.Dataset`` and doesn't save the files. The argument should be
-        a dict with keys as the variable name in the output dataframe and values as
-        the path to save to the file.
 
     Returns
     -------
-    xarray.Dataset
-        Requested layer data within a geometry or bounding box
+    dict
+        A dict where the keys are the layer name and values are the returned response
+        from the WMS service as bytes. You can use ``utils.create_dataset`` function
+        to convert the responses to ``xarray.Dataset``.
     """
 
     wms = WebMapService(url, version=version)
 
-    validate_wms(wms, layers, outFormat, crs)
+    valid_layers = {wms[lyr].name: wms[lyr].title for lyr in list(wms.contents)}
 
-    if isinstance(geometry, Polygon):
-        if fill_holes:
-            geometry = Polygon(geometry.exterior)
-        bounds = utils.match_crs(geometry.bounds, geo_crs, crs)
-    else:
-        bounds = utils.match_crs(geometry, geo_crs, crs)
+    if not isinstance(layers, (str, list)):
+        raise InvalidInputType("layers", "str or list")
 
-    width, height = utils.bbox_resolution(bounds, resolution, crs)
+    _layers = [layers] if isinstance(layers, str) else layers
 
-    if fpath is not None and not isinstance(fpath, dict):
-        raise InvalidInputType("fpath", "dict", "{var_name : path}")
+    if any(lyr not in valid_layers.keys() for lyr in _layers):
+        raise InvalidInputValue("layers", (f"{n} for {t}" for n, t in valid_layers.items()))
 
-    if fpath is None:
-        fpath = {k: None for k in layers.keys()}
-    else:
-        if layers.keys() != fpath.keys():
-            raise ValueError("Keys of fpath and layers dictionaries should be the same.")
-        utils.check_dir(fpath.values())
+    valid_outformats = wms.getOperationByName("GetMap").formatOptions
+    if outformat is None or outformat not in valid_outformats:
+        raise InvalidInputValue("outformat", valid_outformats)
 
-    def _wms(inp):
-        name, layer = inp
-        img = wms.getmap(
-            layers=[layer], srs=crs, bbox=bounds, size=(width, height), format=outFormat,
-        )
-        return (name, img.read())
-
-    resp = utils.threading(_wms, layers.items(), max_workers=len(layers))
-
-    _geometry = utils.match_crs(geometry, geo_crs, crs)
-    data = utils.create_dataset(resp[0][1], _geometry, resp[0][0], fpath[resp[0][0]])
-
-    if len(resp) > 1:
-        for name, r in resp:
-            da = utils.create_dataset(r, _geometry, name, fpath[name])
-            data = xr.merge([data, da])
-
-    return data
-
-
-def validate_wms(
-    wms: Union[WebMapService_1_3_0, WebMapService_1_1_1],
-    layers: Union[str, Dict[str, str]],
-    outFormat: str,
-    crs: str,
-):
-    """Validate query inputs for a WMS request."""
-
-    valid_layers = {wms[layer].name: wms[layer].title for layer in list(wms.contents)}
-
-    if not isinstance(layers, dict):
-        raise InvalidInputType("layers", "dict", "{var_name : layer_name}")
-
-    if any(layer not in valid_layers.keys() for layer in layers.values()):
-        raise InvalidInputValue("layer", (f"{n} for {t}" for n, t in valid_layers.items()))
-
-    valid_outFormats = wms.getOperationByName("GetMap").formatOptions
-    if outFormat is None or outFormat not in valid_outFormats:
-        raise InvalidInputValue("outFormat", valid_outFormats)
-
-    valid_crss = {layer: [s.lower() for s in wms[layer].crsOptions] for layer in layers.values()}
-    if any(crs not in valid_crss[layer] for layer in layers.values()):
+    valid_crss = {lyr: [s.lower() for s in wms[lyr].crsOptions] for lyr in _layers}
+    if any(crs not in valid_crss[lyr] for lyr in _layers):
         _valid_crss = (f"{lyr}: {', '.join(cs)}\n" for lyr, cs in valid_crss.items())
         raise InvalidInputValue("CRS", _valid_crss)
 
+    bounds = utils.match_crs(bbox, box_crs, crs)
 
-class WFS:
+    width, height = utils.bbox_resolution(bounds, resolution, crs)
+
+    def getmap(lyr):
+        img = wms.getmap(
+            layers=[lyr], srs=crs, bbox=bounds, size=(width, height), format=outformat,
+        )
+        return (lyr, img.read())
+
+    return dict(utils.threading(getmap, _layers, max_workers=len(_layers)))
+
+
+@dataclass
+class WFSBase:
+    """Base class for WFS service.
+
+    Parameters
+    ----------
+    url : str
+        The base url for the WFS service, for examples:
+        https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
+    layer : str
+        The layer from the service to be downloaded, defaults to None which throws
+        an error and includes all the available layers offered by the service.
+    outformat : str
+        The data format to request for data from the service, defaults to None which
+         throws an error and includes all the available format offered by the service.
+    version : str, optional
+        The WFS service version which should be either 1.1.1, 1.3.0, or 2.0.0.
+        Defaults to 2.0.0.
+    crs: str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    validation : bool
+        Validate the input arguments from the WFS service, defaults to True. Set this
+        to False if you are sure all the WFS settings such as layer and crs are correct
+        to avoid sending extra requests.
+    """
+
+    url: str
+    layer: Optional[str] = None
+    outformat: Optional[str] = None
+    version: str = "2.0.0"
+    crs: str = "epsg:4326"
+    validation: bool = True
+    session: RetrySession = RetrySession()
+
+    def __repr__(self) -> str:
+        """Print the services properties."""
+        return (
+            "Connected to the WFS service with the following properties:\n"
+            + f"URL: {self.url}\n"
+            + f"Version: {self.version}\n"
+            + f"Layer: {self.layer}\n"
+            + f"Output Format: {self.outformat}\n"
+            + f"Output CRS: {self.crs}"
+        )
+
+    def validate_wfs(self):
+        wfs = WebFeatureService(self.url, version=self.version)
+
+        valid_layers = list(wfs.contents)
+        if self.layer is None:
+            raise MissingInputs(
+                "The layer argument is missing."
+                + " The following layers are available:\n"
+                + ", ".join(valid_layers)
+            )
+
+        if self.layer not in valid_layers:
+            raise InvalidInputValue("layers", valid_layers)
+
+        valid_outformats = wfs.getOperationByName("GetFeature").parameters["outputFormat"]["values"]
+        valid_outformats = [v.lower() for v in valid_outformats]
+        if self.outformat is None:
+            raise MissingInputs(
+                "The outformat argument is missing."
+                + " The following output formats are available:\n"
+                + ", ".join(valid_outformats)
+            )
+
+        if self.outformat not in valid_outformats:
+            raise InvalidInputValue("outformat", valid_outformats)
+
+        valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[self.layer].crsOptions]
+        if self.crs.lower() not in valid_crss:
+            raise InvalidInputValue("crs", valid_crss)
+
+    def get_validnames(self) -> Response:
+        """Get valid column names for a layer."""
+
+        max_features = "count" if self.version == "2.0.0" else "maxFeatures"
+
+        payload = {
+            "service": "wfs",
+            "version": self.version,
+            "outputFormat": self.outformat,
+            "request": "GetFeature",
+            "typeName": self.layer,
+            max_features: "1",
+        }
+
+        resp = self.session.get(self.url, payload)
+
+        if resp.headers["Content-Type"] == "application/xml":
+            root = etree.fromstring(resp.text)
+            raise ZeroMatched(root[0][0].text.strip())
+        return resp
+
+
+class WFS(WFSBase):
     """Data from any WFS service within a geometry or by featureid.
 
     Parameters
@@ -380,7 +436,7 @@ class WFS:
     layer : str
         The layer from the service to be downloaded, defaults to None which throws
         an error and includes all the available layers offered by the service.
-    outFormat : str
+    outformat : str
         The data format to request for data from the service, defaults to None which
          throws an error and includes all the available format offered by the service.
     version : str, optional
@@ -399,82 +455,15 @@ class WFS:
         self,
         url: str,
         layer: Optional[str] = None,
-        outFormat: Optional[str] = None,
+        outformat: Optional[str] = None,
         version: str = "2.0.0",
         crs: str = "epsg:4326",
         validation: bool = True,
     ) -> None:
-        self.url = url
-        self.layer = layer
-        self.outFormat = outFormat
-        self.version = version
-        self.crs = crs
-        self.session = RetrySession()
+        super().__init__(url, layer, outformat, version, crs, validation)
 
         if validation:
             self.validate_wfs()
-
-    def __repr__(self) -> str:
-        """Print the services properties."""
-        return (
-            "Connected to the WFS service with the following properties:\n"
-            + f"URL: {self.url}\n"
-            + f"Version: {self.version}\n"
-            + f"Layer: {self.layer}\n"
-            + f"Output Format: {self.outFormat}\n"
-            + f"Output CRS: {self.crs}"
-        )
-
-    def validate_wfs(self):
-        wfs = WebFeatureService(self.url, version=self.version)
-
-        valid_layers = list(wfs.contents)
-        if self.layer is None:
-            raise MissingInputs(
-                "The layer argument is missing."
-                + " The following layers are available:\n"
-                + ", ".join(valid_layers)
-            )
-
-        if self.layer not in valid_layers:
-            raise InvalidInputValue("layers", valid_layers)
-
-        valid_outFormats = wfs.getOperationByName("GetFeature").parameters["outputFormat"]["values"]
-        valid_outFormats = [v.lower() for v in valid_outFormats]
-        if self.outFormat is None:
-            raise MissingInputs(
-                "The outFormat argument is missing."
-                + " The following output formats are available:\n"
-                + ", ".join(valid_outFormats)
-            )
-
-        if self.outFormat not in valid_outFormats:
-            raise InvalidInputValue("outFormat", valid_outFormats)
-
-        valid_crss = [f"{s.authority.lower()}:{s.code}" for s in wfs[self.layer].crsOptions]
-        if self.crs.lower() not in valid_crss:
-            raise InvalidInputValue("crs", valid_crss)
-
-    def get_validnames(self) -> Response:
-        """Get valid column names for a layer."""
-
-        max_features = "count" if self.version == "2.0.0" else "maxFeatures"
-
-        payload = {
-            "service": "wfs",
-            "version": self.version,
-            "outputFormat": self.outFormat,
-            "request": "GetFeature",
-            "typeName": self.layer,
-            max_features: "1",
-        }
-
-        r = self.session.get(self.url, payload)
-
-        if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
-            raise ZeroMatched(root[0][0].text.strip())
-        return r
 
     def getfeature_bybox(
         self, bbox: Tuple[float, float, float, float], box_crs: str = "epsg:4326"
@@ -501,18 +490,18 @@ class WFS:
         payload = {
             "service": "wfs",
             "version": self.version,
-            "outputFormat": self.outFormat,
+            "outputFormat": self.outformat,
             "request": "GetFeature",
             "typeName": self.layer,
             "bbox": ",".join(str(c) for c in bbox) + f",{self.crs}",
         }
 
-        r = self.session.get(self.url, payload)
+        resp = self.session.get(self.url, payload)
 
-        if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
+        if resp.headers["Content-Type"] == "application/xml":
+            root = etree.fromstring(resp.text)
             raise ZeroMatched(root[0][0].text.strip())
-        return r
+        return resp
 
     def getfeature_byid(
         self, featurename: str, featureids: Union[List[str], str], filter_spec: str = "1.1",
@@ -581,20 +570,20 @@ class WFS:
         payload = {
             "service": "wfs",
             "version": self.version,
-            "outputFormat": self.outFormat,
+            "outputFormat": self.outformat,
             "request": "GetFeature",
             "typeName": self.layer,
             "srsName": self.crs,
             "filter": fxml(featurename, featureids),
         }
 
-        r = self.session.post(self.url, payload)
+        resp = self.session.post(self.url, payload)
 
-        if r.headers["Content-Type"] == "application/xml":
-            root = ET.fromstring(r.text)
+        if resp.headers["Content-Type"] == "application/xml":
+            root = etree.fromstring(resp.text)
             raise ZeroMatched(root[0][0].text.strip())
 
-        return r
+        return resp
 
 
 class ServiceURL:

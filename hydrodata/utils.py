@@ -21,7 +21,7 @@ from rasterio import mask as rio_mask
 from rasterio import warp as rio_warp
 from shapely.geometry import LineString, Point, Polygon, mapping, shape
 
-from hydrodata.exceptions import InvalidInputType, MissingInputs, MissingItems, ZeroMatched
+from .exceptions import InvalidInputType, MissingInputs, MissingItems, ZeroMatched
 
 
 def threading(
@@ -657,7 +657,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
 
 
 def create_dataset(
-    content: bytes, geometry: Polygon, name: str, fpath: Optional[Union[str, Path]],
+    content: bytes, geometry: Polygon, name: str, fpath: Optional[Union[str, Path]] = None,
 ) -> Union[xr.Dataset, xr.DataArray]:
     """Create dataset from a response clipped by a geometry.
 
@@ -669,8 +669,8 @@ def create_dataset(
         The geometry for masking the data
     name : str
         Variable name in the dataset
-    fpath : str or Path
-        The path save the file
+    fpath : str or Path, optinal
+        The path save the file, defaults to None i.e., don't save as an image.
 
     Returns
     -------
@@ -701,6 +701,7 @@ def create_dataset(
             )
 
             if fpath is not None:
+                check_dir(fpath)
                 with rio.open(fpath, "w", **meta) as dest:
                     dest.write(masked)
 
@@ -711,7 +712,6 @@ def create_dataset(
                     ds = ds.squeeze("band", drop=True)
                 except ValueError:
                     pass
-                #                 ds = ds.where(~mask[0], other=vrt.nodata)
                 ds.name = name
 
                 ds.attrs["transform"] = transform
@@ -722,7 +722,9 @@ def create_dataset(
     return ds
 
 
-def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -> gpd.GeoDataFrame:
+def json_togeodf(
+    content: Dict[str, Any], in_crs: str = "epsg:4326", crs: str = "epsg:4326"
+) -> gpd.GeoDataFrame:
     """Create GeoDataFrame from (Geo)JSON.
 
     Parameters
@@ -730,9 +732,9 @@ def json_togeodf(content: Dict[str, Any], in_crs: str, crs: str = "epsg:4326") -
     content : dict
         A (Geo)JSON dictionary e.g., r.json()
     in_crs : str
-        CRS of the content
+        CRS of the content, defaults to ``epsg:4326``.
     crs : str, optional
-        CRS of the output GeoDataFrame, defaults to ``epsg:4326``
+        CRS of the output GeoDataFrame, defaults to ``epsg:4326``.
 
     Returns
     -------
