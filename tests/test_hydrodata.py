@@ -4,7 +4,7 @@ from urllib.error import HTTPError
 
 import pytest
 
-from hydrodata import NLDI, WFS, ArcGISREST, NationalMap, ServiceURL, Station, WaterData
+from hydrodata import NLDI, WFS, ArcGISRESTful, NationalMap, ServiceURL, Station, WaterData
 from hydrodata import datasets as hds
 from hydrodata import helpers, plot, services, utils
 
@@ -122,7 +122,9 @@ def test_nm(watershed_nat):
 
 
 def test_restful(watershed_urb):
-    wbd2 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1")
+    wbd2 = ArcGISRESTful(
+        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1"
+    )
     print(wbd2)
     wbd2.max_nrecords = 5
     wbd2.outformat = "geojson"
@@ -132,7 +134,9 @@ def test_restful(watershed_urb):
     _huc2 = utils.json_togeodf(resp[0])
     huc2 = _huc2.append([utils.json_togeodf(r) for r in resp[1:]])
 
-    wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8 = ArcGISRESTful(
+        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4"
+    )
     wbd8.n_threads = 4
     wbd8.get_featureids(watershed_urb.geometry.bounds)
     wbd8.get_featureids(watershed_urb.geometry)

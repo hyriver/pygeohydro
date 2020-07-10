@@ -238,31 +238,38 @@ via WFS as follows:
 
 .. code-block:: python
 
-    from hydrodata import ArcGISREST, WFS, services
+    from hydrodata import ArcGISRESTful, WFS, services
 
-    la_wshed = Station(station_id="11092450")
+    la_wshed = Station('11092450')
 
-    wbd8 = ArcGISREST(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8 = ArcGISRESTful(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
+    wbd8.n_threads = 4
+    wbd8.get_featureids(la_wshed.geometry.bounds)
     wbd8.get_featureids(la_wshed.geometry)
-    huc8 = wbd8.get_features()
+    resp = wbd8.get_features()
+    _huc8 = utils.json_togeodf(resp[0])
+    huc8 = _huc8.append([utils.json_togeodf(r) for r in resp[1:]])
 
-    url_wms = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-    hillshade = services.wms_bygeom(
+    url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
+    layer = "0"
+    r_dict = services.wms_bybox(
         url_wms,
-        geometry=wshed.geometry,
-        version="1.3.0",
-        layers={"aspect": "3DEPElevation:GreyHillshade_elevationFill"},
-        outFormat="image/tiff",
-        resolution=30,
+        layer,
+        la_wshed.geometry.bounds,
+        1e3,
+        "image/tiff",
+        box_crs="epsg:4326",
+        crs="epsg:3857",
     )
+    geom = utils.match_crs(la_wshed.geometry, "epsg:4326", "epsg:3857")
+    wetlands = utils.create_dataset(r_dict[layer], geom, "wetland")
+    wetlands = wetlands.where(wetlands < 255)
 
-    url_wfs = (
-        "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-    )
+    url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
-        outFormat="esrigeojson",
+        outformat="esrigeojson",
         crs="epsg:4269",
     )
     r = wfs.getfeature_bybox(la_wshed.geometry.bounds, box_crs="epsg:4326")

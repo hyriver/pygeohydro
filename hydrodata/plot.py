@@ -145,7 +145,6 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     NamedTuple
         Containing ``daily, ``monthly``, ``annual``, ``mean_monthly``, ``ranked`` fields.
     """
-
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
 
@@ -167,8 +166,7 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
 
 
 def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
-    """Colormap (cmap) and their respective values (norm) for land cover data
-    legends."""
+    """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"].keys())
 
