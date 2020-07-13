@@ -314,7 +314,7 @@ def wms_bybox(
 
     utils.check_bbox(bbox)
     _bbox = MatchCRS.bounds(bbox, box_crs, crs)
-    width, height = utils.bbox_resolution(_bbox, resolution, crs)
+    _, height = utils.bbox_resolution(_bbox, resolution, crs)
     bounds, widths = utils.vsplit_bbox(_bbox, resolution, crs)
     _bounds = [(*bw[0], i, bw[1]) for i, bw in enumerate(zip(bounds, widths))]
 
