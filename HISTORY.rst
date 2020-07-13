@@ -48,6 +48,7 @@ Enhancements
   robustness and efficiency.
 - Refactored ``Daymet`` class to improve readability.
 - Add `Deepsource <https://deepsource.io/>`_ for further code quality checking.
+- Automatic handling of large WMS requests (more than 8 million pixel i.e., width x height)
 
 New Features
 ~~~~~~~~~~~~
@@ -57,12 +58,15 @@ New Features
 - Added a URL repository for the supported services called ``ServiceURL``
 - Added support for `FEMA <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`_ web services
   for flood maps and `FWS <https://www.fws.gov/wetlands/Data/Web-Map-Services.html>`_ for wetlands.
+- Added a new function called ``wms_toxarray`` for converting WMS request responses to
+  ``xarray.DataArray`` or ``xarray.Dataset``.
 
 Bug fixes
 ~~~~~~~~~
 - Re-projection issues for function with input geometry.
 - Start and end variables not being initialized when coords was used in ``Station``.
 - Geometry mask for ``xarray.DataArray``
+- WMS output re-projections
 
 0.6.0 (2020-06-23)
 ------------------
