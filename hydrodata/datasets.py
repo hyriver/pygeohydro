@@ -847,12 +847,12 @@ def ssebopeta_bygeom(
 
         resp = utils.threading(_ssebop, f_list, max_workers=4,)
 
-        data = utils.create_dataset(resp[0][1], geometry, "eta", None)
+        data = utils.create_dataset(resp[0][1], geometry, "epsg:4326", "eta", None)
         data = data.expand_dims({"time": [resp[0][0]]})
 
         if len(resp) > 1:
             for dt, r in resp:
-                ds = utils.create_dataset(r, geometry, "eta", None)
+                ds = utils.create_dataset(r, geometry, "epsg:4326", "eta", None)
                 ds = ds.expand_dims({"time": [dt]})
                 data = xr.merge([data, ds])
 
@@ -969,22 +969,8 @@ def nlcd(
         ServiceURL().wms.mrlc, layers, bounds, resolution, "image/geotiff", box_crs=crs, crs=crs,
     )
 
-    _fpath: List[Optional[Path]]
-    if data_dir is not None:
-        _fpath = [
-            Path(data_dir, f'canopy_{years["canopy"]}.geotiff'),
-            Path(data_dir, f'cover_{years["cover"]}.geotiff'),
-            Path(data_dir, f'impervious_{years["impervious"]}.geotiff'),
-        ]
-    else:
-        _fpath = [None, None, None]
-
-    fpath = dict(zip(layers, _fpath))
-    var_name = dict(zip(layers, ["canopy", "cover", "impervious"]))
-
-    ds = xr.merge(
-        [utils.create_dataset(r, _geometry, var_name[lyr], fpath[lyr]) for lyr, r in r_dict.items()]
-    )
+    ds = utils.wms_toxarray(r_dict, bounds, crs, data_dir)
+    ds = ds.rename(dict(zip(r_dict.keys(), ["canopy", "cover", "impervious"])))
 
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
@@ -1058,8 +1044,6 @@ class NationalMap:
     def get_aspect(self) -> xr.DataArray:
         """Aspect map as an ``xarray.DataArray`` in degrees."""
         aspect = self.get_map("3DEPElevation:Aspect Degrees", "aspect")
-        aspect = aspect.where(aspect < aspect.nodatavals[0], drop=True)
-        aspect.attrs["nodatavals"] = (np.nan,)
         aspect.attrs["units"] = "degrees"
         return aspect
 
@@ -1077,8 +1061,6 @@ class NationalMap:
             Slope within a geometry in degrees or meters/meters
         """
         slope = self.get_map("3DEPElevation:Slope Degrees", "slope")
-        slope = slope.where(slope < slope.nodatavals[0], drop=True)
-        slope.attrs["nodatavals"] = (np.nan,)
         if mpm:
             attrs = slope.attrs
             slope = np.tan(np.deg2rad(slope))
@@ -1117,11 +1099,12 @@ class NationalMap:
             bounds,
             self.resolution,
             "image/tiff",
-            box_crs=self.geo_crs,
+            box_crs=self.crs,
             crs=self.crs,
         )
-        fpath = None if self.data_dir is None else Path(self.data_dir, f"{var_name}.tiff")
-        return utils.create_dataset(r_dict[layer], _geometry, var_name, fpath)
+        data = utils.wms_toxarray(r_dict, _geometry, self.crs, self.data_dir)
+        data.name = var_name
+        return data
 
 
 class Station:

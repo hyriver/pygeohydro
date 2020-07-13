@@ -116,7 +116,7 @@ def test_ssebopeta(watershed_nat):
 def test_nlcd(watershed_nat):
     lulc = hds.nlcd(watershed_nat.geometry, resolution=1e3)
     st = utils.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 42.130) < 1e-3
+    assert abs(st["categories"]["Forest"] - 82.209) < 1e-3
 
 
 def test_nm(watershed_nat):
@@ -170,11 +170,10 @@ def test_wms(watershed_nat):
         box_crs="epsg:4326",
         crs="epsg:3857",
     )
-    geom = MatchCRS.geometry(watershed_nat.geometry, "epsg:4326", "epsg:3857")
-    wetlands = utils.create_dataset(r_dict[layer], geom, "wetland", "tmp/wetland.tiff")
+    wetlands = utils.wms_toxarray(r_dict, watershed_nat.geometry.bounds, "epsg:4326", "tmp")
     shutil.rmtree("tmp", ignore_errors=True)
 
-    assert abs(wetlands.isel(band=0).mean().values.item() - 132.888) < 1e-3
+    assert abs(wetlands.isel(band=0).mean().values.item() - 16.195) < 1e-3
 
 
 def test_wfs(watershed_urb):

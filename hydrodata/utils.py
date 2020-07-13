@@ -19,7 +19,7 @@ from owslib.wms import WebMapService
 from pandas._libs.missing import NAType
 from rasterio import mask as rio_mask
 from rasterio import warp as rio_warp
-from shapely.geometry import LineString, Point, Polygon, mapping, shape
+from shapely.geometry import LineString, Point, Polygon, box, mapping, shape
 
 from .exceptions import InvalidInputType, MissingInputs, MissingItems, ZeroMatched
 from .helpers import nlcd_helper
@@ -651,7 +651,11 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
 
 
 def create_dataset(
-    content: bytes, geometry: Polygon, name: str, fpath: Optional[Union[str, Path]] = None,
+    content: bytes,
+    geometry: Union[Polygon, Tuple[float, float, float, float]],
+    geo_crs: str,
+    name: str,
+    fpath: Optional[Union[str, Path]] = None,
 ) -> Union[xr.Dataset, xr.DataArray]:
     """Create dataset from a response clipped by a geometry.
 
@@ -659,8 +663,10 @@ def create_dataset(
     ----------
     content : requests.Response
         The response to be processed
-    geometry : Polygon
+    geometry : Polygon or tuple of length 4
         The geometry for masking the data
+    geo_crs : str
+        The spatial reference of the input geometry
     name : str
         Variable name in the dataset
     fpath : str or Path, optinal
@@ -682,7 +688,12 @@ def create_dataset(
             else:
                 nodata = np.dtype(src.dtypes[0]).type(src.nodata)
 
-            masked, transform = rio_mask.mask(src, [geometry], crop=True, nodata=nodata)
+            if isinstance(geometry, Polygon):
+                _geometry = [MatchCRS.geometry(geometry, geo_crs, src.crs)]
+            else:
+                _geometry = [box(*MatchCRS.bounds(geometry, geo_crs, src.crs))]
+
+            masked, transform = rio_mask.mask(src, _geometry, crop=True, nodata=nodata)
             meta = src.meta
             meta.update(
                 {
@@ -1208,3 +1219,109 @@ def bbox_resolution(
     dely = geod.geometry_length(liney)
 
     return int(delx / resolution), int(dely / resolution)
+
+
+def vsplit_bbox(
+    bbox: Tuple[float, float, float, float],
+    resolution: float,
+    box_crs: str = "epsg:4326",
+    max_pixel: int = 8000000,
+) -> Tuple[List[Tuple[float, float, float, float]], List[int]]:
+    """Split the bounding box vertically for WMS requests.
+
+    Parameters
+    ----------
+    bbox : tuple
+        A bounding box; (west, south, east, north)
+    resolution : float
+        The target resolution for a WMS request in meters.
+    box_crs : str, optional
+        The spatial reference of the input bbox, default to EPSG:4326.
+    max_pixel : int, opitonal
+        The maximum allowable number of pixels (width x height) for a WMS requests,
+        defaults to 8 million based on some trial-and-error.
+
+    Returns
+    -------
+    tuple
+        The first element is a list of bboxes and the second one is width of the last bbox
+    """
+    _crs = "epsg:4326"
+    check_bbox(bbox)
+    _bbox = MatchCRS.bounds(bbox, box_crs, _crs)
+    width, height = bbox_resolution(_bbox, resolution, _crs)
+
+    # Max number of cells that 3DEP can handle safely is about 8 mil.
+    # We need to divide the domain into boxes with cell count of 8 mil.
+    # We fix the height and incremenet the width.
+    if (width * height) > max_pixel:
+        _width = int(max_pixel / height)
+        stepx = _width * resolution
+
+        geod = pyproj.Geod(ellps="WGS84")
+
+        west, south, east, north = _bbox
+        az = geod.inv(west, south, east, south)[0]
+        lons = [west]
+
+        while lons[-1] < east:
+            lons.append(geod.fwd(lons[-1], south, az, stepx)[0])
+
+        lons[-1] = east
+        bboxs = [(left, south, right, north) for left, right in zip(lons[:-1], lons[1:])]
+        bboxs = [MatchCRS.bounds(i, _crs, box_crs) for i in bboxs]
+        widths = [_width for _ in range(len(bboxs))]
+        widths[-1] = width - (len(bboxs) - 1) * _width
+    else:
+        bboxs = [bbox]
+        widths = [width]
+    return bboxs, widths
+
+
+def wms_toxarray(
+    r_dict: Dict[str, bytes],
+    geometry: Union[Polygon, Tuple[float, float, float, float]],
+    geo_crs: str,
+    data_dir: Optional[Union[str, Path]] = None,
+) -> Union[xr.DataArray, xr.Dataset]:
+    """Convert responses from ``wms_bybox`` to ``xarray.Dataset`` or ``xarray.DataAraay``.
+
+    Parameters
+    ----------
+    r_dict : dict
+        The output of ``wms_bybox`` function.
+    geometry : Polygon or tuple
+        The geometry to mask the data that should be in the same CRS as the r_dict.
+    geo_crs : str
+        The spatial reference of the input geometry.
+    data_dir : str or Path, optional
+        The directory to save the output as ``tiff`` images.
+
+    Returns
+    -------
+    xarray.Dataset or xarray.DataAraay
+        The dataset or data array based on the number of variables.
+    """
+    if data_dir is not None:
+        check_dir(Path(data_dir, "dummy"))
+
+    _fpath = {lyr: f'{lyr.split(":")[-1].lower().replace(" ", "_")}.tiff' for lyr in r_dict.keys()}
+    fpath = {lyr: None if data_dir is None else Path(data_dir, fn) for lyr, fn in _fpath.items()}
+
+    ds = xr.merge(
+        [create_dataset(r, geometry, geo_crs, lyr, fpath[lyr]) for lyr, r in r_dict.items()]
+    )
+
+    def mask_da(da):
+        if not np.isnan(da.nodatavals[0]):
+            msk = da < da.nodatavals[0] if da.nodatavals[0] > 0 else da > da.nodatavals[0]
+            _da = da.where(msk, drop=True)
+            _da.attrs["nodatavals"] = (np.nan,)
+            return _da
+        return da
+
+    ds = ds.map(mask_da)
+
+    if len(ds.variables) - len(ds.dims) == 1:
+        ds = ds[list(ds.keys())[0]]
+    return ds

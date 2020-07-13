@@ -1,7 +1,7 @@
 """Base classes and function for REST, WMS, and WMF services."""
 from collections import defaultdict
 from dataclasses import dataclass
-from itertools import zip_longest
+from itertools import product, zip_longest
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 from warnings import warn
 
@@ -312,17 +312,21 @@ def wms_bybox(
         _valid_crss = (f"{lyr}: {', '.join(cs)}\n" for lyr, cs in valid_crss.items())
         raise InvalidInputValue("CRS", _valid_crss)
 
-    bounds = MatchCRS.bounds(bbox, box_crs, crs)
+    utils.check_bbox(bbox)
+    _bbox = MatchCRS.bounds(bbox, box_crs, crs)
+    width, height = utils.bbox_resolution(_bbox, resolution, crs)
+    bounds, widths = utils.vsplit_bbox(_bbox, resolution, crs)
+    _bounds = [(*bw[0], i, bw[1]) for i, bw in enumerate(zip(bounds, widths))]
 
-    width, height = utils.bbox_resolution(bounds, resolution, crs)
-
-    def getmap(lyr):
+    def getmap(args):
+        lyr, bnds = args
+        _bbox, res_count, _width = bnds[:-2], bnds[-2], bnds[-1]
         img = wms.getmap(
-            layers=[lyr], srs=crs, bbox=bounds, size=(width, height), format=outformat,
+            layers=[lyr], srs=crs, bbox=_bbox, size=(_width, height), format=outformat,
         )
-        return (lyr, img.read())
+        return (f"{lyr}_{res_count}", img.read())
 
-    return dict(utils.threading(getmap, _layers, max_workers=len(_layers)))
+    return dict(utils.threading(getmap, product(_layers, _bounds), max_workers=len(_layers)))
 
 
 @dataclass
