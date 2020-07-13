@@ -17,6 +17,7 @@ from simplejson import JSONDecodeError
 from . import utils
 from .connection import RetrySession
 from .exceptions import InvalidInputType, InvalidInputValue, MissingInputs, ServerError, ZeroMatched
+from .utils import MatchCRS
 
 
 class ArcGISRESTful:
@@ -168,12 +169,12 @@ class ArcGISRESTful:
         geo_crs : str
             The spatial reference of the input geometry, defaults to EPSG:4326
         """
-        geom = utils.match_crs(geom, geo_crs, self.crs)
-
         if isinstance(geom, tuple):
+            geom = MatchCRS.bounds(geom, geo_crs, self.crs)  # type: ignore
             geom_query = utils.ESRIGeomQuery(geom, self.out_sr).bbox()
         else:
-            geom_query = utils.ESRIGeomQuery(geom, self.out_sr).polygon()  # type: ignore
+            geom = MatchCRS.geometry(geom, geo_crs, self.crs)
+            geom_query = utils.ESRIGeomQuery(geom, self.out_sr).polygon()
 
         payload = {
             **geom_query,
@@ -311,7 +312,7 @@ def wms_bybox(
         _valid_crss = (f"{lyr}: {', '.join(cs)}\n" for lyr, cs in valid_crss.items())
         raise InvalidInputValue("CRS", _valid_crss)
 
-    bounds = utils.match_crs(bbox, box_crs, crs)
+    bounds = MatchCRS.bounds(bbox, box_crs, crs)
 
     width, height = utils.bbox_resolution(bounds, resolution, crs)
 
@@ -481,7 +482,7 @@ class WFS(WFSBase):
             WFS query response within a bounding box.
         """
         utils.check_bbox(bbox)
-        bbox = utils.match_crs(bbox, box_crs, self.crs)
+        bbox = MatchCRS.bounds(bbox, box_crs, self.crs)
 
         payload = {
             "service": "wfs",

@@ -1,7 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 import io
 import zipfile
-from dataclasses import dataclass  # for python 3.6 compatibility
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -25,6 +25,7 @@ from .exceptions import (
     ZeroMatched,
 )
 from .services import WFS, ServiceURL
+from .utils import MatchCRS
 
 MARGINE = 15
 
@@ -627,9 +628,9 @@ def daymet_bygeom(
     if isinstance(geometry, Polygon):
         if fill_holes:
             geometry = Polygon(geometry.exterior)
-        bounds = utils.match_crs(geometry.bounds, geo_crs, "epsg:4326")
+        bounds = MatchCRS.bounds(geometry.bounds, geo_crs, "epsg:4326")
     else:
-        bounds = utils.match_crs(geometry, geo_crs, "epsg:4326")
+        bounds = MatchCRS.bounds(geometry, geo_crs, "epsg:4326")
 
     west, south, east, north = np.round(bounds, 6)
     base_url = ServiceURL().restful.daymet_grid
@@ -668,8 +669,20 @@ def daymet_bygeom(
             data[k].attrs["units"] = v
 
     data = data.drop_vars(["lambert_conformal_conic"])
+
     crs = " ".join(
-        ["+proj=lcc", "+lon_0=-100", "+lat_0=42.5", "+lat_1=25", "+lat_2=60", "+ellps=WGS84"]
+        [
+            "+proj=lcc",
+            "+lat_1=25",
+            "+lat_2=60",
+            "+lat_0=42.5",
+            "+lon_0=-100",
+            "+x_0=0",
+            "+y_0=0",
+            "+ellps=WGS84",
+            "+units=km",
+            "+no_defs",
+        ]
     )
     data.attrs["crs"] = crs
 
@@ -697,10 +710,11 @@ def daymet_bygeom(
     if pet:
         data = utils.pet_fao_gridded(data)
 
-    _geometry = utils.match_crs(geometry, geo_crs, crs)
-    if isinstance(_geometry, Polygon):
+    if isinstance(geometry, Polygon):
+        _geometry = MatchCRS.geometry(geometry, geo_crs, crs)
         bounds = _geometry.bounds
     else:
+        _geometry = MatchCRS.bounds(geometry, geo_crs, crs)
         bounds = _geometry
 
     transform = rio_warp.calculate_default_transform(
@@ -809,7 +823,7 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-    geometry = utils.match_crs(geometry, geo_crs, "epsg:4326")
+    geometry = MatchCRS.geometry(geometry, geo_crs, "epsg:4326")
 
     if fill_holes:
         geometry = Polygon(geometry.exterior)
@@ -943,21 +957,16 @@ def nlcd(
         f'NLCD_{years["impervious"]}_Impervious_L48',
     ]
 
-    if fill_holes and isinstance(geometry, Polygon):
-        geometry = Polygon(geometry.exterior)
-
-    _geometry = utils.match_crs(geometry, geo_crs, crs)
-
-    bounds = _geometry if isinstance(_geometry, tuple) else _geometry.bounds
+    if isinstance(geometry, Polygon):
+        _geometry = Polygon(geometry.exterior) if fill_holes else geometry
+        _geometry = MatchCRS.geometry(_geometry, geo_crs, crs)
+        bounds = _geometry.bounds
+    else:
+        _geometry = MatchCRS.bounds(geometry, geo_crs, crs)
+        bounds = _geometry
 
     r_dict = services.wms_bybox(
-        ServiceURL().wms.mrlc,
-        layers,
-        bounds,
-        resolution,
-        "image/geotiff",
-        box_crs=geo_crs,
-        crs=crs,
+        ServiceURL().wms.mrlc, layers, bounds, resolution, "image/geotiff", box_crs=crs, crs=crs,
     )
 
     _fpath: List[Optional[Path]]
@@ -1094,12 +1103,13 @@ class NationalMap:
         xarray.DataArray
             The requeted data within the geometry
         """
-        if self.fill_holes and isinstance(self.geometry, Polygon):
-            self.geometry = Polygon(self.geometry.exterior)
-
-        _geometry = utils.match_crs(self.geometry, self.geo_crs, self.crs)
-
-        bounds = _geometry if isinstance(_geometry, tuple) else _geometry.bounds
+        if isinstance(self.geometry, Polygon):
+            _geometry = Polygon(self.geometry.exterior) if self.fill_holes else self.geometry
+            _geometry = MatchCRS.geometry(_geometry, self.geo_crs, self.crs)
+            bounds = _geometry.bounds
+        else:
+            _geometry = MatchCRS.bounds(self.geometry, self.geo_crs, self.crs)
+            bounds = _geometry
 
         r_dict = services.wms_bybox(
             ServiceURL().wms.nm_3dep,
