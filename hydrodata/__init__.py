@@ -12,6 +12,7 @@ from .exceptions import (
     ZeroMatched,
 )
 from .services import WFS, ArcGISRESTful, ServiceURL
+from .utils import MatchCRS
 
 __author__ = """Taher Chegini"""
 __email__ = "cheginit@gmail.com"

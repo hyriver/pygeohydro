@@ -4,7 +4,16 @@ from urllib.error import HTTPError
 
 import pytest
 
-from hydrodata import NLDI, WFS, ArcGISRESTful, NationalMap, ServiceURL, Station, WaterData
+from hydrodata import (
+    NLDI,
+    WFS,
+    ArcGISRESTful,
+    MatchCRS,
+    NationalMap,
+    ServiceURL,
+    Station,
+    WaterData,
+)
 from hydrodata import datasets as hds
 from hydrodata import helpers, plot, services, utils
 
@@ -161,7 +170,7 @@ def test_wms(watershed_nat):
         box_crs="epsg:4326",
         crs="epsg:3857",
     )
-    geom = utils.match_crs(watershed_nat.geometry, "epsg:4326", "epsg:3857")
+    geom = MatchCRS.geometry(watershed_nat.geometry, "epsg:4326", "epsg:3857")
     wetlands = utils.create_dataset(r_dict[layer], geom, "wetland", "tmp/wetland.tiff")
     shutil.rmtree("tmp", ignore_errors=True)
 
@@ -325,9 +334,9 @@ def test_fspec1():
     assert st.json()["numberMatched"] == 1
 
 
-def test_match_crs(watershed_urb):
-    geom = utils.match_crs(watershed_urb.geometry, "epsg:4326", "epsg:2149")
-    bbox = utils.match_crs(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
+def test_matchcrs(watershed_urb):
+    geom = MatchCRS.geometry(watershed_urb.geometry, "epsg:4326", "epsg:2149")
+    bbox = MatchCRS.bounds(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
     assert abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
 
 

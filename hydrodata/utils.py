@@ -2,7 +2,7 @@
 import numbers
 import os
 from concurrent import futures
-from dataclasses import dataclass  # for python 3.6 compatibility
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union, ValuesView
 from warnings import warn
@@ -139,7 +139,7 @@ def elevation_bybbox(
     """
     check_bbox(bbox)
 
-    bbox = match_crs(bbox, box_crs, "epsg:4326")
+    bbox = MatchCRS.bounds(bbox, box_crs, "epsg:4326")
     width, height = bbox_resolution(bbox, resolution)
 
     url = "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
@@ -711,7 +711,7 @@ def create_dataset(
                 ds.attrs["res"] = (transform[0], transform[4])
                 ds.attrs["bounds"] = tuple(vrt.bounds)
                 ds.attrs["nodatavals"] = vrt.nodatavals
-                ds.attrs["crs"] = vrt.crs.to_string()
+                ds.attrs["crs"] = vrt.crs
     return ds
 
 
@@ -1055,19 +1055,43 @@ def vector_accumulation(
     return acc
 
 
-def match_crs(
-    geometry: Union[Polygon, Tuple[float, float, float, float]], in_crs: str, out_crs: str,
-) -> Union[Polygon, Tuple[float, float, float, float]]:
-    """Match CRS of a input geometry with the output CRS."""
-    if not isinstance(geometry, (Polygon, tuple)):
-        raise InvalidInputType("geometry", "tuple or Polygon")
+class MatchCRS:
+    """Match CRS of a input geometry (Polygon, bbox, coord) with the output CRS.
 
-    if in_crs != out_crs:
-        if isinstance(geometry, Polygon):
-            return shape(rio_warp.transform_geom(in_crs, out_crs, mapping(geometry)))
-        if isinstance(geometry, tuple):
-            return rio_warp.transform_bounds(in_crs, out_crs, *geometry)
-    return geometry
+    Parameters
+    ----------
+    geometry : tuple or Polygon
+        The input geometry (Polygon, bbox, coord)
+    in_crs : str
+        The spatial reference of the input geometry
+    out_crs : str
+        The target spatial reference
+    """
+
+    @staticmethod
+    def geometry(geom: Polygon, in_crs: str, out_crs: str) -> Polygon:
+        if not isinstance(geom, Polygon):
+            raise InvalidInputType("geom", "Polygon")
+
+        return shape(rio_warp.transform_geom(in_crs, out_crs, mapping(geom)))
+
+    @staticmethod
+    def bounds(
+        geom: Tuple[float, float, float, float], in_crs: str, out_crs: str
+    ) -> Tuple[float, float, float, float]:
+        if not isinstance(geom, tuple) and len(geom) != 4:
+            raise InvalidInputType("geom", "tuple of length 4", "(west, south, east, north)")
+
+        return rio_warp.transform_bounds(in_crs, out_crs, *geom)
+
+    @staticmethod
+    def coords(
+        geom: Tuple[List[float], List[float]], in_crs: str, out_crs: str
+    ) -> Tuple[List[float], List[float]]:
+        if not isinstance(geom, tuple) and len(geom) != 2:
+            raise InvalidInputType("geom", "tuple of length 2", "([xs], [ys])")
+
+        return rio_warp.transform(in_crs, out_crs, geom[0], geom[1])
 
 
 def check_bbox(bbox: Tuple[float, float, float, float]) -> None:
@@ -1173,7 +1197,7 @@ def bbox_resolution(
     """
     check_bbox(bbox)
 
-    bbox = match_crs(bbox, bbox_crs, "epsg:4326")
+    bbox = MatchCRS.bounds(bbox, bbox_crs, "epsg:4326")
     west, south, east, north = bbox
     geod = pyproj.Geod(ellps="WGS84")
 
