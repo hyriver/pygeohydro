@@ -972,7 +972,7 @@ def nlcd(
     ds = utils.wms_toxarray(r_dict, _geometry, crs, data_dir)
 
     rename = {}
-    for n in r_dict.keys():
+    for n in r_dict:
         if "cover" in n.lower():
             rename[n] = "cover"
         elif "canopy" in n.lower():
@@ -1461,11 +1461,7 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     folium.Map
         Interactive map within a bounding box.
     """
-    if isinstance(bbox, tuple):
-        if len(bbox) != 4:
-            raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
-    else:
-        raise InvalidInputType("bbox", "tuple", "(west, south, east, north)")
+    utils.check_bbox(bbox)
 
     sites = nwis_siteinfo(bbox=bbox)
     sites["coords"] = [
