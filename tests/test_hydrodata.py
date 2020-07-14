@@ -52,7 +52,8 @@ def test_daymet(watershed_nat):
     st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
     yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
-    st_g = hds.daymet_bygeom(watershed_nat.geometry.bounds, dates=dates, fill_holes=True)
+    st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
+    st_g = hds.daymet_bygeom(watershed_nat.geometry.bounds, dates=dates)
     st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (

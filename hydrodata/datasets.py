@@ -13,7 +13,7 @@ import rasterio as rio
 import xarray as xr
 from rasterio import features as rio_features
 from rasterio import warp as rio_warp
-from shapely.geometry import Point, Polygon
+from shapely.geometry import Point, Polygon, box
 
 from . import helpers, services, utils
 from .connection import RetrySession
@@ -626,13 +626,14 @@ def daymet_bygeom(
         dates_itr = daymet.years_tolist(years)  # type: ignore
 
     if isinstance(geometry, Polygon):
-        if fill_holes:
-            geometry = Polygon(geometry.exterior)
+        geometry = Polygon(geometry.exterior) if fill_holes else geometry
         bounds = MatchCRS.bounds(geometry.bounds, geo_crs, "epsg:4326")
+    elif isinstance(geometry, tuple):
+        bounds = MatchCRS.bounds(geometry, geo_crs, "epsg:4326")  # type: ignore
     else:
-        bounds = MatchCRS.bounds(geometry, geo_crs, "epsg:4326")
+        raise InvalidInputType("geometry", "Polygon or bbox tuple")
 
-    west, south, east, north = np.round(bounds, 6)
+    west, south, east, north = bounds
     base_url = ServiceURL().restful.daymet_grid
     urls = []
 
@@ -712,10 +713,10 @@ def daymet_bygeom(
 
     if isinstance(geometry, Polygon):
         _geometry = MatchCRS.geometry(geometry, geo_crs, crs)
-        bounds = _geometry.bounds
     else:
-        _geometry = MatchCRS.bounds(geometry, geo_crs, crs)
-        bounds = _geometry
+        _geometry = box(*MatchCRS.bounds(geometry, geo_crs, crs))
+
+    bounds = _geometry.bounds
 
     transform = rio_warp.calculate_default_transform(
         crs,
