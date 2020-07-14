@@ -1,7 +1,7 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.0.7
+    rev: 5.0.8
     hooks:
       - id: isort
 
