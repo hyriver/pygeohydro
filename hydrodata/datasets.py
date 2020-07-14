@@ -969,8 +969,17 @@ def nlcd(
         ServiceURL().wms.mrlc, layers, bounds, resolution, "image/geotiff", box_crs=crs, crs=crs,
     )
 
-    ds = utils.wms_toxarray(r_dict, bounds, crs, data_dir)
-    ds = ds.rename(dict(zip(r_dict.keys(), ["canopy", "cover", "impervious"])))
+    ds = utils.wms_toxarray(r_dict, _geometry, crs, data_dir)
+
+    rename = {}
+    for n in r_dict.keys():
+        if "cover" in n.lower():
+            rename[n] = "cover"
+        elif "canopy" in n.lower():
+            rename[n] = "canopy"
+        else:
+            rename[n] = "impervious"
+    ds = ds.rename(rename)
 
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
