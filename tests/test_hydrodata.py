@@ -116,7 +116,7 @@ def test_ssebopeta(watershed_nat):
 def test_nlcd(watershed_nat):
     lulc = hds.nlcd(watershed_nat.geometry, resolution=1e3)
     st = utils.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 82.209) < 1e-3
+    assert abs(st["categories"]["Forest"] - 82.406) < 1e-3
 
 
 def test_nm(watershed_nat):
