@@ -30,7 +30,7 @@ def watershed_urb():
 
 def test_station():
     shutil.rmtree("tests/data", ignore_errors=True)
-    natural = Station(station_id="01031500")
+    natural = Station(station_id="01031500", data_dir="tests/data")
     natural = Station(station_id="01031500", verbose=True)
     urban = Station(coords=(-118.47, 34.16))
     urban = Station(coords=(-118.47, 34.16), dates=("2000-01-01", "2010-01-21"))
@@ -52,7 +52,7 @@ def test_daymet(watershed_nat):
     st_p = hds.daymet_byloc(coords, dates=dates, variables=variables, pet=True)
     yr_p = hds.daymet_byloc(coords, years=2010, variables=variables)
 
-    st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, fill_holes=True)
+    st_g = hds.daymet_bygeom(watershed_nat.geometry.bounds, dates=dates, fill_holes=True)
     st_g = hds.daymet_bygeom(watershed_nat.geometry, dates=dates, variables=variables, pet=True)
     yr_g = hds.daymet_bygeom(watershed_nat.geometry, years=2010, variables=variables)
     assert (
@@ -113,7 +113,14 @@ def test_ssebopeta(watershed_nat):
     )
 
 
+def test_get_ssebopeta_urls():
+    f_list = hds._get_ssebopeta_urls(years=2010)
+    f_list = hds._get_ssebopeta_urls(years=[2010, 2014, 2015])
+    assert len(f_list) == 1095
+
+
 def test_nlcd(watershed_nat):
+    lulc = hds.nlcd(watershed_nat.geometry.bounds, resolution=1e3)
     lulc = hds.nlcd(watershed_nat.geometry, resolution=1e3)
     st = utils.cover_statistics(lulc.cover)
     assert abs(st["categories"]["Forest"] - 82.406) < 1e-3
