@@ -79,17 +79,17 @@ Additionally, the following functionalities are offered:
 * Efficient vector-based **flow accumulation** in a stream network,
 * Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on
   `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`__,
-* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-based
-  services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__- and
+* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-,
+  `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__-, and
   `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__-based services,
-* Helpers for plotting land cover data based on **official NLCD cover legends**,
+* Helpers for plotting land cover data based on the **official NLCD cover legends**,
 * A **roughness coefficients** lookup table for each land cover type which is useful for
   overland flow routing among other applications.
 
-You can try using Hydrodata without installing it by clicking on the binder badge below
+You can try using Hydrodata without installation by clicking on the binder badge below
 the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be
-launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and
-``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
+launched in yout web browser. Then, you can check out the notebooks in the ``docs`` folder
+or create a new one and start coding!
 
 Moreover, requests for additional databases or functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
@@ -104,13 +104,13 @@ Installation
 ------------
 
 You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system
-(for example ``libgdal-dev`` in Ubuntu):
+(for example, the package is called ``libgdal-dev`` in Ubuntu that can be installed with ``apt``):
 
 .. code-block:: console
 
     $ pip install hydrodata
 
-Alternatively, it can be installed from ``conda-forge``
+Alternatively, Hydrodata can be installed from the ``conda-forge`` repository
 using `Conda <https://docs.conda.io/en/latest/>`__:
 
 .. code-block:: console
@@ -238,13 +238,11 @@ via WFS as follows:
 
 .. code-block:: python
 
-    from hydrodata import ArcGISRESTful, WFS, services
+    from hydrodata import ArcGISRESTful, WFS, services, MatchCRS
 
     la_wshed = Station('11092450')
 
     wbd8 = ArcGISRESTful(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
-    wbd8.n_threads = 4
-    wbd8.get_featureids(la_wshed.geometry.bounds)
     wbd8.get_featureids(la_wshed.geometry)
     resp = wbd8.get_features()
     _huc8 = utils.json_togeodf(resp[0])
@@ -261,9 +259,8 @@ via WFS as follows:
         box_crs="epsg:4326",
         crs="epsg:3857",
     )
-    geom = utils.match_crs(la_wshed.geometry, "epsg:4326", "epsg:3857")
-    wetlands = utils.create_dataset(r_dict[layer], geom, "wetland")
-    wetlands = wetlands.where(wetlands < 255)
+    geom = MatchCRS.geometry(la_wshed.geometry, "epsg:4326", "epsg:3857")
+    wetlands = utils.wms_toxarray(r_dict, geom, "epsg:3857")
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
     wfs = WFS(
