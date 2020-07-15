@@ -93,8 +93,11 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ pre-commit install
     $ pre-commit run --all-files
 
-6. Now you can make your changes locally, make sure to add a description of the changes to
-   ``HISTORY.rst`` file and add extra tests, if applicable, to ``tests`` folder. Afterwards,
+6. Now you can make your changes locally, make sure to add a description of
+   the changes to ``HISTORY.rst`` file and add extra tests, if applicable,
+   to ``tests`` folder. Also, make sure to give yourself credit by adding
+   your name at the end of the item(s) that you add in the history like this
+   ``By `Taher Chegini <https://github.com/cheginit>`_``. Then,
    fetch the latest updates from the remote and resolve any merge conflicts:
 
 .. code-block:: console
@@ -106,13 +109,11 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
 
 .. code-block:: console
 
-    $ make clean
     $ make lint
-    $ make install
     $ make coverage
 
-8. If you are making breaking changes make sure to reflect them in ``docs/usage.ipynb`` and
-   ``docs/quickguide.ipynb`` notebooks if necessary.
+8. If you are making breaking changes make sure to reflect them in
+   ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if necessary.
 
 9. Commit your changes and push your branch to GitHub:
 
@@ -123,21 +124,6 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ git push origin name-of-your-bugfix-or-feature
 
 10. Submit a pull request through the GitHub website.
-
-Pull Request Guidelines
------------------------
-
-Before you submit a pull request, check that it meets these guidelines:
-
-1. The pull request should include tests.
-2. If the pull request adds functionality, the docs should be updated. Put
-   your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
-3. The pull request should work for Python 3.6, 3.7 and 3.8. Check
-   https://github.com/cheginit/hydrodata/actions
-   and make sure that the tests pass for all supported Python versions.
-4. Whenever you add an item to ``HISTORY.rst`` file make sure to add your name
-   at the end of the item like this ``By `Taher Chegini <https://github.com/cheginit>`_``
 
 Tips
 ----

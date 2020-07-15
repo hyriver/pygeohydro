@@ -232,9 +232,10 @@ The ``services`` module can be used to access some other web services as well.
 For example, we can access
 `Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`__
 via RESTful service,
-`3D Eleveation Program <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from WMS, and
-`FEMA National Flood Hazard Layer <https://www.fema.gov/national-flood-hazard-layer-nfhl>`__
-via WFS as follows:
+`National Wetlands Inventory <https://www.fws.gov/wetlands/>`__ from WMS, and
+`FEMA National Flood Hazard <https://www.fema.gov/national-flood-hazard-layer-nfhl>`__
+via WFS. The output for these functions are of type ``requests.Response`` that
+can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata utilities.
 
 .. code-block:: python
 
