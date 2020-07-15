@@ -279,12 +279,6 @@ class WaterData:
         geopandas.GeoDataFrame
             NHDPlus features
         """
-        r = self.wfs.get_validnames()
-        valid_names = utils.json_togeodf(r.json(), self.crs, self.crs)
-
-        if property_name not in valid_names:
-            raise InvalidInputValue("property name", valid_names)
-
         r = self.wfs.getfeature_byid(property_name, property_ids, filter_spec="2.0")
         rjson = r.json()
         if rjson["numberMatched"] == 0:

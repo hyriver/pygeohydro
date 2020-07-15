@@ -553,7 +553,7 @@ def add_tocomid(flw: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
 
 def traverse_json(
     obj: Union[Dict[str, Any], List[Dict[str, Any]]], path: Union[str, List[str]]
-) -> List[str]:
+) -> List[Any]:
     """Extract an element from a JSON file along a specified path.
 
     Notes
