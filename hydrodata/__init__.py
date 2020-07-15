@@ -1,6 +1,5 @@
 """Top-level package for Hydrodata."""
 
-from .connection import RetrySession
 from .datasets import NLDI, NationalMap, Station, WaterData
 from .exceptions import (
     InvalidInputRange,
@@ -11,7 +10,6 @@ from .exceptions import (
     ServerError,
     ZeroMatched,
 )
-from .services import WFS, ArcGISRESTful, ServiceURL
 from .utils import MatchCRS
 
 __author__ = """Taher Chegini"""
