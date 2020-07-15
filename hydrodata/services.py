@@ -591,7 +591,7 @@ class WFS(WFSBase):
             "filter": fxml(featurename, featureids),
         }
 
-        resp = self.session.get(self.url, payload)
+        resp = self.session.post(self.url, payload)
 
         if resp.headers["Content-Type"] == "application/xml":
             root = etree.fromstring(resp.text)
