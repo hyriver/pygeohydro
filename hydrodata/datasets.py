@@ -9,14 +9,15 @@ import folium
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pygeoogc as ogc
 import rasterio as rio
 import xarray as xr
+from pygeoogc import WFS, RetrySession, ServiceURL
 from rasterio import features as rio_features
 from rasterio import warp as rio_warp
 from shapely.geometry import Point, Polygon, box
 
-from . import helpers, services, utils
-from .connection import RetrySession
+from . import helpers, utils
 from .exceptions import (
     InvalidInputRange,
     InvalidInputType,
@@ -24,7 +25,6 @@ from .exceptions import (
     MissingInputs,
     ZeroMatched,
 )
-from .services import WFS, ServiceURL
 from .utils import MatchCRS
 
 MARGINE = 15
@@ -296,7 +296,7 @@ class NLDI:
         self.base_url = ServiceURL().restful.nldi
         self.session = RetrySession()
         r = self.session.get(self.base_url).json()
-        self.valid_sources = [el for sub in utils.traverse_json(r, ["source"]) for el in sub]
+        self.valid_sources = [el for sub in ogc.utils.traverse_json(r, ["source"]) for el in sub]
 
     def getfeature_byid(
         self, fsource: str, fid: str, basin: bool = False, url_only: bool = False
@@ -960,7 +960,7 @@ def nlcd(
         _geometry = MatchCRS.bounds(geometry, geo_crs, crs)
         bounds = _geometry
 
-    r_dict = services.wms_bybox(
+    r_dict = ogc.wms_bybox(
         ServiceURL().wms.mrlc, layers, bounds, resolution, "image/geotiff", box_crs=crs, crs=crs,
     )
 
@@ -1097,7 +1097,7 @@ class NationalMap:
             _geometry = MatchCRS.bounds(self.geometry, self.geo_crs, self.crs)
             bounds = _geometry
 
-        r_dict = services.wms_bybox(
+        r_dict = ogc.wms_bybox(
             ServiceURL().wms.nm_3dep,
             layer,
             bounds,

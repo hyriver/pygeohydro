@@ -2,20 +2,13 @@
 import shutil
 from urllib.error import HTTPError
 
+import pygeoogc as ogc
 import pytest
+from pygeoogc import WFS, ArcGISRESTful, ServiceURL
 
-from hydrodata import (
-    NLDI,
-    WFS,
-    ArcGISRESTful,
-    MatchCRS,
-    NationalMap,
-    ServiceURL,
-    Station,
-    WaterData,
-)
+from hydrodata import NLDI, MatchCRS, NationalMap, Station, WaterData
 from hydrodata import datasets as hds
-from hydrodata import helpers, plot, services, utils
+from hydrodata import helpers, plot, utils
 
 
 @pytest.fixture
@@ -138,38 +131,10 @@ def test_nm(watershed_nat):
     )
 
 
-def test_restful(watershed_urb):
-    wbd2 = ArcGISRESTful(
-        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1"
-    )
-    print(wbd2)
-    wbd2.max_nrecords = 5
-    wbd2.outformat = "geojson"
-    wbd2.featureids = list(range(1, 21))
-    wbd2.outfields = ["huc2", "name", "areaacres"]
-    resp = wbd2.get_features()
-    _huc2 = utils.json_togeodf(resp[0])
-    huc2 = _huc2.append([utils.json_togeodf(r) for r in resp[1:]])
-
-    wbd8 = ArcGISRESTful(
-        base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4"
-    )
-    wbd8.n_threads = 4
-    wbd8.get_featureids(watershed_urb.geometry.bounds)
-    wbd8.get_featureids(watershed_urb.geometry)
-    resp = wbd8.get_features()
-    _huc8 = utils.json_togeodf(resp[0])
-    huc8 = _huc8.append([utils.json_togeodf(r) for r in resp[1:]])
-    assert (
-        huc2.shape[0] == len([x for y in wbd2._featureids for x in y])
-        and abs(huc8.areaacres.sum() - 2283406.92) < 1e-2
-    )
-
-
-def test_wms(watershed_nat):
+def test_wms_toxarray(watershed_nat):
     url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
     layer = "0"
-    r_dict = services.wms_bybox(
+    r_dict = ogc.wms_bybox(
         url_wms,
         layer,
         watershed_nat.geometry.bounds,
@@ -184,7 +149,7 @@ def test_wms(watershed_nat):
     assert abs(wetlands.isel(band=0).mean().values.item() - 16.195) < 1e-3
 
 
-def test_wfs(watershed_urb):
+def test_json_togeodf(watershed_urb):
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
 
     wfs = WFS(
@@ -328,46 +293,7 @@ def test_path():
     assert _path == res
 
 
-def test_fspec1():
-    wfs = WFS(
-        "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows",
-        layer="wmadata:gagesii",
-        outformat="application/json",
-        version="1.1.0",
-        crs="epsg:900913",
-    )
-
-    st = wfs.getfeature_byid("staid", "01031500", "1.1")
-    assert st.json()["numberMatched"] == 1
-
-
 def test_matchcrs(watershed_urb):
     geom = MatchCRS.geometry(watershed_urb.geometry, "epsg:4326", "epsg:2149")
     bbox = MatchCRS.bounds(watershed_urb.geometry.bounds, "epsg:4326", "epsg:2149")
     assert abs(geom.area - 687536221.664) < 1e-3 and abs(bbox[0] - (-3654059.141)) < 1e-3
-
-
-def test_urls():
-    urls = ServiceURL()
-    assert (
-        urls.restful.nwis == "https://waterservices.usgs.gov/nwis"
-        and urls.restful.nldi == "https://labs.waterdata.usgs.gov/api/nldi/linked-data"
-        and urls.restful.daymet_point == "https://daymet.ornl.gov/single-pixel/api/data"
-        and urls.restful.daymet_grid == "https://thredds.daac.ornl.gov/thredds/ncss/ornldaac/1328"
-        and urls.restful.wbd == "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer"
-        and urls.restful.fws == "https://www.fws.gov/wetlands/arcgis/rest/services"
-        and urls.restful.fema
-        == "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer"
-        and urls.wms.mrlc == "https://www.mrlc.gov/geoserver/mrlc_download/wms"
-        and urls.wms.fema
-        == "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHLWMS/MapServer/WMSServer"
-        and urls.wms.nm_3dep
-        == "https://elevation.nationalmap.gov/arcgis/services/3DEPElevation/ImageServer/WMSServer"
-        and urls.wms.fws
-        == "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
-        and urls.wfs.waterdata == "https://labs.waterdata.usgs.gov/geoserver/wmadata/ows"
-        and urls.wfs.fema
-        == "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-        and urls.http.ssebopeta
-        == "https://edcintl.cr.usgs.gov/downloads/sciweb1/shared/uswem/web/conus/eta/modis_eta/daily/downloads"
-    )

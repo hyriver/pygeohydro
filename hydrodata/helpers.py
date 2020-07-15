@@ -4,8 +4,7 @@ from typing import Any, Dict
 import numpy as np
 import pandas as pd
 from defusedxml import cElementTree as ET
-
-from .connection import RetrySession
+from pygeoogc import RetrySession
 
 
 def nlcd_helper() -> Dict[str, Any]:
