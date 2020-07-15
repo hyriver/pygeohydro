@@ -2,10 +2,9 @@
 from collections import defaultdict
 from dataclasses import dataclass
 from itertools import product, zip_longest
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 from warnings import warn
 
-import geopandas as gpd
 import pyproj
 from defusedxml import cElementTree as etree
 from owslib.wfs import WebFeatureService
@@ -190,7 +189,7 @@ class ArcGISRESTful:
         except (KeyError, TypeError, IndexError, JSONDecodeError):
             raise ZeroMatched("No feature ID were found within the requested region.")
 
-    def get_features(self) -> gpd.GeoDataFrame:
+    def get_features(self) -> List[Dict[str, Any]]:
         """Get features based on the feature IDs."""
         if not all(f in self.valid_fields for f in self.outfields):
             raise InvalidInputValue("outfields", self.valid_fields)
@@ -357,7 +356,7 @@ class WFSBase:
     """
 
     url: str
-    layer: Optional[str] = None
+    layer: str
     outformat: Optional[str] = None
     version: str = "2.0.0"
     crs: str = "epsg:4326"
@@ -406,7 +405,7 @@ class WFSBase:
         if self.crs.lower() not in valid_crss:
             raise InvalidInputValue("crs", valid_crss)
 
-    def get_validnames(self) -> Response:
+    def get_validnames(self) -> List[str]:
         """Get valid column names for a layer."""
         max_features = "count" if self.version == "2.0.0" else "maxFeatures"
 
@@ -424,7 +423,18 @@ class WFSBase:
         if resp.headers["Content-Type"] == "application/xml":
             root = etree.fromstring(resp.text)
             raise ZeroMatched(root[0][0].text.strip())
-        return resp
+
+        r_json = resp.json()
+        valid_fields = list(
+            set(
+                utils.traverse_json(r_json, ["fields", "name"])
+                + utils.traverse_json(r_json, ["fields", "alias"])
+                + ["*"]
+            )
+        )
+        if None in valid_fields:
+            valid_fields = list(utils.traverse_json(r_json, ["features", "properties"])[0].keys())
+        return valid_fields
 
 
 class WFS(WFSBase):
@@ -436,8 +446,8 @@ class WFS(WFSBase):
         The base url for the WFS service, for examples:
         https://hazards.fema.gov/nfhl/services/public/NFHL/MapServer/WFSServer
     layer : str
-        The layer from the service to be downloaded, defaults to None which throws
-        an error and includes all the available layers offered by the service.
+        The layer from the service to be downloaded. You can pass an empty str
+        to raise an error which shows all the available layers offered by the service.
     outformat : str
         The data format to request for data from the service, defaults to None which
          throws an error and includes all the available format offered by the service.
@@ -456,7 +466,7 @@ class WFS(WFSBase):
     def __init__(
         self,
         url: str,
-        layer: Optional[str] = None,
+        layer: str,
         outformat: Optional[str] = None,
         version: str = "2.0.0",
         crs: str = "epsg:4326",
@@ -524,6 +534,10 @@ class WFS(WFSBase):
         requests.Response
             WMS query response
         """
+        valid_features = self.get_validnames()
+        if featurename not in valid_features:
+            raise InvalidInputValue("featurename", valid_features)
+
         featureids = featureids if isinstance(featureids, list) else [featureids]
 
         if len(featureids) == 0:
@@ -577,7 +591,7 @@ class WFS(WFSBase):
             "filter": fxml(featurename, featureids),
         }
 
-        resp = self.session.post(self.url, payload)
+        resp = self.session.get(self.url, payload)
 
         if resp.headers["Content-Type"] == "application/xml":
             root = etree.fromstring(resp.text)
