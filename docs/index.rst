@@ -31,9 +31,21 @@
 
 |
 
-Hydrodata is a python library designed to aid in watershed analysis. It provides easy and
-consistent access to a handful of hydrology and climatology databases with some helper
-functions for visualization. Currently, the following data retrieval services are supported:
+Hydrodata is a stack of Python libraries designed to aid in watershed analysis. This software
+stack includes:
+
+- `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__: For easy access to services that are based on
+  ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__,
+  `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__, and
+  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__ web services.
+- `Py3DEP <https://github.com/cheginit/py3dep>`__: For accessing
+  `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from the National Map service
+  for getting data such as Digital Elevation Model, slope, and aspect,
+
+Hydrodata itself has two main modules; ``datasets`` and ``plot``. The ``datasets`` module provides
+easy and consistent access to a handful of hydrology and climatology databases. The ``plot`` module
+includes some helper functions for plotting hydrologic signatures and NLCD cover data.
+Currently, the following data retrieval services are supported through the ``datasets`` moduel:
 
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
@@ -44,28 +56,24 @@ functions for visualization. Currently, the following data retrieval services ar
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for
   analysing and plotting the cover data),
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from National Map service for
-  getting data such as Digital Elevation Model, slope, and aspect,
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, both single pixel and gridded.
 
-Additionally, the following functionalities are offered:
+Additionally, the following utilities are available:
 
 * **Interactive map** for exploring USGS stations within a bounding box,
 * Efficient vector-based **flow accumulation** in a stream network,
 * Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on
   `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`__,
-* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-based
-  services as well as `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__- and
-  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__-based services,
-* Helpers for plotting land cover data based on **official NLCD cover legends**,
+* Helpers for plotting land cover data based on the **official NLCD cover legends**,
 * A **roughness coefficients** lookup table for each land cover type which is useful for
   overland flow routing among other applications.
+* Functions for converting the returned responses from the supported webservices to data frames;
+  ``json_togeodf`` and ``wms_toxarray``.
 
-You can try using Hydrodata without installing it by clicking on the binder badge below
-the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be
-launched on yout web browser. Then, you can check out ``docs/usage.ipynb`` and
-``docs/quickguide.ipynb`` notebooks or create a new one and start coding!
+You can try using Hydrodata without installation it on you system by clicking on the binder badge
+below the Hydrodata banner. A Jupyter notebook instance with Hydrodata
+pre-installed will be launched in your web browser and you can start coding!
 
 .. image:: _static/example_plots.png
     :align: center

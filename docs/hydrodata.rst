@@ -4,14 +4,6 @@ Hydrodata Package
 Submodules
 ----------
 
-hydrodata.connection module
----------------------------
-
-.. automodule:: hydrodata.connection
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 hydrodata.datasets module
 -------------------------
 
@@ -40,14 +32,6 @@ hydrodata.plot module
 ---------------------
 
 .. automodule:: hydrodata.plot
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-hydrodata.services module
--------------------------
-
-.. automodule:: hydrodata.services
    :members:
    :undoc-members:
    :show-inheritance:
