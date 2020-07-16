@@ -55,9 +55,21 @@
 Features
 --------
 
-Hydrodata is a python library designed to aid in watershed analysis. It provides easy and
-consistent access to a handful of hydrology and climatology databases with some helper
-functions for visualization. Currently, the following data retrieval services are supported:
+Hydrodata is a stack of Python libraries designed to aid in watershed analysis. This software
+stack includes:
+
+- `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__: For easy access to services that are based on
+  ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__,
+  `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__, and
+  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__ web service.
+- `Py3DEP <https://github.com/cheginit/py3dep>`__: For accessing
+  `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from the National Map service
+  for getting data such as Digital Elevation Model, slope, and aspect,
+
+Hydrodata itself has two main modules; ``datasets`` and ``plot``. The ``datasets`` module provides
+easy and consistent access to a handful of hydrology and climatology databases. The ``plot`` module
+includes some helper functions for plotting hydrologic signatures and NLCD cover data.
+Currently, the following data retrieval services are supported through the ``datasets`` moduel:
 
 * `Daymet <https://daymet.ornl.gov/>`__ for climatology data, both single pixel and gridded,
 * `NLDI <https://labs.waterdata.usgs.gov/about-nldi/>`_ for NHDPlus V2 indexing data,
@@ -68,28 +80,24 @@ functions for visualization. Currently, the following data retrieval services ar
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover, land use (some utilities are available for
   analysing and plotting the cover data),
-* `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from National Map service for
-  getting data such as Digital Elevation Model, slope, and aspect,
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, both single pixel and gridded.
 
-Additionally, the following functionalities are offered:
+Additionally, the following utilities are available:
 
 * **Interactive map** for exploring USGS stations within a bounding box,
 * Efficient vector-based **flow accumulation** in a stream network,
 * Computing **Potential Evapotranspiration** (PET) using Daymet climate data based on
   `FAO-56 <http://www.fao.org/3/X0490E/X0490E00.htm>`__,
-* High level APIs for easy access to any ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__-,
-  `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__-, and
-  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__-based services,
 * Helpers for plotting land cover data based on the **official NLCD cover legends**,
 * A **roughness coefficients** lookup table for each land cover type which is useful for
   overland flow routing among other applications.
+* Functions for converting the returned responses from the supported webservices to data frames;
+  ``json_togdf`` and ``wms_toxarray``.
 
-You can try using Hydrodata without installation by clicking on the binder badge below
-the Hydrodata banner. A Jupyter notebook instance with Hydrodata installed, will be
-launched in yout web browser. Then, you can check out the notebooks in the ``docs`` folder
-or create a new one and start coding!
+You can try using Hydrodata without installation it on you system by clicking on the binder badge
+below the Hydrodata banner. A Jupyter notebook instance with Hydrodata
+pre-installed will be launched in your web browser and you can start coding!
 
 Moreover, requests for additional databases or functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
@@ -132,7 +140,6 @@ We can start by exploring the available USGS stations within a bounding box:
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
     :align: center
-
 
 Then, we can either specify a station ID or coordinates to the ``Station`` function and
 gathers the USGS site information such as name, contributing drainage area,
@@ -228,39 +235,45 @@ graphs in one plot:
 
     plot.signatures(clm_p["Q (cms)"], precipitation=clm_p["prcp (mm/day)"])
 
-The ``services`` module can be used to access some other web services as well.
+The ``pygeoogc`` library can be used to access some other web services as well.
 For example, we can access
 `Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`__
 via RESTful service,
 `National Wetlands Inventory <https://www.fws.gov/wetlands/>`__ from WMS, and
 `FEMA National Flood Hazard <https://www.fema.gov/national-flood-hazard-layer-nfhl>`__
 via WFS. The output for these functions are of type ``requests.Response`` that
-can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata utilities.
+can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata.
 
 .. code-block:: python
 
-    from hydrodata import ArcGISRESTful, WFS, services, MatchCRS
+    from pygeoogc import ArcGISREST, WFS, wms_bybox, MatchCRS
+    from hydrodata import NLDI, utils
 
-    la_wshed = Station('11092450')
+    basin_geom = NLDI().getfeature_byid(
+        "nwissite",
+        "USGS-11092450",
+        basin=True
+    ).geometry[0]
 
-    wbd8 = ArcGISRESTful(base_url="https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4")
-    wbd8.get_featureids(la_wshed.geometry)
+    rest_url = "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4"
+    wbd8 = ArcGISRESTful(rest_url)
+    wbd8.get_featureids(basin_geom)
     resp = wbd8.get_features()
-    _huc8 = utils.json_togeodf(resp[0])
-    huc8 = _huc8.append([utils.json_togeodf(r) for r in resp[1:]])
+    huc8 = utils.json_togeodf(resp[0])
+    huc8 = huc8.append([utils.json_togeodf(r) for r in resp[1:]])
 
     url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
     layer = "0"
-    r_dict = services.wms_bybox(
+    r_dict = wms_bybox(
         url_wms,
         layer,
-        la_wshed.geometry.bounds,
+        basin_geom.bounds,
         1e3,
         "image/tiff",
         box_crs="epsg:4326",
         crs="epsg:3857",
     )
-    geom = MatchCRS.geometry(la_wshed.geometry, "epsg:4326", "epsg:3857")
+    geom = MatchCRS.geometry(basin_geom, "epsg:4326", "epsg:3857")
     wetlands = utils.wms_toxarray(r_dict, geom, "epsg:3857")
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
@@ -270,17 +283,17 @@ can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata utili
         outformat="esrigeojson",
         crs="epsg:4269",
     )
-    r = wfs.getfeature_bybox(la_wshed.geometry.bounds, box_crs="epsg:4326")
+    r = wfs.getfeature_bybox(basin_geom.bounds, box_crs="epsg:4326")
     flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
 ------------
 
-Hydrodata offers some limited statistical analysis. It could be more useful to
-the watershed modeling community to integrate more data exploratory capabilities to
-the package. Additionally, adding support for more databases such as water quality,
-phenology, and water level, are very welcome. If you are interested please get in touch.
-You can find information about contributing to hydrodata at our
+Hydrodata offers some limited analysis tools. It could be more useful for
+the watershed modeling community to integrate more data exploratory and analysis
+capabilities to the package. Additionally, adding support for more databases such
+as water quality, phenology, and water level, are very welcome. If you are interested
+please get in touch. You can find information about contributing to hydrodata at our
 `Contributing page <https://hydrodata.readthedocs.io/en/latest/contributing.html>`__.
 
 Credits
