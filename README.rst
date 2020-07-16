@@ -93,7 +93,7 @@ Additionally, the following utilities are available:
 * A **roughness coefficients** lookup table for each land cover type which is useful for
   overland flow routing among other applications.
 * Functions for converting the returned responses from the supported webservices to data frames;
-  ``json_togdf`` and ``wms_toxarray``.
+  ``json_togeodf`` and ``wms_toxarray``.
 
 You can try using Hydrodata without installation it on you system by clicking on the binder badge
 below the Hydrodata banner. A Jupyter notebook instance with Hydrodata
