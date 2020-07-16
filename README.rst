@@ -61,7 +61,7 @@ stack includes:
 - `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__: For easy access to services that are based on
   ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__,
   `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__, and
-  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__ web service.
+  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__ web services.
 - `Py3DEP <https://github.com/cheginit/py3dep>`__: For accessing
   `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from the National Map service
   for getting data such as Digital Elevation Model, slope, and aspect,
