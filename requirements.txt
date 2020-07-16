@@ -2,17 +2,16 @@
 # See that file for comments about the need/usage of each dependency.
 
 dataclasses
-defusedxml
 folium
 geojson
 geopandas
 lxml
 matplotlib
 networkx
-owslib
 pandas
 pip
+pygeoogc
+pygeoogc
 rasterio
 scipy
-simplejson
 xarray
