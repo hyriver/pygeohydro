@@ -966,15 +966,15 @@ def nlcd(
 
     ds = utils.wms_toxarray(r_dict, _geometry, crs, data_dir)
 
-    rename = {}
-    for n in r_dict:
+    var_names = {}
+    for n in ds.keys():
         if "cover" in n.lower():
-            rename[n] = "cover"
+            var_names[n] = "cover"
         elif "canopy" in n.lower():
-            rename[n] = "canopy"
+            var_names[n] = "canopy"
         else:
-            rename[n] = "impervious"
-    ds = ds.rename(rename)
+            var_names[n] = "impervious"
+    ds = ds.rename(var_names)
 
     ds.cover.attrs["units"] = "classes"
     ds.canopy.attrs["units"] = "%"
