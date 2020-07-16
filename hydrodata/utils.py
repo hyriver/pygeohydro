@@ -1109,7 +1109,7 @@ def wms_toxarray(
     geo_crs: str,
     data_dir: Optional[Union[str, Path]] = None,
 ) -> Union[xr.DataArray, xr.Dataset]:
-    """Convert responses from ``wms_bybox`` to ``xarray.Dataset`` or ``xarray.DataAraay``.
+    """Convert responses from ``pygeoogc.wms_bybox`` to ``xarray.Dataset``.
 
     Parameters
     ----------
@@ -1132,9 +1132,13 @@ def wms_toxarray(
 
     _fpath = {lyr: f'{lyr.split(":")[-1].lower().replace(" ", "_")}.tiff' for lyr in r_dict.keys()}
     fpath = {lyr: None if data_dir is None else Path(data_dir, fn) for lyr, fn in _fpath.items()}
+    var_name = {lyr: f"{''.join(n for n in lyr.split('_')[:-1])}" for lyr in r_dict.keys()}
 
     ds = xr.merge(
-        [create_dataset(r, geometry, geo_crs, lyr, fpath[lyr]) for lyr, r in r_dict.items()]
+        [
+            create_dataset(r, geometry, geo_crs, var_name[lyr], fpath[lyr])
+            for lyr, r in r_dict.items()
+        ]
     )
 
     def mask_da(da):
