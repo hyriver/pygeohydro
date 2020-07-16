@@ -28,6 +28,7 @@ dependencies:
   - pip:
     - geojson
     - pygeoogc
+    - pygeoogc
     - folium
 
     - nbsphinx

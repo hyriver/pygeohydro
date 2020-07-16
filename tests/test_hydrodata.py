@@ -1,4 +1,4 @@
-"""Tests for `hydrodata` package."""
+"""Tests for Hydrodata package."""
 import shutil
 from urllib.error import HTTPError
 
