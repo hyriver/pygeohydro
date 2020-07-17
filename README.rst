@@ -259,8 +259,7 @@ can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata.
     wbd8 = ArcGISRESTful(rest_url)
     wbd8.get_featureids(basin_geom)
     resp = wbd8.get_features()
-    huc8 = utils.json_togeodf(resp[0])
-    huc8 = huc8.append([utils.json_togeodf(r) for r in resp[1:]])
+    huc8 = utils.json_togeodf(resp)
 
     url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
     layer = "0"
