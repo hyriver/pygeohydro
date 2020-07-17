@@ -7,6 +7,9 @@ History
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- The ``services`` module is now a separate package called PyGeoOGCC and is set as a requirement
+  for Hydrodata. PyGeoOGC is a leaner package with much less dependecies and is suitable for
+  people who might only need an interface to web services.
 - Unified function names for getting feature by ID and by box.
 - Combined ``start`` and ``end`` arguments into a ``tuple`` argument
   called ``dates`` across the codebase.
@@ -24,7 +27,7 @@ Breaking changes
   always the preferred way to request for data. This change made the code more readable.
 - Renamed two functions: ``ArcGISRESTful`` and ``wms_bybox``. These function now return
   ``requests.Response`` type output.
-- ``onlyIPv4`` is now a class method in ``RetrySession``.
+- ``onlyipv4`` is now a class method in ``RetrySession``.
 
 Enhancements
 ~~~~~~~~~~~~
@@ -49,6 +52,7 @@ Enhancements
 - Refactored ``Daymet`` class to improve readability.
 - Add `Deepsource <https://deepsource.io/>`_ for further code quality checking.
 - Automatic handling of large WMS requests (more than 8 million pixel i.e., width x height)
+- The ``json_togeodf`` function now accepts both a single (Geo)JSON or a list of them
 
 New Features
 ~~~~~~~~~~~~
