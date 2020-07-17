@@ -682,31 +682,42 @@ def create_dataset(
 
 
 def json_togeodf(
-    content: Dict[str, Any], in_crs: str = "epsg:4326", crs: str = "epsg:4326"
+    content: Union[List[Dict[str, Any]], Dict[str, Any]],
+    in_crs: str = "epsg:4326",
+    crs: str = "epsg:4326",
 ) -> gpd.GeoDataFrame:
     """Create GeoDataFrame from (Geo)JSON.
 
     Parameters
     ----------
-    content : dict
-        A (Geo)JSON dictionary e.g., r.json()
+    content : dict or list of dict
+        A (Geo)JSON dictionary e.g., r.json() or a list of them.
     in_crs : str
         CRS of the content, defaults to ``epsg:4326``.
     crs : str, optional
-        CRS of the output GeoDataFrame, defaults to ``epsg:4326``.
+        The target CRS of the output GeoDataFrame, defaults to ``epsg:4326``.
 
     Returns
     -------
     geopandas.GeoDataFrame
         Generated geo-data frame from a GeoJSON
     """
+    if not isinstance(content, (list, dict)):
+        raise InvalidInputType("content", "list or list of dict ((geo)json)")
+
+    content = content if isinstance(content, list) else [content]
     try:
-        geodf = gpd.GeoDataFrame.from_features(content, crs=in_crs)
+        geodf = gpd.GeoDataFrame.from_features(content[0], crs=in_crs)
     except TypeError:
-        geodf = gpd.GeoDataFrame.from_features(arcgis_togeojson(content), crs=in_crs)
+        content = [arcgis_togeojson(c) for c in content]
+        geodf = gpd.GeoDataFrame.from_features(content[0], crs=in_crs)
+
+    if len(content) > 1:
+        geodf = geodf.append([gpd.GeoDataFrame.from_features(c, crs=in_crs) for c in content[1:]])
 
     if in_crs != crs:
         geodf = geodf.to_crs(crs)
+
     return geodf
 
 

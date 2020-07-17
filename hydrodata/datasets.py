@@ -761,7 +761,7 @@ def ssebopeta_byloc(
     f_list = _get_ssebopeta_urls(start=start, end=end, years=years)
     session = RetrySession()
 
-    with session.onlyIPv4():
+    with session.onlyipv4():
 
         def _ssebop(urls):
             dt, url = urls
@@ -832,7 +832,7 @@ def ssebopeta_bygeom(
 
     session = RetrySession()
 
-    with session.onlyIPv4():
+    with session.onlyipv4():
 
         def _ssebop(url_stamped):
             dt, url = url_stamped
