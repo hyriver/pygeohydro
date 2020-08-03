@@ -53,6 +53,7 @@ Enhancements
 - Add `Deepsource <https://deepsource.io/>`_ for further code quality checking.
 - Automatic handling of large WMS requests (more than 8 million pixel i.e., width x height)
 - The ``json_togeodf`` function now accepts both a single (Geo)JSON or a list of them
+- Refactored ``plot.signatures`` using ``add_gridspec`` for a much cleaner code.
 
 New Features
 ~~~~~~~~~~~~

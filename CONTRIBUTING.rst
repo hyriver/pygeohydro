@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/cheginit/hydrodata/issues.
+Report bugs at https://github.com/cheginit/pynhd/issues.
 
 If you are reporting a bug, please include:
 
@@ -39,14 +39,14 @@ and "help wanted" is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-Hydrodata could always use more documentation, whether as part of the
-official Hydrodata docs, in docstrings, or even on the web in blog posts,
+pynhd could always use more documentation, whether as part of the
+official pynhd docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/cheginit/hydrodata/issues.
+The best way to send feedback is to file an issue at https://github.com/cheginit/pynhd/issues.
 
 If you are proposing a feature:
 
@@ -58,24 +58,24 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up Hydrodata for local development.
+Ready to contribute? Here's how to set up pynhd for local development.
 
-1. Fork the Hydrodata repo through the GitHub website.
-2. Clone your fork locally and add the main Hydrodata as the upstream remote:
+1. Fork the pynhd repo through the GitHub website.
+2. Clone your fork locally and add the main pynhd as the upstream remote:
 
 .. code-block:: console
 
-    $ git clone git@github.com:your_name_here/hydrodata.git
-    $ git remote add upstream git@github.com:cheginit/hydrodata.git
+    $ git clone git@github.com:your_name_here/pynhd.git
+    $ git remote add upstream git@github.com:cheginit/pynhd.git
 
 3. Install your local copy into a virtualenv. Assuming you have Conda installed, this is how you
    can set up your fork for local development:
 
 .. code-block:: console
 
-    $ cd hydrodata/
+    $ cd pynhd/
     $ conda env create -f ci/requirements/environment.yml
-    $ conda activate hydrodata-dev
+    $ conda activate pynhd-dev
     $ python -m pip install . --no-deps
 
 4. Check out the ``develop`` branch and create a branch for local development:
@@ -113,7 +113,7 @@ Ready to contribute? Here's how to set up Hydrodata for local development.
     $ make coverage
 
 8. If you are making breaking changes make sure to reflect them in
-   ``docs/usage.ipynb`` and ``docs/quickguide.ipynb`` notebooks if necessary.
+   the documentation, ``README.rst``, and tests if necessary.
 
 9. Commit your changes and push your branch to GitHub:
 
@@ -143,8 +143,9 @@ Then run:
 
 .. code-block:: console
 
-    $ bump2version patch # possible: major / minor / patch
-    $ git push
+    $ git tag -a vX.X.X -m "vX.X.X"
     $ git push --follow-tags
 
+where ``X.X.X`` is the version number following the
+`semantic versioning spec <https://semver.org>`__ i.e., MAJOR.MINOR.PATCH.
 Then release the tag from Github and Github Actions will deploy it to PyPi.

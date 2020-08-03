@@ -3,14 +3,16 @@
 Plots includes  daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
+import calendar
+import os
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union, ValuesView
 
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
-from . import helpers, utils
+from . import helpers
 from .exceptions import InvalidInputType
 
 
@@ -54,8 +56,6 @@ def signatures(
         Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
     """
-    pd.plotting.register_matplotlib_converters()
-
     if not isinstance(daily, (pd.DataFrame, pd.Series)):
         raise InvalidInputType("daily", "pd.DataFrame, pd.Series")
 
@@ -114,7 +114,7 @@ def signatures(
     plt.suptitle(title, size=16, y=1.02)
 
     if output is not None:
-        utils.check_dir(output)
+        _check_dir(output)
         plt.savefig(output, dpi=300, bbox_inches="tight")
 
 
@@ -150,8 +150,12 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
 
     monthly = daily.groupby(pd.Grouper(freq="M")).sum()
     annual = daily.groupby(pd.Grouper(freq="Y")).sum()
-    mean_monthly = utils.mean_monthly(daily)
-    ranked = utils.exceedance(daily)
+
+    month_abbr = dict(enumerate(calendar.month_abbr))
+    mean_month = daily.groupby(daily.index.month).mean()
+    mean_month.index = mean_month.index.map(month_abbr)
+
+    ranked = exceedance(daily)
     _titles = [
         "Total Hydrograph (daily)",
         "Total Hydrograph (monthly)",
@@ -162,7 +166,7 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     fields = PlotDataType._fields
     titles = dict(zip(fields[:-1], _titles))
     bar_width = dict(zip(fields[:-2], [1, 30, 365, 1]))
-    return PlotDataType(daily, monthly, annual, mean_monthly, ranked, bar_width, titles)
+    return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles)
 
 
 def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
@@ -174,3 +178,41 @@ def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
     norm = BoundaryNorm(bounds, cmap.N)
     levels = bounds + [100]
     return cmap, norm, levels
+
+
+def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
+    """Compute Flow duration (rank, sorted obs)."""
+    if isinstance(daily, pd.Series):
+        daily = daily.to_frame()
+
+    ranks = daily.rank(ascending=False, pct=True) * 100
+    fdc = [
+        pd.DataFrame({c: daily[c], f"{c}_rank": ranks[c]})
+        .sort_values(by=f"{c}_rank")
+        .reset_index(drop=True)
+        for c in daily
+    ]
+    return pd.concat(fdc, axis=1)
+
+
+def _check_dir(
+    fpath_itr: Optional[
+        Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]], str, Path]
+    ]
+) -> None:
+    """Create parent directory for a file if doesn't exist."""
+    if isinstance(fpath_itr, (str, Path)):
+        fpath_itr = [fpath_itr]
+    elif not isinstance(fpath_itr, Iterable):
+        raise InvalidInputType("fpath_itr", "str or iterable")
+
+    for f in fpath_itr:
+        if f is None:
+            continue
+
+        parent = Path(f).parent
+        if not parent.is_dir():
+            try:
+                os.makedirs(parent)
+            except OSError:
+                raise OSError(f"Parent directory cannot be created: {parent}")
