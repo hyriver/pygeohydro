@@ -82,8 +82,4 @@ def test_plot(geometry_nat, geometry_urb):
 
 def test_helpers():
     err = hd.helpers.nwis_errors()
-    try:
-        fc = hd.helpers.nhdplus_fcodes()
-        assert err.shape[0] == 7 and fc.shape[0] == 115
-    except (HTTPError, AttributeError):
-        assert err.shape[0] == 7
+    assert err.shape[0] == 7
