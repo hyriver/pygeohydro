@@ -39,6 +39,9 @@ dependencies:
   - descartes
 
   # doc deps
+  - ipykernel
+  - ipython
+  - jupyter_client
   - recommonmark
   - nbsphinx
   - sphinx
