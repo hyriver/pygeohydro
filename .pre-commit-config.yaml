@@ -40,7 +40,7 @@ repos:
     hooks:
       - id: mypy
         name: Static type checking with mypy
-        files: pynhd
+        files: hydrodata
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.7.2
@@ -54,5 +54,5 @@ repos:
     hooks:
       - id: bandit
         name: Check for security issues with bandit
-        args: [-lll, --recursive, pynhd]
+        args: [-lll, --recursive, hydrodata]
         files: .py$
