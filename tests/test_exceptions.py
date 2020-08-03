@@ -1,42 +1,6 @@
 import pytest
 
-from hydrodata import (
-    InvalidInputRange,
-    InvalidInputType,
-    InvalidInputValue,
-    MissingInputs,
-    MissingItems,
-    ServerError,
-    ZeroMatched,
-)
-
-
-def server_error():
-    url = "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/1000"
-    raise ServerError(url)
-
-
-def test_server_error():
-    with pytest.raises(ServerError):
-        server_error()
-
-
-def missing_items():
-    raise MissingItems(["tmin", "dayl"])
-
-
-def test_missing_items():
-    with pytest.raises(MissingItems):
-        missing_items()
-
-
-def zero_matched():
-    raise ZeroMatched("Query returned no matched objects.")
-
-
-def test_zero_matched():
-    with pytest.raises(ZeroMatched):
-        zero_matched()
+from hydrodata import InvalidInputRange, InvalidInputType, InvalidInputValue
 
 
 def invalid_value():
@@ -64,12 +28,3 @@ def invalid_range():
 def test_invalid_range():
     with pytest.raises(InvalidInputRange):
         invalid_range()
-
-
-def missing_input():
-    raise MissingInputs("Either coords or station_id should be provided.")
-
-
-def test_missing_input():
-    with pytest.raises(MissingInputs):
-        missing_input()
