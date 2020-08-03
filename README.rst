@@ -61,13 +61,15 @@ Hydrodata is a stack of Python libraries designed to aid in watershed analysis t
 web services. Currently, it only includes hydrology and climatology data within the US.
 Hydrodata software stack is shown in the table below.
 
-| Package | Description |
-| --- | --- |
-| PyGeoOGC_ | Query data from ArcGIS RESTful-, WMS-, and WFS-based services |
-| PyGeoUtils_ | Convert responses from supported services to datasets |
-| PyNHD_ | Access NLDI and WaterData web services for getting data from NHDPlus database |
-| Py3DEP_ | Access topology related data through 3D Elevation Program (3DEP) web service |
-| PyDaymet_ | Access the Daymet database for daily climate data |
+=========== =============================================================================
+Package     Description
+=========== =============================================================================
+PyGeoOGC_   Query data from ArcGIS RESTful-, WMS-, and WFS-based services
+PyGeoUtils_ Convert responses from supported services to datasets
+PyNHD_      Access NLDI and WaterData web services for getting data from NHDPlus database
+Py3DEP_     Access topology related data through 3D Elevation Program (3DEP) web service
+PyDaymet_   Access the Daymet database for daily climate data
+=========== =============================================================================
 
 .. _PyGeoOGC: https://github.com/cheginit/pygeoogc
 
@@ -78,14 +80,6 @@ Hydrodata software stack is shown in the table below.
 .. _Py3DEP: https://github.com/cheginit/py3dep
 
 .. _PyDaymet: https://github.com/cheginit/pydaymet
-
-- `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__: For easy access to services that are based on
-  ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__,
-  `WMS <https://en.wikipedia.org/wiki/Web_Map_Service>`__, and
-  `WFS <https://en.wikipedia.org/wiki/Web_Feature_Service>`__ web services.
-- `Py3DEP <https://github.com/cheginit/py3dep>`__: For accessing
-  `3DEP <https://www.usgs.gov/core-science-systems/ngp/3dep>`__ from the National Map service
-  for getting data such as Digital Elevation Model, slope, and aspect,
 
 Hydrodata itself has two main modules; ``datasets`` and ``plot``. The ``datasets`` module provides
 easy and consistent access to a handful of hydrology and climatology databases. The ``plot`` module
