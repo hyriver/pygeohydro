@@ -1,6 +1,6 @@
 """Top-level package for Hydrodata."""
 
-from .datasets import NLDI, NationalMap, Station, WaterData
+from . import helpers, plot
 from .exceptions import (
     InvalidInputRange,
     InvalidInputType,
@@ -10,8 +10,11 @@ from .exceptions import (
     ServerError,
     ZeroMatched,
 )
-from .utils import MatchCRS
-
-__author__ = """Taher Chegini"""
-__email__ = "cheginit@gmail.com"
-__version__ = "0.6.0"
+from .hydrodata import (
+    NWIS,
+    cover_statistics,
+    interactive_map,
+    nlcd,
+    ssebopeta_bygeom,
+    ssebopeta_byloc,
+)

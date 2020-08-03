@@ -96,7 +96,7 @@ Additionally, the following utilities are available:
   ``json_togeodf`` and ``wms_toxarray``.
 
 You can try using Hydrodata without installation it on you system by clicking on the binder badge
-below the Hydrodata banner. A Jupyter notebook instance with Hydrodata
+below the Hydrodata banner. A Jupyter notebook instance with the Hydrodata software stack
 pre-installed will be launched in your web browser and you can start coding!
 
 Moreover, requests for additional databases or functionalities can be submitted via
@@ -112,7 +112,7 @@ Installation
 ------------
 
 You can install Hydrodata using ``pip`` after installing ``libgdal`` on your system
-(for example, the package is called ``libgdal-dev`` in Ubuntu that can be installed with ``apt``):
+(for example, in Ubuntu run ``sudo apt install libgdal-dev``):
 
 .. code-block:: console
 
@@ -276,14 +276,17 @@ can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata.
     wetlands = utils.wms_toxarray(r_dict, geom, "epsg:3857")
 
     url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
+
     wfs = WFS(
         url_wfs,
         layer="public_NFHL:Base_Flood_Elevations",
         outformat="esrigeojson",
         crs="epsg:4269",
     )
-    r = wfs.getfeature_bybox(basin_geom.bounds, box_crs="epsg:4326")
-    flood = utils.json_togeodf(r.json(), "epsg:4269", "epsg:4326")
+    bbox = basin_geom.bounds
+    bbox = (bbox[1], bbox[0], bbox[3], bbox[2])
+    r = wfs.getfeature_bybox(bbox, box_crs="epsg:4326")
+    flood = utils.json2geodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
 ------------

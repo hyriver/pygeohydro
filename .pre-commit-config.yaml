@@ -1,18 +1,20 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.1.1
+    rev: 5.2.2
     hooks:
       - id: isort
+        name: Sort imports with isort
 
   - repo: https://github.com/python/black
     rev: 19.10b0
     hooks:
       - id: black
+        name: Autoformat with black
         args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.1.0
+    rev: v3.2.0
     hooks:
     - id: trailing-whitespace
     - id: check-executables-have-shebangs
@@ -22,12 +24,14 @@ repos:
     rev: 0.8.1rc3
     hooks:
     - id: doc8
+      name: Autoformat with doc8
       args: [--max-line-length, "100"]
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.3
     hooks:
       - id: flake8
+        name: Linting with flake8
         exclude: docs/conf.py
         additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings]
 
@@ -35,17 +39,20 @@ repos:
     rev: v0.782
     hooks:
       - id: mypy
-        files: hydrodata
+        name: Static type checking with mypy
+        files: pynhd
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.7.0
+    rev: v2.7.2
     hooks:
       - id: pyupgrade
+        name: Upgrade synax to python 3.6+ with pyupgrade
         args: [--py36-plus]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.6.2
     hooks:
       - id: bandit
-        args: [-lll, --recursive, hydrodata]
+        name: Check for security issues with bandit
+        args: [-lll, --recursive, pynhd]
         files: .py$
