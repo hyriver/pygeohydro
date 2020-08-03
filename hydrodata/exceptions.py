@@ -2,44 +2,6 @@
 from typing import Generator, List, Optional, Union
 
 
-class ServerError(Exception):
-    """Exception raised when the requested data is not available on the server.
-
-    Parameters
-    ----------
-    url : str
-        The server url
-    """
-
-    def __init__(self, url: str) -> None:
-        self.message = f"The requested server is no available in the URL:\n{url}"
-        super().__init__(self.message)
-
-    def __str__(self) -> str:
-        return self.message
-
-
-class MissingItems(Exception):
-    """Exception raised when a required item is missing.
-
-    Parameters
-    ----------
-    missing : tuple
-        The server url
-    """
-
-    def __init__(self, missing: List[str]) -> None:
-        self.message = "The following items are missing:\n" + f"{', '.join(missing)}"
-        super().__init__(self.message)
-
-    def __str__(self) -> str:
-        return self.message
-
-
-class ZeroMatched(ValueError):
-    """Exception raised when a function argument is missing."""
-
-
 class InvalidInputValue(Exception):
     """Exception raised for invalid input.
 
@@ -88,7 +50,3 @@ class InvalidInputType(Exception):
 
     def __str__(self) -> str:
         return self.message
-
-
-class MissingInputs(ValueError):
-    """Exception raised when there are missing function arguments."""
