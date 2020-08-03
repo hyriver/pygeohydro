@@ -1,4 +1,4 @@
-"""Top-level package for Hydrodata."""
+from pkg_resources import DistributionNotFound, get_distribution
 
 from . import helpers, plot
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
@@ -10,3 +10,9 @@ from .hydrodata import (
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
+
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass
