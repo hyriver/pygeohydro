@@ -7,6 +7,8 @@ History
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
+- Made hydrodata, a Python software stack by separating a couple of of the classess
+  and libraries into a stand-alone package.
 - The ``services`` module is now a separate package called PyGeoOGCC and is set as a requirement
   for Hydrodata. PyGeoOGC is a leaner package with much less dependecies and is suitable for
   people who might only need an interface to web services.
