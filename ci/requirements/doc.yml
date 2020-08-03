@@ -4,22 +4,48 @@ channels:
 dependencies:
   - python>=3.6
   - pip
+  - setuptools
+
+  # hydrodata stack
+  - pygeoogc
+  - pygeoutils
   - pynhd
+  - py3dep
+  - pydaymet
+
+  # add deps to speedup dep resolving
   - matplotlib-base
   - folium
   - lxml
+  - owslib
+  - pyproj
+  - shapely
+  - simplejson
+  - defusedxml
+  - requests
+  - dataclasses
+  - xarray
+  - geopandas
+  - rasterio
+  - networkx
+  - scipy
 
+  # xarray speedups
   - dask
   - netCDF4
   - bottleneck
+
+  # dep for plotting with geopandas
   - descartes
 
+  # doc deps
   - recommonmark
   - nbsphinx
   - sphinx
   - sphinx-copybutton
   - numpydoc
 
+  # sphinx-material deps
   - beautifulsoup4
   - python-slugify
   - css-html-js-minify

@@ -4,6 +4,8 @@ channels:
 dependencies:
   - python=3.8
   - pynhd
+  - py3dep
+  - pydaymet
   - matplotlib-base
   - folium
   - lxml

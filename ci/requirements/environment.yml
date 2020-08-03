@@ -4,10 +4,20 @@ channels:
 dependencies:
   - python>=3.8
   - pip
+  - setuptools
   - pynhd
+  - owslib
+  - pandas
   - matplotlib-base
+  - xarray
+  - scipy
+  - geopandas
+  - geojson
   - folium
-  - lxml
+  - rasterio
+  - networkx
+  - simplejson
+  - defusedxml
 
   - dask
   - netCDF4
