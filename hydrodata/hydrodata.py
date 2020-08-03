@@ -100,7 +100,7 @@ def ssebopeta_bygeom(
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
     _geometry = geoutils.geo2polygon(geometry, geo_crs, "epsg:4326")
-    _geometry = Polygon(_geometry.exterior) if fill_holes else geometry
+    _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
 
     f_list = _get_ssebopeta_urls(dates)
 
@@ -198,16 +198,17 @@ def nlcd(
 
     if years is None:
         years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
-    if isinstance(years, dict):
-        for service in years.keys():
-            if years[service] not in avail_years[service]:
-                raise InvalidInputValue(
-                    f"{service.capitalize()} data for {years[service]}", avail_years[service],
-                )
-    else:
+
+    if not isinstance(years, dict):
         raise InvalidInputType(
             "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
         )
+
+    for s in years.keys():
+        if years[s] not in avail_years[s]:
+            raise InvalidInputValue(
+                f"{s.capitalize()} data for {years[s]}", avail_years[s],
+            )
 
     layers = []
     if years["canopy"] is not None:
@@ -222,16 +223,13 @@ def nlcd(
     if len(layers) == 0:
         raise InvalidInputRange("At least one of the layers should have a non-None year.")
 
-    if isinstance(geometry, Polygon):
-        _geometry = Polygon(geometry.exterior) if fill_holes else geometry
-        bounds = _geometry.bounds
-    else:
-        bounds = _geometry = geometry
+    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
+    _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
 
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
-    r_dict = wms.getmap_bybox(bounds, resolution, box_crs=geo_crs)
+    r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
 
-    ds = geoutils.gtiff2xarray(r_dict, _geometry, geo_crs)
+    ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
 
     for n in ds.keys():
         if "cover" in n.lower():
