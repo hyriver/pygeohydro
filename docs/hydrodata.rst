@@ -1,4 +1,4 @@
-Hydrodata Package
+hydrodata package
 =================
 
 Submodules

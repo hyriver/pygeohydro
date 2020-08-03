@@ -10,22 +10,11 @@ Dependencies
 Dependencies of Hydrodata are as listed below:
 
 - `Python 3.6+ <https://www.python.org/downloads>`_
-- `NumPy <http://www.numpy.org>`_
-- `Pandas <http://pandas.pydata.org>`_
-- `Xarray <https://xarray.pydata.org>`_
-- `SciPy <https://www.scipy.org>`_
-- `OWSLib <https://geopython.github.io/OWSLib>`_
-- `GeoPandas <https://geopandas.org>`_
-- `GeoJSON <https://pypi.org/project/geojson>`_
-- `RasterIO <https://github.com/mapbox/rasterio>`_
-- `Matplotlib <http://matplotlib.org>`_
-- `Shapely <https://shapely.readthedocs.io>`_
-- `SimpleJSON <https://simplejson.readthedocs.io>`_
+- `PyNHD <https://github.com/cheginit/pynhd>`__
+- `Py3DEP <https://github.com/cheginit/py3dep>`__
+- `PyDaymet <https://github.com/cheginit/pydaymet>`__
 - `Folium <https://python-visualization.github.io/folium/>`_
-- `Requests <https://requests.readthedocs.io>`_
 - `LXML <https://lxml.de/>`_
-- `DefusedXML <https://github.com/tiran/defusedxml>`_
-- `NetworkX <https://networkx.github.io>`_
 
 The following optional libraries are recommended to improve performance of ``xarray``:
 
