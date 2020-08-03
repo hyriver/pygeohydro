@@ -3,16 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python=3.6
-  - pip
-  - pygeoogc
-  - pandas
+  - pynhd
   - matplotlib-base
-  - xarray
-  - scipy
-  - geopandas
-  - geojson
   - folium
-  - rasterio
-  - networkx
   - lxml
-  - dataclasses
