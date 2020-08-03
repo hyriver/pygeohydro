@@ -1,37 +1,29 @@
 name: doc
 channels:
-  - defaults
+  - conda-forge
 dependencies:
-  - python=3.7
+  - python>=3.6
   - pip
-  - owslib
-  - pandas
+  - pynhd
   - matplotlib-base
-  - xarray
-  - scipy
-  - geopandas
-  - pyproj
-  - shapely
-  - rasterio
-  - networkx
-  - simplejson
-  - defusedxml
-
-  - descartes
+  - folium
   - lxml
 
-  - numpydoc
-  - ipykernel
-  - ipython
-  - sphinx
-  - recommonmark
-  - pip:
-    - geojson
-    - pygeoogc
-    - folium
+  - dask
+  - netCDF4
+  - bottleneck
+  - descartes
 
-    - nbsphinx
+  - recommonmark
+  - nbsphinx
+  - sphinx
+  - sphinx-copybutton
+  - numpydoc
+
+  - beautifulsoup4
+  - python-slugify
+  - css-html-js-minify
+  - unidecode
+  - pip:
     - nbsphinx_link
-    - sphinx-markdown-tables
-    - sphinx-copybutton
     - git+https://github.com/bashtage/sphinx-material.git

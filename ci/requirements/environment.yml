@@ -4,25 +4,15 @@ channels:
 dependencies:
   - python>=3.8
   - pip
-  - pygeoogc
-  - owslib
-  - pandas
+  - pynhd
   - matplotlib-base
-  - xarray
-  - scipy
-  - geopandas
-  - geojson
   - folium
-  - rasterio
-  - networkx
-  - simplejson
-  - defusedxml
+  - lxml
 
   - dask
   - netCDF4
   - bottleneck
   - descartes
-  - lxml
 
   - bump2version
   - pytest-cov
@@ -35,7 +25,6 @@ dependencies:
   - nbsphinx
   - sphinx
   - sphinx-copybutton
-  - pycodestyle
   - numpydoc
 
   - beautifulsoup4
