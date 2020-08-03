@@ -65,7 +65,7 @@ Hydrodata software stack is shown in the table below.
 =========== =============================================================================
 Package     Description
 =========== =============================================================================
-Hydrodata_  Access NWIS, HCDN2009, NLCD, and SSEBop databases
+Hydrodata_  Access NWIS, HCDN 2009, NLCD, and SSEBop databases
 PyGeoOGC_   Query data from ArcGIS RESTful-, WMS-, and WFS-based services
 PyGeoUtils_ Convert responses from PyGeoOGC's supported services to datasets
 PyNHD_      Access NLDI and WaterData web services for getting data from NHDPlus database
