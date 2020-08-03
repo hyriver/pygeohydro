@@ -15,7 +15,6 @@ with open(Path(__file__).with_name("README.rst")) as f:
 
 setup(
     use_scm_version=True,
-    setup_requires=["setuptools_scm"],
     long_description=long_description,
     long_description_content_type="text/x-rst",
     install_requires=parse_requirements("requirements.txt"),
