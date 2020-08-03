@@ -70,7 +70,7 @@ Package     Description
 PyGeoOGC_   Query data from ArcGIS RESTful-, WMS-, and WFS-based services
 PyGeoUtils_ Convert responses from supported services to datasets
 PyNHD_      Access NLDI and WaterData web services for getting data from NHDPlus database
-Py3DEP_     Access topology related data through 3D Elevation Program (3DEP) web service
+Py3DEP_     Access topographic data through 3D Elevation Program (3DEP) web service
 PyDaymet_   Access the Daymet database for daily climate data
 =========== =============================================================================
 
