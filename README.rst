@@ -52,11 +52,32 @@
 
 |
 
+🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
+
 Features
 --------
 
-Hydrodata is a stack of Python libraries designed to aid in watershed analysis. This software
-stack includes:
+Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
+web services. Currently, it only includes hydrology and climatology data within the US.
+Hydrodata software stack is shown in the table below.
+
+| Package | Description |
+| --- | --- |
+| PyGeoOGC_ | Query data from ArcGIS RESTful-, WMS-, and WFS-based services |
+| PyGeoUtils_ | Convert responses from supported services to datasets |
+| PyNHD_ | Access NLDI and WaterData web services for getting data from NHDPlus database |
+| Py3DEP_ | Access topology related data through 3D Elevation Program (3DEP) web service |
+| PyDaymet_ | Access the Daymet database for daily climate data |
+
+.. _PyGeoOGC: https://github.com/cheginit/pygeoogc
+
+.. _PyGeoUtils: https://github.com/cheginit/pygeoutils
+
+.. _PyNHD: https://github.com/cheginit/pynhd
+
+.. _Py3DEP: https://github.com/cheginit/py3dep
+
+.. _PyDaymet: https://github.com/cheginit/pydaymet
 
 - `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__: For easy access to services that are based on
   ArcGIS `RESTful <https://en.wikipedia.org/wiki/Representational_state_transfer>`__,
