@@ -78,20 +78,6 @@ def nlcd_helper() -> Dict[str, Any]:
     return nlcd_meta
 
 
-def nhdplus_fcodes() -> pd.DataFrame:
-    """Get NHDPlus FCode lookup table."""
-    url = (
-        "https://nhd.usgs.gov/userGuide/Robohelpfiles/NHD_User_Guide"
-        + "/Feature_Catalog/Hydrography_Dataset/Complete_FCode_List.htm"
-    )
-    return pd.concat(pd.read_html(url, header=0)).drop_duplicates("FCode").set_index("FCode")
-
-
 def nwis_errors() -> pd.DataFrame:
     """Get error code lookup table for USGS sites that have daily values."""
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
-
-
-def daymet_variables() -> pd.DataFrame:
-    """Get Daymet variables table."""
-    return pd.read_html("https://daymet.ornl.gov/overview")[1]
