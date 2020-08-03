@@ -1,22 +1,20 @@
 #!/usr/bin/env python
-"""Convert/check the conda environment.yml to the pip requirements.txt.
+"""Convert the conda py3.6.yml to the pip requirements-dev.txt.
 
-Notes
------
-It checks that they have the same packages (for the CI).
+It also checks that they have the same packages (for the CI).
 The original script is taken from Pandas github repository.
 https://github.com/pandas-dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py.
 
 Usage
 -----
-Generate `requirements-dev.txt`
-$ ./generate_pip_deps_from_conda.py
 
-Compare and fail (exit status != 0) if `requirements-dev.txt` has not been
-generated with this script:
-$ ./generate_pip_deps_from_conda.py --compare
+    Generate `requirements-dev.txt`
+    $ ./generate_pip_deps_from_conda.py
+
+    Compare and fail (exit status != 0) if `requirements-dev.txt` has not been
+    generated with this script:
+    $ ./generate_pip_deps_from_conda.py --compare
 """
-
 import argparse
 import os
 import re
@@ -30,6 +28,7 @@ RENAME = {
     "pyqt": "pyqt5",
     "dask-core": "dask",
     "matplotlib-base": "matplotlib",
+    "seaborn-base": "seaborn",
 }
 
 
@@ -66,10 +65,12 @@ def conda_package_to_pip(package):
 def main(conda_fname, pip_fname, compare=False):
     """Generate the pip dependencies file from the conda file.
 
+    It also compares that they are synchronized (``compare=True``).
+
     Parameters
     ----------
     conda_fname : str
-        Path to the conda file with dependencies (e.g. `environment.yml`).
+        Path to the conda file with dependencies (e.g. `py3.6.yml`).
     pip_fname : str
         Path to the pip file with dependencies (e.g. `requirements-dev.txt`).
     compare : bool, default False
@@ -128,7 +129,7 @@ if __name__ == "__main__":
     if res:
         msg = (
             f"`requirements-dev.txt` has to be generated with `{sys.argv[0]}` after "
-            "`environment.yml` is modified.\n"
+            "`py3.6.yml` is modified.\n"
         )
         if args.azure:
             msg = f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
