@@ -51,6 +51,7 @@
     :alt: Zenodo
 
 |
+|
 
 🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
 
@@ -62,6 +63,8 @@ web services. Currently, it only includes hydrology and climatology data within 
 Hydrodata software stack is shown in the table below.
 
 =========== =============================================================================
+       Hydrodata_
+-----------------------------------------------------------------------------------------
 Package     Description
 =========== =============================================================================
 PyGeoOGC_   Query data from ArcGIS RESTful-, WMS-, and WFS-based services
@@ -71,14 +74,11 @@ Py3DEP_     Access topology related data through 3D Elevation Program (3DEP) web
 PyDaymet_   Access the Daymet database for daily climate data
 =========== =============================================================================
 
+.. _Hydrodata: https://github.com/cheginit/hydrodata
 .. _PyGeoOGC: https://github.com/cheginit/pygeoogc
-
 .. _PyGeoUtils: https://github.com/cheginit/pygeoutils
-
 .. _PyNHD: https://github.com/cheginit/pynhd
-
 .. _Py3DEP: https://github.com/cheginit/py3dep
-
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 Hydrodata itself has two main modules; ``datasets`` and ``plot``. The ``datasets`` module provides
