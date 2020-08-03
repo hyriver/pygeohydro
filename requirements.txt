@@ -4,4 +4,6 @@
 folium
 lxml
 matplotlib
+py3dep
+pydaymet
 pynhd
