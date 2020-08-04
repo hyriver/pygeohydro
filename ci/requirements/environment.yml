@@ -31,6 +31,9 @@ dependencies:
   - codecov
   - coverage
 
+  - ipykernel
+  - ipython
+  - jupyter_client
   - recommonmark
   - nbsphinx
   - sphinx
