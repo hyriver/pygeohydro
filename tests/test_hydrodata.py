@@ -64,6 +64,7 @@ def test_get_ssebopeta_urls():
     assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_nlcd(geometry_nat):
     hd.nlcd(geometry_nat.bounds, resolution=1e3)
     lulc = hd.nlcd(geometry_nat, resolution=1e3, crs="epsg:3542")
