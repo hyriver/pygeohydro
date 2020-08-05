@@ -4,12 +4,12 @@ on: [push, pull_request]
 
 jobs:
   run-linters:
-    name: Run linters
+    name: Run pre-commit
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@master
+      - uses: actions/setup-python@master
         with:
           python-version: 3.8
 
