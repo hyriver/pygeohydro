@@ -231,6 +231,9 @@ def nlcd(
 
     ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
 
+    if isinstance(ds, xr.DataArray):
+        ds = ds.to_dataset()
+
     for n in ds.keys():
         if "cover" in n.lower():
             ds = ds.rename({n: "cover"})

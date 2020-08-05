@@ -10,6 +10,7 @@ from .hydrodata import (
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
+from .print_versions import show_versions
 
 try:
     __version__ = get_distribution(__name__).version
