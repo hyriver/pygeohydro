@@ -36,6 +36,14 @@ hydrodata.plot module
    :undoc-members:
    :show-inheritance:
 
+hydrodata.print\_versions module
+--------------------------------
+
+.. automodule:: hydrodata.print_versions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 
 Module contents
 ---------------
