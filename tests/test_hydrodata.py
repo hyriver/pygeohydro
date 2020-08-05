@@ -1,4 +1,5 @@
 """Tests for Hydrodata package."""
+import io
 from urllib.error import HTTPError
 
 import pytest
@@ -83,3 +84,9 @@ def test_plot(geometry_nat, geometry_urb):
 def test_helpers():
     err = hd.helpers.nwis_errors()
     assert err.shape[0] == 7
+
+
+def test_show_versions():
+    f = io.StringIO()
+    hd.show_versions(file=f)
+    assert "INSTALLED VERSIONS" in f.getvalue()
