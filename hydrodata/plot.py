@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union, ValuesView
 
+import matplotlib
 import pandas as pd
 from matplotlib import pyplot as plt
 from matplotlib.colors import BoundaryNorm, ListedColormap
@@ -18,11 +19,9 @@ from .exceptions import InvalidInputType
 
 def signatures(
     daily: Union[pd.DataFrame, pd.Series],
-    daily_unit: str = "cms",
     precipitation: Optional[pd.Series] = None,
-    prcp_unit: str = "mm/day",
     title: Optional[str] = None,
-    figsize: Tuple[int, int] = (13, 13),
+    figsize: Tuple[int, int] = (14, 13),
     threshold: float = 1e-3,
     output: Union[str, Path] = None,
 ) -> None:
@@ -36,22 +35,18 @@ def signatures(
     Parameters
     ----------
     daily : pd.DataFrame or pd.Series
-        The column names are used as labels on the plot and the column values should be
-        daily streamflow.
-    daily_unit : str, optional
-        The unit of the daily streamflow to appear on the plots, defaults to cms.
+        The streamflows in mm/day. The column names are used as labels
+        on the plot and the column values should be daily streamflow.
     precipitation : pd.Series, optional
-        Daily precipitation time series in :math:`mm/day`. If given, the data is
+        Daily precipitation time series in mm/day. If given, the data is
         plotted on the second x-axis at the top.
-    prcp_unit : str, optional
-        The unit of the precipitation to appear on the plots, defaults to mm/day.
     title : str, optional
         The plot supertitle.
     figsize : tuple, optional
-        Width and height of the plot in inches, defaults to (13, 13) inches.
+        Width and height of the plot in inches, defaults to (14, 13) inches.
     threshold : float, optional
         The threshold for cutting off the discharge for the flow duration
-        curve to deal with log 0 issue, defaults to :math:`1e-3 mm/day`.
+        curve to deal with log 0 issue, defaults to :math:`1^{-3}` mm/day.
     output : str, optional
         Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
@@ -76,10 +71,11 @@ def signatures(
         ax = fig.add_subplot(sp)
         _discharge = getattr(discharge, f)  # noqa: B009
         _title = discharge.titles[f]
+        _unit = discharge.units[f]
         qxval = _discharge.index
 
         ax.plot(qxval, _discharge)
-        ax.set_ylabel(f"$Q$ ({daily_unit})")
+        ax.set_ylabel(f"$Q$ ({_unit})")
 
         if prcp is not None:
             _prcp = getattr(prcp, f)  # noqa: B009
@@ -90,13 +86,17 @@ def signatures(
                 _prcp.index, _prcp.to_numpy().ravel(), alpha=0.7, width=prcp.bar_width[f], color="g"
             )
             ax_p.set_ylim(_prcp.max().to_numpy()[0] * 2.5, 0)
-            ax_p.set_ylabel(f"$P$ ({prcp_unit})")
+            ax_p.set_ylabel(f"$P$ ({_unit})")
 
         ax.set_xlim(qxval[0], qxval[-1])
         ax.set_xlabel("")
         ax.set_title(_title)
         if len(_discharge.columns) > 1 and f == "daily":
             ax.legend(_discharge.columns, loc="best")
+
+        if f == "annual":
+            ax.xaxis.set_major_locator(matplotlib.dates.YearLocator())
+            ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
 
     ax = fig.add_subplot(sub_ax[-1])
     for col in discharge.daily:
@@ -107,7 +107,7 @@ def signatures(
     ax.set_yscale("log")
     ax.set_xlim(0, 100)
     ax.set_xlabel("% Exceedance")
-    ax.set_ylabel(fr"$\log(Q)$ ({daily_unit})")
+    ax.set_ylabel(fr"$\log(Q)$ ({discharge.units['ranked']})")
     ax.set_title("Flow Duration Curve")
 
     plt.tight_layout()
@@ -128,6 +128,7 @@ class PlotDataType(NamedTuple):
     ranked: pd.DataFrame
     bar_width: Dict[str, int]
     titles: Dict[str, str]
+    units: Dict[str, str]
 
 
 def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
@@ -149,6 +150,7 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
         daily = daily.to_frame()
 
     monthly = daily.groupby(pd.Grouper(freq="M")).sum()
+
     annual = daily.groupby(pd.Grouper(freq="Y")).sum()
 
     month_abbr = dict(enumerate(calendar.month_abbr))
@@ -163,10 +165,18 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
         "Regime Curve (monthly mean)",
         "Flow Duration Curve",
     ]
+    _units = [
+        "mm/day",
+        "mm/month",
+        "mm/year",
+        "mm/day",
+        "mm/day",
+    ]
     fields = PlotDataType._fields
     titles = dict(zip(fields[:-1], _titles))
+    units = dict(zip(fields[:-1], _units))
     bar_width = dict(zip(fields[:-2], [1, 30, 365, 1]))
-    return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles)
+    return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles, units)
 
 
 def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
