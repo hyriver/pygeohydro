@@ -30,6 +30,7 @@ Breaking changes
 - Renamed two functions: ``ArcGISRESTful`` and ``wms_bybox``. These function now return
   ``requests.Response`` type output.
 - ``onlyipv4`` is now a class method in ``RetrySession``.
+- The ``plot.signatures`` function not assums that the ``daily`` argument is in mm/day.
 
 Enhancements
 ~~~~~~~~~~~~
