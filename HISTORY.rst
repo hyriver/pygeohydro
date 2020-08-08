@@ -31,6 +31,9 @@ Breaking changes
   ``requests.Response`` type output.
 - ``onlyipv4`` is now a class method in ``RetrySession``.
 - The ``plot.signatures`` function not assums that the ``daily`` argument is in mm/day.
+- Added a flag to ``get_streamflow`` function in the ``NWIS`` class to convert from cms
+  to mm/day which is useful for plotting hydorlogic signatures using the ``signatures``
+  functions.
 
 Enhancements
 ~~~~~~~~~~~~
