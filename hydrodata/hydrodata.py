@@ -4,6 +4,7 @@ import zipfile
 from typing import Dict, List, Optional, Tuple, Union
 
 import folium
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoogc as ogc
@@ -11,7 +12,7 @@ import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, RetrySession, ServiceURL
-from pynhd import WaterData
+from pynhd import NLDI, WaterData
 from shapely.geometry import Polygon
 
 from . import helpers
@@ -377,7 +378,7 @@ class NWIS:
         return sites
 
     def get_streamflow(
-        self, station_ids: Union[List[str], str], dates: Tuple[str, str]
+        self, station_ids: Union[List[str], str], dates: Tuple[str, str], mmd: bool = False
     ) -> pd.DataFrame:
         """Get daily streamflow observations from USGS.
 
@@ -387,6 +388,8 @@ class NWIS:
             The gage ID(s)  of the USGS station.
         dates : tuple
             Start and end dates as a tuple (start, end).
+        mmd : bool
+            Convert cms to mm/day based on the contributing drainage area of the stations.
 
         Returns
         -------
@@ -445,8 +448,23 @@ class NWIS:
             return discharge
 
         qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
+
         # Convert cfs to cms
         qobs = qobs.astype("float64") * 0.028316846592
+
+        if mmd:
+            nldi = NLDI()
+            basins_dict = {
+                f"USGS-{s}": nldi.getfeature_byid("nwissite", f"USGS-{s}", basin=True).geometry[0]
+                for s in station_ids
+            }
+            basins = gpd.GeoDataFrame.from_dict(basins_dict, orient="index")
+            basins.columns = ["geometry"]
+            basins = basins.set_crs("epsg:4326")
+            eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+            area = basins.to_crs(eck4).area
+            ms2mmd = 1000.0 * 24.0 * 3600.0
+            qobs = qobs.apply(lambda x: x / area.loc[x.name] * ms2mmd)
         return qobs
 
 
