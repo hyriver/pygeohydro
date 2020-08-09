@@ -102,11 +102,6 @@ def signatures(
         if f == "annual":
             ax.xaxis.set_major_locator(matplotlib.dates.YearLocator())
             ax.xaxis.set_major_formatter(matplotlib.dates.DateFormatter("%Y"))
-            offset = matplotlib.transforms.ScaledTranslation(0.5, 0.0, fig.dpi_scale_trans)
-
-            for label in ax.xaxis.get_majorticklabels():
-                label.set_transform(label.get_transform() + offset)
-                label.set_horizontalalignment("left")
 
     ax = fig.add_subplot(sub_ax[-1])
     for col in discharge.daily:
