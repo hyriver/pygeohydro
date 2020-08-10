@@ -1,0 +1,12 @@
+codecov:
+    branch: master
+
+coverage:
+  status:
+    project:
+      default:
+        target: 1
+    patch: false
+    changes: false
+
+comment: off
