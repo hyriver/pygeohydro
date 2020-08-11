@@ -34,6 +34,7 @@ def geometry_urb():
     )
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_nwis(geometry_nat):
     nwis = NWIS()
     qobs = nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
@@ -72,6 +73,7 @@ def test_nlcd(geometry_nat):
     assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_plot(geometry_nat, geometry_urb):
     hd.interactive_map(geometry_nat.bounds)
     nwis = NWIS()
@@ -82,6 +84,7 @@ def test_plot(geometry_nat, geometry_urb):
     assert levels[-1] == 100
 
 
+@pytest.mark.flaky(max_runs=3)
 def test_helpers():
     err = hd.helpers.nwis_errors()
     assert err.shape[0] == 7
