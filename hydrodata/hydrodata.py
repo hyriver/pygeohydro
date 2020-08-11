@@ -19,6 +19,7 @@ from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 
 MARGINE = 15
+DEF_CRS = "epsg:4326"
 
 
 def ssebopeta_byloc(
@@ -71,7 +72,7 @@ def ssebopeta_byloc(
 def ssebopeta_bygeom(
     geometry: Union[Polygon, Tuple[float, float, float, float]],
     dates: Union[Tuple[str, str], Union[int, List[int]]],
-    geo_crs: str = "epsg:4326",
+    geo_crs: str = DEF_CRS,
     fill_holes: bool = False,
 ) -> xr.DataArray:
     """Get daily actual ET for a region from SSEBop database.
@@ -100,7 +101,7 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, "epsg:4326")
+    _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
     _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
 
     f_list = _get_ssebopeta_urls(dates)
@@ -114,7 +115,7 @@ def ssebopeta_bygeom(
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds = geoutils.gtiff2xarray({"eta_": content}, _geometry, "epsg:4326")
+            ds = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
             return ds.expand_dims({"time": [dt]})
 
         data = xr.merge(ogc.utils.threading(_ssebop, f_list, max_workers=4))
@@ -159,8 +160,8 @@ def nlcd(
     geometry: Union[Polygon, Tuple[float, float, float, float]],
     resolution: float,
     years: Optional[Dict[str, Optional[int]]] = None,
-    geo_crs: str = "epsg:4326",
-    crs: str = "epsg:4326",
+    geo_crs: str = DEF_CRS,
+    crs: str = DEF_CRS,
     fill_holes: bool = False,
 ) -> xr.Dataset:
     """Get data from NLCD database (2016).
@@ -460,7 +461,7 @@ class NWIS:
             }
             basins = gpd.GeoDataFrame.from_dict(basins_dict, orient="index")
             basins.columns = ["geometry"]
-            basins = basins.set_crs("epsg:4326")
+            basins = basins.set_crs(DEF_CRS)
             eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
             area = basins.to_crs(eck4).area
             ms2mmd = 1000.0 * 24.0 * 3600.0
