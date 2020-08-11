@@ -52,16 +52,13 @@ def signatures(
         the plot is not saved to a file.
     """
     if not isinstance(daily, (pd.DataFrame, pd.Series)):
-        raise InvalidInputType("daily", "pd.DataFrame, pd.Series")
+        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
 
-    if precipitation is None:
-        prcp = None
-    else:
-        if not isinstance(precipitation, pd.Series):
-            raise InvalidInputType("daily", "pd.DataFrame, pd.Series")
-        prcp = prepare_plot_data(precipitation)
+    if precipitation is not None and not isinstance(precipitation, pd.Series):
+        raise InvalidInputType("precipitation", "pd.Series")
 
     discharge = prepare_plot_data(daily)
+    prcp = None if precipitation is None else prepare_plot_data(precipitation)
 
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(4, 2)
