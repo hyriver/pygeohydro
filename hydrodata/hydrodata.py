@@ -198,19 +198,16 @@ def nlcd(
     names = ["impervious", "cover", "canopy"]
     avail_years = {n: nlcd_meta[f"{n}_years"] + [None] for n in names}
 
-    if years is None:
-        years = {"impervious": 2016, "cover": 2016, "canopy": 2016}
+    years = {"impervious": 2016, "cover": 2016, "canopy": 2016} if years is None else years
 
     if not isinstance(years, dict):
         raise InvalidInputType(
             "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
         )
 
-    for s in years.keys():
-        if years[s] not in avail_years[s]:
-            raise InvalidInputValue(
-                f"{s.capitalize()} data for {years[s]}", avail_years[s],
-            )
+    if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
+        vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
+        raise InvalidInputValue("years", vals)
 
     layers = []
     if years["canopy"] is not None:
