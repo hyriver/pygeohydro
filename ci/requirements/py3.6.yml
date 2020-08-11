@@ -8,8 +8,8 @@ dependencies:
   - folium
   - lxml
   - pip:
-      - git+https://github.com/cheginit/pynhd
-      - git+https://github.com/cheginit/py3dep
-      - git+https://github.com/cheginit/pydaymet
-      - git+https://github.com/cheginit/pygeoogc
-      - git+https://github.com/cheginit/pygeoutils
+    - git+https://github.com/cheginit/pynhd.git
+    - git+https://github.com/cheginit/py3dep.git
+    - git+https://github.com/cheginit/pydaymet.git
+    - git+https://github.com/cheginit/pygeoogc.git
+    - git+https://github.com/cheginit/pygeoutils.git
