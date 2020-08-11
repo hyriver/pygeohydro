@@ -79,14 +79,17 @@ def signatures(
             _prcp = _prcp.loc[_prcp.index.intersection(qxval)]
 
             ax_p = ax.twinx()
-            ax_p.bar(
-                _prcp.index,
-                _prcp.to_numpy().ravel(),
-                alpha=0.7,
-                width=prcp.bar_width[f],
-                color="g",
-                align="edge",
-            )
+            if _prcp.shape[0] > 1000:
+                ax_p.plot(_prcp.index, _prcp.to_numpy().ravel(), alpha=0.7, color="g")
+            else:
+                ax_p.bar(
+                    _prcp.index,
+                    _prcp.to_numpy().ravel(),
+                    alpha=0.7,
+                    width=prcp.bar_width[f],
+                    color="g",
+                    align="edge",
+                )
             ax_p.set_ylim(_prcp.max().to_numpy()[0] * 2.5, 0)
             ax_p.set_ylabel(f"$P$ ({_unit})")
 
