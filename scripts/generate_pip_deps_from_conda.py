@@ -22,13 +22,18 @@ import sys
 
 import yaml
 
-EXCLUDE = {"python"}
+EXCLUDE = {"python", "pip"}
 RENAME = {
     "pytables": "tables",
     "pyqt": "pyqt5",
     "dask-core": "dask",
     "matplotlib-base": "matplotlib",
     "seaborn-base": "seaborn",
+    "git+https://github.com/cheginit/pygeoogc.git": "pygeoogc",
+    "git+https://github.com/cheginit/pygeoutils.git": "pygeoutils",
+    "git+https://github.com/cheginit/pynhd.git": "pynhd",
+    "git+https://github.com/cheginit/py3dep.git": "py3dep",
+    "git+https://github.com/cheginit/pydaymet.git": "pydaymet",
 }
 
 
@@ -96,6 +101,13 @@ def main(conda_fname, pip_fname, compare=False):
             pip_deps += dep["pip"]
         else:
             raise ValueError(f"Unexpected dependency {dep}")
+
+    for i, dep in enumerate(pip_deps):
+        if dep in RENAME:
+            pip_deps[i] = RENAME[dep]
+
+    if "pip" in pip_deps:
+        pip_deps.remove("pip")
 
     fname = os.path.split(conda_fname)[1]
     header = (
