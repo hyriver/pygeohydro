@@ -6,4 +6,6 @@ lxml
 matplotlib
 py3dep
 pydaymet
+pygeoogc
+pygeoutils
 pynhd
