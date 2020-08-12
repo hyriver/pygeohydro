@@ -104,7 +104,7 @@ The full documnetation can be found at https://hydrodata.readthedocs.io.
 Features
 --------
 
-Hydrodata itself has three modules; ``hydrodata``, ``plot``, and ``helpers``.
+Hydrodata itself has three main modules; ``hydrodata``, ``plot``, and ``helpers``.
 The ``hydrodata`` module provides access to the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
@@ -161,8 +161,8 @@ Hydrodata offers some limited analysis tools. It could be more useful for
 the watershed modeling community to integrate more data exploratory and analysis
 capabilities to the package. Additionally, adding support for more databases such
 as water quality, phenology, and water level, are very welcome. If you are interested
-please get in touch. You can find information about contributing to hydrodata at our
-`Contributing page <https://hydrodata.readthedocs.io/en/latest/contributing.html>`__.
+please get in touch. You can find more information about contributing to Hydrodata at our
+`Contributing <https://hydrodata.readthedocs.io/en/latest/contributing.html>`__ webpage.
 
 Credits
 -------

@@ -81,7 +81,7 @@ and you can start coding!
 Features
 ========
 
-Hydrodata itself has three modules; ``hydrodata``, ``plot``, and ``helpers``.
+Hydrodata itself has three main modules; ``hydrodata``, ``plot``, and ``helpers``.
 The ``hydrodata`` module provides access to the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
