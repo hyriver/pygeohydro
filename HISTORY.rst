@@ -30,7 +30,7 @@ Breaking changes
 - Renamed two functions: ``ArcGISRESTful`` and ``wms_bybox``. These function now return
   ``requests.Response`` type output.
 - ``onlyipv4`` is now a class method in ``RetrySession``.
-- The ``plot.signatures`` function not assums that the ``daily`` argument is in mm/day.
+- The ``plot.signatures`` function now assums that the input time series are in mm/day.
 - Added a flag to ``get_streamflow`` function in the ``NWIS`` class to convert from cms
   to mm/day which is useful for plotting hydorlogic signatures using the ``signatures``
   functions.
