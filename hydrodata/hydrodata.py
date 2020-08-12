@@ -193,34 +193,8 @@ def nlcd(
      xarray.DataArray
          NLCD within a geometry
     """
-    nlcd_meta = helpers.nlcd_helper()
-
-    names = ["impervious", "cover", "canopy"]
-    avail_years = {n: nlcd_meta[f"{n}_years"] + [None] for n in names}
-
     years = {"impervious": 2016, "cover": 2016, "canopy": 2016} if years is None else years
-
-    if not isinstance(years, dict):
-        raise InvalidInputType(
-            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
-        )
-
-    if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
-        vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-        raise InvalidInputValue("years", vals)
-
-    layers = [
-        f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
-        f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
-        f'NLCD_{years["impervious"]}_Impervious_L48',
-    ]
-
-    for lyr in layers:
-        if "None" in lyr:
-            layers.remove(lyr)
-
-    if len(layers) == 0:
-        raise InvalidInputRange("At least one of the layers should have a non-None year.")
+    layers = _nlcd_layers(years)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
     _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
@@ -245,6 +219,38 @@ def nlcd(
             ds.impervious.attrs["units"] = "%"
 
     return ds
+
+
+def _nlcd_layers(years: Dict[str, Optional[int]]) -> List[str]:
+    """Get NLCD layers for the provided years dictionary."""
+    nlcd_meta = helpers.nlcd_helper()
+
+    names = ["impervious", "cover", "canopy"]
+    avail_years = {n: nlcd_meta[f"{n}_years"] + [None] for n in names}
+
+    if not isinstance(years, dict):
+        raise InvalidInputType(
+            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
+        )
+
+    if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
+        vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
+        raise InvalidInputValue("years", vals)
+
+    layers = [
+        f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
+        f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
+        f'NLCD_{years["impervious"]}_Impervious_L48',
+    ]
+
+    for lyr in layers:
+        if "None" in lyr:
+            layers.remove(lyr)
+
+    if len(layers) == 0:
+        raise InvalidInputRange("At least one of the layers should have a non-None year.")
+
+    return layers
 
 
 class NWIS:
