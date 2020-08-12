@@ -1,10 +1,10 @@
-name: build
+name: pytest
 
 on: [push, pull_request]
 
 jobs:
   test:
-    name: pytest (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: python ${{ matrix.python-version }}, ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -12,9 +12,9 @@ jobs:
         os: ["ubuntu-latest", "macos-latest"]
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup Miniconda
-        uses: goanpeca/setup-miniconda@v1.5.0
+      - uses: actions/checkout@master
+      - name: Setup miniconda
+        uses: goanpeca/setup-miniconda@v1
         with:
           activate-environment: hydrodata
           python-version: ${{ matrix.python-version }}
@@ -22,17 +22,17 @@ jobs:
           auto-update-conda: true
           auto-activate-base: false
 
-      - name: Install Hydrodata
+      - name: Install hydrodata
         shell: bash -l {0}
         run: |
           conda info
           conda list
-          conda install -y -c conda-forge pytest pytest-runner pytest-cov pytest-xdist codecov
+          conda install -y -c conda-forge pytest pytest-cov codecov flaky
           pip install --no-deps -e .
 
-      - name: Run tests
+      - name: Run pytest
         shell: bash -l {0}
         run: pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
 
       - name: Run codecov
-        uses: codecov/codecov-action@v1.0.7
+        uses: codecov/codecov-action@v1

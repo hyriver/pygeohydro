@@ -4,22 +4,14 @@ on: [push, pull_request]
 
 jobs:
   run-linters:
-    name: Run linters
+    name: Run pre-commit
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check out Git repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v1
+      - uses: actions/checkout@master
+      - uses: actions/setup-python@master
         with:
           python-version: 3.8
 
-      - name: Install Python dependencies
-        run: pip install -r ci/requirements/requirements_lint.txt
+      - uses: pre-commit/action@v2.0.0
 
-      - run: isort --recursive --diff hydrodata tests
-      - run: black --py36 --diff hydrodata tests
-      - run: pyupgrade --py36-plus
-      - run: flake8 hydrodata tests

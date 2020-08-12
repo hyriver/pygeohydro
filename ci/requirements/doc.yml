@@ -1,36 +1,58 @@
 name: doc
 channels:
-  - defaults
+  - conda-forge
 dependencies:
-  - python>=3.6
+  - python=3.8
   - pip
+  - setuptools
+
+  # add deps to speedup dep resolving
+  - matplotlib-base
+  - folium
+  - lxml
   - owslib
-  - scipy
-  - pandas
-  - numba
-  - matplotlib
-  - descartes
+  - pyproj
+  - shapely
+  - simplejson
+  - defusedxml
+  - requests
+  - dataclasses
   - xarray
+  - geopandas
+  - rasterio
+  - networkx
+  - scipy
+
+  # xarray speedups
   - dask
   - netCDF4
   - bottleneck
-  - lxml
-  - geopandas
-  - rasterio
-  - pyproj
-  - networkx
-  - simplejson
-  - pytables
-  - defusedxml
-  - numpydoc
+
+  # dep for plotting with geopandas
+  - descartes
+
+  # doc deps
   - ipykernel
   - ipython
-  - sphinx
+  - jupyter_client
   - recommonmark
+  - nbsphinx
+  - sphinx
+  - sphinx-copybutton
+  - numpydoc
+
+  # sphinx-material deps
+  - beautifulsoup4
+  - python-slugify
+  - css-html-js-minify
+  - unidecode
   - pip:
-    - nbsphinx
-    - geojson
-    - folium
-    - sphinx-markdown-tables
-    - sphinx-copybutton
+    - nbsphinx_link
     - git+https://github.com/bashtage/sphinx-material.git
+
+    # hydrodata stack
+    - git+https://github.com/cheginit/pygeoogc.git
+    - git+https://github.com/cheginit/pygeoutils.git
+    - git+https://github.com/cheginit/pynhd.git
+    - git+https://github.com/cheginit/py3dep.git
+    - git+https://github.com/cheginit/pydaymet.git

@@ -4,26 +4,12 @@ channels:
 dependencies:
   - python=3.7
   - pip
-  - owslib
-  - scipy
-  - pandas
-  - numba
-  - matplotlib
-  - descartes
-  - xarray
-  - dask
-  - netCDF4
-  - bottleneck
-  - lxml
-  - geopandas
+  - matplotlib-base
   - folium
-  - rasterio
-  - pyproj
-  - proj
-  - gdal
-  - networkx
-  - geojson
-  - simplejson
-  - pytables
-  - defusedxml
-  - typing-extensions
+  - lxml
+  - pip:
+    - git+https://github.com/cheginit/pygeoogc.git
+    - git+https://github.com/cheginit/pygeoutils.git
+    - git+https://github.com/cheginit/pynhd.git
+    - git+https://github.com/cheginit/py3dep.git
+    - git+https://github.com/cheginit/pydaymet.git
