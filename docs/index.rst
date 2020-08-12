@@ -72,7 +72,7 @@ Some of the major capabilities if Hydrodata are:
 * A URL inventory of some of the popular web services.
 * Many other utilities for manipulating the data and visualization.
 
-You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`
+You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`__
 webpage to see some notebook examples. You can also try using Hydrodata without installation
 it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
 instance with the Hydrodata software stack pre-installed will be launched in your web browser
