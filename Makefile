@@ -53,20 +53,20 @@ lint: ## check style with flake8
 	pre-commit run --all-files
 
 test: ## run tests quickly with the default Python
-	pytest --cov=hydrodata
+	pytest --no-cov -n 2 -v
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source hydrodata -m pytest
+	coverage run --source hydrodata -m pytest -v
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
-docs: ## generate Sphinx HTML documentation, including API docs
+apidocs: ## generate API docs
 	rm -f docs/hydrodata.rst
 	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ hydrodata
-	sed -i '0,/hydrodata/{s/hydrodata/Modules/}' docs/modules.rst
-	sed -i '0,/hydrodata/{s/hydrodata package/Hydrodata Package/}' docs/hydrodata.rst
+	sphinx-apidoc -o docs/ -f -H "API Reference" hydrodata
+
+docs: apidocs ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean
 	$(MAKE) -C docs html
 	$(BROWSER) docs/_build/html/index.html

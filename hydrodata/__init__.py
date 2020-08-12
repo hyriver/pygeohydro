@@ -1,9 +1,19 @@
-"""Top-level package for Hydrodata."""
+from pkg_resources import DistributionNotFound, get_distribution
 
-from .connection import RetrySession
-from .datasets import NLDI, NationalMap, Station, WaterData
-from .services import WFS, ArcGISREST
+from . import helpers, plot
+from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
+from .hydrodata import (
+    NWIS,
+    cover_statistics,
+    interactive_map,
+    nlcd,
+    ssebopeta_bygeom,
+    ssebopeta_byloc,
+)
+from .print_versions import show_versions
 
-__author__ = """Taher Chegini"""
-__email__ = "cheginit@gmail.com"
-__version__ = "0.6.0"
+try:
+    __version__ = get_distribution(__name__).version
+except DistributionNotFound:
+    # package is not installed
+    pass

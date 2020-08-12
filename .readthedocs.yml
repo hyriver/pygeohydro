@@ -5,3 +5,9 @@ build:
 
 conda:
     environment: ci/requirements/doc.yml
+
+python:
+  install:
+    - method: pip
+      path: .
+

@@ -4,48 +4,46 @@ channels:
 dependencies:
   - python>=3.8
   - pip
+  - setuptools
+  - pynhd
   - owslib
-  - scipy
   - pandas
-  - numba
-  - matplotlib
-  - descartes
+  - matplotlib-base
   - xarray
+  - scipy
+  - geopandas
+  - geojson
+  - folium
+  - rasterio
+  - networkx
+  - simplejson
+  - defusedxml
+
   - dask
   - netCDF4
   - bottleneck
-  - lxml
-  - geopandas
-  - folium
-  - rasterio
-  - pyproj
-  - networkx
-  - geojson
-  - simplejson
-  - pytables
-  - geojson
-  - folium
-  - defusedxml
+  - descartes
 
-  - flake8
-  - flake8-comprehensions
-  - flake8-builtins
-  - flake8-rst-docstrings
-  - flake8-blind-except
-  - pycodestyle
-  - numpydoc
-
-  - pytest-runner
+  - bump2version
   - pytest-cov
   - pytest-xdist
   - pre-commit
   - codecov
   - coverage
 
-  - jupyterlab
+  - ipykernel
+  - ipython
+  - jupyter_client
   - recommonmark
   - nbsphinx
   - sphinx
   - sphinx-copybutton
+  - numpydoc
+
+  - beautifulsoup4
+  - python-slugify
+  - css-html-js-minify
+  - unidecode
   - pip:
+    - nbsphinx_link
     - git+https://github.com/bashtage/sphinx-material.git

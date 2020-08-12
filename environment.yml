@@ -1,0 +1,11 @@
+name: hydrodata-binder
+channels:
+  - conda-forge
+dependencies:
+  - python>=3.8
+  - hydrodata
+  - dask
+  - netCDF4
+  - bottleneck
+  - descartes
+  - cartopy

@@ -1,11 +1,12 @@
-#!/usr/bin/env python3
-"""
-Convert the conda environment.yml to the pip requirements-dev.txt,
-or check that they have the same packages (for the CI). The original
-script is taken from Pandas github repository.
-https://github.com/pandas-dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py
+#!/usr/bin/env python
+"""Convert the conda py3.6.yml to the pip requirements-dev.txt.
 
-Usage:
+It also checks that they have the same packages (for the CI).
+The original script is taken from Pandas github repository.
+https://github.com/pandas-dev/pandas/blob/master/scripts/generate_pip_deps_from_conda.py.
+
+Usage
+-----
 
     Generate `requirements-dev.txt`
     $ ./generate_pip_deps_from_conda.py
@@ -21,13 +22,23 @@ import sys
 
 import yaml
 
-EXCLUDE = {"python"}
-RENAME = {"pytables": "tables", "pyqt": "pyqt5", "dask-core": "dask"}
+EXCLUDE = {"python", "pip"}
+RENAME = {
+    "pytables": "tables",
+    "pyqt": "pyqt5",
+    "dask-core": "dask",
+    "matplotlib-base": "matplotlib",
+    "seaborn-base": "seaborn",
+    "git+https://github.com/cheginit/pygeoogc.git": "pygeoogc",
+    "git+https://github.com/cheginit/pygeoutils.git": "pygeoutils",
+    "git+https://github.com/cheginit/pynhd.git": "pynhd",
+    "git+https://github.com/cheginit/py3dep.git": "py3dep",
+    "git+https://github.com/cheginit/pydaymet.git": "pydaymet",
+}
 
 
 def conda_package_to_pip(package):
-    """
-    Convert a conda package to its pip equivalent.
+    """Convert a conda package to its pip equivalent.
 
     In most cases they are the same, those are the exceptions:
     - Packages that should be excluded (in `EXCLUDE`)
@@ -57,14 +68,14 @@ def conda_package_to_pip(package):
 
 
 def main(conda_fname, pip_fname, compare=False):
-    """
-    Generate the pip dependencies file from the conda file, or compare that
-    they are synchronized (``compare=True``).
+    """Generate the pip dependencies file from the conda file.
+
+    It also compares that they are synchronized (``compare=True``).
 
     Parameters
     ----------
     conda_fname : str
-        Path to the conda file with dependencies (e.g. `environment.yml`).
+        Path to the conda file with dependencies (e.g. `py3.6.yml`).
     pip_fname : str
         Path to the pip file with dependencies (e.g. `requirements-dev.txt`).
     compare : bool, default False
@@ -91,6 +102,13 @@ def main(conda_fname, pip_fname, compare=False):
         else:
             raise ValueError(f"Unexpected dependency {dep}")
 
+    for i, dep in enumerate(pip_deps):
+        if dep in RENAME:
+            pip_deps[i] = RENAME[dep]
+
+    if "pip" in pip_deps:
+        pip_deps.remove("pip")
+
     fname = os.path.split(conda_fname)[1]
     header = (
         f"# This file is auto-generated from {fname}, do not modify.\n"
@@ -108,30 +126,24 @@ def main(conda_fname, pip_fname, compare=False):
 
 
 if __name__ == "__main__":
-    argparser = argparse.ArgumentParser(
-        description="convert (or compare) conda file to pip"
-    )
+    argparser = argparse.ArgumentParser(description="convert (or compare) conda file to pip")
     argparser.add_argument(
-        "--compare",
-        action="store_true",
-        help="compare whether the two files are equivalent",
+        "--compare", action="store_true", help="compare whether the two files are equivalent",
     )
     args = argparser.parse_args()
 
     repo_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     res = main(
-        os.path.join(repo_path, "ci/requirements/py3.8.yml"),
+        os.path.join(repo_path, "ci/requirements/py3.6.yml"),
         os.path.join(repo_path, "requirements.txt"),
         compare=args.compare,
     )
     if res:
         msg = (
             f"`requirements-dev.txt` has to be generated with `{sys.argv[0]}` after "
-            "`environment.yml` is modified.\n"
+            "`py3.6.yml` is modified.\n"
         )
         if args.azure:
-            msg = (
-                f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
-            )
+            msg = f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
         sys.stderr.write(msg)
     sys.exit(res)
