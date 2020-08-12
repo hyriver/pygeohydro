@@ -72,6 +72,12 @@ Some of the major capabilities if Hydrodata are:
 * A URL inventory of some of the popular web services.
 * Many other utilities for manipulating the data and visualization.
 
+You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`
+webpage to see some notebook examples. You can also try using Hydrodata without installation
+it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
+instance with the Hydrodata software stack pre-installed will be launched in your web browser
+and you can start coding!
+
 Features
 ========
 
@@ -100,10 +106,6 @@ The ``helpers`` module include:
 * ``nlcd_helper``: A roughness coefficients lookup table for each land cover type which is
   useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
-
-You can try using Hydrodata without installation it on you system by clicking on the binder badge
-below the Hydrodata banner. A Jupyter notebook instance with the Hydrodata software stack
-pre-installed will be launched in your web browser and you can start coding!
 
 Moreover, requests for additional databases or functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
