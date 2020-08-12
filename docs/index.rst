@@ -24,7 +24,7 @@ PyDaymet_   Access the Daymet database for daily climate data
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 Hydrodata: Portal to hydrology and climatology data
----------------------------------------------------
+===================================================
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata
@@ -54,8 +54,26 @@ Hydrodata: Portal to hydrology and climatology data
 
 🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
 
+Why Hydrodata?
+==============
+
+Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
+web services. Currently, it only includes hydrology and climatology data within the US.
+Some of the major capabilities if Hydrodata are:
+
+* Easy access to many web services for subsetting data and returning them as masked xarrays
+  or GeoDataFrames.
+* Splitting the requests into smaller chunks under-the-hood since web services limit
+  the number of items per request. So the only bottolneck for subsetting the data
+  is the local available memory.
+* Navigating and extracting data from the NHDPlus database using web services without
+  downloading the whole database.
+* Cleaning up the vector NHDPlus data, fixing some common issues, and computing flow accumulation.
+* A URL inventory of some of the popular web services.
+* Many other utilities for manipulating the data and visualization.
+
 Features
---------
+========
 
 Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
 web services. Currently, it only includes hydrology and climatology data within the US.
@@ -96,20 +114,22 @@ Moreover, requests for additional databases or functionalities can be submitted 
 .. image:: _static/example_plots.png
     :align: center
 
+Documentation
+=============
+
 .. toctree::
     :maxdepth: 1
-    :caption: Documentation
+    :caption: Getting Started
 
     installation
+    examples
+
+.. toctree::
+    :maxdepth: 1
+    :caption: Help & reference
+
+    history
     modules
     contributing
     authors
-    history
     license
-
-Index
------
-
-:ref:`genindex`
-
-:ref:`modindex`

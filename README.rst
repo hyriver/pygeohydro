@@ -75,13 +75,28 @@ Hydrodata: Portal to hydrology and climatology data
 
 🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
 
-Features
---------
+Why Hydrodata?
+--------------
 
 Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
 web services. Currently, it only includes hydrology and climatology data within the US.
-Hydrodata itself has three modules; ``hydrodata``, ``plot``, and ``helpers``.
+Some of the major capabilities if Hydrodata are:
 
+* Easy access to many web services for subsetting data and returning them as masked xarrays
+  or GeoDataFrames.
+* Splitting the requests into smaller chunks under-the-hood since web services limit
+  the number of items per request. So the only bottolneck for subsetting the data
+  is the local available memory.
+* Navigating and extracting data from the NHDPlus database using web services without
+  downloading the whole database.
+* Cleaning up the vector NHDPlus data, fixing some common issues, and computing flow accumulation.
+* A URL inventory of some of the popular web services.
+* Many other utilities for manipulating the data and visualization.
+
+Features
+--------
+
+Hydrodata itself has three modules; ``hydrodata``, ``plot``, and ``helpers``.
 The ``hydrodata`` module provides access to the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
@@ -93,7 +108,7 @@ The ``hydrodata`` module provides access to the following web services:
 
 Also, it has two other functions:
 
-* ``interactive_map``: Interactive map for exploring USGS stations within a bounding box.
+* ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
 * ``cover_statistics``: Compute categorical statistics of land use/land cover data.
 
 The ``plot`` module includes two main functions:
@@ -113,6 +128,9 @@ pre-installed will be launched in your web browser and you can start coding!
 
 Moreover, requests for additional databases or functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
+
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
 Documentation
 -------------
@@ -136,169 +154,6 @@ using `Conda <https://docs.conda.io/en/latest/>`__:
 .. code-block:: console
 
     $ conda install -c conda-forge hydrodata
-
-Quickstart
-----------
-
-With just a few lines of code, Hydrodata provides easy access to a handful of databases.
-We can start by exploring the available USGS stations within a bounding box:
-
-.. code-block:: python
-
-    import hydrodata.datasets as hds
-
-    hds.interactive_map((-70, 44, -69, 46))
-
-.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
-    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/interactive_map.png
-    :align: center
-
-Then, we can either specify a station ID or coordinates to the ``Station`` function and
-gathers the USGS site information such as name, contributing drainage area,
-and watershed geometry.
-
-.. code-block:: python
-
-    from hydrodata import Station
-
-    dates = ("2000-01-01", "2010-01-21")
-    wshed = Station(coords=(-69.32, 45.17), dates=dates)
-
-The generated ``wshed`` object has a property that shows whether the station is in
-HCDN database i.e., whether it's a natural watershed or is affected by human activity.
-For this watershed ``wshed.hcdn`` is ``True``, therefore, this is a natural watershed.
-Moreover, using the retrieved information, ``datasets`` module provides access to other
-databases within the watershed geometry. For example, we can get the main river channel and its
-tributaries, the USGS stations upstream (or downstream) of the main river channel
-(or the tributatires) up to a certain distance, say 150 km or all the stations:
-
-.. code-block:: python
-
-    tributaries = wshed.flowlines()
-    main_channel = wshed.flowlines(navigation="upstreamMain")
-    catchments = wshed.catchments()
-    stations = wshed.nwis_stations(navigation="upstreamMain", distance=150)
-
-For demonstrating the flow accumulation function, lets assume the flow in each river segment
-is equal to its length. Therefore, it should produce the same results as the ``arbolatesu``
-variable in the NHDPlus database.
-
-.. code-block:: python
-
-    from hydrodata import utils
-
-    flw = utils.prepare_nhdplus(tributaries, 0, 0, purge_non_dendritic=False)
-
-
-    def routing(qin, q):
-        return qin + q
-
-
-    acc = utils.vector_accumulation(
-        flw[["comid", "tocomid", "lengthkm"]], routing, "lengthkm", ["lengthkm"]
-    )
-    flw = flw.merge(acc, on="comid")
-    diff = flw.arbolatesu - flw.acc
-
-We can check the validity of the results using ``diff.abs().sum() = 5e-14``.
-Furthermore, DEM, slope, and aspect can be retrieved for the station's contributing
-watershed at 1 km resolution:
-
-.. code-block:: python
-
-    from hydrodata import NationalMap
-
-    nm = NationalMap(wshed.geometry, resolution=1e3)
-    dem, slope, aspect = nm.get_dem(), nm.get_slope(), nm.get_aspect()
-
-The point-based climate data and streamflow observations can be retrieved as well.
-Note the use of ``pet`` flag for computing PET:
-
-.. code-block:: python
-
-    variables = ["tmin", "tmax", "prcp"]
-    clm_p = hds.daymet_byloc(wshed.coords, dates=dates, variables=variables, pet=True)
-    clm_p["Q (cms)"] = hds.nwis_streamflow(wshed.station_id, dates)
-
-In addition to point-based data, we can get gridded data. The retrieved data are masked
-with the watershed geometry:
-
-.. code-block:: python
-
-    dates = ("2005-01-01", "2005-01-31")
-    clm_g = hds.daymet_bygeom(
-        wshed.geometry, dates=dates, variables=variables, pet=True
-    )
-    eta_g = hds.ssebopeta_bygeom(wshed.geometry, dates=dates)
-
-All the gridded data are returned as `xarray <https://xarray.pydata.org/en/stable/>`__
-``Dataset`` (or ``DataArray``) that offers efficient data processing tools.
-Some example plots are shown below:
-
-.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
-    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
-
-Additionally, Hydrodata has a ``plot`` module that plots five hydrologic signatures
-graphs in one plot:
-
-.. code-block:: python
-
-    from hydrodata import plot
-
-    plot.signatures(clm_p["Q (cms)"], precipitation=clm_p["prcp (mm/day)"])
-
-The ``pygeoogc`` library can be used to access some other web services as well.
-For example, we can access
-`Watershed Boundary Dataset <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer>`__
-via RESTful service,
-`National Wetlands Inventory <https://www.fws.gov/wetlands/>`__ from WMS, and
-`FEMA National Flood Hazard <https://www.fema.gov/national-flood-hazard-layer-nfhl>`__
-via WFS. The output for these functions are of type ``requests.Response`` that
-can be converted to ``GeoDataFrame`` or ``xarray.Dataset`` using Hydrodata.
-
-.. code-block:: python
-
-    from pygeoogc import ArcGISREST, WFS, wms_bybox, MatchCRS
-    from hydrodata import NLDI, utils
-
-    basin_geom = NLDI().getfeature_byid(
-        "nwissite",
-        "USGS-11092450",
-        basin=True
-    ).geometry[0]
-
-    rest_url = "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/4"
-    wbd8 = ArcGISRESTful(rest_url)
-    wbd8.get_featureids(basin_geom)
-    resp = wbd8.get_features()
-    huc8 = utils.json_togeodf(resp)
-
-    url_wms = "https://www.fws.gov/wetlands/arcgis/services/Wetlands_Raster/ImageServer/WMSServer"
-    layer = "0"
-    r_dict = wms_bybox(
-        url_wms,
-        layer,
-        basin_geom.bounds,
-        1e3,
-        "image/tiff",
-        box_crs="epsg:4326",
-        crs="epsg:3857",
-    )
-    geom = MatchCRS.geometry(basin_geom, "epsg:4326", "epsg:3857")
-    wetlands = utils.wms_toxarray(r_dict, geom, "epsg:3857")
-
-    url_wfs = "https://hazards.fema.gov/gis/nfhl/services/public/NFHL/MapServer/WFSServer"
-
-    wfs = WFS(
-        url_wfs,
-        layer="public_NFHL:Base_Flood_Elevations",
-        outformat="esrigeojson",
-        crs="epsg:4269",
-    )
-    bbox = basin_geom.bounds
-    bbox = (bbox[1], bbox[0], bbox[3], bbox[2])
-    r = wfs.getfeature_bybox(bbox, box_crs="epsg:4326")
-    flood = utils.json2geodf(r.json(), "epsg:4269", "epsg:4326")
 
 Contributing
 ------------
