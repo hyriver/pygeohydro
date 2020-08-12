@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/cheginit/pynhd/issues.
+Report bugs at https://github.com/cheginit/hydrodata/issues.
 
 If you are reporting a bug, please include:
 
@@ -39,14 +39,14 @@ and "help wanted" is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-pynhd could always use more documentation, whether as part of the
-official pynhd docs, in docstrings, or even on the web in blog posts,
+Hydrodata could always use more documentation, whether as part of the
+official Hydrodata docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/cheginit/pynhd/issues.
+The best way to send feedback is to file an issue at https://github.com/cheginit/hydrodata/issues.
 
 If you are proposing a feature:
 
@@ -58,24 +58,24 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up pynhd for local development.
+Ready to contribute? Here's how to set up Hydrodata for local development.
 
-1. Fork the pynhd repo through the GitHub website.
-2. Clone your fork locally and add the main pynhd as the upstream remote:
+1. Fork the Hydrodata repo through the GitHub website.
+2. Clone your fork locally and add the main Hydrodata as the upstream remote:
 
 .. code-block:: console
 
-    $ git clone git@github.com:your_name_here/pynhd.git
-    $ git remote add upstream git@github.com:cheginit/pynhd.git
+    $ git clone git@github.com:your_name_here/hydrodata.git
+    $ git remote add upstream git@github.com:cheginit/hydrodata.git
 
 3. Install your local copy into a virtualenv. Assuming you have Conda installed, this is how you
    can set up your fork for local development:
 
 .. code-block:: console
 
-    $ cd pynhd/
+    $ cd hydrodata/
     $ conda env create -f ci/requirements/environment.yml
-    $ conda activate pynhd-dev
+    $ conda activate hydrodata-dev
     $ python -m pip install . --no-deps
 
 4. Check out the ``develop`` branch and create a branch for local development:
