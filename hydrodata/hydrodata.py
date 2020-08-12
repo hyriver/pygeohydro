@@ -453,7 +453,7 @@ class NWIS:
         if mmd:
             nldi = NLDI()
             basins_dict = {
-                f"USGS-{s}": nldi.getfeature_byid("nwissite", f"USGS-{s}", basin=True).geometry[0]
+                f"USGS-{s}": nldi.getfeature_byid("nwissite", f"USGS-{s}", basin=True).geometry
                 for s in station_ids
             }
             basins = gpd.GeoDataFrame.from_dict(basins_dict, orient="index")
