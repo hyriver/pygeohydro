@@ -75,10 +75,7 @@ Some of the major capabilities if Hydrodata are:
 Features
 ========
 
-Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
-web services. Currently, it only includes hydrology and climatology data within the US.
 Hydrodata itself has three modules; ``hydrodata``, ``plot``, and ``helpers``.
-
 The ``hydrodata`` module provides access to the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,

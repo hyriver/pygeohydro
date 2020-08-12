@@ -93,6 +93,14 @@ Some of the major capabilities if Hydrodata are:
 * A URL inventory of some of the popular web services.
 * Many other utilities for manipulating the data and visualization.
 
+You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`
+webpage to see some notebook examples. You can also try using Hydrodata without installation
+it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
+instance with the Hydrodata software stack pre-installed will be launched in your web browser
+and you can start coding!
+
+The full documnetation can be found at https://hydrodata.readthedocs.io.
+
 Features
 --------
 
@@ -122,20 +130,11 @@ The ``helpers`` module include:
   useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
 
-You can try using Hydrodata without installation it on you system by clicking on the binder badge
-below the Hydrodata banner. A Jupyter notebook instance with the Hydrodata software stack
-pre-installed will be launched in your web browser and you can start coding!
-
 Moreover, requests for additional databases or functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
-
-Documentation
--------------
-
-Learn more about Hydrodata in its official documentation at https://hydrodata.readthedocs.io.
 
 
 Installation
