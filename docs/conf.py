@@ -118,9 +118,9 @@ nbsphinx_prolog = """
 
         This page was generated from `{{ docname }}`__.
         Interactive online version:
-        :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/develop?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
+        :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/master?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
 
-    __ https://github.com/cheginit/hydrodata/tree/develop/docs/{{ docname }}
+    __ https://github.com/cheginit/hydrodata/tree/master/docs/{{ docname }}
 """
 
 autosummary_generate = True

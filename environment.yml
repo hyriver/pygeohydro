@@ -5,7 +5,7 @@ dependencies:
   - python>=3.8
   - hydrodata
   - dask
-  - netCDF4
   - bottleneck
   - descartes
   - cartopy
+
