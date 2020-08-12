@@ -209,15 +209,15 @@ def nlcd(
         vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
         raise InvalidInputValue("years", vals)
 
-    layers = []
-    if years["canopy"] is not None:
-        layers.append(f'NLCD_{years["canopy"]}_Tree_Canopy_L48')
+    layers = [
+        f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
+        f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
+        f'NLCD_{years["impervious"]}_Impervious_L48',
+    ]
 
-    if years["cover"] is not None:
-        layers.append(f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48')
-
-    if years["impervious"] is not None:
-        layers.append(f'NLCD_{years["impervious"]}_Impervious_L48')
+    for lyr in layers:
+        if "None" in lyr:
+            layers.remove(lyr)
 
     if len(layers) == 0:
         raise InvalidInputRange("At least one of the layers should have a non-None year.")
