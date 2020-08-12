@@ -54,7 +54,7 @@ def signatures(
     if not isinstance(daily, (pd.DataFrame, pd.Series)):
         raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
 
-    if precipitation is not None and not isinstance(precipitation, pd.Series):
+    if precipitation is not None and not isinstance(precipitation, (pd.DataFrame, pd.Series)):
         raise InvalidInputType("precipitation", "pd.Series")
 
     discharge = prepare_plot_data(daily)
