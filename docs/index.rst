@@ -43,7 +43,7 @@ Hydrodata: Portal to hydrology and climatology data
     :alt: Github Actions
 
 .. image:: https://mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/cheginit/hydrodata/develop
+    :target: https://mybinder.org/v2/gh/cheginit/hydrodata/master
     :alt: Binder
 
 .. image:: https://zenodo.org/badge/237573928.svg
