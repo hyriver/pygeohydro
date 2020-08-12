@@ -2,23 +2,26 @@
 History
 =======
 
-0.7.0 (unreleased)
+0.7.0 (2020-8-12)
 ------------------
+
+This version divides Hydrodata into six standalone Python libraries. So many of the changes
+listed below belong to the modules and functions that are now a separate package. This decision
+was made for reducing the complexity of the code base and allow the users to only install
+the packages that they need without having to install all the Hydrodata dependencies.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
-- Made hydrodata, a Python software stack by separating a couple of of the classess
-  and libraries into a stand-alone package.
 - The ``services`` module is now a separate package called PyGeoOGCC and is set as a requirement
-  for Hydrodata. PyGeoOGC is a leaner package with much less dependecies and is suitable for
+  for Hydrodata. PyGeoOGC is a leaner package with much less dependencies and is suitable for
   people who might only need an interface to web services.
 - Unified function names for getting feature by ID and by box.
 - Combined ``start`` and ``end`` arguments into a ``tuple`` argument
-  called ``dates`` across the codebase.
+  called ``dates`` across the code base.
 - Rewrote NLDI function and moved most of its classmethods to Station
   so now Station class has more cohesion.
-- Removed exploratory functionality of ``ArcGISREST``, since it's more convinient
-  to do so from a broweser. Now, ``base_url`` is a required arguments.
+- Removed exploratory functionality of ``ArcGISREST``, since it's more convenient
+  to do so from a browser. Now, ``base_url`` is a required arguments.
 - Renamed ``in_crs`` in ``datasets`` and ``services`` functions to ``geo_crs`` for geometry and
   ``box_crs`` for bounding box inputs.
 - Re-wrote the ``signatures`` function from scratch using ``NamedTuple`` to improve readability
@@ -30,9 +33,9 @@ Breaking changes
 - Renamed two functions: ``ArcGISRESTful`` and ``wms_bybox``. These function now return
   ``requests.Response`` type output.
 - ``onlyipv4`` is now a class method in ``RetrySession``.
-- The ``plot.signatures`` function now assums that the input time series are in mm/day.
+- The ``plot.signatures`` function now assumes that the input time series are in mm/day.
 - Added a flag to ``get_streamflow`` function in the ``NWIS`` class to convert from cms
-  to mm/day which is useful for plotting hydorlogic signatures using the ``signatures``
+  to mm/day which is useful for plotting hydrologic signatures using the ``signatures``
   functions.
 
 Enhancements
@@ -40,7 +43,7 @@ Enhancements
 - Remove soft requirements from the env files.
 - Refactored ``requests`` functions into a single class and a separate file.
 - Made all the classes available directly from ``hydrodata``.
-- Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipline and addressed
+- Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipeline and addressed
   the some of issues
   that CodeFactor found.
 - Added `Bandit <https://bandit.readthedocs.io/en/latest/>`_ to check the code for
@@ -50,9 +53,9 @@ Enhancements
 - Added ``pytest`` fixtures to improve the tests speed.
 - Refactored ``daymet`` and ``nwis_siteinfo`` functions to reduce code complexity
   and improve readability.
-- Major refactoring of the codebase while adding type hinting.
+- Major refactoring of the code base while adding type hinting.
 - The input geometry (or bounding box) can be provided in any projection
-  and the neccessary re-projections are done under the hood.
+  and the necessary re-projections are done under the hood.
 - Refactored the method for getting object IDs in ``ArcGISREST`` class to improve
   robustness and efficiency.
 - Refactored ``Daymet`` class to improve readability.
@@ -111,7 +114,7 @@ Bug fixes
 - An almost complete re-writing of the code base and not backward-compatible
 - New website design
 - Added vector accumulation
-- Added base classes and function accesing any ArcGIS REST, WMS, WMS service
+- Added base classes and function accessing any ArcGIS REST, WMS, WMS service
 - Standalone functions for creating datasets from responses and masking the data
 - Added threading using pqdm to speed up the downloads
 - Interactive map for exploring USGS stations
@@ -123,9 +126,9 @@ Bug fixes
 
 - Added new databases: NLDI, NHDPLus V2, OpenTopography, gridded Daymet, and SSEBop
 - The gridded data are returned as xarray DataArrays
-- Removed dependecy on StreamStats and replaced it by NLDI
-- Improved overal robustness and efficiency of the code
-- Not backward comparible
+- Removed dependency on StreamStats and replaced it by NLDI
+- Improved overall robustness and efficiency of the code
+- Not backward comparable
 - Added code style enforcement with isort, black, flake8 and pre-commit
 - Added a new shiny logo!
 - New installation method

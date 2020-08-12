@@ -64,7 +64,7 @@ Some of the major capabilities if Hydrodata are:
 * Easy access to many web services for subsetting data and returning them as masked xarrays
   or GeoDataFrames.
 * Splitting the requests into smaller chunks under-the-hood since web services limit
-  the number of items per request. So the only bottolneck for subsetting the data
+  the number of items per request. So the only bottleneck for subsetting the data
   is the local available memory.
 * Navigating and extracting data from the NHDPlus database using web services without
   downloading the whole database.
