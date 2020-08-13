@@ -21,6 +21,7 @@ def signatures(
     daily: Union[pd.DataFrame, pd.Series],
     precipitation: Optional[pd.Series] = None,
     title: Optional[str] = None,
+    title_ypos: float = 1.02,
     figsize: Tuple[int, int] = (14, 13),
     threshold: float = 1e-3,
     output: Union[str, Path] = None,
@@ -42,6 +43,8 @@ def signatures(
         plotted on the second x-axis at the top.
     title : str, optional
         The plot supertitle.
+    title_ypos : float
+        The vertical position of the plot title, default to 1.02
     figsize : tuple, optional
         Width and height of the plot in inches, defaults to (14, 13) inches.
     threshold : float, optional
@@ -116,7 +119,7 @@ def signatures(
     ax.set_title("Flow Duration Curve")
 
     plt.tight_layout()
-    plt.suptitle(title, size=16, y=1.02)
+    plt.suptitle(title, size=16, y=title_ypos)
 
     if output is not None:
         _check_dir(output)
