@@ -2,6 +2,12 @@
 History
 =======
 
+0.7.1 (unreleased)
+------------------
+
+- Added a new argument to ``plot.signatures`` for controling the vertical position of the
+  plot title, called ``title_ypos``. This could be useful for multi-line titles.
+
 0.7.0 (2020-8-12)
 ------------------
 
