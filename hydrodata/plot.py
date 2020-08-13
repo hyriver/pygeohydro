@@ -100,7 +100,12 @@ def signatures(
         ax.set_xlabel("")
         ax.set_title(_title)
         if len(_discharge.columns) > 1 and f == "daily":
-            ax.legend(_discharge.columns, loc="best")
+            ax.legend(
+                _discharge.columns,
+                bbox_to_anchor=(0.0, 1.02, 1.0, 0.102),
+                loc="lower right",
+                ncol=len(_discharge),
+            )
 
         if f == "annual":
             ax.xaxis.set_major_locator(matplotlib.dates.YearLocator())
