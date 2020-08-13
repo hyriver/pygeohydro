@@ -243,9 +243,9 @@ def _nlcd_layers(years: Dict[str, Optional[int]]) -> List[str]:
         f'NLCD_{years["impervious"]}_Impervious_L48',
     ]
 
-    for lyr in layers:
-        if "None" in lyr:
-            layers.remove(lyr)
+    nones = [lyr for lyr in layers if "None" in lyr]
+    for lyr in nones:
+        layers.remove(lyr)
 
     if len(layers) == 0:
         raise InvalidInputRange("At least one of the layers should have a non-None year.")
