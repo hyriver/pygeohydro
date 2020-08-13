@@ -68,7 +68,8 @@ def test_get_ssebopeta_urls():
 @pytest.mark.flaky(max_runs=3)
 def test_nlcd(geometry_nat):
     hd.nlcd(geometry_nat.bounds, resolution=1e3)
-    lulc = hd.nlcd(geometry_nat, resolution=1e3, crs="epsg:3542")
+    years = {"impervious": None, "cover": 2016, "canopy": None}
+    lulc = hd.nlcd(geometry_nat, years=years, resolution=1e3, crs="epsg:3542")
     st = hd.cover_statistics(lulc.cover)
     assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
 
