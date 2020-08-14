@@ -54,14 +54,7 @@ def signatures(
         Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
     """
-    if not isinstance(daily, (pd.DataFrame, pd.Series)):
-        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
-
-    if precipitation is not None and not isinstance(precipitation, (pd.DataFrame, pd.Series)):
-        raise InvalidInputType("precipitation", "pd.Series")
-
-    discharge = prepare_plot_data(daily)
-    prcp = None if precipitation is None else prepare_plot_data(precipitation)
+    discharge, prcp = _prepare_plot_data(daily, precipitation)
 
     fig = plt.figure(figsize=figsize)
     gs = fig.add_gridspec(4, 2)
@@ -99,6 +92,7 @@ def signatures(
         ax.set_xlim(qxval[0], qxval[-1])
         ax.set_xlabel("")
         ax.set_title(_title)
+
         if len(_discharge.columns) > 1 and f == "daily":
             ax.legend(
                 _discharge.columns,
@@ -142,6 +136,23 @@ class PlotDataType(NamedTuple):
     bar_width: Dict[str, int]
     titles: Dict[str, str]
     units: Dict[str, str]
+
+
+def _prepare_plot_data(
+    daily: Union[pd.DataFrame, pd.Series],
+    precipitation: Optional[Union[pd.DataFrame, pd.Series]] = None,
+) -> Tuple[PlotDataType, Optional[PlotDataType]]:
+    if not isinstance(daily, (pd.DataFrame, pd.Series)):
+        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
+
+    discharge = prepare_plot_data(daily)
+
+    if not isinstance(precipitation, (pd.DataFrame, pd.Series)) and precipitation is not None:
+        raise InvalidInputType("precipitation", "pd.DataFrame or pd.Series")
+
+    prcp = None if precipitation is None else prepare_plot_data(precipitation)
+
+    return discharge, prcp
 
 
 def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
