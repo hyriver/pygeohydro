@@ -94,7 +94,7 @@ Some of the major capabilities if Hydrodata are:
 * Many other utilities for manipulating the data and visualization.
 
 You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`__
-webpage to see some example notebooks. You can also try using Hydrodata without installation
+webpage to see some example notebooks. You can also try using Hydrodata without installing
 it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
 instance with the Hydrodata software stack pre-installed will be launched in your web browser
 and you can start coding!
