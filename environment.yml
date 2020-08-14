@@ -3,7 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - python>=3.8
-  - hydrodata>=0.7.0
+  - hydrodata=0.7
   - dask
   - bottleneck
   - descartes
