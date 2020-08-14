@@ -7,7 +7,8 @@ History
 
 - Added a new argument to ``plot.signatures`` for controling the vertical position of the
   plot title, called ``title_ypos``. This could be useful for multi-line titles.
-- Fixed an issue with the ``nlcd`` function where none layers are not dropped.
+- Fixed an issue with the ``nlcd`` function where none layers are not dropped and cause the
+  function to fails.
 
 0.7.0 (2020-8-12)
 ------------------
