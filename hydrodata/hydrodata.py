@@ -1,6 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 import io
 import zipfile
+from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple, Union
 
 import folium
@@ -116,9 +117,10 @@ def ssebopeta_bygeom(
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
             ds = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
-            return ds.expand_dims({"time": [dt]})
+            return dt, ds.expand_dims({"time": [dt]})
 
-        data = xr.merge(ogc.utils.threading(_ssebop, f_list, max_workers=4))
+        resp_list = ogc.utils.threading(_ssebop, f_list, max_workers=4)
+        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())
 
     eta = data.eta.copy()
     eta *= 1e-3
