@@ -13,7 +13,7 @@ dependencies:
   - owslib
   - pyproj
   - shapely
-  - simplejson
+  - orjson
   - defusedxml
   - requests
   - dataclasses

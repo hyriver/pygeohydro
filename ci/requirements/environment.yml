@@ -15,7 +15,7 @@ dependencies:
   - folium
   - rasterio
   - networkx
-  - simplejson
+  - orjson
   - defusedxml
 
   - dask
