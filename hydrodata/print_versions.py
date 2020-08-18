@@ -109,7 +109,7 @@ def show_versions(file=sys.stdout):
         ("rasterio", lambda mod: mod.__version__),
         ("geopandas", lambda mod: mod.__version__),
         ("pandas", lambda mod: mod.__version__),
-        ("simplejson", lambda mod: mod.__version__),
+        ("orjson", lambda mod: mod.__version__),
         ("shapely", lambda mod: mod.__version__),
         ("scipy", lambda mod: mod.__version__),
         ("netCDF4", lambda mod: mod.__version__),
