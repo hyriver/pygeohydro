@@ -2,11 +2,28 @@
 History
 =======
 
-0.7.1 (unreleased)
+0.7.2 (2020-8-18)
 ------------------
 
-- Added a new argument to ``plot.signatures`` for controling the vertical position of the
+Enhancements
+~~~~~~~~~~~~
+- Replaced ``simplejson`` with ``orjson`` to speed-up JSON operations.
+- Explicitly sort the time dimension of the ``ssebopeta_bygeom`` function.
+
+Bug fixes
+~~~~~~~~~
+- Fix an issue with the ``nlcd`` function where high resolution requests fail.
+
+0.7.1 (2020-8-13)
+------------------
+
+New Features
+~~~~~~~~~~~~
+- Added a new argument to ``plot.signatures`` for controlling the vertical position of the
   plot title, called ``title_ypos``. This could be useful for multi-line titles.
+
+Bug fixes
+~~~~~~~~~
 - Fixed an issue with the ``nlcd`` function where none layers are not dropped and cause the
   function to fails.
 
