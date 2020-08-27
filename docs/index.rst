@@ -59,7 +59,7 @@ Why Hydrodata?
 
 Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
 web services. Currently, it only includes hydrology and climatology data within the US.
-Some of the major capabilities if Hydrodata are:
+Some of the major capabilities of Hydrodata are:
 
 * Easy access to many web services for subsetting data and returning them as masked xarrays
   or GeoDataFrames.
@@ -125,7 +125,7 @@ Documentation
 
 .. toctree::
     :maxdepth: 1
-    :caption: Help & reference
+    :caption: Help & Reference
 
     history
     modules
