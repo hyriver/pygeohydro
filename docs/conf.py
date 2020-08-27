@@ -323,7 +323,13 @@ htmlhelp_basename = "hydrodatadoc"
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    ("index", "hydrodata.tex", "hydrodata Documentation", "hydrodata Developers", "manual",)
+    (
+        "index",
+        "hydrodata.tex",
+        "hydrodata Documentation",
+        "hydrodata Developers",
+        "manual",
+    )
 ]
 
 # The name of an image file (relative to this directory) to place at the top of

@@ -24,7 +24,8 @@ DEF_CRS = "epsg:4326"
 
 
 def ssebopeta_byloc(
-    coords: Tuple[float, float], dates: Union[Tuple[str, str], Union[int, List[int]]],
+    coords: Tuple[float, float],
+    dates: Union[Tuple[str, str], Union[int, List[int]]],
 ) -> pd.DataFrame:
     """Daily actual ET for a location from SSEBop database in mm/day.
 
