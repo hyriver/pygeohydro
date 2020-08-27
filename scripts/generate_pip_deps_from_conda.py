@@ -128,7 +128,9 @@ def main(conda_fname, pip_fname, compare=False):
 if __name__ == "__main__":
     argparser = argparse.ArgumentParser(description="convert (or compare) conda file to pip")
     argparser.add_argument(
-        "--compare", action="store_true", help="compare whether the two files are equivalent",
+        "--compare",
+        action="store_true",
+        help="compare whether the two files are equivalent",
     )
     args = argparser.parse_args()
 
