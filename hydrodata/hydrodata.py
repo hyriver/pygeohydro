@@ -375,7 +375,7 @@ class NWIS:
 
         sites = sites[sites.site_no.apply(len) == 8]
 
-        gii = WaterData("gagesii", "epsg:900913")
+        gii = WaterData("gagesii", "epsg:4269")
         hcdn = gii.byid("staid", sites.site_no.tolist())
         hcdn_dict = hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
         sites["hcdn_2009"] = sites.site_no.apply(
