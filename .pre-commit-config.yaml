@@ -1,7 +1,7 @@
 repos:
   # isort should run before black as black sometimes tweaks the isort output
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.4.2
+    rev: 5.5.1
     hooks:
       - id: isort
         name: Sort imports with isort
@@ -21,7 +21,7 @@ repos:
     - id: requirements-txt-fixer
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.9.0a0
+    rev: 0.9.0a1
     hooks:
     - id: doc8
       name: Autoformat with doc8
