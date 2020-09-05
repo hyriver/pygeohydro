@@ -51,3 +51,4 @@ dependencies:
     - git+https://github.com/cheginit/pynhd.git
     - git+https://github.com/cheginit/py3dep.git
     - git+https://github.com/cheginit/pydaymet.git
+    - git+https://github.com/cheginit/hydrodata.git

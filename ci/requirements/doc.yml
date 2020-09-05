@@ -31,6 +31,10 @@ dependencies:
   # dep for plotting with geopandas
   - descartes
 
+  # deps for plotting with classification
+  - cmocean
+  - mapclassify
+
   # doc deps
   - ipykernel
   - ipython
