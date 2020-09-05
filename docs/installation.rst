@@ -1,4 +1,4 @@
-.. highlight:: shell
+.. highlight:: bash
 
 ============
 Installation
@@ -10,11 +10,13 @@ Dependencies
 Dependencies of Hydrodata are as listed below:
 
 - `Python 3.6+ <https://www.python.org/downloads>`_
+- `PyGeoOGC <https://github.com/cheginit/pygeoogc>`__
+- `PyGeoUtils <https://github.com/cheginit/pygeoutils>`__
 - `PyNHD <https://github.com/cheginit/pynhd>`__
 - `Py3DEP <https://github.com/cheginit/py3dep>`__
 - `PyDaymet <https://github.com/cheginit/pydaymet>`__
-- `Folium <https://python-visualization.github.io/folium/>`_
-- `LXML <https://lxml.de/>`_
+- `Matplotlib <https://matplotlib.org/>`__
+- `Folium <https://python-visualization.github.io/folium/>`__
 
 The following optional libraries are recommended to improve performance of ``xarray``:
 

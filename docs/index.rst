@@ -55,22 +55,22 @@ Hydrodata: Portal to hydrology and climatology data
 🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
 
 Why Hydrodata?
-==============
+--------------
 
 Hydrodata is a stack of Python libraries designed to aid in watershed analysis through
 web services. Currently, it only includes hydrology and climatology data within the US.
 Some of the major capabilities of Hydrodata are:
 
-* Easy access to many web services for subsetting data and returning them as masked xarrays
-  or GeoDataFrames.
-* Splitting the requests into smaller chunks under-the-hood since web services limit
+* Easy access to many web services for subsetting data and returning the requests as masked
+  xarrays or GeoDataFrames.
+* Splitting large requests into smaller chunks under-the-hood since web services usually limit
   the number of items per request. So the only bottleneck for subsetting the data
   is the local available memory.
-* Navigating and extracting data from the NHDPlus database using web services without
-  downloading the whole database.
-* Cleaning up the vector NHDPlus data, fixing some common issues, and computing flow accumulation.
-* A URL inventory of some of the popular web services.
-* Many other utilities for manipulating the data and visualization.
+* Navigating and subsetting NHDPlus database (both meduim- and high-resolution) using web services.
+* Cleaning up the vector NHDPlus data, fixing some common issues, and computing vector-based
+  accumulation through the network.
+* A URL inventory for some of the popular (and tested) web services.
+* Some utilities for manipulating the data and visualization.
 
 You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`__
 webpage to see some example notebooks. You can also try using Hydrodata without installing
@@ -79,7 +79,7 @@ instance with the Hydrodata software stack pre-installed will be launched in you
 and you can start coding!
 
 Features
-========
+--------
 
 Hydrodata itself has three main modules; ``hydrodata``, ``plot``, and ``helpers``.
 The ``hydrodata`` module provides access to the following web services:
@@ -93,15 +93,15 @@ The ``hydrodata`` module provides access to the following web services:
 
 Also, it has two other functions:
 
-* ``interactive_map``: Interactive map for exploring USGS stations within a bounding box.
+* ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
 * ``cover_statistics``: Compute categorical statistics of land use/land cover data.
 
 The ``plot`` module includes two main functions:
 
-* ``signatures``: Plot five hydrologic signature graphs
-* ``cover_legends``: The official NLCD land cover legends for plotting a land cover dataset.
+* ``signatures``: Plot five hydrologic signature graphs.
+* ``cover_legends``: Return the official NLCD land cover legends for plotting a land cover dataset.
 
-The ``helpers`` module include:
+The ``helpers`` module includes:
 
 * ``nlcd_helper``: A roughness coefficients lookup table for each land cover type which is
   useful for overland flow routing among other applications.
