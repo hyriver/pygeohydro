@@ -4,16 +4,40 @@
 
 |
 
-=========== ===========================================================================
-Package     Description
-=========== ===========================================================================
-Hydrodata_  Access NWIS, HCDN 2009, NLCD, and SSEBop databases
-PyGeoOGC_   Query data from any ArcGIS RESTful-, WMS-, and WFS-based services
-PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets
-PyNHD_      Access NLDI and WaterData web services for navigating the NHDPlus database
-Py3DEP_     Access topographic data through the 3D Elevation Program (3DEP) web service
-PyDaymet_   Access the Daymet database for daily climate data
-=========== ===========================================================================
+.. |hydrodata| image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
+    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+.. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/build/badge.svg
+    :target: https://github.com/cheginit/pygeoogc/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+.. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/workflows/build/badge.svg
+    :target: https://github.com/cheginit/pygeoutils/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+.. |pynhd| image:: https://github.com/cheginit/pynhd/workflows/build/badge.svg
+    :target: https://github.com/cheginit/pynhd/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+.. |py3dep| image:: https://github.com/cheginit/py3dep/workflows/build/badge.svg
+    :target: https://github.com/cheginit/py3dep/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+.. |pydaymet| image:: https://github.com/cheginit/pydaymet/workflows/build/badge.svg
+    :target: https://github.com/cheginit/pydaymet/actions?query=workflow%3Abuild
+    :alt: Github Actions
+
+=========== ==================================================================== ============
+Package     Description                                                          Status
+=========== ==================================================================== ============
+Hydrodata_  Access NWIS, HCDN 2009, NLCD, and SSEBop databases                   |hydrodata|
+PyGeoOGC_   Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
+PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
+PyNHD_      Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
+Py3DEP_     Access topographic data through National Map's 3DEP web service      |py3dep|
+PyDaymet_   Access Daymet for daily climate data both single pixel and gridded   |pydaymet|
+=========== ==================================================================== ============
 
 .. _Hydrodata: https://github.com/cheginit/hydrodata
 .. _PyGeoOGC: https://github.com/cheginit/pygeoogc
@@ -36,10 +60,6 @@ Hydrodata: Portal to hydrology and climatology data
 .. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
     :target: https://codecov.io/gh/cheginit/hydrodata
     :alt: CodeCov
-
-.. image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
-    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
-    :alt: Github Actions
 
 .. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
     :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
