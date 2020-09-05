@@ -1,9 +1,14 @@
-=======
 History
 =======
 
+0.7.3 (2020-9-05)
+-----------------
+
+- Fixed the issue with WaterData due to the recent changes on the server side.
+- Updated the examples based on the latest changes across the stack.
+
 0.7.2 (2020-8-18)
-------------------
+-----------------
 
 Enhancements
 ~~~~~~~~~~~~
@@ -15,7 +20,7 @@ Bug fixes
 - Fix an issue with the ``nlcd`` function where high resolution requests fail.
 
 0.7.1 (2020-8-13)
-------------------
+-----------------
 
 New Features
 ~~~~~~~~~~~~
@@ -28,7 +33,7 @@ Bug fixes
   function to fails.
 
 0.7.0 (2020-8-12)
-------------------
+-----------------
 
 This version divides Hydrodata into six standalone Python libraries. So many of the changes
 listed below belong to the modules and functions that are now a separate package. This decision
