@@ -82,16 +82,16 @@ Hydrodata is a stack of Python libraries designed to aid in watershed analysis t
 web services. Currently, it only includes hydrology and climatology data within the US.
 Some of the major capabilities of Hydrodata are:
 
-* Easy access to many web services for subsetting data and returning them as masked xarrays
-  or GeoDataFrames.
-* Splitting the requests into smaller chunks under-the-hood since web services limit
+* Easy access to many web services for subsetting data and returning the requests as masked
+  xarrays or GeoDataFrames.
+* Splitting large requests into smaller chunks under-the-hood since web services usually limit
   the number of items per request. So the only bottleneck for subsetting the data
   is the local available memory.
-* Navigating and extracting data from the NHDPlus database using web services without
-  downloading the whole database.
-* Cleaning up the vector NHDPlus data, fixing some common issues, and computing flow accumulation.
-* A URL inventory of some of the popular web services.
-* Many other utilities for manipulating the data and visualization.
+* Navigating and subsetting NHDPlus database (both meduim- and high-resolution) using web services.
+* Cleaning up the vector NHDPlus data, fixing some common issues, and computing vector-based
+  accumulation through the network.
+* A URL inventory for some of the popular (and tested) web services.
+* Some utilities for manipulating the data and visualization.
 
 You can visit `examples <https://hydrodata.readthedocs.io/en/develop/examples.html>`__
 webpage to see some example notebooks. You can also try using Hydrodata without installing
@@ -121,16 +121,16 @@ Also, it has two other functions:
 
 The ``plot`` module includes two main functions:
 
-* ``signatures``: Plot five hydrologic signature graphs
-* ``cover_legends``: The official NLCD land cover legends for plotting a land cover dataset.
+* ``signatures``: Plot five hydrologic signature graphs.
+* ``cover_legends``: Return the official NLCD land cover legends for plotting a land cover dataset.
 
-The ``helpers`` module include:
+The ``helpers`` module includes:
 
 * ``nlcd_helper``: A roughness coefficients lookup table for each land cover type which is
   useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
 
-Moreover, requests for additional databases or functionalities can be submitted via
+Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
 
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
