@@ -193,7 +193,7 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
         "mm/day",
         "mm/month",
         "mm/year",
-        "mm/day",
+        "mm/month",
         "mm/day",
     ]
     fields = PlotDataType._fields
