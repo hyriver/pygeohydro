@@ -1,6 +1,5 @@
 """Tests for Hydrodata package."""
 import io
-from urllib.error import HTTPError
 
 import pytest
 from shapely.geometry import Polygon
