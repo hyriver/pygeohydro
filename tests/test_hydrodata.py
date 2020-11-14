@@ -50,7 +50,7 @@ def test_ssebopeta(geometry_nat):
     dates = ("2000-01-01", "2000-01-05")
     coords = (geometry_nat.centroid.x, geometry_nat.centroid.y)
     eta_p = hd.ssebopeta_byloc(coords, dates=dates)
-    eta_g = hd.ssebopeta_bygeom(geometry_nat, dates=dates, fill_holes=True)
+    eta_g = hd.ssebopeta_bygeom(geometry_nat, dates=dates)
     assert (
         abs(eta_p.mean().values[0] - 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.576) < 1e-3
