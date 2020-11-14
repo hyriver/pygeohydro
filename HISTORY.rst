@@ -1,11 +1,13 @@
 History
 =======
 
-0.7.3 (2020-9-05)
------------------
+0.7.3 (unreleased)
+------------------
 
 - Fixed the issue with WaterData due to the recent changes on the server side.
 - Updated the examples based on the latest changes across the stack.
+- Add support for multipolygon.
+- Remove the ``fill_hole`` argument.
 
 0.7.2 (2020-8-18)
 -----------------

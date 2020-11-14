@@ -14,7 +14,7 @@ import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, RetrySession, ServiceURL
 from pynhd import NLDI, WaterData
-from shapely.geometry import Polygon
+from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
@@ -75,7 +75,6 @@ def ssebopeta_bygeom(
     geometry: Union[Polygon, Tuple[float, float, float, float]],
     dates: Union[Tuple[str, str], Union[int, List[int]]],
     geo_crs: str = DEF_CRS,
-    fill_holes: bool = False,
 ) -> xr.DataArray:
     """Get daily actual ET for a region from SSEBop database.
 
@@ -95,8 +94,6 @@ def ssebopeta_bygeom(
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
     geo_crs : str, optional
         The CRS of the input geometry, defaults to epsg:4326.
-    fill_holes : bool, optional
-        Whether to fill the holes in the geometry's interior (Polygon type), defaults to False.
 
     Returns
     -------
@@ -104,7 +101,6 @@ def ssebopeta_bygeom(
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
     _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
-    _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
 
     f_list = _get_ssebopeta_urls(dates)
 
@@ -160,12 +156,11 @@ def _get_ssebopeta_urls(
 
 
 def nlcd(
-    geometry: Union[Polygon, Tuple[float, float, float, float]],
+    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     resolution: float,
     years: Optional[Dict[str, Optional[int]]] = None,
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
-    fill_holes: bool = False,
 ) -> xr.Dataset:
     """Get data from NLCD database (2016).
 
@@ -174,7 +169,7 @@ def nlcd(
 
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon or tuple of length 4
+    geometry : Polygon, MultiPolygon, or tuple of length 4
         The geometry or bounding box (west, south, east, north) for extracting the data.
     resolution : float
         The data resolution in meters. The width and height of the output are computed in pixel
@@ -188,8 +183,6 @@ def nlcd(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    fill_holes : bool, optional
-        Whether to fill the holes in the geometry's interior, defaults to False.
 
     Returns
     -------
@@ -200,7 +193,6 @@ def nlcd(
     layers = _nlcd_layers(years)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
-    _geometry = Polygon(_geometry.exterior) if fill_holes else _geometry
 
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
     r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
