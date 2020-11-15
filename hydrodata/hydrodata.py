@@ -578,8 +578,9 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
         )
     )
 
+    cov = np.floor_divide(cover_arr[~np.isnan(cover_arr)], 10).astype("int")
     cat_list = (
-        np.array([np.count_nonzero(cover_arr // 10 == c) for c in range(10) if c != 6])
+        np.array([np.count_nonzero(cov == c) for c in range(10) if c != 6])
         / total_pix
         * 100.0
     )
