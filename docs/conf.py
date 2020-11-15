@@ -96,6 +96,7 @@ extensions = [
     "nbsphinx_link",
     "recommonmark",
     "sphinx_copybutton",
+    "sphinx-inline-tabs",
 ]
 
 extlinks = {
