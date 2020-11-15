@@ -8,6 +8,7 @@ History
 - Updated the examples based on the latest changes across the stack.
 - Add support for multipolygon.
 - Remove the ``fill_hole`` argument.
+- Fix a warning in ``nlcd`` regarding performing division on nan values.
 
 0.7.2 (2020-8-18)
 -----------------
