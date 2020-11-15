@@ -52,6 +52,7 @@ dependencies:
   - unidecode
   - pip:
     - nbsphinx_link
+    - sphinx-inline-tabs
     - git+https://github.com/bashtage/sphinx-material.git
 
     # hydrodata stack
