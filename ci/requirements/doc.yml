@@ -6,26 +6,30 @@ dependencies:
   - pip
   - setuptools
 
-  # add deps to speedup dep resolving
-  - matplotlib-base
-  - folium
-  - lxml
+  # add deps to speedup resolving deps
   - owslib
   - pyproj
-  - shapely
-  - orjson
   - defusedxml
   - requests
-  - dataclasses
+  - aiohttp
+  - chardet
+  - aiodns
+  - brotlipy
+  - nest-asyncio
   - xarray
+  - netCDF4
   - geopandas
   - rasterio
+  - shapely
+  - orjson
+  - lxml
+  - dask
   - networkx
+  - matplotlib-base
+  - folium
   - scipy
 
   # xarray speedups
-  - dask
-  - netCDF4
   - bottleneck
 
   # dep for plotting with geopandas
