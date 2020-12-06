@@ -50,7 +50,7 @@ repos:
         args: [--py36-plus]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.6.2
+    rev: 1.6.3
     hooks:
       - id: bandit
         name: Check for security issues with bandit

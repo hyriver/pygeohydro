@@ -362,8 +362,11 @@ class NWIS:
         except AttributeError:
             pass
 
-        float_cols = ["dec_lat_va", "dec_long_va", "alt_va"]
-        sites[float_cols] = sites[float_cols].astype("float64")
+        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
+        if expanded:
+            float_cols += ["drain_area_va", "contrib_drain_area_va"]
+
+        sites[float_cols] = sites[float_cols].apply(lambda x: pd.to_numeric(x, errors="coerce"))
 
         sites = sites[sites.site_no.apply(len) == 8]
 

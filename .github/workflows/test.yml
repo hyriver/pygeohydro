@@ -8,13 +8,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        python-version: ["3.6", "3.7", "3.8"]
-        os: ["ubuntu-latest", "macos-latest"]
+        python-version: [3.6, 3.7, 3.8, 3.9]
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        exclude:
+            - os: windows-latest
+              python-version: 3.6
 
     steps:
       - uses: actions/checkout@master
       - name: Setup miniconda
-        uses: goanpeca/setup-miniconda@v1
+        uses: conda-incubator/setup-miniconda@master
         with:
           activate-environment: hydrodata
           python-version: ${{ matrix.python-version }}
