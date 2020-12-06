@@ -1,11 +1,29 @@
 # This file is auto-generated from py3.6.yml, do not modify.
 # See that file for comments about the need/usage of each dependency.
 
+aiodns
+aiohttp
+brotlipy
+chardet
+dask
+defusedxml
 folium
+geopandas
 lxml
 matplotlib
+nest-asyncio
+netCDF4
+networkx
+orjson
+owslib
 py3dep
 pydaymet
 pygeoogc
 pygeoutils
 pynhd
+pyproj
+rasterio
+requests
+setuptools
+shapely
+xarray

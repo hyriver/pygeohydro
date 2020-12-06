@@ -54,7 +54,7 @@ def get_sys_info():
             ("byteorder", f"{sys.byteorder}"),
             ("LC_ALL", f'{os.environ.get("LC_ALL", "None")}'),
             ("LANG", f'{os.environ.get("LANG", "None")}'),
-            ("LOCALE", ".".join(locale.getlocale())),
+            ("LOCALE", ".".join(str(i) for i in locale.getlocale())),
         ]
     )
 
