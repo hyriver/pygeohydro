@@ -1,7 +1,7 @@
 History
 =======
 
-0.7.3 (unreleased)
+0.8.0 (2020-12-06)
 ------------------
 
 - Fixed the issue with WaterData due to the recent changes on the server side.
