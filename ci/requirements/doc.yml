@@ -39,6 +39,9 @@ dependencies:
   - cmocean
   - mapclassify
 
+  # add third-party deps for the examples
+  - osmnx
+
   # doc deps
   - ipykernel
   - ipython
@@ -55,6 +58,7 @@ dependencies:
   - css-html-js-minify
   - unidecode
   - pip:
+    - numbagg
     - nbsphinx_link
     - sphinx-inline-tabs
     - git+https://github.com/bashtage/sphinx-material.git

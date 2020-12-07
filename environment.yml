@@ -4,7 +4,18 @@ channels:
 dependencies:
   - python>=3.8
   - hydrodata
+
+  # xarray speedups
   - bottleneck
+
+  # dep for plotting with geopandas
   - descartes
   - cartopy
+
+  # deps for plotting with classification
+  - cmocean
+  - mapclassify
+
+  # add third-party deps for the examples
+  - osmnx
 
