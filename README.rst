@@ -4,27 +4,27 @@
 
 |
 
-.. |hydrodata| image:: https://github.com/cheginit/hydrodata/workflows/build/badge.svg
+.. |hydrodata| image:: https://github.com/cheginit/hydrodata/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Abuild
     :alt: Github Actions
 
-.. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/build/badge.svg
+.. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/pygeoogc/actions?query=workflow%3Abuild
     :alt: Github Actions
 
-.. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/workflows/build/badge.svg
+.. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/pygeoutils/actions?query=workflow%3Abuild
     :alt: Github Actions
 
-.. |pynhd| image:: https://github.com/cheginit/pynhd/workflows/build/badge.svg
+.. |pynhd| image:: https://github.com/cheginit/pynhd/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/pynhd/actions?query=workflow%3Abuild
     :alt: Github Actions
 
-.. |py3dep| image:: https://github.com/cheginit/py3dep/workflows/build/badge.svg
+.. |py3dep| image:: https://github.com/cheginit/py3dep/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/py3dep/actions?query=workflow%3Abuild
     :alt: Github Actions
 
-.. |pydaymet| image:: https://github.com/cheginit/pydaymet/workflows/build/badge.svg
+.. |pydaymet| image:: https://github.com/cheginit/pydaymet/workflows/pytest/badge.svg
     :target: https://github.com/cheginit/pydaymet/actions?query=workflow%3Abuild
     :alt: Github Actions
 
