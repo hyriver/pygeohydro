@@ -57,7 +57,7 @@ Hydrodata: Portal to hydrology and climatology data
     :target: https://anaconda.org/conda-forge/hydrodata
     :alt: Conda Version
 
-.. image:: https://codecov.io/gh/cheginit/hydrodata/branch/develop/graph/badge.svg
+.. image:: https://codecov.io/gh/cheginit/hydrodata/graph/badge.svg
     :target: https://codecov.io/gh/cheginit/hydrodata
     :alt: CodeCov
 
