@@ -11,11 +11,9 @@ dependencies:
   # dep for plotting with geopandas
   - descartes
   - cartopy
-
-  # deps for plotting with classification
   - cmocean
   - mapclassify
 
-  # add third-party deps for the examples
+  # third-party deps for the examples
   - osmnx
 
