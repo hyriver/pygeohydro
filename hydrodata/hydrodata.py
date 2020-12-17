@@ -456,17 +456,11 @@ class NWIS:
 
         if mmd:
             nldi = NLDI()
-            basins_dict = {
-                f"USGS-{s}": nldi.getfeature_byid("nwissite", f"USGS-{s}", basin=True).geometry
-                for s in station_ids
-            }
-            basins = gpd.GeoDataFrame.from_dict(basins_dict, orient="index")
-            basins.columns = ["geometry"]
-            basins = basins.set_crs(DEF_CRS)
+            basins = nldi.get_basins(station_ids)
             eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
             area = basins.to_crs(eck4).area
             ms2mmd = 1000.0 * 24.0 * 3600.0
-            qobs = qobs.apply(lambda x: x / area.loc[x.name] * ms2mmd)
+            qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
         return qobs
 
 
