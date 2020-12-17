@@ -14,7 +14,7 @@ repos:
         args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.3.0
+    rev: v3.4.0
     hooks:
     - id: trailing-whitespace
     - id: check-executables-have-shebangs
@@ -50,9 +50,27 @@ repos:
         args: [--py36-plus]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.6.3
+    rev: 1.7.0
     hooks:
       - id: bandit
         name: Check for security issues with bandit
         args: [-lll, --recursive, hydrodata]
         files: .py$
+
+  - repo: https://github.com/nbQA-dev/nbQA
+    rev: 0.5.5
+    hooks:
+      - id: nbqa-isort
+        name: Sort imports in notebooks
+        files: docs/examples
+        args: [--nbqa-mutate]
+
+      - id: nbqa-black
+        name: Reformat notebooks
+        files: docs/examples
+        args: [--nbqa-mutate]
+
+      - id: nbqa-pyupgrade
+        files: docs/examples
+        name: Upgrade notebooks syntax to Python 3.6+
+        args: [--nbqa-mutate]
