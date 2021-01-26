@@ -10,16 +10,17 @@ import platform
 import struct
 import subprocess
 import sys
+from typing import IO, List, Optional, Tuple
 
 
-def get_sys_info():
+def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     """Return system information as a dict.
 
     From https://github.com/numpy/numpy/blob/master/setup.py#L64-L89
     """
     blob = []
 
-    def _minimal_ext_cmd(cmd):
+    def _minimal_ext_cmd(cmd: List[str]) -> bytes:
         # construct minimal environment
         env = {}
         for k in ["SYSTEMROOT", "PATH", "HOME"]:
@@ -42,11 +43,11 @@ def get_sys_info():
 
     blob.append(("commit", commit))
 
-    (sysname, _nodename, release, _version, machine, processor) = platform.uname()
+    (sysname, _, release, _, machine, processor) = platform.uname()
     blob.extend(
         [
             ("python", sys.version),
-            ("python-bits", struct.calcsize("P") * 8),
+            ("python-bits", f"{struct.calcsize('P') * 8}"),
             ("OS", f"{sysname}"),
             ("OS-release", f"{release}"),
             ("machine", f"{machine}"),
@@ -61,7 +62,7 @@ def get_sys_info():
     return blob
 
 
-def netcdf_and_hdf5_versions():
+def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
     """Get netcdf and hdf5 versions."""
     libhdf5_version = None
     libnetcdf_version = None
@@ -80,7 +81,7 @@ def netcdf_and_hdf5_versions():
     return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
 
-def show_versions(file=sys.stdout):
+def show_versions(file: IO = sys.stdout) -> None:
     """Print the versions of hydrodata stack and its dependencies.
 
     Parameters
@@ -133,7 +134,7 @@ def show_versions(file=sys.stdout):
         ("sphinx", lambda mod: mod.__version__),
     ]
 
-    deps_blob = []
+    deps_blob: List[Tuple[str, Optional[str]]] = []
     for (modname, ver_f) in deps:
         try:
             if modname in sys.modules:
