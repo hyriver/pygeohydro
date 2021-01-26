@@ -1,6 +1,12 @@
 History
 =======
 
+0.8.1 (2021-01-26)
+------------------
+
+- Use the new pynhd function for getting basins, ``NLDI.get_basisn``.
+- Made ``mypy`` checks more strict and added all the missing type annotations.
+
 0.8.0 (2020-12-06)
 ------------------
 
@@ -180,7 +186,7 @@ Bug fixes
 ------------------
 
 - Simplified import method
-- Changed usage from `rst` format to `ipynb`
+- Changed usage from ``rst`` format to ``ipynb``
 - Autoo-formatting with the black python package
 - Change docstring format based on Sphinx
 - Fixed pytest warnings and changed its working directory
