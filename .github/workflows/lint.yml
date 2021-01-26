@@ -14,4 +14,3 @@ jobs:
           python-version: 3.8
 
       - uses: pre-commit/action@v2.0.0
-
