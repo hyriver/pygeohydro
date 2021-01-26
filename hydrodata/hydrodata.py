@@ -2,7 +2,7 @@
 import io
 import zipfile
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import folium
 import numpy as np
@@ -40,17 +40,17 @@ def ssebopeta_byloc(
     pandas.DataFrame
         Daily actual ET for a location
     """
-    if isinstance(coords, tuple) and len(coords) == 2:
-        lon, lat = coords
-    else:
+    if not isinstance(coords, tuple) and len(coords) != 2:
         raise InvalidInputType("coords", "tuple", "(lon, lat)")
+
+    lon, lat = coords
 
     f_list = _get_ssebopeta_urls(dates)
     session = RetrySession()
 
     with session.onlyipv4():
 
-        def _ssebop(urls):
+        def _ssebop(urls: Tuple[str, str]) -> Dict[str, Union[str, List[float]]]:
             dt, url = urls
             r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
@@ -107,7 +107,7 @@ def ssebopeta_bygeom(
 
     with session.onlyipv4():
 
-        def _ssebop(url_stamped):
+        def _ssebop(url_stamped: Tuple[str, str]) -> Tuple[str, xr.Dataset]:
             dt, url = url_stamped
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
@@ -116,7 +116,7 @@ def ssebopeta_bygeom(
             return dt, ds.expand_dims({"time": [dt]})
 
         resp_list = ogc.utils.threading(_ssebop, f_list, max_workers=4)
-        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())
+        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())  # type: ignore
 
     eta = data.eta.copy()
     eta *= 1e-3
@@ -128,13 +128,22 @@ def _get_ssebopeta_urls(
     dates: Union[Tuple[str, str], Union[int, List[int]]]
 ) -> List[Tuple[pd.DatetimeIndex, str]]:
     """Get list of URLs for SSEBop dataset within a period or years."""
-    if isinstance(dates, tuple) and len(dates) == 2:
+    if not isinstance(dates, (tuple, list, int)):
+        raise InvalidInputType(
+            "dates", "tuple, list, or int", "(start, end), year, or [years, ...]"
+        )
+
+    if isinstance(dates, tuple):
+        if len(dates) != 2:
+            raise InvalidInputType(
+                "dates", "Start and end should be passed as a tuple of length 2."
+            )
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
         if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
             raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
         date_range = pd.date_range(start, end)
-    elif isinstance(dates, (list, int)):
+    else:
         years = dates if isinstance(dates, list) else [dates]
         seebop_yrs = np.arange(2000, 2019)
 
@@ -143,8 +152,6 @@ def _get_ssebopeta_urls(
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
-    else:
-        raise InvalidInputType("dates", "tuple or list", "(start, end) or [2001, 2010, ...]")
 
     base_url = ServiceURL().http.ssebopeta
     f_list = [
@@ -250,7 +257,7 @@ def _nlcd_layers(years: Dict[str, Optional[int]]) -> List[str]:
 class NWIS:
     """Access NWIS web service."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.session = RetrySession()
         self.url = ServiceURL().restful.nwis
 
@@ -442,7 +449,7 @@ class NWIS:
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in time_series
         }
 
-        def to_df(col, dic):
+        def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
             discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
             discharge.index = pd.to_datetime(discharge.index)
             discharge.columns = [col]
