@@ -26,4 +26,5 @@ rasterio
 requests
 setuptools
 shapely
+simplejson
 xarray
