@@ -75,16 +75,16 @@ repos:
     rev: 0.5.7
     hooks:
       - id: nbqa-isort
-        name: Sort imports in notebooks
+        name: Format notebooks; sort imports by isort
         files: docs/examples
         args: [--nbqa-mutate]
 
       - id: nbqa-black
-        name: Reformat notebooks
+        name: Format notebooks; reformat by black
         files: docs/examples
         args: [--nbqa-mutate]
 
       - id: nbqa-pyupgrade
         files: docs/examples
-        name: Upgrade notebooks syntax to Python 3.6+
+        name: Format notebooks; upgrade syntax to Python 3.6+ by pyupgrade
         args: [--nbqa-mutate]
