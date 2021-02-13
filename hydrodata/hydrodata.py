@@ -376,12 +376,30 @@ class NWIS:
 
         sites = sites[sites.site_no.apply(len) == 8]
 
+        site_ids = sites.site_no.tolist()
         gii = WaterData("gagesii", DEF_CRS)
-        hcdn = gii.byid("staid", sites.site_no.tolist())
-        hcdn_dict = hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
-        sites["hcdn_2009"] = sites.site_no.apply(
-            lambda x: len(hcdn_dict[x]) > 0 if x in hcdn_dict.keys() else False
-        )
+        hcdn_dict: Dict[str, str] = {}
+        try:
+            hcdn = gii.byid("staid", site_ids)
+            hcdn_dict.update(hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict())
+        except AttributeError:
+            for sid in site_ids:
+                try:
+                    hcdn = gii.byid("staid", sid)
+                    hcdn_dict.update(
+                        hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
+                    )
+                except AttributeError:
+                    hcdn_dict.update({sid: None})
+
+        def hcdn_2009(x: str) -> Optional[bool]:
+            _hcdn = hcdn_dict.get(x, None)
+            if _hcdn:
+                return len(_hcdn) > 0
+            else:
+                return None
+
+        sites["hcdn_2009"] = sites.site_no.apply(hcdn_2009)
 
         return sites
 
