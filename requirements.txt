@@ -17,6 +17,7 @@ networkx
 orjson
 owslib
 py3dep
+pyarrow
 pydaymet
 pygeoogc
 pygeoutils

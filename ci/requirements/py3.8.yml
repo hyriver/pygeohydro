@@ -17,6 +17,7 @@ dependencies:
   - xarray
   - netCDF4
   - geopandas
+  - pyarrow
   - rasterio
   - shapely
   - orjson
