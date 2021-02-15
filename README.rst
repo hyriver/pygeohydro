@@ -93,8 +93,6 @@ Hydrodata: Portal to hydrology and climatology data
 
 |
 
-🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
-
 Why Hydrodata?
 --------------
 
@@ -118,6 +116,10 @@ webpage to see some example notebooks. You can also try using Hydrodata without 
 it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
 instance with the Hydrodata software stack pre-installed will be launched in your web browser
 and you can start coding!
+
+Please note that since Hydrodata is in early development stages, while the provided
+functionaities should be stable, changes in APIs are possible in new releases. But we
+appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
 The full documentation can be found at https://hydrodata.readthedocs.io.
 
