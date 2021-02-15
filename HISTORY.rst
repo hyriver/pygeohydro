@@ -1,11 +1,79 @@
+=======
 History
 =======
 
-0.8.1 (2021-01-26)
+0.9.0 (2021-02-14)
 ------------------
 
+- Bump versions of packages across the stack to the same version.
+
+Hydrodata
+~~~~~~~~~
 - Use the new pynhd function for getting basins, ``NLDI.get_basisn``.
 - Made ``mypy`` checks more strict and added all the missing type annotations.
+
+PyGeoOGC
+~~~~~~~~
+- Add support for query by point and multi-points to ``ArcGISRESTful.bygeom``.
+- Add support for buffer distance to ``ArcGISRESTful.bygeom``.
+- Add support for generating ESRI-based queries for points and multi-points
+  to ``ESRIGeomQuery``.
+- Add all the missing type annotations.
+- Update the Daymet url to version 4. You can check the release information
+  `here <https://daac.ornl.gov/DAYMET/guides/Daymet_Daily_V4.html>`_
+- Use ``cytoolz`` library for some of the operations for improving performance.
+- Add ``extent`` property to ``ArcGISRESTful`` class that get the spatial extent
+  of the service.
+- Add url to ``airmap`` service for getting elevation data at 30 m resolution.
+
+PyGeoUtils
+~~~~~~~~~~
+- Add ``gtiff2file`` for saving raster responses as ``geotiff`` file(s).
+- Fix an error in ``_get_nodata_crs`` for handling nodata value when its value in the source
+  is None.
+- Fix the warning during the ``GeoDataFrame`` generation in ``json2geodf`` when there is
+  no geometry column in the input json.
+
+PyNHD
+~~~~~
+- Add a new function for getting basins geometries for a list of USGS station IDs.
+  The function is a method of ``NLDI`` class called ``get_basins``. So, now
+  ``NLDI.getfeature_byid`` function does not have a basin flag. This change
+  makes getting geometries easier and faster.
+- Remove ``characteristics_dataframe`` method from ``NLDI`` and made a standalone function
+  called ``nhdplus_attrs`` for accessing NHDPlus attributes directly from ScienceBase.
+- Add a new argument to ``topoogical_sort`` called ``edge_attr`` that allows to
+  add attribute(s) to the returned Networkx Graph. By default it is ``None``.
+- A new base class, ``AGRBase`` for connecting to ArcGISRESTful-based services such as National Map
+  and EPA's WaterGEOS.
+- Add support for setting the buffer distance for the input geometries to ``AGRBase.bygeom``.
+- Add ``comid_byloc`` to ``NLDI`` class for getting ComIDs of the closest flowlines from a list of
+  lon/lat coordinates.
+- Add ``bydistance`` to ``WaterData`` for getting features within a given radius of a point.
+
+Py3DEP
+~~~~~~
+- Add support for saving maps as ``geotiff`` file(s).
+- Replace ``Elevation Point Query Service`` service with ``AirMap`` for getting
+  elevations for a list of coordinates in bulk since ``AirMap`` is much faster.
+  The resolution of ``AirMap`` is 30 m.
+- Use ``cytoolz`` for some of the operations for improving performance.
+
+PyDaymet
+~~~~~~~~
+- Update to version 4 of Daymet database. You can check the release information
+  `here <https://daac.ornl.gov/DAYMET/guides/Daymet_Daily_V4.html>`_
+- Add a new function called ``get_bycoords`` that provides an alternative to ``get_byloc``
+  for getting climate data at a single pixel. This new function uses THREDDS data server
+  with NetCDF Subset Service (NCSS), and supports getting monthly and annual averages directly
+  from the server. Note that this function will replace ``get_byloc`` in  the future.
+  So consider migrating your code by replacing ``get_byloc`` with ``get_bycoords``. The
+  input arguments of ``get_bycoords`` is very similar to ``get_bygeom``. Another difference
+  between ``get_byloc`` and ``get_bycoords`` is column names where ``get_bycoords`` uses
+  the units that are return by NCSS server.
+- Add support for downloading mothly and annual summaries in addition to the daily
+  time-scale. You can pass ``time_scale`` as ``daily``, ``monthly``, or ``annual``
+  to ``get_bygeom`` or ``get_bycoords`` functions to download the respective summaries.
 
 0.8.0 (2020-12-06)
 ------------------
