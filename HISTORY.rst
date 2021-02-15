@@ -74,6 +74,9 @@ PyDaymet
 - Add support for downloading mothly and annual summaries in addition to the daily
   time-scale. You can pass ``time_scale`` as ``daily``, ``monthly``, or ``annual``
   to ``get_bygeom`` or ``get_bycoords`` functions to download the respective summaries.
+- Add support for getting climate data for Hawaii and Puerto Rico by passing ``region``
+  to ``get_bygeom`` and ``get_bycoords`` functions. The acceptable values are ``na`` for
+  CONUS, ``hi`` for Hawaii, and ``pr`` for Puerto Rico.
 
 0.8.0 (2020-12-06)
 ------------------
