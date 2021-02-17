@@ -1,7 +1,6 @@
-.. image:: _static/hydrodata_logo_text.png
-   :width: 50%
-   :alt: hydrodata
-   :align: left
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo_text.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/hydrodata_logo_text.png
+    :align: center
 
 |
 
@@ -48,7 +47,7 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 Hydrodata: Portal to hydrology and climatology data
-===================================================
+---------------------------------------------------
 
 .. image:: https://img.shields.io/pypi/v/hydrodata.svg
     :target: https://pypi.python.org/pypi/hydrodata
@@ -58,21 +57,41 @@ Hydrodata: Portal to hydrology and climatology data
     :target: https://anaconda.org/conda-forge/hydrodata
     :alt: Conda Version
 
-.. image:: https://pepy.tech/badge/hydrodata
-    :target: https://pepy.tech/project/hydrodata
-    :alt: Downloads
+.. image:: https://codecov.io/gh/cheginit/hydrodata/graph/badge.svg
+    :target: https://codecov.io/gh/cheginit/hydrodata
+    :alt: CodeCov
+
+.. image:: https://readthedocs.org/projects/hydrodata/badge/?version=latest
+    :target: https://hydrodata.readthedocs.io/en/latest/?badge=latest
+    :alt: ReadTheDocs
 
 .. image:: https://mybinder.org/badge_logo.svg
     :target: https://mybinder.org/v2/gh/cheginit/hydrodata/master?urlpath=lab/tree/docs/examples
     :alt: Binder
+
+|
+
+.. image:: https://pepy.tech/badge/hydrodata
+    :target: https://pepy.tech/project/hydrodata
+    :alt: Downloads
+
+.. image:: https://www.codefactor.io/repository/github/cheginit/hydrodata/badge/develop
+    :target: https://www.codefactor.io/repository/github/cheginit/hydrodata/overview/develop
+    :alt: CodeFactor
+
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
+    :alt: black
+
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+    :target: https://github.com/pre-commit/pre-commit
+    :alt: pre-commit
 
 .. image:: https://zenodo.org/badge/237573928.svg
     :target: https://zenodo.org/badge/latestdoi/237573928
     :alt: Zenodo
 
 |
-
-🚨 **This package is under heavy development and breaking changes are likely to happen.** 🚨
 
 Why Hydrodata?
 --------------
@@ -97,6 +116,12 @@ webpage to see some example notebooks. You can also try using Hydrodata without 
 it on you system by clicking on the binder badge below the Hydrodata banner. A Jupyter notebook
 instance with the Hydrodata software stack pre-installed will be launched in your web browser
 and you can start coding!
+
+Please note that since Hydrodata is in early development stages, while the provided
+functionaities should be stable, changes in APIs are possible in new releases. But we
+appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
+
+The full documentation can be found at https://hydrodata.readthedocs.io.
 
 Features
 --------
@@ -127,11 +152,11 @@ The ``helpers`` module includes:
   useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
 
-Moreover, requests for additional databases or functionalities can be submitted via
+Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/hydrodata/issues>`__.
 
-.. image:: _static/example_plots.png
-    :align: center
+.. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
 Documentation
 =============
