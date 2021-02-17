@@ -50,6 +50,11 @@ PyNHD
 - Add ``comid_byloc`` to ``NLDI`` class for getting ComIDs of the closest flowlines from a list of
   lon/lat coordinates.
 - Add ``bydistance`` to ``WaterData`` for getting features within a given radius of a point.
+- Add support for using `hydro <https://hydro.nationalmap.gov/arcgis/rest/services/NHDPlus_HR/MapServer>`_
+  or `edits <https://edits.nationalmap.gov/arcgis/rest/services/NHDPlus_HR/NHDPlus_HR/MapServer>`_
+  webs services for getting NHDPlus High-Resolution using ``NHDPlusHR`` function. The new arguments
+  are ``service`` which accepts ``hydro`` or ``edits``, and ``autos_switch`` flag for automatically
+  switching to the other service if the ones passed by ``service`` fails.
 
 Py3DEP
 ~~~~~~
