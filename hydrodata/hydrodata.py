@@ -107,7 +107,7 @@ def ssebopeta_bygeom(
 
     with session.onlyipv4():
 
-        def _ssebop(url_stamped: Tuple[str, str]) -> Tuple[str, xr.Dataset]:
+        def _ssebop(url_stamped: Tuple[str, str]) -> Tuple[str, xr.DataArray]:
             dt, url = url_stamped
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
@@ -396,8 +396,7 @@ class NWIS:
             _hcdn = hcdn_dict.get(x, None)
             if _hcdn:
                 return len(_hcdn) > 0
-            else:
-                return None
+            return None
 
         sites["hcdn_2009"] = sites.site_no.apply(hcdn_2009)
 
