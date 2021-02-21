@@ -29,7 +29,7 @@ repos:
     - id: rst-directive-colons
 
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 2.1.4
+    rev: 2.1.5
     hooks:
     - id: shfmt
 
@@ -49,7 +49,7 @@ repos:
         additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings, flake8-simplify]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.800
+    rev: v0.812
     hooks:
       - id: mypy
         name: Static type checking with mypy
@@ -72,7 +72,7 @@ repos:
         files: .py$
 
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: 0.5.7
+    rev: v0.5.8-1-g1defb695ced783d6f67273a21bdd1951ea3f7e90
     hooks:
       - id: nbqa-isort
         name: Format notebooks; sort imports by isort
