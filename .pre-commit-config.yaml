@@ -72,7 +72,7 @@ repos:
         files: .py$
 
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: v0.5.8-1-g1defb695ced783d6f67273a21bdd1951ea3f7e90
+    rev: v0.5.8-2-g007eb3cf60194030c5b4cf133beeada5009badfb
     hooks:
       - id: nbqa-isort
         name: Format notebooks; sort imports by isort
