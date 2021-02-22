@@ -2,6 +2,14 @@
 History
 =======
 
+0.9.1 (2021-02-22)
+------------------
+
+Hydrodata
+~~~~~~~~~
+- Fix an issue with ``NWIS.get_info`` method where stations with False values as their
+  ``hcdn_2009`` value were returned as ``None`` instead.
+
 0.9.0 (2021-02-14)
 ------------------
 
