@@ -18,7 +18,6 @@ from shapely.geometry import MultiPolygon, Polygon
 from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 
-MARGINE = 15
 DEF_CRS = "epsg:4326"
 
 
@@ -140,12 +139,12 @@ def _get_ssebopeta_urls(
             )
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
-        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2018-12-31"):
-            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
+        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2020-12-31"):
+            raise InvalidInputRange("SSEBop database ranges from 2000 to 2020.")
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
-        seebop_yrs = np.arange(2000, 2019)
+        seebop_yrs = np.arange(2000, 2020)
 
         if any(y not in seebop_yrs for y in years):
             raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
@@ -360,7 +359,7 @@ class NWIS:
         else:
             sites = site_list[0]
 
-        sites = sites.drop(sites[sites.alt_va == ""].index)
+        sites.loc[sites.alt_va == "", "alt_va"] = pd.NA
         try:
             sites = sites[sites.parm_cd == "00060"]
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
