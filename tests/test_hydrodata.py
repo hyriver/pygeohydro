@@ -40,7 +40,7 @@ def test_nwis(geometry_nat):
     info = nwis.get_info(nwis.query_byid(SID_NATURAL), expanded=True)
     info_box = nwis.get_info(nwis.query_bybox(geometry_nat.bounds))
     assert (
-        abs(qobs.sum().item() - 27.630) < 1e-3
+        abs(qobs.sum() - 27.630) < 1e-3
         and info.hcdn_2009.item()
         and info_box.site_no.tolist() == ["01031300", "01031450", "01031500"]
     )
