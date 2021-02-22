@@ -394,7 +394,7 @@ class NWIS:
 
         def hcdn_2009(x: str) -> Optional[bool]:
             _hcdn = hcdn_dict.get(x, None)
-            if _hcdn:
+            if _hcdn is not None:
                 return len(_hcdn) > 0
             return None
 
