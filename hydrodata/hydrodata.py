@@ -361,7 +361,7 @@ class NWIS:
 
         sites.loc[sites.alt_va == "", "alt_va"] = pd.NA
         try:
-            sites = sites[sites.parm_cd == "00060"]
+            sites = sites.drop(sites[sites.parm_cd != "00060"].index)
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
         except AttributeError:
@@ -513,11 +513,11 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
         for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False)
     ]
     sites["altitude"] = (
-        sites["alt_va"].astype(str) + " ft above " + sites["alt_datum_cd"].astype(str)
+        sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
 
-    sites["drain_area_va"] = sites["drain_area_va"].astype(str) + " square miles"
-    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype(str) + " square miles"
+    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " square miles"
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " square miles"
 
     cols_old = [
         "site_no",
