@@ -2,6 +2,13 @@
 History
 =======
 
+0.9.2 (unreleased)
+------------------
+
+Hydrodata
+~~~~~~~~~
+- In ``NWIS.get_info``, Drop rows that don't have mean daily discharge data instead of slicing.
+
 0.9.1 (2021-02-22)
 ------------------
 
