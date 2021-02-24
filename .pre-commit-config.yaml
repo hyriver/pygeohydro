@@ -23,7 +23,7 @@ repos:
     - id: end-of-file-fixer
 
   - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.7.1
+    rev: v1.8.0
     hooks:
     - id: rst-backticks
     - id: rst-directive-colons
@@ -72,7 +72,7 @@ repos:
         files: .py$
 
   - repo: https://github.com/nbQA-dev/nbQA
-    rev: v0.5.8-2-g007eb3cf60194030c5b4cf133beeada5009badfb
+    rev: 0.5.9
     hooks:
       - id: nbqa-isort
         name: Format notebooks; sort imports by isort
