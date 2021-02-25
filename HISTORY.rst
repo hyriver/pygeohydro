@@ -8,6 +8,7 @@ History
 Hydrodata
 ~~~~~~~~~
 - In ``NWIS.get_info``, Drop rows that don't have mean daily discharge data instead of slicing.
+- Add support for the National Inventory of Dams (NID) via ``national_dams`` function.
 
 0.9.1 (2021-02-22)
 ------------------
