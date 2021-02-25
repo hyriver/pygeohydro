@@ -19,15 +19,17 @@ dependencies:
   - xarray
   - netCDF4
   - geopandas
+  - pyarrow
+  - openpyxl
   - rasterio
   - shapely
   - orjson
+  - simplejson
   - lxml
   - dask
   - networkx
   - matplotlib-base
   - folium
-  - scipy
 
   # xarray speedups
   - bottleneck
