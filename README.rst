@@ -31,7 +31,7 @@
 =========== ==================================================================== ============
 Package     Description                                                          Status
 =========== ==================================================================== ============
-Hydrodata_  Access NWIS, HCDN 2009, NLCD, and SSEBop databases                   |hydrodata|
+Hydrodata_  Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |hydrodata|
 PyGeoOGC_   Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
 PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
 PyNHD_      Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
@@ -130,6 +130,8 @@ Hydrodata itself has three main modules; ``hydrodata``, ``plot``, and ``helpers`
 The ``hydrodata`` module provides access to the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
+* `NID <https://nid.sec.usace.army.mil/ords/f?p=105:1::::::>`__ for accessing inventory of dams
+  in the US,
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, and canopy data,
