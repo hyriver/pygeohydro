@@ -6,6 +6,7 @@ from .hydrodata import (
     NWIS,
     cover_statistics,
     interactive_map,
+    national_dams,
     nlcd,
     ssebopeta_bygeom,
     ssebopeta_byloc,
