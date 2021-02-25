@@ -73,6 +73,11 @@ def test_nlcd(geometry_nat):
     assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
 
 
+def test_nid():
+    nid = hd.national_dams()
+    assert len(nid) == 91457
+
+
 @pytest.mark.flaky(max_runs=3)
 def test_plot(geometry_nat, geometry_urb):
     hd.interactive_map(geometry_nat.bounds)

@@ -1,10 +1,13 @@
 """Accessing data from the supported databases through their APIs."""
 import io
+import os
 import zipfile
 from collections import OrderedDict
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import folium
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoogc as ogc
@@ -13,12 +16,44 @@ import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, RetrySession, ServiceURL
 from pynhd import NLDI, WaterData
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 
 DEF_CRS = "epsg:4326"
+
+
+def national_dams(save_dir: Optional[str] = None) -> gpd.GeoDataFrame:
+    """Get all dams in the US from National Inventory of Dams 2019.
+
+    Notes
+    -----
+    This function downloads a 25 MB `xls` file and convert it into a
+    GeoDataFrame. So it can take some time depending on your net speed.
+
+    Parmeters
+    ---------
+    save_dir : str, optional
+        Path to a directory to store the data as a GeoDataFrame with
+        feather format, defaults to None.
+    Returns
+        geopandas.GeoDataFrame
+        A GeoDataFrame containing all the available dams in the database (over 90K).
+    """
+    url = "https://nid.sec.usace.army.mil/ords/NID_R.DOWNLOADFILE?InFileName=NID2019_U.xlsx"
+    nid = pd.read_excel(url).set_index("RECORDID")
+    nid["geometry"] = [Point(x, y) for x, y in zip(nid.LONGITUDE, nid.LATITUDE)]
+    nid = gpd.GeoDataFrame(nid, crs="epsg:4326").drop(columns=["LONGITUDE", "LATITUDE"])
+    nid.loc[~nid.is_valid, "geometry"] = pd.NA
+
+    if save_dir is not None:
+        root = Path(save_dir)
+        if not root.exists():
+            os.makedirs(root)
+        nid.to_feather(root.joinpath("nid.feather"))
+
+    return nid
 
 
 def ssebopeta_byloc(
