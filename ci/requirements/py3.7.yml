@@ -18,6 +18,7 @@ dependencies:
   - netCDF4
   - geopandas
   - pyarrow
+  - openpyxl
   - rasterio
   - shapely
   - orjson
