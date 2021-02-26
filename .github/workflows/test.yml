@@ -31,7 +31,7 @@ jobs:
 
       - name: Install hydrodata
         shell: bash -l {0}
-        run: |
+        run: |-
           conda info
           conda list
           conda install -y -c conda-forge pytest pytest-cov codecov flaky
@@ -39,7 +39,8 @@ jobs:
 
       - name: Run pytest
         shell: bash -l {0}
-        run: pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
+        run: |-
+          pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
 
       - name: Run codecov
         uses: codecov/codecov-action@v1
