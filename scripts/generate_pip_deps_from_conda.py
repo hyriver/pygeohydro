@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Convert the conda py3.6.yml to the pip requirements-dev.txt.
+"""Convert the conda environment.yml to the pip requirements-dev.txt.
 
 It also checks that they have the same packages (for the CI).
 The original script is taken from Pandas github repository.
@@ -76,7 +76,7 @@ def main(conda_fname, pip_fname, compare=False):
     Parameters
     ----------
     conda_fname : str
-        Path to the conda file with dependencies (e.g. `py3.6.yml`).
+        Path to the conda file with dependencies (e.g. `environment.yml`).
     pip_fname : str
         Path to the pip file with dependencies (e.g. `requirements-dev.txt`).
     compare : bool, default False
@@ -137,14 +137,14 @@ if __name__ == "__main__":
 
     repo_path = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
     res = main(
-        os.path.join(repo_path, "ci/requirements/py3.6.yml"),
+        os.path.join(repo_path, "ci/requirements/environment.yml"),
         os.path.join(repo_path, "requirements.txt"),
         compare=args.compare,
     )
     if res:
         msg = (
             f"`requirements-dev.txt` has to be generated with `{sys.argv[0]}` after "
-            "`py3.6.yml` is modified.\n"
+            "`environment.yml` is modified.\n"
         )
         if args.azure:
             msg = f"##vso[task.logissue type=error;sourcepath=requirements-dev.txt]{msg}"
