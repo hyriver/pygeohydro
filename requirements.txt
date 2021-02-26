@@ -1,4 +1,4 @@
-# This file is auto-generated from py3.6.yml, do not modify.
+# This file is auto-generated from environment.yml, do not modify.
 # See that file for comments about the need/usage of each dependency.
 
 aiodns
@@ -14,6 +14,7 @@ matplotlib
 nest-asyncio
 netCDF4
 networkx
+openpyxl
 orjson
 owslib
 py3dep
