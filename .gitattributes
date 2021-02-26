@@ -1,0 +1,4 @@
+# reduce the number of merge conflicts
+HISTORY.rst merge=union
+# allow installing from git archives
+.git_archival.txt  export-subst
