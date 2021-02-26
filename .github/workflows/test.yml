@@ -1,4 +1,4 @@
-name: pytest
+name: CI
 
 on: [push, pull_request]
 
@@ -20,27 +20,41 @@ jobs:
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@master
-      - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@master
-        with:
-          activate-environment: hydrodata
-          python-version: ${{ matrix.python-version }}
-          environment-file: ci/requirements/py${{ matrix.python-version }}.yml
-          auto-update-conda: true
-          auto-activate-base: false
-
-      - name: Install hydrodata
-        shell: bash -l {0}
+      - name: Set environment variables
         run: |-
-          conda info
+          echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
+          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key:
+            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
+            hashFiles('ci/requirements/**.yml') }}
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          channels: conda-forge
+          channel-priority: strict
+          mamba-version: "*"
+          activate-environment: hydrodata-tests
+          auto-update-conda: false
+          python-version: ${{ matrix.python-version }}
+          use-only-tar-bz2: true
+      - name: Install conda dependencies
+        run: |-
+          mamba env update -f $CONDA_ENV_FILE
+      - name: Install xarray
+        run: |-
+          python -m pip install --no-deps -e .
+      - name: Version info
+        run: |-
+          conda info -a
           conda list
-          conda install -y -c conda-forge pytest pytest-cov codecov flaky
-          pip install --no-deps -e .
-
+          python -c "import hydrodata;hydrodata.show_versions()"
       - name: Run pytest
         shell: bash -l {0}
         run: |-
+          conda install -y -c conda-forge pytest pytest-cov codecov flaky
           pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
-
       - name: Run codecov
         uses: codecov/codecov-action@v1
