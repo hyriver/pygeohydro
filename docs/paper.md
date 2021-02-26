@@ -45,10 +45,10 @@ REpresentational State Transfer (RESTful), Web Feature Services (WFS), and Web M
   the number of features in a single query, under-the-hood, `PyGeoOGC` takes care of breaking down
   a large query into smaller queries according to the service specifications. Additionally, this
   package offers several notable utilities: data re-projection, sending asynchronous data retrieval
-  requested, and traversing a JSON (JavaScript Object Notation) object.
+  requests, and traversing a JSON (JavaScript Object Notation) object.
 * [PyGeoUtils](https://github.com/cheginit/pygeoutils): Converts responses from PyGeoOGC's
   supported web services to geo-dataframes (vector data type) or datasets (raster data type).
-  Moreover, for gridded datasets, it can mask the output dataset to any given geometry.
+  Moreover, for gridded data, it can mask the output dataset based on any given geometry.
 * [PyNHD](https://github.com/cheginit/pynhd): Provides the ability to navigate and subset NHDPlus
   (National Hydrography Database), at medium- and high-resolution, using NLDI (Hydro
   Network-Linked Data Index), WaterData, and TNM (The National Map) web services. Additionally,
