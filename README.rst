@@ -4,8 +4,8 @@
 
 |
 
-.. |hydrodata| image:: https://github.com/cheginit/hydrodata/workflows/pytest/badge.svg
-    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Apytest
+.. |hydrodata| image:: https://github.com/cheginit/hydrodata/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/cheginit/hydrodata/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/pytest/badge.svg
