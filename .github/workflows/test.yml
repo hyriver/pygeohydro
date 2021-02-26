@@ -47,7 +47,8 @@ jobs:
       - name: Install conda dependencies
         run: |-
           mamba env update -f $CONDA_ENV_FILE
-          mamba install -y -c conda-forge --strict-channel-priority pytest pytest-cov codecov flaky
+          mamba install -y -c conda-forge --strict-channel-priority \
+              pytest pytest-cov codecov flaky pytest-xdist
       - name: Install hydrodata
         run: |-
           conda info -a
