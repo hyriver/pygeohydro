@@ -42,7 +42,7 @@ def national_dams(save_dir: Optional[str] = None) -> gpd.GeoDataFrame:
         A GeoDataFrame containing all the available dams in the database (over 90K).
     """
     url = "https://nid.sec.usace.army.mil/ords/NID_R.DOWNLOADFILE?InFileName=NID2019_U.xlsx"
-    nid = pd.read_excel(url).set_index("RECORDID")
+    nid = pd.read_excel(url, engine="openpyxl").set_index("RECORDID")
     nid["geometry"] = [Point(x, y) for x, y in zip(nid.LONGITUDE, nid.LATITUDE)]
     nid = gpd.GeoDataFrame(nid, crs="epsg:4326").drop(columns=["LONGITUDE", "LATITUDE"])
     nid.loc[~nid.is_valid, "geometry"] = pd.NA
