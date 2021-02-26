@@ -121,8 +121,6 @@ Please note that since Hydrodata is in early development stages, while the provi
 functionaities should be stable, changes in APIs are possible in new releases. But we
 appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
-The full documentation can be found at https://hydrodata.readthedocs.io.
-
 Features
 --------
 
