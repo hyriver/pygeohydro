@@ -265,7 +265,7 @@ def _nlcd_layers(years: Dict[str, Optional[int]]) -> List[str]:
 
     if not isinstance(years, dict):
         raise InvalidInputType(
-            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"
+            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"  # noqa: FS003
         )
 
     if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
