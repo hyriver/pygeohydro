@@ -22,6 +22,29 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
+define generate_footer
+Documentation
+\n=============
+\n
+.. toctree::\n
+\t:maxdepth: 1\n
+\tcaption: Getting Started\n
+\n
+\tinstallation\n
+\texamples\n
+\n
+.. toctree::\n
+\t:maxdepth: 1\n
+\t:caption: Help & Reference\n
+\n
+\thistory\n
+\tmodules\n
+\tcontributing\n
+\tauthors\n
+\tlicense\n
+endef
+export INDEX_FOOTER=$(value generate_footer)
+
 BROWSER := python -c "$$BROWSER_PYSCRIPT"
 
 help:
@@ -64,6 +87,9 @@ coverage: ## check code coverage quickly with the default Python
 apidocs: ## generate API docs
 	rm -f docs/hydrodata.rst
 	rm -f docs/modules.rst
+	sed '/Installation/IQ' README.rst > docs/index.rst
+	echo $$INDEX_FOOTER >> docs/index.rst
+	sed -i 's/\t/    /g' docs/index.rst
 	sphinx-apidoc -o docs/ -f -H "API Reference" hydrodata
 
 docs: apidocs ## generate Sphinx HTML documentation, including API docs
