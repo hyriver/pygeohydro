@@ -1,6 +1,6 @@
-name: CI
-
 on: [push, pull_request]
+
+name: CI
 
 jobs:
   test:
@@ -48,7 +48,7 @@ jobs:
         run: |-
           mamba env update -f $CONDA_ENV_FILE
           mamba install -y -c conda-forge --strict-channel-priority \
-              pytest pytest-cov codecov flaky pytest-xdist
+              pytest pytest-cov pytest-env pytest-xdist flaky
       - name: Install hydrodata
         run: |-
           conda info -a
@@ -56,13 +56,11 @@ jobs:
           python -m pip install --no-deps -e .
       - name: Version info
         run: |-
-          python -c "import hydrodata;hydrodata.show_versions()"
+          python -c "import hydrodata; hydrodata.show_versions()"
       - name: Run pytest
         run: |-
-          python -m pytest -n 4 \
-              --cov=hydrodata \
-              --cov-report term-missing --cov-report xml
-      - name: Run codecov and upload
+          python -m pytest -n 4 --cov=hydrodata --cov-report xml
+      - name: Run codecov and upload the report
         uses: codecov/codecov-action@v1
         with:
           file: ./coverage.xml
