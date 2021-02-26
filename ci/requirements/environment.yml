@@ -18,7 +18,6 @@ dependencies:
   - geopandas
   - pyarrow
   - openpyxl
-  - xlrd
   - rasterio
   - shapely
   - orjson
