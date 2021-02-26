@@ -4,8 +4,8 @@
 
 |
 
-.. |hydrodata| image:: https://github.com/cheginit/hydrodata/workflows/pytest/badge.svg
-    :target: https://github.com/cheginit/hydrodata/actions?query=workflow%3Apytest
+.. |hydrodata| image:: https://github.com/cheginit/hydrodata/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/cheginit/hydrodata/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/pytest/badge.svg
@@ -121,8 +121,6 @@ Please note that since Hydrodata is in early development stages, while the provi
 functionaities should be stable, changes in APIs are possible in new releases. But we
 appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
-The full documentation can be found at https://hydrodata.readthedocs.io.
-
 Features
 --------
 
@@ -160,22 +158,22 @@ Moreover, requests for additional databases and functionalities can be submitted
 .. image:: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
     :target: https://raw.githubusercontent.com/cheginit/hydrodata/develop/docs/_static/example_plots.png
 
+
 Documentation
 =============
+ .. toctree::
+     :maxdepth: 1
+     caption: Getting Started
 
-.. toctree::
-    :maxdepth: 1
-    :caption: Getting Started
+     installation
+     examples
 
-    installation
-    examples
+ .. toctree::
+     :maxdepth: 1
+     :caption: Help & Reference
 
-.. toctree::
-    :maxdepth: 1
-    :caption: Help & Reference
-
-    history
-    modules
-    contributing
-    authors
-    license
+     history
+     modules
+     contributing
+     authors
+     license
