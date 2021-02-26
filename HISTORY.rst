@@ -9,6 +9,8 @@ Hydrodata
 ~~~~~~~~~
 - In ``NWIS.get_info``, Drop rows that don't have mean daily discharge data instead of slicing.
 - Add support for the National Inventory of Dams (NID) via ``national_dams`` function.
+- Speed up Github Actions by using ``mamba`` and caching.
+- Improve ``pip`` installation by adding ``pyproject.toml``.
 
 0.9.1 (2021-02-22)
 ------------------
