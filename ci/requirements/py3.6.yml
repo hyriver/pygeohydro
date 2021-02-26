@@ -1,4 +1,4 @@
-name: hydrodata
+name: hydrodata-tests
 channels:
   - conda-forge
 dependencies:
@@ -19,6 +19,7 @@ dependencies:
   - geopandas
   - pyarrow
   - openpyxl
+  - xlrd
   - rasterio
   - shapely
   - orjson

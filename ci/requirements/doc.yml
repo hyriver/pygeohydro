@@ -1,8 +1,8 @@
 name: doc
 channels:
   - conda-forge
+  - nodefaults
 dependencies:
-  - python=3.8
   - pip
   - setuptools
 
@@ -19,8 +19,10 @@ dependencies:
   - xarray
   - netCDF4
   - geopandas
+  - pygeos
   - pyarrow
   - openpyxl
+  - xlrd
   - rasterio
   - shapely
   - orjson
