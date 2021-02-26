@@ -40,12 +40,17 @@ repos:
       name: Autoformat with doc8
       args: [--max-line-length, "100"]
 
+  - repo: https://github.com/keewis/blackdoc
+    rev: v0.3.3
+    hooks:
+      - id: blackdoc
+        name: Autoformat cods in docstrings with blackdoc
+
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.8.4
     hooks:
       - id: flake8
         name: Linting with flake8
-        exclude: docs/conf.py
         additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings, flake8-simplify]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
