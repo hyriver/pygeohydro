@@ -118,16 +118,17 @@ def show_versions(file: IO = sys.stdout) -> None:
         ("owslib", lambda mod: mod.__version__),
         ("pyproj", lambda mod: mod.__version__),
         ("requests", lambda mod: mod.__version__),
+        ("pygeos", lambda mod: mod.__version__),
         ("matplotlib", lambda mod: mod.__version__),
         # optionals
         ("bottleneck", lambda mod: mod.__version__),
         ("dask", lambda mod: mod.__version__),
         ("cartopy", lambda mod: mod.__version__),
-        ("seaborn", lambda mod: mod.__version__),
         # setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
         ("conda", lambda mod: mod.__version__),
+        ("mamba", lambda mod: mod.__version__),
         ("pytest", lambda mod: mod.__version__),
         # Misc.
         ("IPython", lambda mod: mod.__version__),
