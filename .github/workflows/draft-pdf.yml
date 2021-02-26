@@ -1,3 +1,5 @@
+name: "Build draft PDF"
+
 on: [push]
 
 jobs:
@@ -7,6 +9,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+        with:
+          token: ${{ secrets.PDF_PUSH }}
+
       - name: Build draft PDF
         uses: openjournals/openjournals-draft-action@master
         with:
@@ -17,3 +22,10 @@ jobs:
         with:
           name: paper
           path: docs/paper.pdf
+      - name: Commit and push if PDF changed
+        run: |-
+          git diff
+          git config --global user.email "draf_pdf@example.com"
+          git config --global user.name "Draf_PDF-bot"
+          git diff --quiet || (git add docs/paper.pdf && git commit -m "Updated PDF version of the paper.")
+          git push
