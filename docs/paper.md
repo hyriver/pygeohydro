@@ -88,7 +88,7 @@ entities have made available.
 
 There are several open-source packages that offer similar functionalities. For example,
 [hydrofunctions](https://github.com/mroberge/hydrofunctions) is a Python package that retrieves
-streamflow data from NWIS and [ulmo](https://github.com/ulmo-dev/ulmo) is another a Python package
+streamflow data from NWIS and [ulmo](https://github.com/ulmo-dev/ulmo) is another Python package
 that provides access to several public hydrology and climatology data. `Dataretrieval` gives
 access to some of the USGS (United States Geological Survey) databases and has two versions in
 [R](https://github.com/USGS-R/dataRetrieval) and [Python](https://github.com/USGS-python/dataretrieval).
