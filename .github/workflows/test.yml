@@ -47,6 +47,7 @@ jobs:
       - name: Install conda dependencies
         run: |-
           mamba env update -f $CONDA_ENV_FILE
+          mamba install -y -c conda-forge --strict-channel-priority pytest pytest-cov codecov flaky
       - name: Install hydrodata
         run: |-
           conda info -a
@@ -57,7 +58,14 @@ jobs:
           python -c "import hydrodata;hydrodata.show_versions()"
       - name: Run pytest
         run: |-
-          mamba install -y -c conda-forge --strict-channel-priority pytest pytest-cov codecov flaky
-          pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
-      - name: Run codecov
+          python -m pytest -n 4 \
+              --cov=hydrodata \
+              --cov-report term-missing --cov-report xml
+      - name: Run codecov and upload
         uses: codecov/codecov-action@v1
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          env_vars: RUNNER_OS,PYTHON_VERSION
+          name: codecov-umbrella
+          fail_ci_if_error: false
