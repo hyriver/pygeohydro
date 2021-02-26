@@ -33,6 +33,7 @@ dependencies:
   - folium
 
   # xarray speedups
+  - llvmlite
   - bottleneck
 
   # dep for plotting with geopandas
