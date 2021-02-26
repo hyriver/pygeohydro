@@ -22,7 +22,6 @@ dependencies:
   - pygeos
   - pyarrow
   - openpyxl
-  - xlrd
   - rasterio
   - shapely
   - orjson

@@ -1,9 +1,8 @@
-name: hydrodata-tests
+name: hydrodata-dev
 channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - pip
   - setuptools
   - owslib
   - pyproj
@@ -19,7 +18,6 @@ dependencies:
   - geopandas
   - pyarrow
   - openpyxl
-  - xlrd
   - rasterio
   - shapely
   - orjson
@@ -38,9 +36,8 @@ dependencies:
   - coverage
 
   - jupyterlab
-  - nb_black
+  - jupyterlab_widgets
   - ipywidgets
-  - nodejs
   - recommonmark
   - nbsphinx
   - sphinx
@@ -51,7 +48,10 @@ dependencies:
   - python-slugify
   - css-html-js-minify
   - unidecode
+  - pip
   - pip:
+    - numbagg
+    - nbsphinx_link
     - sphinx-inline-tabs
     - git+https://github.com/bashtage/sphinx-material.git
     - git+https://github.com/cheginit/pygeoogc.git
