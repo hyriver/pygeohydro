@@ -20,7 +20,7 @@ dependencies:
   - netCDF4
   - geopandas
   - pyarrow
-  - openpyxl
+  - xlrd
   - rasterio
   - shapely
   - orjson
