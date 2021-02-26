@@ -42,8 +42,9 @@ jobs:
           use-only-tar-bz2: true
       - name: Install conda dependencies
         run: |-
+          cat $CONDA_ENV_FILE
           mamba env update -f $CONDA_ENV_FILE
-      - name: Install xarray
+      - name: Install hydrodata
         run: |-
           python -m pip install --no-deps -e .
       - name: Version info
@@ -54,7 +55,7 @@ jobs:
       - name: Run pytest
         shell: bash -l {0}
         run: |-
-          conda install -y -c conda-forge pytest pytest-cov codecov flaky
+          mamba install -y -c conda-forge --strict-channel-priority pytest pytest-cov codecov flaky
           pytest --cov=hydrodata --cov-report term-missing --cov-report xml --verbose --color=yes
       - name: Run codecov
         uses: codecov/codecov-action@v1
