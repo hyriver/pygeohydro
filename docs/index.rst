@@ -8,23 +8,23 @@
     :target: https://github.com/cheginit/hydrodata/actions/workflows/test.yml
     :alt: Github Actions
 
-.. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/workflows/pytest/badge.svg
+.. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pygeoogc/actions?query=workflow%3Apytest
     :alt: Github Actions
 
-.. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/workflows/pytest/badge.svg
+.. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pygeoutils/actions?query=workflow%3Apytest
     :alt: Github Actions
 
-.. |pynhd| image:: https://github.com/cheginit/pynhd/workflows/pytest/badge.svg
+.. |pynhd| image:: https://github.com/cheginit/pynhd/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pynhd/actions?query=workflow%3Apytest
     :alt: Github Actions
 
-.. |py3dep| image:: https://github.com/cheginit/py3dep/workflows/pytest/badge.svg
+.. |py3dep| image:: https://github.com/cheginit/py3dep/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/py3dep/actions?query=workflow%3Apytest
     :alt: Github Actions
 
-.. |pydaymet| image:: https://github.com/cheginit/pydaymet/workflows/pytest/badge.svg
+.. |pydaymet| image:: https://github.com/cheginit/pydaymet/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pydaymet/actions?query=workflow%3Apytest
     :alt: Github Actions
 
@@ -161,19 +161,20 @@ Moreover, requests for additional databases and functionalities can be submitted
 
 Documentation
 =============
- .. toctree::
-     :maxdepth: 1
-     caption: Getting Started
 
-     installation
-     examples
+.. toctree::
+    :maxdepth: 1
+    :caption: Getting Started
 
- .. toctree::
-     :maxdepth: 1
-     :caption: Help & Reference
+    installation
+    examples
 
-     history
-     modules
-     contributing
-     authors
-     license
+.. toctree::
+    :maxdepth: 1
+    :caption: Help & Reference
+
+    history
+    modules
+    contributing
+    authors
+    license

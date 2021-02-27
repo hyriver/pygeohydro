@@ -26,22 +26,22 @@ define generate_footer
 Documentation
 \n=============
 \n
-.. toctree::\n
-\t:maxdepth: 1\n
-\tcaption: Getting Started\n
+\n.. toctree::
+\n\t:maxdepth: 1
+\n\t:caption: Getting Started
 \n
-\tinstallation\n
-\texamples\n
+\n\tinstallation
+\n\texamples
 \n
-.. toctree::\n
-\t:maxdepth: 1\n
-\t:caption: Help & Reference\n
+\n.. toctree::
+\n\t:maxdepth: 1
+\n\t:caption: Help & Reference
 \n
-\thistory\n
-\tmodules\n
-\tcontributing\n
-\tauthors\n
-\tlicense\n
+\n\thistory
+\n\tmodules
+\n\tcontributing
+\n\tauthors
+\n\tlicense
 endef
 export INDEX_FOOTER=$(value generate_footer)
 
