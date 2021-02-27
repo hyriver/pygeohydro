@@ -24,7 +24,7 @@ def signatures(
     title_ypos: float = 1.02,
     figsize: Tuple[int, int] = (14, 13),
     threshold: float = 1e-3,
-    output: Union[str, Path] = None,
+    output: Optional[Union[str, Path]] = None,
 ) -> None:
     """Plot hydrological signatures with w/ or w/o precipitation.
 

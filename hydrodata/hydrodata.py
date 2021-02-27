@@ -74,7 +74,7 @@ def ssebopeta_byloc(
     pandas.DataFrame
         Daily actual ET for a location
     """
-    if not isinstance(coords, tuple) and len(coords) != 2:
+    if not (isinstance(coords, tuple) and len(coords) == 2):
         raise InvalidInputType("coords", "tuple", "(lon, lat)")
 
     lon, lat = coords
@@ -150,7 +150,7 @@ def ssebopeta_bygeom(
             return dt, ds.expand_dims({"time": [dt]})
 
         resp_list = ogc.utils.threading(_ssebop, f_list, max_workers=4)
-        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())  # type: ignore
+        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())
 
     eta = data.eta.copy()
     eta *= 1e-3
