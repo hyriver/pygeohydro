@@ -3,6 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
+  - python=3.8
   - pip
   - setuptools
 
@@ -33,7 +34,6 @@ dependencies:
   - folium
 
   # xarray speedups
-  - llvmlite
   - bottleneck
 
   # dep for plotting with geopandas
