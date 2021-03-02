@@ -93,10 +93,12 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 |
 
-**This package was formerly named `hydrodata <https://pypi.org/project/hydrodata/>`__
+**NOTE**
+
+This package was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__
 and since a R package with the same name already exists, we decided to
-renamed this package to ``pygeohydro <https://pypi.org/project/hydrodata/`__.
-Installing hydrodata will install this package from now on.**
+renamed this package to `pygeohydro <https://pypi.org/project/pygeohydro>`__.
+Installing hydrodata will install this package from now on.
 
 Features
 --------
