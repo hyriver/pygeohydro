@@ -75,7 +75,7 @@ def test_nlcd(geometry_nat):
 
 def test_nid():
     nid = gh.get_nid()
-    codes = gh.get_nid_code()
+    codes = gh.get_nid_codes()
     assert len(nid) == 91457 and codes.loc[("Dam Type", "CN")].item() == "Concrete"
 
 
