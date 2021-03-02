@@ -1,9 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 import io
-import os
 import zipfile
 from collections import OrderedDict
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import folium
@@ -24,36 +22,99 @@ from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 DEF_CRS = "epsg:4326"
 
 
-def national_dams(save_dir: Optional[str] = None) -> gpd.GeoDataFrame:
-    """Get all dams in the US from National Inventory of Dams 2019.
+def _nid_attrs(variables: List[str]) -> Dict[str, str]:
+    """Get descriptions of the NID variables."""
+    session = RetrySession()
+    base_url = "https://nid.sec.usace.army.mil/ords"
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R",
+        "Upgrade-Insecure-Requests": "1",
+        "DNT": "1",
+    }
+    desc: Dict[str, str] = {}
+    for v in variables:
+        payload = {"p": f"105:10:10326760693796::NO::P10_COLUMN_NAME:{v}"}
+        page = session.get(f"{base_url}/f", payload=payload, headers=headers)
+        tables = pd.read_html(page.text)
+        desc[v] = tables[0]["Field Definition"].values[0]
+
+    return desc
+
+
+def get_nid() -> gpd.GeoDataFrame:
+    """Get all dams in the US (over 91K) from National Inventory of Dams 2019.
 
     Notes
     -----
-    This function downloads a 25 MB `xls` file and convert it into a
-    GeoDataFrame. So it can take some time depending on your net speed.
+    This function downloads a 25 MB `xlsx` file and convert it into a
+    GeoDataFrame. So, your net speed might be a bottleneck. Another
+    bottleneck is data loading since the dataset has more than 91K rows,
+    it might take sometime for Pandas to load the data into memory.
 
-    Parmeters
-    ---------
-    save_dir : str, optional
-        Path to a directory to store the data as a GeoDataFrame with
-        feather format, defaults to None.
     Returns
-        geopandas.GeoDataFrame
-        A GeoDataFrame containing all the available dams in the database (over 90K).
+    -------
+    geopandas.GeoDataFrame
+        A GeoDataFrame containing all the available dams in the database. This dataframe
+        has an ``attrs`` property that contains definitions of all the NID variables including
+        their units. You can access this dictionary by, for example, ``nid.attrs`` assuming
+        that ``nid`` is the dataframe. For example, ``nli.attrs["VOLUME"]`` returns the definition
+        of the ``VOLUME`` column in NID.
     """
     url = "https://nid.sec.usace.army.mil/ords/NID_R.DOWNLOADFILE?InFileName=NID2019_U.xlsx"
-    nid = pd.read_excel(url, engine="openpyxl").set_index("RECORDID")
+    nid = pd.read_excel(url, engine="openpyxl", index_col=0, dtype="category")
+    attrs = _nid_attrs(nid.columns)
+
+    nid["INSPECTION_DATE"] = nid.INSPECTION_DATE.str.replace("3018", "2018")
+    for c in ["INSPECTION_DATE", "SUBMIT_DATE", "EAP_LAST_REV_DATE"]:
+        nid[c] = pd.to_datetime(nid[c])
+
+    for c in ["NUMBER_OF_LOCKS", "YEAR_COMPLETED"]:
+        nid[c] = nid[c].astype("Int16")
+
     nid["geometry"] = [Point(x, y) for x, y in zip(nid.LONGITUDE, nid.LATITUDE)]
     nid = gpd.GeoDataFrame(nid, crs="epsg:4326").drop(columns=["LONGITUDE", "LATITUDE"])
     nid.loc[~nid.is_valid, "geometry"] = pd.NA
-
-    if save_dir is not None:
-        root = Path(save_dir)
-        if not root.exists():
-            os.makedirs(root)
-        nid.to_feather(root.joinpath("nid.feather"))
+    nid.attrs = attrs
 
     return nid
+
+
+def get_nid_codes() -> pd.DataFrame:
+    """Get the definitions of letter codes in NID database.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A multi-index dataframe where the first index is code categories and the second one is
+        letter codes. For example, ``tables.loc[('Core Type',  'A')]`` returns Bituminous Concrete.
+    """
+    base_url = "https://nid.sec.usace.army.mil/ords"
+    payload = {"p": "105:21:10326760693796::NO:::"}
+    headers = {
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Connection": "keep-alive",
+        "Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R",
+        "Upgrade-Insecure-Requests": "1",
+        "DNT": "1",
+    }
+    page = RetrySession().get(f"{base_url}/f", payload=payload, headers=headers)
+
+    summary = [
+        s.split("summary=")[-1].split('"')[1::2][0] for s in page.text.split("\n") if "summary" in s
+    ]
+
+    tables = [
+        pd.read_html(page.text, attrs={"class": "t-Report-report", "summary": s})[0]
+        for s in summary[1:]
+    ]
+    tables = [
+        tb.rename(columns={"CODE": "Code", "VALUE": "Value"}).set_index("Code") for tb in tables
+    ]
+    return pd.concat(tables, keys=summary[1:])
 
 
 def ssebopeta_byloc(

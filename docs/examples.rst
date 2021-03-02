@@ -1,7 +1,7 @@
 Examples
 ========
 
-The following notebooks demonstrate capabilities of the Hydrodata software stack.
+The following notebooks demonstrate capabilities of the PyGeoHydro software stack.
 
 .. toctree::
     :maxdepth: 1

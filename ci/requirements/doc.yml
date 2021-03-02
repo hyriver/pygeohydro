@@ -67,7 +67,7 @@ dependencies:
     - sphinx-inline-tabs
     - git+https://github.com/bashtage/sphinx-material.git
 
-    # hydrodata stack
+    # pygeohydro stack
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git

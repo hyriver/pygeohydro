@@ -1,5 +1,5 @@
 #
-# hydrodata documentation build configuration file, created by
+# pygeohydro documentation build configuration file, created by
 # sphinx-quickstart on Thu Feb  6 18:57:54 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -28,7 +28,7 @@ root = pathlib.Path(__file__).absolute().parent.parent
 os.environ["PYTHONPATH"] = str(root)
 sys.path.insert(0, str(root))
 
-import hydrodata  # isort:skip
+import pygeohydro  # isort:skip
 
 # allowed_failures = set()
 
@@ -42,7 +42,7 @@ else:
     print("pip environment:")
     subprocess.run(["pip", "list"])
 
-print(f"Hydrodata: {hydrodata.__version__}, {hydrodata.__file__}")
+print(f"PyGeoHydro: {pygeohydro.__version__}, {pygeohydro.__file__}")
 
 with suppress(ImportError):
     import matplotlib
@@ -52,13 +52,13 @@ with suppress(ImportError):
 
 # -- Project information -----------------------------------------------------
 
-project = "Hydrodata"
+project = "PyGeoHydro"
 author = "Taher Chegini"
 copyright = f"2019-{datetime.datetime.now().year}, {author}"
-html_title = "Hydrodata"
+html_title = "PyGeoHydro"
 
 # The full version, including alpha/beta/rc tags
-release = LooseVersion(hydrodata.__version__).vstring
+release = LooseVersion(pygeohydro.__version__).vstring
 
 # try:
 #     import rasterio
@@ -100,8 +100,8 @@ extensions = [
 ]
 
 extlinks = {
-    "issue": ("https://github.com/cheginit/hydrodata/issues/%s", "GH"),
-    "pull": ("https://github.com/cheginit/hydrodata/pull/%s", "PR"),
+    "issue": ("https://github.com/cheginit/pygeohydro/issues/%s", "GH"),
+    "pull": ("https://github.com/cheginit/pygeohydro/pull/%s", "PR"),
 }
 
 nbsphinx_timeout = 600
@@ -118,9 +118,9 @@ nbsphinx_prolog = """
 
         This page was generated from `{{ docname }}`__.
         Interactive online version:
-        :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/hydrodata/master?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
+        :raw-html:`<a href="https://mybinder.org/v2/gh/cheginit/pygeohydro/master?filepath=docs/{{ docname }}"><img alt="Binder badge" src="https://mybinder.org/badge_logo.svg" style="vertical-align:text-bottom"></a>`
 
-    __ https://github.com/cheginit/hydrodata/tree/master/docs/{{ docname }}
+    __ https://github.com/cheginit/pygeohydro/tree/master/docs/{{ docname }}
 """
 
 autosummary_generate = True
@@ -202,12 +202,12 @@ html_theme_options = {
     "nav_title": project,
     # Specify a base_url used to generate sitemap.xml. If not
     # specified, then no sitemap will be built.
-    "base_url": "https://hydrodata.readthedocs.io/",
+    "base_url": "https://pygeohydro.readthedocs.io/",
     # Set the color and the accent color
     "color_primary": "blue",
     "color_accent": "blue-grey",
     # Set the repo location to get a badge with stats
-    "repo_url": "https://github.com/cheginit/hydrodata",
+    "repo_url": "https://github.com/cheginit/pygeohydro",
     "repo_name": project,
     # Visible levels of the global TOC; -1 means unlimited
     "globaltoc_depth": 3,
@@ -220,8 +220,8 @@ html_theme_options = {
     "version_dropdown": True,
     "version_json": "_static/versions.json",
     "version_info": {
-        "Release": "https://github.com/cheginit/hydrodata",
-        "Development": "https://github.com/cheginit/hydrodata/tree/develop",
+        "Release": "https://github.com/cheginit/pygeohydro",
+        "Development": "https://github.com/cheginit/pygeohydro/tree/develop",
     },
 }
 
@@ -237,7 +237,7 @@ html_theme_options = {
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-html_logo = "_static/hydrodata_logo.png"
+html_logo = "_static/pygeohydro_logo.png"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -305,7 +305,7 @@ html_sidebars = {"**": ["logo-text.html", "globaltoc.html", "localtoc.html", "se
 # html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = "hydrodatadoc"
+htmlhelp_basename = "pygeohydrodoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -325,9 +325,9 @@ htmlhelp_basename = "hydrodatadoc"
 latex_documents = [
     (
         "index",
-        "hydrodata.tex",
-        "hydrodata Documentation",
-        "hydrodata Developers",
+        "pygeohydro.tex",
+        "pygeohydro Documentation",
+        "pygeohydro Developers",
         "manual",
     )
 ]
@@ -357,7 +357,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [("index", "hydrodata", "hydrodata Documentation", ["hydrodata Developers"], 1)]
+man_pages = [("index", "pygeohydro", "pygeohydro Documentation", ["pygeohydro Developers"], 1)]
 
 # If true, show URL addresses after external links.
 # man_show_urls = False
@@ -371,10 +371,10 @@ man_pages = [("index", "hydrodata", "hydrodata Documentation", ["hydrodata Devel
 texinfo_documents = [
     (
         "index",
-        "hydrodata",
-        "hydrodata Documentation",
-        "hydrodata Developers",
-        "hydrodata",
+        "pygeohydro",
+        "pygeohydro Documentation",
+        "pygeohydro Developers",
+        "pygeohydro",
         "A portal to access hydrology and climatology databases from Python.",
         "Miscellaneous",
     )

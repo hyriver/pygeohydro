@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=.
 set BUILDDIR=_build
-set SPHINXPROJ=hydrodata
+set SPHINXPROJ=pygeohydro
 
 if "%1" == "" goto help
 

@@ -82,7 +82,7 @@ def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
 
 
 def show_versions(file: IO = sys.stdout) -> None:
-    """Print the versions of hydrodata stack and its dependencies.
+    """Print the versions of pygeohydro stack and its dependencies.
 
     Parameters
     ----------
@@ -98,8 +98,8 @@ def show_versions(file: IO = sys.stdout) -> None:
 
     deps = [
         # (MODULE_NAME, f(mod) -> mod version)
-        # hydrodata stack
-        ("hydrodata", lambda mod: mod.__version__),
+        # pygeohydro stack
+        ("pygeohydro", lambda mod: mod.__version__),
         ("pygeoogc", lambda mod: mod.__version__),
         ("pygeoutils", lambda mod: mod.__version__),
         ("py3dep", lambda mod: mod.__version__),

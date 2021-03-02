@@ -79,18 +79,18 @@ test: ## run tests quickly with the default Python
 	pytest --no-cov -n 4 -v
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source hydrodata -m pytest -v
+	coverage run --source pygeohydro -m pytest -v
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
 
 apidocs: ## generate API docs
-	rm -f docs/hydrodata.rst
+	rm -f docs/pygeohydro.rst
 	rm -f docs/modules.rst
 	sed '/Installation/IQ' README.rst > docs/index.rst
 	echo $$INDEX_FOOTER >> docs/index.rst
 	sed -i 's/\t/    /g' docs/index.rst
-	sphinx-apidoc -o docs/ -f -H "API Reference" hydrodata
+	sphinx-apidoc -o docs/ -f -H "API Reference" pygeohydro
 
 docs: apidocs ## generate Sphinx HTML documentation, including API docs
 	$(MAKE) -C docs clean

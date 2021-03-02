@@ -1,4 +1,4 @@
-name: hydrodata-binder
+name: pygeohydro-binder
 channels:
   - conda-forge
   - nodefaults
@@ -28,7 +28,7 @@ dependencies:
   - networkx
   - matplotlib-base
   - folium
-  - hydrodata
+  - pygeohydro
 
   # xarray speedups
   - bottleneck

@@ -1,1 +1,1 @@
-"""Unit test package for hydrodata."""
+"""Unit test package for pygeohydro."""

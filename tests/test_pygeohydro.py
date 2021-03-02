@@ -1,11 +1,11 @@
-"""Tests for Hydrodata package."""
+"""Tests for PyGeoHydro package."""
 import io
 
 import pytest
 from shapely.geometry import Polygon
 
-import hydrodata as hd
-from hydrodata import NWIS
+import pygeohydro as hd
+from pygeohydro import NWIS
 
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
@@ -58,9 +58,9 @@ def test_ssebopeta(geometry_nat):
 
 
 def test_get_ssebopeta_urls():
-    hd.hydrodata._get_ssebopeta_urls(2010)
-    urls_dates = hd.hydrodata._get_ssebopeta_urls(DATES_LONG)
-    urls_years = hd.hydrodata._get_ssebopeta_urls([2010, 2014, 2015])
+    hd.pygeohydro._get_ssebopeta_urls(2010)
+    urls_dates = hd.pygeohydro._get_ssebopeta_urls(DATES_LONG)
+    urls_years = hd.pygeohydro._get_ssebopeta_urls([2010, 2014, 2015])
     assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 

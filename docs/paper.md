@@ -1,5 +1,5 @@
 ---
-title: 'Hydrodata: A portal to hydrology and climatology data through Python'
+title: 'PyGeoHydro: A portal to hydrology and climatology data through Python'
 tags:
   - Python
   - hydrology
@@ -26,13 +26,13 @@ climatology data has facilitated publishing reproducible scientific researches i
 Such web services allow researchers to subset big databases and perform some of the common data
 processing operations on the server-side. However, implementing such services increases the
 technical complexity of code development as it requires sufficient understanding of their
-underlying protocols to generate valid queries and filters. `Hydrodata` tries to bridge this gap
+underlying protocols to generate valid queries and filters. `PyGeoHydro` tries to bridge this gap
 by providing a unified and simple Application Programming Interface (API) to web services that are
 based on three of the most commonly used protocols for geo-spatial/temporal data publication:
 REpresentational State Transfer (RESTful), Web Feature Services (WFS), and Web Map Services (WMS).
-`Hydrodata` is a software stack and includes the following Python packages:
+`PyGeoHydro` is a software stack and includes the following Python packages:
 
-* [Hydrodata](https://github.com/cheginit/hydrodata): Provides access to NWIS (National Water
+* [PyGeoHydro](https://github.com/cheginit/pygeohydro): Provides access to NWIS (National Water
   Information System), NID (National Inventory of Dams), HCDN-2009 (Hydro-Climatic Data Network),
   NLCD (National Land Cover Database), and SSEBop (operational Simplified Surface Energy Balance)
   databases. Moreover, it can generate an interactive map for exploring NWIS stations within a
@@ -69,7 +69,7 @@ Furthermore, `PyGeoOGC` and `PyGeoUtils` are low-level engines of this software 
 other four packages utilize for providing access to some of the most popular databases in the
 hydrology community. These two low-level packages are generic and developers can use them for
 connecting and sending queries to any other web services that are based on the protocols that
-`Hydrodata` supports.
+`PyGeoHydro` supports.
 
 # Statement of need
 
@@ -82,7 +82,7 @@ are available in raster format, and river network could be from a vector data ty
 these data are available from different sources, for example, we can retrieve climate data
 from Daymet [@Thornton_2020], topology data from 3D Elevation Program [@Thatcher_2020],
 and river network from National Hydrography Database [@Buto_2020]. The diversity in data sources
-and their large size may hinder reproducible publication of such studies. `Hydrodata` software
+and their large size may hinder reproducible publication of such studies. `PyGeoHydro` software
 stack provides access to such databases through plethora of web services that public and private
 entities have made available.
 
@@ -94,8 +94,8 @@ access to some of the USGS (United States Geological Survey) databases and has t
 [R](https://github.com/USGS-R/dataRetrieval) and [Python](https://github.com/USGS-python/dataretrieval).
 There is also a R Package with the same name, [HydroData](https://github.com/mikejohnson51/HydroData),
 that provides access to 15 earth system datasets. Although these packages offer similar
-functionalities to `Hydrodata`, none of the Python packages offer access to datasets from diverse
-sources and offer post-processing functionalities that `Hydrodata` provides.
+functionalities to `PyGeoHydro`, none of the Python packages offer access to datasets from diverse
+sources and offer post-processing functionalities that `PyGeoHydro` provides.
 
 # Acknowledgements
 

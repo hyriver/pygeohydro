@@ -1,4 +1,4 @@
-name: hydrodata-dev
+name: pygeohydro-dev
 channels:
   - conda-forge
   - nodefaults
