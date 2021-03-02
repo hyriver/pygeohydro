@@ -4,7 +4,7 @@ import io
 import pytest
 from shapely.geometry import Polygon
 
-import pygeohydro as hd
+import pygeohydro as gh
 from pygeohydro import NWIS
 
 SID_NATURAL = "01031500"
@@ -49,8 +49,8 @@ def test_nwis(geometry_nat):
 def test_ssebopeta(geometry_nat):
     dates = ("2000-01-01", "2000-01-05")
     coords = (geometry_nat.centroid.x, geometry_nat.centroid.y)
-    eta_p = hd.ssebopeta_byloc(coords, dates=dates)
-    eta_g = hd.ssebopeta_bygeom(geometry_nat, dates=dates)
+    eta_p = gh.ssebopeta_byloc(coords, dates=dates)
+    eta_g = gh.ssebopeta_bygeom(geometry_nat, dates=dates)
     assert (
         abs(eta_p.mean().values[0] - 0.575) < 1e-3
         and abs(eta_g.mean().values.item() - 0.576) < 1e-3
@@ -58,44 +58,45 @@ def test_ssebopeta(geometry_nat):
 
 
 def test_get_ssebopeta_urls():
-    hd.pygeohydro._get_ssebopeta_urls(2010)
-    urls_dates = hd.pygeohydro._get_ssebopeta_urls(DATES_LONG)
-    urls_years = hd.pygeohydro._get_ssebopeta_urls([2010, 2014, 2015])
+    gh.pygeohydro._get_ssebopeta_urls(2010)
+    urls_dates = gh.pygeohydro._get_ssebopeta_urls(DATES_LONG)
+    urls_years = gh.pygeohydro._get_ssebopeta_urls([2010, 2014, 2015])
     assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
 @pytest.mark.flaky(max_runs=3)
 def test_nlcd(geometry_nat):
-    hd.nlcd(geometry_nat.bounds, resolution=1e3)
+    gh.nlcd(geometry_nat.bounds, resolution=1e3)
     years = {"impervious": None, "cover": 2016, "canopy": None}
-    lulc = hd.nlcd(geometry_nat, years=years, resolution=1e3, crs="epsg:3542")
-    st = hd.cover_statistics(lulc.cover)
+    lulc = gh.nlcd(geometry_nat, years=years, resolution=1e3, crs="epsg:3542")
+    st = gh.cover_statistics(lulc.cover)
     assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
 
 
 def test_nid():
-    nid = hd.national_dams()
-    assert len(nid) == 91457
+    nid = gh.get_nid()
+    codes = gh.get_nid_code()
+    assert len(nid) == 91457 and codes.loc[("Dam Type", "CN")].item() == "Concrete"
 
 
 @pytest.mark.flaky(max_runs=3)
 def test_plot(geometry_nat, geometry_urb):
-    hd.interactive_map(geometry_nat.bounds)
+    gh.interactive_map(geometry_nat.bounds)
     nwis = NWIS()
     qobs = nwis.get_streamflow([SID_NATURAL, SID_URBAN], DATES_LONG)
-    hd.plot.signatures(qobs, precipitation=qobs[f"USGS-{SID_NATURAL}"], output="data/hd.plot.png")
-    hd.plot.signatures(qobs[f"USGS-{SID_NATURAL}"], precipitation=qobs[f"USGS-{SID_NATURAL}"])
-    _, _, levels = hd.plot.cover_legends()
+    gh.plot.signatures(qobs, precipitation=qobs[f"USGS-{SID_NATURAL}"], output="data/gh.plot.png")
+    gh.plot.signatures(qobs[f"USGS-{SID_NATURAL}"], precipitation=qobs[f"USGS-{SID_NATURAL}"])
+    _, _, levels = gh.plot.cover_legends()
     assert levels[-1] == 100
 
 
 @pytest.mark.flaky(max_runs=3)
 def test_helpers():
-    err = hd.helpers.nwis_errors()
+    err = gh.helpers.nwis_errors()
     assert err.shape[0] == 7
 
 
 def test_show_versions():
     f = io.StringIO()
-    hd.show_versions(file=f)
+    gh.show_versions(file=f)
     assert "INSTALLED VERSIONS" in f.getvalue()
