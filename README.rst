@@ -221,12 +221,10 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
     :width: 200
-    :height: 200
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
     :width: 200
-    :height: 200
 
 Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes``:
 
