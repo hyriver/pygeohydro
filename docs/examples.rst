@@ -8,6 +8,7 @@ The following notebooks demonstrate capabilities of the PyGeoHydro software stac
 
     examples/webservices
     examples/nwis
+    examples/nid
     examples/nhdplus
     examples/daymet
     examples/nlcd

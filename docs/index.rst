@@ -1,5 +1,5 @@
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/pygeohydro_logo_text.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/pygeohydro_logo_text.png
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
     :align: center
 
 |
@@ -31,7 +31,7 @@
 =========== ==================================================================== ============
 Package     Description                                                          Status
 =========== ==================================================================== ============
-PyGeoHydro_  Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
+PyGeoHydro_ Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
 PyGeoOGC_   Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
 PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
 PyNHD_      Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
@@ -46,8 +46,9 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _Py3DEP: https://github.com/cheginit/py3dep
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
-PyGeoHydro: Portal to hydrology and climatology data
-----------------------------------------------------
+
+PyGeoHydro: A portal to hydrology and climatology data through Python
+=====================================================================
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
@@ -111,7 +112,7 @@ Some of the major capabilities of PyGeoHydro are:
 * A URL inventory for some of the popular (and tested) web services.
 * Some utilities for manipulating the data and visualization.
 
-You can visit `examples <https://pygeohydro.readthedocs.io/en/develop/examples.html>`__
+You can visit `examples <https://pygeohydro.readthedocs.io/en/master/examples.html>`__
 webpage to see some example notebooks. You can also try using PyGeoHydro without installing
 it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
 instance with the PyGeoHydro software stack pre-installed will be launched in your web browser
@@ -121,42 +122,11 @@ Please note that since PyGeoHydro is in early development stages, while the prov
 functionaities should be stable, changes in APIs are possible in new releases. But we
 appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
-Features
---------
-
-PyGeoHydro itself has three main modules; ``pygeohydro``, ``plot``, and ``helpers``.
-The ``pygeohydro`` module provides access to the following web services:
-
-* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
-* `NID <https://nid.sec.usace.army.mil/ords/f?p=105:1::::::>`__ for accessing the National
-  Inventory of Dams in the US,
-* `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
-  where human activity affects the natural flow of the watercourse,
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, and canopy data,
-* `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
-  evapotranspiration, for both single pixel and gridded data.
-
-Also, it has two other functions:
-
-* ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
-* ``cover_statistics``: Compute categorical statistics of land use/land cover data.
-
-The ``plot`` module includes two main functions:
-
-* ``signatures``: Plot five hydrologic signature graphs.
-* ``cover_legends``: Return the official NLCD land cover legends for plotting a land cover dataset.
-
-The ``helpers`` module includes:
-
-* ``nlcd_helper``: A roughness coefficients lookup table for each land cover type which is
-  useful for overland flow routing among other applications.
-* ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
-
 Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/example_plots.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/example_plots.png
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
 
 
 Documentation
