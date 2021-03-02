@@ -502,7 +502,7 @@ class NWIS:
                     hcdn_dict.update({sid: None})
 
         def hcdn_2009(x: str) -> Optional[bool]:
-            _hcdn = hcdn_dict.get(x, None)
+            _hcdn = hcdn_dict.get(x)
             if _hcdn is not None:
                 return len(_hcdn) > 0
             return None
@@ -618,10 +618,7 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
     nwis = NWIS()
     query = nwis.query_bybox(bbox)
     sites = nwis.get_info(query, expanded=True)
-    sites["coords"] = [
-        (lat, lon)
-        for lat, lon in sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False)
-    ]
+    sites["coords"] = list(sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False))
     sites["altitude"] = (
         sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
