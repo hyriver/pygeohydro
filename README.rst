@@ -71,8 +71,8 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 |
 
-.. image:: https://pepy.tech/badge/pygeohydro
-    :target: https://pepy.tech/project/pygeohydro
+.. image:: https://pepy.tech/badge/hydrodata
+    :target: https://pepy.tech/project/hydrodata
     :alt: Downloads
 
 .. image:: https://www.codefactor.io/repository/github/cheginit/pygeohydro/badge/develop
@@ -180,6 +180,7 @@ important properties of stations are shown.
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
+    :alt: Interactive Map
 
 We can select all the stations within this boundary box that have daily mean streamflow data from
 2000-01-01 to 2010-12-31:
@@ -221,10 +222,12 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
     :width: 200
+    :alt: Land Use/Land Cover
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
     :width: 200
+    :alt: Actual ET
 
 Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes``:
 
@@ -235,6 +238,7 @@ Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes`
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
+    :alt: Dams
 
 Contributing
 ------------
