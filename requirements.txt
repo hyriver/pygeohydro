@@ -17,9 +17,7 @@ networkx
 openpyxl
 orjson
 owslib
-py3dep
 pyarrow
-pydaymet
 pygeoogc
 pygeoutils
 pynhd
