@@ -66,14 +66,14 @@ repos:
       - id: mypy
         name: Static type checking with mypy
         exclude: tests
-        files: hydrodata
+        files: pygeohydro
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.0
     hooks:
       - id: bandit
         name: Check for security issues with bandit
-        args: [-lll, --recursive, hydrodata]
+        args: [-lll, --recursive, pygeohydro]
         files: .py$
 
   - repo: https://github.com/nbQA-dev/nbQA
