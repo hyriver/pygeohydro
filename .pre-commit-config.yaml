@@ -33,18 +33,18 @@ repos:
     hooks:
     - id: shfmt
 
-  - repo: https://github.com/PyCQA/doc8
-    rev: 0.9.0a1
-    hooks:
-    - id: doc8
-      name: Autoformat with doc8
-      args: [--max-line-length, "100"]
-
   - repo: https://github.com/keewis/blackdoc
     rev: v0.3.3
     hooks:
       - id: blackdoc
-        name: Autoformat cods in docstrings with blackdoc
+        name: Autoformat codes in docstrings with blackdoc
+
+  # - repo: https://github.com/PyCQA/doc8
+  #   rev: 0.9.0a1
+  #   hooks:
+  #   - id: doc8
+  #     name: Check documentation formats with doc8
+  #     args: [--max-line-length, "100"]
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.10.0

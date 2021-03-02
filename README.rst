@@ -1,5 +1,5 @@
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/pygeohydro_logo_text.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/pygeohydro_logo_text.png
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
     :align: center
 
 |
@@ -31,7 +31,7 @@
 =========== ==================================================================== ============
 Package     Description                                                          Status
 =========== ==================================================================== ============
-PyGeoHydro_  Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
+PyGeoHydro_ Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
 PyGeoOGC_   Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
 PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
 PyNHD_      Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
@@ -46,8 +46,8 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _Py3DEP: https://github.com/cheginit/py3dep
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
-PyGeoHydro: Portal to hydrology and climatology data
-----------------------------------------------------
+PyGeoHydro: A portal to hydrology and climatology data through Python
+====================================================================
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
@@ -93,39 +93,18 @@ PyGeoHydro: Portal to hydrology and climatology data
 
 |
 
-Why PyGeoHydro?
----------------
-
-PyGeoHydro is a stack of Python libraries designed to aid in watershed analysis through
-web services. Currently, it only includes hydrology and climatology data within the US.
-Some of the major capabilities of PyGeoHydro are:
-
-* Easy access to many web services for subsetting data and returning the requests as masked
-  xarrays or GeoDataFrames.
-* Splitting large requests into smaller chunks under-the-hood since web services usually limit
-  the number of items per request. So the only bottleneck for subsetting the data
-  is the local available memory.
-* Navigating and subsetting NHDPlus database (both meduim- and high-resolution) using web services.
-* Cleaning up the vector NHDPlus data, fixing some common issues, and computing vector-based
-  accumulation through the network.
-* A URL inventory for some of the popular (and tested) web services.
-* Some utilities for manipulating the data and visualization.
-
-You can visit `examples <https://pygeohydro.readthedocs.io/en/develop/examples.html>`__
-webpage to see some example notebooks. You can also try using PyGeoHydro without installing
-it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
-instance with the PyGeoHydro software stack pre-installed will be launched in your web browser
-and you can start coding!
-
-Please note that since PyGeoHydro is in early development stages, while the provided
-functionaities should be stable, changes in APIs are possible in new releases. But we
-appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
+**This package was formerly named ``hydrodata`` and since there's a R package
+with the same name is already exists, we decided to renamed this package to ``pygeohydro``.
+Installing ``hydrodata`` will install this package instead from now on.**
 
 Features
 --------
 
-PyGeoHydro itself has three main modules; ``pygeohydro``, ``plot``, and ``helpers``.
-The ``pygeohydro`` module provides access to the following web services:
+PyGeoHydro is part of a Python software stach and gives access to some the public
+web services that prvoide geospatial hydrology data. It has three main modules;
+``pygeohydro``, ``plot``, and ``helpers``.
+
+The ``pygeohydro`` module can pull data from the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
 * `NID <https://nid.sec.usace.army.mil/ords/f?p=105:1::::::>`__ for accessing the National
@@ -155,9 +134,18 @@ The ``helpers`` module includes:
 Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/example_plots.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/develop/docs/_static/example_plots.png
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
 
+You can visit `examples <https://pygeohydro.readthedocs.io/en/master/examples.html>`__
+webpage to see some example notebooks. You can also try using PyGeoHydro without installing
+it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
+instance with the PyGeoHydro software stack pre-installed will be launched in your web browser
+and you can start coding!
+
+Please note that since PyGeoHydro is in early development stages, while the provided
+functionaities should be stable, changes in APIs are possible in new releases. But we
+appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
 Installation
 ------------
@@ -175,6 +163,78 @@ using `Conda <https://docs.conda.io/en/latest/>`__:
 .. code-block:: console
 
     $ conda install -c conda-forge pygeohydro
+
+Quick start
+-----------
+
+We can explore the available NWIS stations within a bounding box using ``interactive_map``
+function. It returns an interactive map and by clicking on an station some of the most
+important properties of stations are shown.
+
+.. code-block:: python
+
+    import pygeohydro as gh
+
+    bbox = (-69.5, 45, -69, 45.5)
+    gh.interactive_map(bbox)
+
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
+
+We can select all the stations within this boundary box that have daily mean streamflow data from
+2000-01-01 to 2010-12-31:
+
+.. code-block:: python
+
+    from pygeohydro import NWIS
+
+    nwis = NWIS()
+    info_box = nwis.get_info(nwis.query_bybox(bbox))
+    dates = ("2000-01-01", "2010-12-31")
+    stations = info_box[
+        (info_box.begin_date <= dates[0]) & (info_box.end_date >= dates[1])
+    ].site_no.tolist()
+
+Then, we can get the streamflow data in mm/day (by default the data are in cms) and plot them:
+
+.. code-block:: python
+
+    from pygeohydro import plot
+
+    qobs = nwis.get_streamflow(stations, dates, mmd=True)
+    plot.signatures(qobs)
+
+Moreover, we can get land use/land cove data using ``nlcd`` function, percentages of
+land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``:
+
+.. code-block:: python
+
+    from pynhd import NLDI
+
+    geometry = NLDI().get_basins("01031500").geometry[0]
+    lulc = gh.nlcd(
+        geometry, 100, years={"impervious": None, "cover": 2016, "canopy": None}
+    )
+    stats = gh.cover_statistics(lulc.cover)
+    eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
+
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
+    :width: 45%
+
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
+    :width: 45%
+
+Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes``:
+
+.. code-block:: python
+
+    nid = gh.get_nid()
+    codes = gh.get_nid_codes()
+
+.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
+    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
 
 Contributing
 ------------
