@@ -47,7 +47,7 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 PyGeoHydro: A portal to hydrology and climatology data through Python
-====================================================================
+=====================================================================
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
@@ -93,9 +93,10 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 |
 
-**This package was formerly named hydrodata and since there's a R package
-with the same name is already exists, we decided to renamed this package to pygeohydro.
-Installing hydrodata will install this package instead from now on.**
+**This package was formerly named `hydrodata <https://pypi.org/project/hydrodata/>`__
+and since a R package with the same name already exists, we decided to
+renamed this package to ``pygeohydro <https://pypi.org/project/hydrodata/`__.
+Installing hydrodata will install this package from now on.**
 
 Features
 --------
