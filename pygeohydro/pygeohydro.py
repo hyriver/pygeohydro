@@ -22,26 +22,48 @@ from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 DEF_CRS = "epsg:4326"
 
 
-def _nid_attrs(variables: List[str]) -> Dict[str, str]:
-    """Get descriptions of the NID variables."""
-    session = RetrySession()
-    base_url = "https://nid.sec.usace.army.mil/ords"
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R",
-        "Upgrade-Insecure-Requests": "1",
-        "DNT": "1",
-    }
-    desc: Dict[str, str] = {}
-    for v in variables:
-        payload = {"p": f"105:10:10326760693796::NO::P10_COLUMN_NAME:{v}"}
-        page = session.get(f"{base_url}/f", payload=payload, headers=headers)
-        tables = pd.read_html(page.text)
-        desc[v] = tables[0]["Field Definition"].values[0]
+class NID:
+    """Retrieve data from the National Inventory of Dams."""
 
-    return desc
+    def __init__(self) -> None:
+        self.session = RetrySession()
+        self.base_url = "https://nid.sec.usace.army.mil/ords"
+        self.headers = {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "DNT": "1",
+        }
+
+    def get_xlsx(self) -> io.BytesIO:
+        """Get the excel file that containes the dam data."""
+        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-QM2rrHvxwzROBqNYVD0WIlg2"})
+        payload = {"InFileName": "NID2019_U.xlsx"}
+        r = self.session.get(
+            f"{self.base_url}/NID_R.DOWNLOADFILE", payload=payload, headers=self.headers
+        )
+        return io.BytesIO(r.content)
+
+    def get_attrs(self, variables: List[str]) -> Dict[str, str]:
+        """Get descriptions of the NID variables."""
+        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R"})
+
+        desc: Dict[str, str] = {}
+        for v in variables:
+            payload = {"p": f"105:10:10326760693796::NO::P10_COLUMN_NAME:{v}"}
+            page = self.session.get(f"{self.base_url}/f", payload=payload, headers=self.headers)
+            tables = pd.read_html(page.text)
+            desc[v] = tables[0]["Field Definition"].values[0]
+
+        return desc
+
+    def get_codes(self) -> str:
+        """Get the definitions of letter codes in NID database."""
+        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-Bk16kg_4BwSK2anC36B4XBQn"})
+        payload = {"p": "105:21:16137342922753::NO:::"}
+        page = self.session.get(f"{self.base_url}/f", payload=payload, headers=self.headers)
+        return page.text
 
 
 def get_nid() -> gpd.GeoDataFrame:
@@ -63,9 +85,9 @@ def get_nid() -> gpd.GeoDataFrame:
         that ``nid`` is the dataframe. For example, ``nli.attrs["VOLUME"]`` returns the definition
         of the ``VOLUME`` column in NID.
     """
-    url = "https://nid.sec.usace.army.mil/ords/NID_R.DOWNLOADFILE?InFileName=NID2019_U.xlsx"
-    nid = pd.read_excel(url, engine="openpyxl", index_col=0, dtype="category")
-    attrs = _nid_attrs(nid.columns)
+    service = NID()
+    nid = pd.read_excel(service.get_xlsx(), engine="openpyxl", index_col=0, dtype="category")
+    attrs = service.get_attrs(nid.columns)
 
     nid["INSPECTION_DATE"] = nid.INSPECTION_DATE.str.replace("3018", "2018")
     for c in ["INSPECTION_DATE", "SUBMIT_DATE", "EAP_LAST_REV_DATE"]:
@@ -91,24 +113,16 @@ def get_nid_codes() -> pd.DataFrame:
         A multi-index dataframe where the first index is code categories and the second one is
         letter codes. For example, ``tables.loc[('Core Type',  'A')]`` returns Bituminous Concrete.
     """
-    base_url = "https://nid.sec.usace.army.mil/ords"
-    payload = {"p": "105:21:10326760693796::NO:::"}
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive",
-        "Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R",
-        "Upgrade-Insecure-Requests": "1",
-        "DNT": "1",
-    }
-    page = RetrySession().get(f"{base_url}/f", payload=payload, headers=headers)
+    tables_txt = NID().get_codes()
 
     summary = [
-        s.split("summary=")[-1].split('"')[1::2][0] for s in page.text.split("\n") if "summary" in s
+        s.split("summary=")[-1].split('"')[1::2][0]
+        for s in tables_txt.split("\n")
+        if "summary" in s
     ]
 
     tables = [
-        pd.read_html(page.text, attrs={"class": "t-Report-report", "summary": s})[0]
+        pd.read_html(tables_txt, attrs={"class": "t-Report-report", "summary": s})[0]
         for s in summary[1:]
     ]
     tables = [
