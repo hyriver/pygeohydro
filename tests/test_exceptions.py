@@ -1,6 +1,6 @@
 import pytest
 
-from hydrodata import InvalidInputRange, InvalidInputType, InvalidInputValue
+from pygeohydro import InvalidInputRange, InvalidInputType, InvalidInputValue
 
 
 def invalid_value():

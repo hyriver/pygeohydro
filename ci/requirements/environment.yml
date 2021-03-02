@@ -1,4 +1,4 @@
-name: hydrodata-tests
+name: pygeohydro-tests
 channels:
   - conda-forge
   - nodefaults

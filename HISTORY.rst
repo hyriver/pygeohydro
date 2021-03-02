@@ -5,18 +5,19 @@ History
 0.9.2 (unreleased)
 ------------------
 
-Hydrodata
-~~~~~~~~~
+PyGeoHydro
+~~~~~~~~~~
+- Rename ``hydrodata`` package to ``pygeohydro`` for publication on JOSS.
 - In ``NWIS.get_info``, drop rows that don't have mean daily discharge data instead of slicing.
-- Add support for the National Inventory of Dams (NID) via ``national_dams`` function.
+- Add support for the National Inventory of Dams (NID) via ``get_nid`` function.
 - Speed up Github Actions by using ``mamba`` and caching.
 - Improve ``pip`` installation by adding ``pyproject.toml``.
 
 0.9.1 (2021-02-22)
 ------------------
 
-Hydrodata
-~~~~~~~~~
+PyGeoHydro
+~~~~~~~~~~
 - Fix an issue with ``NWIS.get_info`` method where stations with False values as their
   ``hcdn_2009`` value were returned as ``None`` instead.
 
@@ -25,8 +26,8 @@ Hydrodata
 
 - Bump versions of packages across the stack to the same version.
 
-Hydrodata
-~~~~~~~~~
+PyGeoHydro
+~~~~~~~~~~
 - Use the new pynhd function for getting basins, ``NLDI.get_basisn``.
 - Made ``mypy`` checks more strict and added all the missing type annotations.
 
@@ -138,15 +139,15 @@ Bug fixes
 0.7.0 (2020-8-12)
 -----------------
 
-This version divides Hydrodata into six standalone Python libraries. So many of the changes
+This version divides PyGeoHydro into six standalone Python libraries. So many of the changes
 listed below belong to the modules and functions that are now a separate package. This decision
 was made for reducing the complexity of the code base and allow the users to only install
-the packages that they need without having to install all the Hydrodata dependencies.
+the packages that they need without having to install all the PyGeoHydro dependencies.
 
 Breaking changes
 ~~~~~~~~~~~~~~~~
 - The ``services`` module is now a separate package called PyGeoOGCC and is set as a requirement
-  for Hydrodata. PyGeoOGC is a leaner package with much less dependencies and is suitable for
+  for PyGeoHydro. PyGeoOGC is a leaner package with much less dependencies and is suitable for
   people who might only need an interface to web services.
 - Unified function names for getting feature by ID and by box.
 - Combined ``start`` and ``end`` arguments into a ``tuple`` argument
@@ -175,7 +176,7 @@ Enhancements
 ~~~~~~~~~~~~
 - Remove soft requirements from the env files.
 - Refactored ``requests`` functions into a single class and a separate file.
-- Made all the classes available directly from ``hydrodata``.
+- Made all the classes available directly from ``pygeohydro``.
 - Added `CodeFactor <https://www.codefactor.io/>`_ to the Github pipeline and addressed
   the some of issues
   that CodeFactor found.
@@ -201,7 +202,7 @@ New Features
 ~~~~~~~~~~~~
 - Added access to WaterData's Geoserver databases.
 - Added access to the remaining NLDI database (Water Quality Portal and Water Data Exchange).
-- Created a Binder for launching a computing environment on the cloud and testing Hydrodata.
+- Created a Binder for launching a computing environment on the cloud and testing PyGeoHydro.
 - Added a URL repository for the supported services called ``ServiceURL``
 - Added support for `FEMA <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`_ web services
   for flood maps and `FWS <https://www.fws.gov/wetlands/Data/Web-Map-Services.html>`_ for wetlands.

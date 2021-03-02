@@ -34,7 +34,7 @@ RENAME = {
     "git+https://github.com/cheginit/pynhd.git": "pynhd",
     "git+https://github.com/cheginit/py3dep.git": "py3dep",
     "git+https://github.com/cheginit/pydaymet.git": "pydaymet",
-    "git+https://github.com/cheginit/hydrodata.git": "hydrodata",
+    "git+https://github.com/cheginit/pygeohydro.git": "pygeohydro",
 }
 
 

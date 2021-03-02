@@ -2,16 +2,17 @@ from pkg_resources import DistributionNotFound, get_distribution
 
 from . import helpers, plot
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
-from .hydrodata import (
+from .print_versions import show_versions
+from .pygeohydro import (
     NWIS,
     cover_statistics,
+    get_nid,
+    get_nid_codes,
     interactive_map,
-    national_dams,
     nlcd,
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
-from .print_versions import show_versions
 
 try:
     __version__ = get_distribution(__name__).version
