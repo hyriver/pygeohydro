@@ -93,9 +93,9 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 |
 
-**This package was formerly named ``hydrodata`` and since there's a R package
-with the same name is already exists, we decided to renamed this package to ``pygeohydro``.
-Installing ``hydrodata`` will install this package instead from now on.**
+**This package was formerly named hydrodata and since there's a R package
+with the same name is already exists, we decided to renamed this package to pygeohydro.
+Installing hydrodata will install this package instead from now on.**
 
 Features
 --------
@@ -133,9 +133,6 @@ The ``helpers`` module includes:
 
 Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
-
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/example_plots.png
 
 You can visit `examples <https://pygeohydro.readthedocs.io/en/master/examples.html>`__
 webpage to see some example notebooks. You can also try using PyGeoHydro without installing
@@ -220,11 +217,11 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
-    :width: 45%
+    :width: 200
 
 .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
-    :width: 45%
+    :width: 200
 
 Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes``:
 
