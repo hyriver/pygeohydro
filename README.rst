@@ -229,7 +229,7 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     :width: 200
     :alt: Actual ET
 
-Additionally, we can all the US dams data using ``get_nid`` and ``get_nid_codes``:
+Additionally, we can pull all the US dams data using ``get_nid`` and ``get_nid_codes``:
 
 .. code-block:: python
 
