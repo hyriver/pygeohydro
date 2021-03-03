@@ -1,8 +1,8 @@
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
-    :align: center
+.. .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+..     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+..     :align: center
 
-|
+.. |
 
 .. |pygeohydro| image:: https://github.com/cheginit/pygeohydro/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pygeohydro/actions/workflows/test.yml
@@ -47,8 +47,8 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 
-PyGeoHydro: A portal to hydrology and climatology data through Python
-=====================================================================
+A Portal To Hydrology And Climatology Data Through Python
+=========================================================
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
@@ -94,31 +94,39 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 |
 
-Why PyGeoHydro?
----------------
+**NOTE**
 
-PyGeoHydro is a stack of Python libraries designed to aid in watershed analysis through
-web services. Currently, it only includes hydrology and climatology data within the US.
-Some of the major capabilities of PyGeoHydro are:
+This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__
+and since a R package with the same name already exists, we decided to
+renamed the project. Therefore, we renamed ``hydrodata`` to
+`pygeohydro <https://pypi.org/project/pygeohydro>`__.
+Installing ``hydrodata`` will install ``pygeohydro`` from now on.
+
+Features
+--------
+
+This stack of six Python libraries are designed to aid in watershed analysis through
+web services. Currently, they only includes hydrology and climatology data within the US.
+Some of the major capabilities these packages are:
 
 * Easy access to many web services for subsetting data and returning the requests as masked
   xarrays or GeoDataFrames.
 * Splitting large requests into smaller chunks under-the-hood since web services usually limit
   the number of items per request. So the only bottleneck for subsetting the data
-  is the local available memory.
+  is the local machine memory.
 * Navigating and subsetting NHDPlus database (both meduim- and high-resolution) using web services.
 * Cleaning up the vector NHDPlus data, fixing some common issues, and computing vector-based
-  accumulation through the network.
+  accumulation through a river network.
 * A URL inventory for some of the popular (and tested) web services.
 * Some utilities for manipulating the data and visualization.
 
 You can visit `examples <https://pygeohydro.readthedocs.io/en/master/examples.html>`__
-webpage to see some example notebooks. You can also try using PyGeoHydro without installing
+webpage to see some example notebooks. You can also try this project without installing
 it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
 instance with the PyGeoHydro software stack pre-installed will be launched in your web browser
 and you can start coding!
 
-Please note that since PyGeoHydro is in early development stages, while the provided
+Please note that this project is in early development stages, while the provided
 functionaities should be stable, changes in APIs are possible in new releases. But we
 appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
 
