@@ -1,8 +1,8 @@
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
-    :align: center
+.. .. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+..     :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/pygeohydro_logo_text.png
+..     :align: center
 
-|
+.. |
 
 .. |pygeohydro| image:: https://github.com/cheginit/pygeohydro/actions/workflows/test.yml/badge.svg
     :target: https://github.com/cheginit/pygeohydro/actions/workflows/test.yml
@@ -95,16 +95,17 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 **NOTE**
 
-This package was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__
+This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__
 and since a R package with the same name already exists, we decided to
-renamed this package to `pygeohydro <https://pypi.org/project/pygeohydro>`__.
-Installing hydrodata will install this package from now on.
+renamed the project. Therefore, we renamed ``hydrodata`` to
+`pygeohydro <https://pypi.org/project/pygeohydro>`__.
+Installing ``hydrodata`` will install ``pygeohydro`` from now on.
 
 Features
 --------
 
-PyGeoHydro is part of a Python software stach and gives access to some the public
-web services that prvoide geospatial hydrology data. It has three main modules;
+PyGeoHydro is part of a Python software stack and gives access to some of the public
+web services that prvoide geospatial hydrology data. It has three main modules:
 ``pygeohydro``, ``plot``, and ``helpers``.
 
 The ``pygeohydro`` module can pull data from the following web services:
