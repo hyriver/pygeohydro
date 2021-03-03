@@ -95,11 +95,11 @@ PyGeoHydro: A portal to hydrology and climatology data through Python
 
 **NOTE**
 
-This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__
-and since a R package with the same name already exists, we decided to
-renamed the project. Therefore, we renamed ``hydrodata`` to
+This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__.
+Since a `R <https://github.com/mikejohnson51/HydroData>`__ package with the same name
+already exists, we decided to renamed our project to
 `pygeohydro <https://pypi.org/project/pygeohydro>`__.
-Installing ``hydrodata`` will install ``pygeohydro`` from now on.
+Installing ``hydrodata`` installs ``pygeohydro`` from now on.
 
 Features
 --------
@@ -122,12 +122,12 @@ The ``pygeohydro`` module can pull data from the following web services:
 Also, it has two other functions:
 
 * ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
-* ``cover_statistics``: Compute categorical statistics of land use/land cover data.
+* ``cover_statistics``: Categorical statistics of land use/land cover data.
 
 The ``plot`` module includes two main functions:
 
-* ``signatures``: Plot five hydrologic signature graphs.
-* ``cover_legends``: Return the official NLCD land cover legends for plotting a land cover dataset.
+* ``signatures``: Hydrologic signature graphs.
+* ``cover_legends``: Official NLCD land cover legends for plotting a land cover dataset.
 
 The ``helpers`` module includes:
 
