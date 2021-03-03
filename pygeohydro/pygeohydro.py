@@ -86,7 +86,7 @@ def get_nid() -> gpd.GeoDataFrame:
         of the ``VOLUME`` column in NID.
     """
     service = NID()
-    nid = pd.read_excel(service.get_xlsx(), engine="openpyxl", index_col=0, dtype="category")
+    nid = pd.read_excel(service.get_xlsx(), engine="openpyxl", index_col=0)
     attrs = service.get_attrs(nid.columns)
 
     nid["INSPECTION_DATE"] = nid.INSPECTION_DATE.str.replace("3018", "2018")
