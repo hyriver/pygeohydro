@@ -128,7 +128,7 @@ def get_nid_codes() -> pd.DataFrame:
     tables = [
         tb.rename(columns={"CODE": "Code", "VALUE": "Value"}).set_index("Code") for tb in tables
     ]
-    return pd.concat(tables, keys=summary[1:])
+    return pd.concat(tables, keys=summary[1:]).rename_axis(["Category", "Code"])
 
 
 def ssebopeta_byloc(
