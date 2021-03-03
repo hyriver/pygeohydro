@@ -105,9 +105,9 @@ Installing ``hydrodata`` will install ``pygeohydro`` from now on.
 Features
 --------
 
-This stack of six Python libraries are designed to aid in watershed analysis through
-web services. Currently, they only includes hydrology and climatology data within the US.
-Some of the major capabilities these packages are:
+This software stack consists of of six Python libraries and is designed to aid in watershed
+analysis through web services. Currently, they only includes hydrology and climatology data
+within the US. Some of the major capabilities of this software stack are as follows:
 
 * Easy access to many web services for subsetting data and returning the requests as masked
   xarrays or GeoDataFrames.
