@@ -2,7 +2,15 @@
 History
 =======
 
-0.9.2 (unreleased)
+0.10.0 (unreleased)
+-------------------
+
+PyGeoHydro
+~~~~~~~~~~
+
+- The official first release of PyGeoHydro with a new name and logo.
+
+0.9.2 (2021-03-02)
 ------------------
 
 PyGeoHydro
