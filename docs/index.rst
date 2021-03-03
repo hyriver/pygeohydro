@@ -72,8 +72,8 @@ A Portal To Hydrology And Climatology Data Through Python
 
 |
 
-.. image:: https://pepy.tech/badge/pygeohydro
-    :target: https://pepy.tech/project/pygeohydro
+.. image:: https://pepy.tech/badge/hydrodata
+    :target: https://pepy.tech/project/hydrodata
     :alt: Downloads
 
 .. image:: https://www.codefactor.io/repository/github/cheginit/pygeohydro/badge/develop
