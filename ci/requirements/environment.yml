@@ -3,30 +3,37 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - setuptools
+  # pygeoogc deps
+  - aiodns
+  - aiohttp
+  - brotlipy
+  - chardet
+  - cytoolz
+  - defusedxml
+  - nest-asyncio
+  - orjson
   - owslib
   - pyproj
-  - defusedxml
   - requests
-  - aiohttp
-  - chardet
-  - aiodns
-  - brotlipy
-  - nest-asyncio
-  - xarray
-  - netCDF4
-  - geopandas
-  - pyarrow
-  - openpyxl
-  - rasterio
+  - setuptools
   - shapely
-  - orjson
   - simplejson
-  - lxml
-  - dask
+
+  # pygeoutils deps
+  - geopandas
+  - netCDF4
+  - rasterio
+  - xarray
+
+  # pynhd deps
   - networkx
+  - pyarrow
+
+  # pygeohydro deps
+  - openpyxl
   - matplotlib-base
   - folium
+
   - pip
   - pip:
     - git+https://github.com/cheginit/pygeoogc.git
