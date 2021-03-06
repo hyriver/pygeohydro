@@ -30,9 +30,10 @@ dependencies:
   - pyarrow
 
   # pygeohydro deps
-  - openpyxl
-  - matplotlib-base
   - folium
+  - lxml
+  - matplotlib-base
+  - openpyxl
 
   - pip
   - pip:
