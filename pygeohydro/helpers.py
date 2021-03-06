@@ -1,9 +1,9 @@
 """Some helper function for PyGeoHydro."""
 from typing import Any, Dict
 
+import defusedxml.ElementTree as etree
 import numpy as np
 import pandas as pd
-from defusedxml import cElementTree as ET
 from pygeoogc import RetrySession
 
 
@@ -23,7 +23,7 @@ def nlcd_helper() -> Dict[str, Any]:
     )
     r = RetrySession().get(url)
 
-    root = ET.fromstring(r.content)
+    root = etree.fromstring(r.content)
 
     clist = root[4][1][1].text.split("\n")[2:]
     _colors = [i.split() for i in clist]
