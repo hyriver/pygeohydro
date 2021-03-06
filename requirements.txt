@@ -9,6 +9,7 @@ cytoolz
 defusedxml
 folium
 geopandas
+lxml
 matplotlib
 nest-asyncio
 netCDF4
