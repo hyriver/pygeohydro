@@ -2,13 +2,15 @@
 History
 =======
 
-0.10.0 (unreleased)
+0.10.0 (2021-03-06)
 -------------------
 
-PyGeoHydro
-~~~~~~~~~~
-
 - The official first release of PyGeoHydro with a new name and logo.
+- Replace cElementTree with ElementTree since it's been deprecated by ``defusedxml``.
+- Make ``mypy`` checks more strict and fix all the errors and prevent possible
+  bugs.
+- Speed up CI testing by using ``mamba`` and caching.
+
 
 0.9.2 (2021-03-02)
 ------------------
