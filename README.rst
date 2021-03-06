@@ -104,8 +104,9 @@ Installing ``hydrodata`` installs ``pygeohydro`` from now on.
 Features
 --------
 
-PyGeoHydro is part of a Python software stack and gives access to some of the public
-web services that prvoide geospatial hydrology data. It has three main modules:
+PyGeoHydro is part of a software stack for retrieving and processing hydrology and climatology
+datasets. This package gives access to some of the public
+web services that provide geospatial hydrology data. It has three main modules:
 ``pygeohydro``, ``plot``, and ``helpers``.
 
 The ``pygeohydro`` module can pull data from the following web services:
@@ -138,15 +139,19 @@ The ``helpers`` module includes:
 Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
 
-You can visit `examples <https://pygeohydro.readthedocs.io/en/master/examples.html>`__
-webpage to see some example notebooks. You can also try using PyGeoHydro without installing
+You can find some example notebooks `here <https://github.com/cheginit/geohydrohub-examples>`__.
+
+You can also try using PyGeoHydro without installing
 it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
-instance with the PyGeoHydro software stack pre-installed will be launched in your web browser
+instance with the stack pre-installed will be launched in your web browser
 and you can start coding!
 
-Please note that since PyGeoHydro is in early development stages, while the provided
-functionaities should be stable, changes in APIs are possible in new releases. But we
+Please note that since this project is in early development stages, while the provided
+functionalities should be stable, changes in APIs are possible in new releases. But we
 appreciate it if you give this project a try and provide feedback. Contributions are most welcome.
+
+Moreover, requests for additional functionalities can be submitted via
+`issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
 
 Installation
 ------------
@@ -179,8 +184,9 @@ important properties of stations are shown.
     bbox = (-69.5, 45, -69, 45.5)
     gh.interactive_map(bbox)
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/interactive_map.png
+.. image:: https://raw.githubusercontent.com/cheginit/geohydrohub-examples/main/notebooks/_static/interactive_map.png
+    :target: https://github.com/cheginit/geohydrohub-examples/blob/main/notebooks/nwis.ipynb
+    :width: 400
     :alt: Interactive Map
 
 We can select all the stations within this boundary box that have daily mean streamflow data from
@@ -220,13 +226,13 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     stats = gh.cover_statistics(lulc.cover)
     eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/lulc.png
+.. image:: https://raw.githubusercontent.com/cheginit/geohydrohub-examples/main/notebooks/_static/lulc.png
+    :target: https://github.com/cheginit/geohydrohub-examples/blob/main/notebooks/nlcd.ipynb
     :width: 200
     :alt: Land Use/Land Cover
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/eta.png
+.. image:: https://raw.githubusercontent.com/cheginit/geohydrohub-examples/main/notebooks/_static/eta.png
+    :target: https://github.com/cheginit/geohydrohub-examples/blob/main/notebooks/ssebop.ipynb
     :width: 200
     :alt: Actual ET
 
@@ -237,8 +243,9 @@ Additionally, we can pull all the US dams data using ``get_nid`` and ``get_nid_c
     nid = gh.get_nid()
     codes = gh.get_nid_codes()
 
-.. image:: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
-    :target: https://raw.githubusercontent.com/cheginit/pygeohydro/master/docs/_static/dams.png
+.. image:: https://raw.githubusercontent.com/cheginit/geohydrohub-examples/main/notebooks/_static/dams.png
+    :target: https://github.com/cheginit/geohydrohub-examples/blob/main/notebooks/nid.ipynb
+    :width: 400
     :alt: Dams
 
 Contributing
