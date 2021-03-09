@@ -45,8 +45,8 @@ PyDaymet_   Access Daymet for daily climate data both single pixel and gridded  
 .. _Py3DEP: https://github.com/cheginit/py3dep
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
-PyGeoHydro: A portal to hydrology and climatology data through Python
-=====================================================================
+PyGeoHydro: Retrieve Geospatial Hydrology Data
+==============================================
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
