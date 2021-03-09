@@ -1,5 +1,5 @@
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/pygeohydro_logo_text.png
-    :target: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/pygeohydro_logo_text.png
+.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/pygeohydro_logo.png
+    :target: https://github.com/cheginit/HydRiver
 
 |
 
