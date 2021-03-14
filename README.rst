@@ -1,5 +1,5 @@
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/pygeohydro_logo.png
-    :target: https://github.com/cheginit/HydRiver
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/pygeohydro_logo.png
+    :target: https://github.com/cheginit/HyRiver
 
 |
 
@@ -97,14 +97,14 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
 This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__.
 Since a `R <https://github.com/mikejohnson51/HydroData>`__ package with the same name
 already exists, we decided to renamed our project to
-`HydRiver <https://github.com/cheginit/HydRiver>`__. The ``hydrodata`` package itself is
+`HyRiver <https://github.com/cheginit/HyRiver>`__. The ``hydrodata`` package itself is
 renamed to `pygeohydro <https://pypi.org/project/pygeohydro>`__.
 Installing ``hydrodata`` installs ``pygeohydro`` from now on.
 
 Features
 --------
 
-PyGeoHydro is a part of `HydRiver <https://github.com/cheginit/HydRiver>`__ software stack that
+PyGeoHydro is a part of `HyRiver <https://github.com/cheginit/HyRiver>`__ software stack that
 is designed to aid in watershed analysis through web services. This package provides
 access to some of the public web services that offer geospatial hydrology data. It has three
 main modules: ``pygeohydro``, ``plot``, and ``helpers``.
@@ -139,7 +139,7 @@ The ``helpers`` module includes:
 Moreover, requests for additional databases and functionalities can be submitted via
 `issue tracker <https://github.com/cheginit/pygeohydro/issues>`__.
 
-You can find some example notebooks `here <https://github.com/cheginit/HydRiver-examples>`__.
+You can find some example notebooks `here <https://github.com/cheginit/HyRiver-examples>`__.
 
 You can also try using PyGeoHydro without installing
 it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
@@ -184,8 +184,8 @@ important properties of stations are shown.
     bbox = (-69.5, 45, -69, 45.5)
     gh.interactive_map(bbox)
 
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/interactive_map.png
-    :target: https://github.com/cheginit/HydRiver-examples/blob/main/notebooks/nwis.ipynb
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/interactive_map.png
+    :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nwis.ipynb
     :width: 400
     :alt: Interactive Map
 
@@ -226,13 +226,13 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     stats = gh.cover_statistics(lulc.cover)
     eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/lulc.png
-    :target: https://github.com/cheginit/HydRiver-examples/blob/main/notebooks/nlcd.ipynb
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/lulc.png
+    :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nlcd.ipynb
     :width: 200
     :alt: Land Use/Land Cover
 
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/eta.png
-    :target: https://github.com/cheginit/HydRiver-examples/blob/main/notebooks/ssebop.ipynb
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/eta.png
+    :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/ssebop.ipynb
     :width: 200
     :alt: Actual ET
 
@@ -243,8 +243,8 @@ Additionally, we can pull all the US dams data using ``get_nid`` and ``get_nid_c
     nid = gh.get_nid()
     codes = gh.get_nid_codes()
 
-.. image:: https://raw.githubusercontent.com/cheginit/HydRiver-examples/main/notebooks/_static/dams.png
-    :target: https://github.com/cheginit/HydRiver-examples/blob/main/notebooks/nid.ipynb
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/dams.png
+    :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nid.ipynb
     :width: 400
     :alt: Dams
 
