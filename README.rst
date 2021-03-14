@@ -74,8 +74,8 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :target: https://pepy.tech/project/hydrodata
     :alt: Downloads
 
-.. image:: https://www.codefactor.io/repository/github/cheginit/pygeohydro/badge/develop
-    :target: https://www.codefactor.io/repository/github/cheginit/pygeohydro/overview/develop
+.. image:: https://www.codefactor.io/repository/github/cheginit/pygeohydro/badge/main
+    :target: https://www.codefactor.io/repository/github/cheginit/pygeohydro/overview/main
     :alt: CodeFactor
 
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
