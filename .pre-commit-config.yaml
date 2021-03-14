@@ -75,21 +75,3 @@ repos:
         name: Check for security issues with bandit
         args: [-lll, --recursive, pygeohydro]
         files: .py$
-
-  - repo: https://github.com/nbQA-dev/nbQA
-    rev: 0.5.9
-    hooks:
-      - id: nbqa-isort
-        name: Format notebooks; sort imports by isort
-        files: docs/examples
-        args: [--nbqa-mutate]
-
-      - id: nbqa-black
-        name: Format notebooks; reformat by black
-        files: docs/examples
-        args: [--nbqa-mutate]
-
-      - id: nbqa-pyupgrade
-        files: docs/examples
-        name: Format notebooks; upgrade syntax to Python 3.6+ by pyupgrade
-        args: [--nbqa-mutate]
