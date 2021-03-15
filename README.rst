@@ -65,7 +65,7 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :alt: ReadTheDocs
 
 .. image:: https://mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/cheginit/pygeohydro/master?urlpath=lab/tree/docs/examples
+    :target: https://mybinder.org/v2/gh/cheginit/HyRiver-examples/main?urlpath=lab/tree/notebooks
     :alt: Binder
 
 |

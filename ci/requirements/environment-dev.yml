@@ -3,62 +3,67 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - setuptools
-  - owslib
-  - defusedxml
-  - requests
-  - aiohttp
-  - chardet
+  # pygeoogc deps
   - aiodns
+  - aiohttp
   - brotlipy
+  - chardet
+  - cytoolz
+  - defusedxml
   - nest-asyncio
-  - xarray
-  - netCDF4
-  - geopandas
-  - pyproj
-  - pyarrow
-  - rasterio
-  - shapely
   - orjson
+  - owslib
+  - pyproj
+  - requests
+  - setuptools
+  - shapely
   - simplejson
-  - lxml
-  - openpyxl
-  - dask
+
+  # pygeoutils deps
+  - geopandas
+  - netCDF4
+  - rasterio
+  - xarray
+
+  # pynhd deps
   - networkx
-  - matplotlib-base
+  - pyarrow
+
+  # pygeohydro deps
   - folium
+  - lxml
+  - matplotlib-base
+  - openpyxl
 
-  - setuptools_scm
-  - pytest-cov
-  - pytest-xdist
-  - pre-commit
-  - coverage
+  # deps to speed up xarray and geopandas
+  - pygeos
+  - bottleneck
+  - descartes
 
-  - jupyterlab
-  - jupyterlab_widgets
-  - ipywidgets
-
+  # doc deps
+  - ipykernel
+  - ipython
+  - jupyter_client
   - recommonmark
   - nbsphinx
   - sphinx
   - sphinx-copybutton
-  - numpydoc
+  - sphinx-gallery
+  - sphinx-autoapi
+
+  # sphinx-material deps
   - beautifulsoup4
   - python-slugify
   - css-html-js-minify
   - unidecode
 
-  - pip
   - pip:
-    - numbagg
-
     - nbsphinx_link
-    - sphinx-inline-tabs
     - git+https://github.com/bashtage/sphinx-material.git
 
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git
+    - git+https://github.com/cheginit/pygeohydro.git
     - git+https://github.com/cheginit/py3dep.git
     - git+https://github.com/cheginit/pydaymet.git
-    - git+https://github.com/cheginit/pygeohydro.git

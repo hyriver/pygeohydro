@@ -1,4 +1,4 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
+.PHONY: clean clean-test clean-pyc clean-build help
 .DEFAULT_GOAL := help
 
 define BROWSER_PYSCRIPT
@@ -13,7 +13,8 @@ endef
 export BROWSER_PYSCRIPT
 
 define PRINT_HELP_PYSCRIPT
-
+import sys
+import re
 for line in sys.stdin:
 	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
 	if match:
@@ -43,41 +44,21 @@ clean-pyc: ## remove Python file artifacts
 	find . -name '__pycache__' -exec rm -fr {} +
 
 clean-test: ## remove test and coverage artifacts
-	rm -fr .tox/
 	rm -f .coverage
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
-	rm -rf data
 
-lint: ## check style with flake8
+lint: ## run pre-commit on all files
 	pre-commit run --all-files
 
-test: ## run tests quickly with the default Python
+test: clean-test ## run tests using pytest in parallel in the current Python env
 	pytest --no-cov -n 4 -v
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source pygeohydro -m pytest -v
+coverage: clean-test ## check code coverage
+	coverage run --source pygeoogc -m pytest -v
 	coverage report -m
 	coverage html
 	$(BROWSER) htmlcov/index.html
-
-apidocs: ## generate API docs
-	rm -f docs/pygeohydro.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ -f -H "API Reference" pygeohydro
-
-docs: apidocs ## generate Sphinx HTML documentation, including API docs
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
-
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
-
-dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
 
 install: clean ## install the package to the active Python's site-packages
 	python -m pip install . --no-deps
