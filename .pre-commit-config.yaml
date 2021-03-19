@@ -1,18 +1,5 @@
 repos:
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.7.0
-    hooks:
-      - id: isort
-        name: Sort imports with isort
-
-  - repo: https://github.com/python/black
-    rev: 20.8b1
-    hooks:
-      - id: black
-        name: Autoformat with black
-        args: [-t, py38, -l, "100"]
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: git://github.com/pre-commit/pre-commit-hooks
     rev: v3.4.0
     hooks:
     - id: trailing-whitespace
@@ -21,23 +8,44 @@ repos:
     - id: check-added-large-files
       args: ['--maxkb=50000']
     - id: end-of-file-fixer
+    - id: check-ast
+    - id: check-json
+    - id: check-merge-conflict
+    - id: check-xml
+    - id: check-yaml
+    - id: debug-statements
+    - id: end-of-file-fixer
+    - id: mixed-line-ending
+      args: ['--fix=lf']
+
+  - repo: https://github.com/timothycrosley/isort
+    rev: 5.7.0
+    hooks:
+    - id: isort
+      name: Sort imports with isort
+
+  - repo: https://github.com/python/black
+    rev: 20.8b1
+    hooks:
+    - id: black
+      name: Autoformat with black
+      args: [-t, py38, -l, "100"]
+
+  - repo: https://github.com/asottile/blacken-docs
+    rev: v1.10.0
+    hooks:
+    - id: blacken-docs
+      name: Autoformat codes in docstrings with blacken-docs
+      additional_dependencies: [black]
+      args: [-t, py38, -l, "88"]
 
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.8.0
     hooks:
     - id: rst-backticks
+      name: Check backsticks in rst files
     - id: rst-directive-colons
-
-  - repo: https://github.com/jumanjihouse/pre-commit-hooks
-    rev: 2.1.5
-    hooks:
-    - id: shfmt
-
-  - repo: https://github.com/keewis/blackdoc
-    rev: v0.3.3
-    hooks:
-      - id: blackdoc
-        name: Autoformat codes in docstrings with blackdoc
+      name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
     rev: 0.9.0a1
@@ -47,31 +55,31 @@ repos:
       args: [--max-line-length, "100"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.10.0
+    rev: v2.10.1
     hooks:
-      - id: pyupgrade
-        name: Upgrade synax to python 3.6+ with pyupgrade
-        args: [--py36-plus]
+    - id: pyupgrade
+      name: Upgrade synax to python 3.6+ with pyupgrade
+      args: [--py36-plus]
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.0
     hooks:
-      - id: flake8
-        name: Linting with flake8
-        additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings, flake8-simplify]
+    - id: flake8
+      name: Linting with flake8
+      additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings, flake8-simplify]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v0.812
     hooks:
-      - id: mypy
-        name: Static type checking with mypy
-        exclude: tests
-        files: pygeohydro
+    - id: mypy
+      name: Static type checking with mypy
+      exclude: tests
+      files: pygeohydro
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.0
     hooks:
-      - id: bandit
-        name: Check for security issues with bandit
-        args: [-lll, --recursive, pygeohydro]
-        files: .py$
+    - id: bandit
+      name: Check for security issues with bandit
+      args: [-lll, --recursive, pygeohydro]
+      files: .py$
