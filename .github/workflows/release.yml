@@ -10,22 +10,23 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repo
         uses: actions/checkout@v2
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: Generate Changelog
+        run: |-
+          echo "Release Notes" > ${{ github.workflow }}-CHANGELOG.rst
+          echo "-------------\n" >> ${{ github.workflow }}-CHANGELOG.rst
+          PAT="^---"
+          L1=$(grep -n $PAT HISTORY.rst | sed -n 1p | cut -d ":" -f 1)
+          L2=$(grep -n $PAT HISTORY.rst | sed -n 2p | cut -d ":" -f 1)
+          awk "NR > $L1 && NR < $L2 - 1" HISTORY.rst >> ${{ github.workflow }}-CHANGELOG.rst
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          body_path: ${{ github.workflow }}-CHANGELOG.rst
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: |
-            Please check [HISTORY.rst](HISTORY.rst) file for a detailed list
-            of changes.
-          draft: false
-          prerelease: true
 
       - name: Set up Python
         uses: actions/setup-python@master
