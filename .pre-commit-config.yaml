@@ -24,7 +24,7 @@ repos:
     - id: isort
       name: Sort imports with isort
 
-  - repo: https://github.com/python/black
+  - repo: https://github.com/psf/black
     rev: 20.8b1
     hooks:
     - id: black
