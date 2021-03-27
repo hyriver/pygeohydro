@@ -64,11 +64,11 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :target: https://pypi.python.org/pypi/pygeohydro
     :alt: Python Versions
 
-|
-
 .. image:: https://pepy.tech/badge/hydrodata
     :target: https://pepy.tech/project/hydrodata
     :alt: Downloads
+
+|
 
 .. image:: https://www.codefactor.io/repository/github/cheginit/pygeohydro/badge/main
     :target: https://www.codefactor.io/repository/github/cheginit/pygeohydro/overview/main
