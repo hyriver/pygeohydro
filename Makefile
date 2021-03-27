@@ -44,21 +44,13 @@ clean-pyc: ## remove Python file artifacts
 	find . -name '__pycache__' -exec rm -fr {} +
 
 clean-test: ## remove test and coverage artifacts
-	rm -f .coverage
-	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
 lint: ## run pre-commit on all files
 	pre-commit run --all-files
 
 test: clean-test ## run tests using pytest in parallel in the current Python env
-	pytest --no-cov -n 4 -v
-
-coverage: clean-test ## check code coverage
-	coverage run --source pygeoogc -m pytest -v
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
+	pytest -n 4 -v
 
 install: clean ## install the package to the active Python's site-packages
 	python -m pip install . --no-deps
