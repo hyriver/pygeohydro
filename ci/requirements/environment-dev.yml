@@ -35,10 +35,20 @@ dependencies:
   - matplotlib-base
   - openpyxl
 
+  # pydaymet deps
+  # - lxml
+  - dask-core
+  - scipy
+
   # deps to speed up xarray and geopandas
   - pygeos
   - bottleneck
   - descartes
+
+  # test deps
+  - pytest
+  - pytest-xdist
+  - flaky
 
   # doc deps
   - ipykernel
