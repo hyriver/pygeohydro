@@ -3,18 +3,13 @@ repos:
     rev: v3.4.0
     hooks:
     - id: trailing-whitespace
-    - id: check-executables-have-shebangs
     - id: requirements-txt-fixer
     - id: check-added-large-files
       args: ['--maxkb=50000']
     - id: end-of-file-fixer
-    - id: check-ast
-    - id: check-json
     - id: check-merge-conflict
-    - id: check-xml
     - id: check-yaml
     - id: debug-statements
-    - id: end-of-file-fixer
     - id: mixed-line-ending
       args: ['--fix=lf']
 
@@ -23,6 +18,7 @@ repos:
     hooks:
     - id: setup-cfg-fmt
       name: Autoformat setup.cfg
+      args: [--min-py3-version, "3.6"]
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.8.0
