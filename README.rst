@@ -8,23 +8,23 @@
     :alt: Github Actions
 
 .. |pygeoogc| image:: https://github.com/cheginit/pygeoogc/actions/workflows/test.yml/badge.svg
-    :target: https://github.com/cheginit/pygeoogc/actions?query=workflow%3Apytest
+    :target: https://github.com/cheginit/pygeoogc/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |pygeoutils| image:: https://github.com/cheginit/pygeoutils/actions/workflows/test.yml/badge.svg
-    :target: https://github.com/cheginit/pygeoutils/actions?query=workflow%3Apytest
+    :target: https://github.com/cheginit/pygeoutils/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |pynhd| image:: https://github.com/cheginit/pynhd/actions/workflows/test.yml/badge.svg
-    :target: https://github.com/cheginit/pynhd/actions?query=workflow%3Apytest
+    :target: https://github.com/cheginit/pynhd/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |py3dep| image:: https://github.com/cheginit/py3dep/actions/workflows/test.yml/badge.svg
-    :target: https://github.com/cheginit/py3dep/actions?query=workflow%3Apytest
+    :target: https://github.com/cheginit/py3dep/actions/workflows/test.yml
     :alt: Github Actions
 
 .. |pydaymet| image:: https://github.com/cheginit/pydaymet/actions/workflows/test.yml/badge.svg
-    :target: https://github.com/cheginit/pydaymet/actions?query=workflow%3Apytest
+    :target: https://github.com/cheginit/pydaymet/actions/workflows/test.yml
     :alt: Github Actions
 
 =========== ==================================================================== ============
@@ -60,13 +60,9 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :target: https://codecov.io/gh/cheginit/pygeohydro
     :alt: CodeCov
 
-.. image:: https://readthedocs.org/projects/pygeohydro/badge/?version=latest
-    :target: https://pygeohydro.readthedocs.io/en/latest/?badge=latest
-    :alt: ReadTheDocs
-
-.. image:: https://mybinder.org/badge_logo.svg
-    :target: https://mybinder.org/v2/gh/cheginit/HyRiver-examples/main?urlpath=lab/tree/notebooks
-    :alt: Binder
+.. image:: https://img.shields.io/pypi/pyversions/pygeohydro.svg
+    :target: https://pypi.python.org/pypi/pygeohydro
+    :alt: Python Versions
 
 |
 
@@ -86,9 +82,9 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :target: https://github.com/pre-commit/pre-commit
     :alt: pre-commit
 
-.. image:: https://zenodo.org/badge/237573928.svg
-    :target: https://zenodo.org/badge/latestdoi/237573928
-    :alt: Zenodo
+.. image:: https://mybinder.org/badge_logo.svg
+    :target: https://mybinder.org/v2/gh/cheginit/HyRiver-examples/main?urlpath=lab/tree/notebooks
+    :alt: Binder
 
 |
 
