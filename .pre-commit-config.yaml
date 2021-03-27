@@ -18,8 +18,13 @@ repos:
     - id: mixed-line-ending
       args: ['--fix=lf']
 
+  - repo: https://github.com/asottile/setup-cfg-fmt
+    rev: v1.17.0
+    hooks:
+    - id: setup-cfg-fmt
+
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.7.0
+    rev: 5.8.0
     hooks:
     - id: isort
       name: Sort imports with isort
@@ -55,7 +60,7 @@ repos:
       args: [--max-line-length, "100"]
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.10.1
+    rev: v2.11.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.6+ with pyupgrade
