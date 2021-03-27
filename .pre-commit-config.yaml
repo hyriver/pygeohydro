@@ -22,6 +22,7 @@ repos:
     rev: v1.17.0
     hooks:
     - id: setup-cfg-fmt
+      name: Autoformat setup.cfg
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.8.0
