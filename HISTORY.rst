@@ -2,6 +2,12 @@
 History
 =======
 
+0.10.2 (2021-03-27)
+-------------------
+
+- Add annoucement regarding the new name for the softwate stack, HyRiver.
+- Improve ``pip`` installation and release workflow.
+
 0.10.1 (2021-03-06)
 -------------------
 
