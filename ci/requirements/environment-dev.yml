@@ -48,28 +48,24 @@ dependencies:
   # test deps
   - pytest
   - pytest-xdist
+  - pytest-sugar
   - flaky
 
-  # doc deps
-  - ipykernel
-  - ipython
-  - jupyter_client
-  - recommonmark
-  - nbsphinx
-  - sphinx
-  - sphinx-copybutton
-  - sphinx-gallery
-  - sphinx-autoapi
+  # dev deps
+  - pre-commit
+  - setuptools_scm
+  - grayskull
+  - profilehooks
+  - tqdm
+  - jupyterlab
+  - jupyterlab_widgets
+  - ipywidgets
+  - nb_black
 
-  # sphinx-material deps
-  - beautifulsoup4
-  - python-slugify
-  - css-html-js-minify
-  - unidecode
-
+  - pip
   - pip:
-    - nbsphinx_link
-    - git+https://github.com/bashtage/sphinx-material.git
+    - jupyterlab-spellchecker
+    - nbmake
 
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
