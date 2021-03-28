@@ -59,7 +59,7 @@ jobs:
           python -c "import pygeohydro; pygeohydro.show_versions()"
       - name: Run pytest
         run: |-
-          python -m pytest -n 4 --cov=pygeohydro --cov-report xml
+          python -m pytest -n=auto --cov=pygeohydro --cov-report xml
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v1
         with:

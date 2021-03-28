@@ -50,7 +50,7 @@ lint: ## run pre-commit on all files
 	pre-commit run --all-files
 
 test: clean-test ## run tests using pytest in parallel in the current Python env
-	pytest -n 4 -v
+	pytest -n=auto -v
 
 install: clean ## install the package to the active Python's site-packages
 	python -m pip install . --no-deps
