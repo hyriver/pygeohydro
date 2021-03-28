@@ -43,20 +43,21 @@ dependencies:
   # deps to speed up xarray and geopandas
   - pygeos
   - bottleneck
+
+  # plotting deps
+  - contextily
+  - mapclassify
+  - cartopy
+  - colorcet
   - descartes
 
-  # test deps
-  - pytest
+  # dev deps
+  - setuptools_scm
   - pytest-xdist
   - pytest-sugar
-  - flaky
-
-  # dev deps
   - pre-commit
-  - setuptools_scm
   - grayskull
   - profilehooks
-  - tqdm
   - jupyterlab
   - jupyterlab_widgets
   - ipywidgets
@@ -65,11 +66,10 @@ dependencies:
   - pip
   - pip:
     - jupyterlab-spellchecker
-    - nbmake
 
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git
-    - git+https://github.com/cheginit/pygeohydro.git
     - git+https://github.com/cheginit/py3dep.git
     - git+https://github.com/cheginit/pydaymet.git
+    - git+https://github.com/cheginit/pygeohydro.git
