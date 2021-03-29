@@ -56,7 +56,6 @@ dependencies:
   - pytest-xdist
   - pytest-sugar
   - pre-commit
-  - grayskull
   - profilehooks
   - jupyterlab
   - jupyterlab_widgets
