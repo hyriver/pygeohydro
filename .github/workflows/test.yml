@@ -14,8 +14,8 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest, windows-latest]
         exclude:
-            - os: windows-latest
-              python-version: 3.6
+          - os: windows-latest
+            python-version: 3.6
 
     steps:
       - name: Cancel Previous Runs
@@ -37,29 +37,25 @@ jobs:
       - name: Setup conda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          channels: conda-forge
           channel-priority: strict
-          mamba-version: "*"
-          activate-environment: pygeohydro-tests
-          auto-update-conda: false
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          environment-file: ci/requirements/environment.yml
           python-version: ${{ matrix.python-version }}
+          activate-environment: pygeoogc-tests
+          use-mamba: true
           use-only-tar-bz2: true
-      - name: Install conda dependencies
+      - name: Install pygeoogc
         run: |-
-          mamba env update -f $CONDA_ENV_FILE
-          mamba install -y -c conda-forge --strict-channel-priority \
-              pytest pytest-cov pytest-env pytest-xdist flaky
-      - name: Install pygeohydro
-        run: |-
-          conda info -a
-          conda list
-          python -m pip install --no-deps -e .
+          mamba info -a
+          mamba list
+          python -m pip install --no-deps .
       - name: Version info
         run: |-
-          python -c "import pygeohydro; pygeohydro.show_versions()"
+          python -c "import pygeoogc; pygeoogc.show_versions()"
       - name: Run pytest
         run: |-
-          python -m pytest -n=auto --cov=pygeohydro --cov-report xml
+          python -m pytest -n=auto --cov=pygeoogc --cov-report xml
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v1
         with:
