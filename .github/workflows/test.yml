@@ -42,20 +42,20 @@ jobs:
           miniforge-variant: Mambaforge
           environment-file: ci/requirements/environment.yml
           python-version: ${{ matrix.python-version }}
-          activate-environment: pygeoogc-tests
+          activate-environment: pygeohydro-tests
           use-mamba: true
           use-only-tar-bz2: true
-      - name: Install pygeoogc
+      - name: Install pygeohydro
         run: |-
           mamba info -a
           mamba list
           python -m pip install --no-deps .
       - name: Version info
         run: |-
-          python -c "import pygeoogc; pygeoogc.show_versions()"
+          python -c "import pygeohydro; pygeohydro.show_versions()"
       - name: Run pytest
         run: |-
-          python -m pytest -n=auto --cov=pygeoogc --cov-report xml
+          python -m pytest -n=auto --cov=pygeohydro --cov-report xml
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v1
         with:
