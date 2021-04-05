@@ -16,6 +16,11 @@ def nlcd_helper() -> Dict[str, Any]:
         - https://github.com/jzmiller1/nlcd
         - https://www.mrlc.gov/data-services-page
         - https://www.mrlc.gov/data/legends/national-land-cover-database-2016-nlcd2016-legend
+
+    Returns
+    -------
+    dict
+        Years where data is available and cover classes and categories, and roughness estimations.
     """
     url = (
         "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/"

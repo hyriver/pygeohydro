@@ -162,12 +162,10 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     ----------
     daily : pandas.Series or pandas.DataFrame
         The data to be processed
-    ranked : bool, optional
-        Whether to sort the data by rank for plotting flow duration curve, defaults to False.
 
     Returns
     -------
-    NamedTuple
+    PlotDataType
         Containing ``daily, ``monthly``, ``annual``, ``mean_monthly``, ``ranked`` fields.
     """
     if isinstance(daily, pd.Series):

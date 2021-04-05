@@ -684,6 +684,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     Parameters
     ----------
     ds : xarray.Dataset
+        Cover dataarray of a LULC dataset from the `nlcd` function.
 
     Returns
     -------

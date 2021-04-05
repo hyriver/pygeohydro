@@ -17,6 +17,11 @@ def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     """Return system information as a dict.
 
     From https://github.com/numpy/numpy/blob/master/setup.py#L64-L89
+
+    Returns
+    -------
+    list
+        System information such as python version.
     """
     blob = []
 
