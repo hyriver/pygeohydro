@@ -56,6 +56,12 @@ repos:
       name: Check documentation formats with doc8
       args: [--max-line-length, "100"]
 
+  - repo: https://github.com/terrencepreilly/darglint
+    rev: v1.8.0
+    hooks:
+    - id: darglint
+      name: Lint docstrings with Darglint
+
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.11.0
     hooks:
@@ -76,12 +82,12 @@ repos:
     - id: mypy
       name: Static type checking with mypy
       exclude: tests
-      files: pygeohydro
+      files: pynhd
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.0
     hooks:
     - id: bandit
       name: Check for security issues with bandit
-      args: [-lll, --recursive, pygeohydro]
+      args: [-lll, --recursive, pynhd]
       files: .py$
