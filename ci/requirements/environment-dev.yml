@@ -1,4 +1,4 @@
-name: dev
+name: hyriver-dev
 channels:
   - conda-forge
   - nodefaults
@@ -42,32 +42,18 @@ dependencies:
   - dask-core
   - scipy
 
-  # deps to speed up xarray and geopandas
-  - pygeos
+  # optional deps to speed up xarray and geopandas
   - bottleneck
-
-  # plotting deps
-  - contextily
-  - mapclassify
-  - cartopy
-  - colorcet
-  - descartes
+  - rtree
+  - pygeos
 
   # dev deps
   - setuptools_scm
   - pytest-xdist
-  - pytest-sugar
   - pre-commit
-  - profilehooks
-  - jupyterlab
-  - jupyterlab_widgets
-  - ipywidgets
-  - nb_black
 
   - pip
   - pip:
-    - jupyterlab-spellchecker
-
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git
