@@ -35,7 +35,7 @@ jobs:
             ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/environment.yml') }}
       - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v2.1.1
         with:
           channel-priority: strict
           miniforge-version: latest
