@@ -17,6 +17,7 @@ dependencies:
   - owslib
   - pyproj
   - requests
+  - requests_cache
   - setuptools
   - shapely
   - simplejson
