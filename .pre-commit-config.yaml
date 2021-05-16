@@ -1,6 +1,6 @@
 repos:
   - repo: git://github.com/pre-commit/pre-commit-hooks
-    rev: v3.4.0
+    rev: v4.0.0
     hooks:
     - id: trailing-whitespace
     - id: requirements-txt-fixer
@@ -27,7 +27,7 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 20.8b1
+    rev: 21.5b1
     hooks:
     - id: black
       name: Autoformat with black
@@ -63,14 +63,14 @@ repos:
       name: Lint docstrings with Darglint
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.11.0
+    rev: v2.16.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.6+ with pyupgrade
       args: [--py36-plus]
 
   - repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.0
+    rev: 3.9.2
     hooks:
     - id: flake8
       name: Linting with flake8
