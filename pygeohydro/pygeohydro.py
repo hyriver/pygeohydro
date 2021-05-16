@@ -71,7 +71,7 @@ def get_nid() -> gpd.GeoDataFrame:
 
     Notes
     -----
-    This function downloads a 25 MB `xlsx` file and convert it into a
+    This function downloads a 25 MB excel file and convert it into a
     GeoDataFrame. So, your net speed might be a bottleneck. Another
     bottleneck is data loading since the dataset has more than 91K rows,
     it might take sometime for Pandas to load the data into memory.
@@ -543,18 +543,14 @@ class NWIS:
 
         siteinfo = self.get_info(self.query_byid(station_ids))
         check_dates = siteinfo.loc[
-            (
-                (siteinfo.stat_cd == "00003")
-                & (start < siteinfo.begin_date)
-                & (end > siteinfo.end_date)
-            ),
+            ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
             "site_no",
         ].tolist()
         nas = [s for s in station_ids if s in check_dates]
         if len(nas) > 0:
             raise InvalidInputRange(
-                "Daily Mean data unavailable for the specified time "
-                + "period for the following stations:\n"
+                "Daily mean data is unavailable for the following stations"
+                + f" since they were established after {end}:\n"
                 + ", ".join(nas)
             )
 
@@ -684,7 +680,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     Parameters
     ----------
     ds : xarray.Dataset
-        Cover dataarray of a LULC dataset from the `nlcd` function.
+        Cover DataArray from a LULC Dataset from the ``nlcd`` function.
 
     Returns
     -------
