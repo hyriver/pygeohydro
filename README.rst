@@ -1,6 +1,8 @@
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/pygeohydro_logo.png
     :target: https://github.com/cheginit/HyRiver
 
+|
+
 .. image:: https://joss.theoj.org/papers/b0df2f6192f0a18b9e622a3edff52e77/status.svg
     :target: https://joss.theoj.org/papers/b0df2f6192f0a18b9e622a3edff52e77
     :alt: JOSS
