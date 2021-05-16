@@ -11,18 +11,15 @@ jobs:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.7, 3.8, 3.9]
         os: [ubuntu-latest, macos-latest, windows-latest]
-        exclude:
-          - os: windows-latest
-            python-version: 3.6
 
     steps:
       - name: Cancel Previous Runs
         uses: styfle/cancel-workflow-action@0.9.0
         with:
           access_token: ${{ github.token }}
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v2.3.4
       - name: Set environment variables
         run: |-
           echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
@@ -35,7 +32,7 @@ jobs:
             ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
             hashFiles('ci/requirements/environment.yml') }}
       - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v2.1.1
         with:
           channel-priority: strict
           miniforge-version: latest
@@ -57,7 +54,7 @@ jobs:
         run: |-
           python -m pytest -n=auto --cov=pygeohydro --cov-report xml
       - name: Run codecov and upload the report
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v1.5.0
         with:
           file: ./coverage.xml
           flags: unittests
