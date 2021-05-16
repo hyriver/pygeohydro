@@ -4,24 +4,24 @@ channels:
   - nodefaults
 dependencies:
   # pygeoogc deps
-  - aiodns
-  - aiohttp
-  - brotlipy
-  - chardet
   - cytoolz
   - defusedxml
-  - nest-asyncio
-  - orjson
   - owslib
+  - pyyaml
   - pyproj
   - requests
+  - requests-cache
   - setuptools
   - shapely
   - simplejson
+  - urllib3
 
   # pygeoutils deps
+  - affine
   - geopandas
-  - netCDF4
+  - numpy
+  - netcdf4
+  - orjson
   - rasterio
   - xarray
 
