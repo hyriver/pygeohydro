@@ -1,6 +1,6 @@
 repos:
   - repo: git://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.0
+    rev: v4.0.1
     hooks:
     - id: trailing-whitespace
     - id: requirements-txt-fixer
@@ -39,7 +39,7 @@ repos:
     - id: blacken-docs
       name: Autoformat codes in docstrings with blacken-docs
       additional_dependencies: [black]
-      args: [-t, py38, -l, "88"]
+      args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.8.0
@@ -63,7 +63,7 @@ repos:
       name: Lint docstrings with Darglint
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.16.0
+    rev: v2.18.1
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.6+ with pyupgrade
@@ -91,3 +91,9 @@ repos:
       name: Check for security issues with bandit
       args: [-lll, --recursive, pynhd]
       files: .py$
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.0.0
+    hooks:
+    - id: codespell
+      name: Checks for common misspellings in text files.
