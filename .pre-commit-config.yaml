@@ -18,7 +18,7 @@ repos:
     hooks:
     - id: setup-cfg-fmt
       name: Autoformat setup.cfg
-      args: [--min-py3-version, "3.6"]
+      args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/timothycrosley/isort
     rev: 5.8.0
@@ -56,18 +56,24 @@ repos:
       name: Check documentation formats with doc8
       args: [--max-line-length, "100"]
 
-  - repo: https://github.com/terrencepreilly/darglint
-    rev: v1.8.0
+  # - repo: https://github.com/terrencepreilly/darglint
+  #   rev: v1.8.0
+  #   hooks:
+  #   - id: darglint
+  #     name: Lint docstrings with Darglint
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.0.0
     hooks:
-    - id: darglint
-      name: Lint docstrings with Darglint
+    - id: codespell
+      name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v2.18.1
     hooks:
     - id: pyupgrade
-      name: Upgrade synax to python 3.6+ with pyupgrade
-      args: [--py36-plus]
+      name: Upgrade synax to python 3.7+ with pyupgrade
+      args: [--py37-plus]
 
   - repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
@@ -82,18 +88,12 @@ repos:
     - id: mypy
       name: Static type checking with mypy
       exclude: tests
-      files: pynhd
+      files: pygeohydro
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.0
     hooks:
     - id: bandit
       name: Check for security issues with bandit
-      args: [-lll, --recursive, pynhd]
+      args: [-lll, --recursive, pygeohydro]
       files: .py$
-
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.0.0
-    hooks:
-    - id: codespell
-      name: Checks for common misspellings in text files.
