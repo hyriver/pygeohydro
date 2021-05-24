@@ -160,14 +160,14 @@ Installation
 
 You can install PyGeoHydro using ``pip`` after installing ``libgdal`` on your system
 (for example, in Ubuntu run ``sudo apt install libgdal-dev``). Moreover, PyGeoHydro has an optional
-dependecy for using persistent caching, ``requests-cache``. We highly recommend to install
-this package as it can significantly speedup send/recieve queries. You don't have to change
+dependency for using persistent caching, ``requests-cache``. We highly recommend to install
+this package as it can significantly speedup send/receive queries. You don't have to change
 anything in your code, since PyGeoHydro under-the-hood looks for ``requests-cache`` and
 if available, it will automatically use persistent caching:
 
 .. code-block:: console
 
-    $ pip install pygeohydro[cache]
+    $ pip install pygeohydro
 
 Alternatively, PyGeoHydro can be installed from the ``conda-forge`` repository
 using `Conda <https://docs.conda.io/en/latest/>`__:
