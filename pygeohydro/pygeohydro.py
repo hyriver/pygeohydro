@@ -37,7 +37,7 @@ class NID:
         }
 
     def get_xlsx(self) -> io.BytesIO:
-        """Get the excel file that containes the dam data."""
+        """Get the excel file that contains the dam data."""
         self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-QM2rrHvxwzROBqNYVD0WIlg2"})
         payload = {"InFileName": "NID2019_U.xlsx"}
         r = self.session.get(
@@ -440,7 +440,78 @@ class NWIS:
         if not isinstance(query, dict):
             raise InvalidInputType("query", "dict")
 
-        output_type = [{"outputDataTypeCd": "dv"}]
+        valid_queries = [
+            "site",
+            "sites",
+            "location",
+            "stateCd",
+            "stateCds",
+            "huc",
+            "hucs",
+            "bBox",
+            "countyCd",
+            "countyCds",
+            "format",
+            "siteOutput",
+            "site_output",
+            "seriesCatalogOutput",
+            "seriesCatalog",
+            "outputDataTypeCd",
+            "outputDataType",
+            "startDt",
+            "endDt",
+            "period",
+            "modifiedSince",
+            "siteName",
+            "siteNm",
+            "stationName",
+            "stationNm",
+            "siteNameOperator",
+            "siteNameMatch",
+            "siteNmMatch",
+            "stationNameMatch",
+            "stationNmMatch",
+            "siteStatus",
+            "siteType",
+            "siteTypes",
+            "siteTypeCd",
+            "siteTypeCds",
+            "hasDataTypeCd",
+            "hasDataType",
+            "dataTypeCd",
+            "dataType",
+            "parameterCd",
+            "variable",
+            "parameterCds",
+            "variables",
+            "var",
+            "vars",
+            "parmCd",
+            "agencyCd",
+            "agencyCds",
+            "altMin",
+            "altMinVa",
+            "altMax",
+            "altMaxVa",
+            "drainAreaMin",
+            "drainAreaMinVa",
+            "drainAreaMax",
+            "drainAreaMaxVa",
+            "aquiferCd",
+            "localAquiferCd",
+            "wellDepthMin",
+            "wellDepthMinVa",
+            "wellDepthMax",
+            "wellDepthMaxVa",
+            "holdDepthMin",
+            "holdDepthMinVa",
+            "holeDepthMax",
+            "holeDepthMaxVa",
+        ]
+        not_valid = [k for k in query if k not in valid_queries]
+        if len(not_valid) > 0:
+            raise InvalidInputValue(f"query keys ({', '.join(not_valid)})", valid_queries)
+        output_type = [{"siteOutput": "basic"}]
         if expanded:
             output_type.append({"siteOutput": "expanded"})
 
@@ -450,9 +521,6 @@ class NWIS:
                 **query,
                 **t,
                 "format": "rdb",
-                "parameterCd": "00060",
-                "siteStatus": "all",
-                "hasDataTypeCd": "dv",
             }
 
             resp = self.session.post(f"{self.url}/site", payload).text.split("\n")
@@ -471,10 +539,9 @@ class NWIS:
 
         sites.loc[sites.alt_va == "", "alt_va"] = pd.NA
         try:
-            sites = sites.drop(sites[sites.parm_cd != "00060"].index)
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
-        except AttributeError:
+        except (AttributeError, KeyError):
             pass
 
         float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
@@ -482,8 +549,6 @@ class NWIS:
             float_cols += ["drain_area_va", "contrib_drain_area_va"]
 
         sites[float_cols] = sites[float_cols].apply(lambda x: pd.to_numeric(x, errors="coerce"))
-
-        sites = sites[sites.site_no.apply(len) == 8]
 
         site_ids = sites.site_no.tolist()
         gii = WaterData("gagesii", DEF_CRS)
@@ -514,7 +579,7 @@ class NWIS:
     def get_streamflow(
         self, station_ids: Union[List[str], str], dates: Tuple[str, str], mmd: bool = False
     ) -> pd.DataFrame:
-        """Get daily streamflow observations from USGS.
+        """Get mean daily streamflow observations from USGS.
 
         Parameters
         ----------
@@ -541,7 +606,13 @@ class NWIS:
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
 
-        siteinfo = self.get_info(self.query_byid(station_ids))
+        query = {
+            "parameterCd": "00060",
+            "siteStatus": "all",
+            "outputDataTypeCd": "dv",
+            **self.query_byid(station_ids),
+        }
+        siteinfo = self.get_info(query)
         check_dates = siteinfo.loc[
             ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
             "site_no",
