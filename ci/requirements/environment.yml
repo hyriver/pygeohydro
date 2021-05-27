@@ -30,6 +30,7 @@ dependencies:
   - pyarrow
 
   # pygeohydro deps
+  - async_retriever
   - folium
   - lxml
   - matplotlib-base

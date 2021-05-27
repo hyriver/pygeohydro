@@ -67,6 +67,7 @@ dependencies:
   - cartopy
   - colorcet
   - hvplot
+  - geoviews
 
   # dev deps
   - setuptools-scm
