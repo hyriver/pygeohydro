@@ -577,10 +577,15 @@ class NWIS:
         if mmd:
             nldi = NLDI()
             basins = nldi.get_basins(sids)
+            if isinstance(basins, tuple):
+                basins = basins[0]
             eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
             area = basins.to_crs(eck4).area
             ms2mmd = 1000.0 * 24.0 * 3600.0
-            qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+            try:
+                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+            except KeyError:
+                raise KeyError("Some stations have missing drainage area.")
         return qobs
 
     @staticmethod
