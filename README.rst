@@ -144,8 +144,8 @@ Moreover, requests for additional databases and functionalities can be submitted
 You can find some example notebooks `here <https://github.com/cheginit/HyRiver-examples>`__.
 
 You can also try using PyGeoHydro without installing
-it on you system by clicking on the binder badge below the PyGeoHydro banner. A Jupyter notebook
-instance with the stack pre-installed will be launched in your web browser
+it on you system by clicking on the binder badge. A Jupyter Lab
+instance with the HyRiver stack pre-installed will be launched in your web browser
 and you can start coding!
 
 Please note that since this project is in early development stages, while the provided
@@ -203,7 +203,12 @@ We can select all the stations within this boundary box that have daily mean str
     from pygeohydro import NWIS
 
     nwis = NWIS()
-    info_box = nwis.get_info(nwis.query_bybox(bbox))
+    query = {
+        **nwis.query_bybox(bbox),
+        "hasDataTypeCd": "dv",
+        "outputDataTypeCd": "dv",
+    }
+    info_box = nwis.get_info(query)
     dates = ("2000-01-01", "2010-12-31")
     stations = info_box[
         (info_box.begin_date <= dates[0]) & (info_box.end_date >= dates[1])
