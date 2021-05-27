@@ -720,7 +720,7 @@ def interactive_map(
     >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), dv=True, iv=True)
     >>> n_stations = len(m.to_dict()["children"]) - 1
     >>> n_stations
-    61
+    10
     """
     bbox = MatchCRS().bounds(bbox, crs, DEF_CRS)
     geoutils.check_bbox(bbox)
