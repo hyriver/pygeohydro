@@ -5,10 +5,20 @@ History
 0.11.0 (unreleased)
 -------------------
 
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Drop support for python 3.6 since many of the dependencies have done so, such as
+  ``xarray`` and ``pandas``.
+
 New Features
 ~~~~~~~~~~~~
-- Make ``NWIS.get_info`` more generic by accepting any valid queries that are documented at
+- Refactor ``NWIS.get_info`` to be more generic by accepting any valid queries that are
+  documented at
   `USGS Site Web Service <https://waterservices.usgs.gov/rest/Site-Service.html#outputDataTypeCd>`__.
+- Allow for passing a list of queries to ``NWIS.get_info`` and use ``async_retriever`` that
+  significantly improves the network response time.
+- Add two new flags to ``interactive_map`` for limiting the stations to those with
+  daily values (``dv=True``) and/or instantaneous values (``iv=True``).
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
