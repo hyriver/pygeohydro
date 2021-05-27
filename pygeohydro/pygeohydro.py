@@ -1,9 +1,13 @@
 """Accessing data from the supported databases through their APIs."""
 import io
+import logging
+import sys
 import zipfile
 from collections import OrderedDict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
+import async_retriever as ar
+import cytoolz as tlz
 import folium
 import geopandas as gpd
 import numpy as np
@@ -12,12 +16,19 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, RetrySession, ServiceURL
+from pygeoogc import WMS, MatchCRS, RetrySession, ServiceURL
 from pynhd import NLDI, WaterData
 from shapely.geometry import MultiPolygon, Point, Polygon
 
 from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler(sys.stdout)
+handler.setFormatter(logging.Formatter(""))
+logger.handlers = [handler]
+logger.propagate = False
 
 DEF_CRS = "epsg:4326"
 
@@ -367,16 +378,14 @@ class NWIS:
     """Access NWIS web service."""
 
     def __init__(self) -> None:
-        self.session = RetrySession()
         self.url = ServiceURL().restful.nwis
 
     @staticmethod
-    def query_byid(ids: Union[str, List[str]]) -> Dict[str, str]:
+    def query_byid(ids: Iterable[str]) -> Dict[str, str]:
         """Generate the geometry keys and values of an ArcGISRESTful query."""
-        if not isinstance(ids, (str, list)):
-            raise InvalidInputType("ids", "str or list")
+        if not isinstance(ids, (Sequence, Iterable)) or isinstance(ids, str):
+            raise InvalidInputType("ids", "list of str")
 
-        ids = [str(i) for i in ids] if isinstance(ids, list) else [str(ids)]
         query = {"sites": ",".join(ids)}
 
         return query
@@ -389,58 +398,213 @@ class NWIS:
 
         return query
 
-    def get_info(self, query: Dict[str, str], expanded: bool = False) -> pd.DataFrame:
-        """Get NWIS stations by a list of IDs or within a bounding box.
-
-        Only stations that record(ed) daily streamflow data are returned.
-        The following columns are included in the dataframe with expanded
-        set to False:
-
-        ==================  ==================================
-        Name                Description
-        ==================  ==================================
-        site_no             Site identification number
-        station_nm          Site name
-        site_tp_cd          Site type
-        dec_lat_va          Decimal latitude
-        dec_long_va         Decimal longitude
-        coord_acy_cd        Latitude-longitude accuracy
-        dec_coord_datum_cd  Decimal Latitude-longitude datum
-        alt_va              Altitude of Gage/land surface
-        alt_acy_va          Altitude accuracy
-        alt_datum_cd        Altitude datum
-        huc_cd              Hydrologic unit code
-        parm_cd             Parameter code
-        stat_cd             Statistical code
-        ts_id               Internal timeseries ID
-        loc_web_ds          Additional measurement description
-        medium_grp_cd       Medium group code
-        parm_grp_cd         Parameter group code
-        srs_id              SRS ID
-        access_cd           Access code
-        begin_date          Begin date
-        end_date            End date
-        count_nu            Record count
-        hcdn_2009           Whether is in HCDN-2009 stations
-        ==================  ==================================
+    def get_info(
+        self, queries: Union[Dict[str, str], List[Dict[str, str]]], expanded: bool = False
+    ) -> pd.DataFrame:
+        """Send multiple queries to USGS Site Web Service.
 
         Parameters
         ----------
-        query : dict
-            A dictionary containing query by IDs or BBOX. Use ``query_byid`` or ``query_bbox``
-            class methods to generate the queries.
+        queries : dict or list of dict
+            A single or a list of valid queries.
         expanded : bool, optional
-            Whether to get expanded sit information for example drainage area.
+            Whether to get expanded sit information for example drainage area, default to False.
 
         Returns
         -------
         pandas.DataFrame
-            NWIS stations
+            A typed dataframe containing the site information.
         """
-        if not isinstance(query, dict):
-            raise InvalidInputType("query", "dict")
+        output_type = [False, True] if expanded else [False]
+        queries = [queries] if isinstance(queries, dict) else queries
 
-        valid_queries = [
+        site_list = []
+        for t in output_type:
+            payloads = self._validate_usgs_queries(queries, t)
+            urls, kwds = zip(*[(f"{self.url}/site", {"params": p}) for p in payloads])
+
+            resp = ar.retrieve(urls, "text", kwds)
+            data = [r.split("\n") for r in resp if "\n" in r]
+            data = [[t.split("\t") for t in d if "#" not in t] for d in data]
+            data = [[dict(zip(d[0], s)) for s in d[2:]] for d in data]
+            site_list.append(pd.concat(pd.DataFrame.from_dict(d).dropna() for d in data))
+
+        if expanded:
+            sites = pd.merge(
+                *site_list, on="site_no", how="outer", suffixes=("", "_overlap")
+            ).filter(regex="^(?!.*_overlap)")
+        else:
+            sites = site_list[0]
+
+        try:
+            sites["begin_date"] = pd.to_datetime(sites["begin_date"])
+            sites["end_date"] = pd.to_datetime(sites["end_date"])
+        except (AttributeError, KeyError):
+            pass
+
+        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
+        if expanded:
+            float_cols += ["drain_area_va", "contrib_drain_area_va"]
+
+        for c in float_cols:
+            sites[c] = pd.to_numeric(sites[c], errors="coerce")
+
+        site_ids = sites.site_no.tolist()
+        gii = WaterData("gagesii", DEF_CRS)
+        hcdn_dict: Dict[str, str] = {}
+        try:
+            hcdn = gii.byid("staid", site_ids)
+            hcdn_dict.update(hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict())
+        except (AttributeError, KeyError):
+            for sid in site_ids:
+                try:
+                    hcdn = gii.byid("staid", sid)
+                    hcdn_dict.update(
+                        hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
+                    )
+                except (AttributeError, KeyError):
+                    hcdn_dict.update({sid: None})
+
+        def hcdn_2009(x: str) -> Optional[bool]:
+            _hcdn = hcdn_dict.get(x)
+            if _hcdn is not None:
+                return len(_hcdn) > 0
+            return None
+
+        sites["hcdn_2009"] = sites.site_no.apply(hcdn_2009)
+
+        return sites
+
+    def get_streamflow(
+        self, station_ids: Union[Sequence[str], str], dates: Tuple[str, str], mmd: bool = False
+    ) -> pd.DataFrame:
+        """Get mean daily streamflow observations from USGS.
+
+        Parameters
+        ----------
+        station_ids : str, list
+            The gage ID(s)  of the USGS station.
+        dates : tuple
+            Start and end dates as a tuple (start, end).
+        mmd : bool
+            Convert cms to mm/day based on the contributing drainage area of the stations.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Streamflow data observations in cubic meter per second (cms). The stations that
+            don't provide mean daily discharge in the target period will be dropped.
+        """
+        if not isinstance(station_ids, (str, Sequence, Iterable)):
+            raise InvalidInputType("ids", "str or list of str")
+
+        sids = [station_ids] if isinstance(station_ids, str) else station_ids
+
+        if not isinstance(dates, tuple) or len(dates) != 2:
+            raise InvalidInputType("dates", "tuple", "(start, end)")
+
+        start = pd.to_datetime(dates[0])
+        end = pd.to_datetime(dates[1])
+
+        queries = [
+            {
+                "parameterCd": "00060",
+                "siteStatus": "all",
+                "outputDataTypeCd": "dv",
+                **self.query_byid(s),
+            }
+            for s in tlz.partition_all(1500, sids)
+        ]
+
+        siteinfo = self.get_info(queries)
+        check_dates = siteinfo.loc[
+            ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
+            "site_no",
+        ]
+        nas = [s for s in sids if s in check_dates]
+        if len(nas) == len(sids):
+            raise InvalidInputRange("Daily mean data is unavailable for any of the input stations.")
+
+        if len(nas) > 0:
+            logger.warning(
+                "The following stations are dropped since they don't have daily mean discharge "
+                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}:\n"
+                + ", ".join(nas)
+            )
+            sids = list(set(sids).difference(set(nas)))
+
+        payloads = [
+            {
+                "format": "json",
+                "sites": ",".join(s),
+                "startDT": start.strftime("%Y-%m-%d"),
+                "endDT": end.strftime("%Y-%m-%d"),
+                "parameterCd": "00060",
+                "statCd": "00003",
+                "siteStatus": "all",
+            }
+            for s in tlz.partition_all(1500, sids)
+        ]
+        urls, kwds = zip(*[(f"{self.url}/dv", {"params": p}) for p in payloads])
+        resp = ar.retrieve(urls, "json", kwds)
+
+        r_ts = {
+            t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
+            for r in resp
+            for t in r["value"]["timeSeries"]
+        }
+
+        no_data = [s for s, t in r_ts.items() if len(t) == 0]
+        if len(no_data) > 0:
+            logger.warning(
+                "The following stations are dropped since they don't have daily mean discharge "
+                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}:\n"
+                + ", ".join(no_data)
+            )
+            [r_ts.pop(s) for s in no_data]
+
+        def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
+            discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
+            discharge.index = pd.to_datetime(discharge.index)
+            discharge.columns = [col]
+            return discharge
+
+        qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
+
+        # Convert cfs to cms
+        qobs = qobs.astype("float64") * 0.028316846592
+
+        if mmd:
+            nldi = NLDI()
+            basins = nldi.get_basins(sids)
+            eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+            area = basins.to_crs(eck4).area
+            ms2mmd = 1000.0 * 24.0 * 3600.0
+            qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+        return qobs
+
+    @staticmethod
+    def _validate_usgs_queries(
+        queries: List[Dict[str, str]], expanded: bool = False
+    ) -> List[Dict[str, str]]:
+        """Validate queries to be used with USGS Site Web Service.
+
+        Parameters
+        ----------
+        queries : list of dict
+            List of valid queries.
+        expanded : bool, optional
+            Get expanded sit information such as drainage area, default to False.
+
+        Returns
+        -------
+        list of dict
+            Validated queries with additional keys for format and site output (basic/expanded).
+        """
+        if not (isinstance(queries, (list, tuple)) and all(isinstance(q, dict) for q in queries)):
+            raise InvalidInputType("query", "list of dict")
+
+        valid_query_keys = [
             "site",
             "sites",
             "location",
@@ -508,184 +672,79 @@ class NWIS:
             "holeDepthMax",
             "holeDepthMaxVa",
         ]
-        not_valid = [k for k in query if k not in valid_queries]
+        not_valid = [k for query in queries for k in query if k not in valid_query_keys]
         if len(not_valid) > 0:
-            raise InvalidInputValue(f"query keys ({', '.join(not_valid)})", valid_queries)
-        output_type = [{"siteOutput": "basic"}]
-        if expanded:
-            output_type.append({"siteOutput": "expanded"})
+            raise InvalidInputValue(f"query keys ({', '.join(not_valid)})", valid_query_keys)
 
-        site_list = []
-        for t in output_type:
-            payload = {
-                **query,
-                **t,
-                "format": "rdb",
-            }
+        _queries = queries.copy()
+        if expanded and any("outputDataTypeCd" in q or "outputDataType" in q for q in queries):
+            [q.pop(k) for k in ["outputDataTypeCd", "outputDataType"] for q in _queries if k in q]
 
-            resp = self.session.post(f"{self.url}/site", payload).text.split("\n")
+        output_type = {"siteOutput": "expanded"} if expanded else {"siteOutput": "basic"}
 
-            r_list = [txt.split("\t") for txt in resp if "#" not in txt]
-            r_dict = [dict(zip(r_list[0], st)) for st in r_list[2:]]
-
-            site_list.append(pd.DataFrame.from_dict(r_dict).dropna())
-
-        if expanded:
-            sites = pd.merge(
-                *site_list, on="site_no", how="outer", suffixes=("", "_overlap")
-            ).filter(regex="^(?!.*_overlap)")
-        else:
-            sites = site_list[0]
-
-        sites.loc[sites.alt_va == "", "alt_va"] = pd.NA
-        try:
-            sites["begin_date"] = pd.to_datetime(sites["begin_date"])
-            sites["end_date"] = pd.to_datetime(sites["end_date"])
-        except (AttributeError, KeyError):
-            pass
-
-        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
-        if expanded:
-            float_cols += ["drain_area_va", "contrib_drain_area_va"]
-
-        sites[float_cols] = sites[float_cols].apply(lambda x: pd.to_numeric(x, errors="coerce"))
-
-        site_ids = sites.site_no.tolist()
-        gii = WaterData("gagesii", DEF_CRS)
-        hcdn_dict: Dict[str, str] = {}
-        try:
-            hcdn = gii.byid("staid", site_ids)
-            hcdn_dict.update(hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict())
-        except AttributeError:
-            for sid in site_ids:
-                try:
-                    hcdn = gii.byid("staid", sid)
-                    hcdn_dict.update(
-                        hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
-                    )
-                except AttributeError:
-                    hcdn_dict.update({sid: None})
-
-        def hcdn_2009(x: str) -> Optional[bool]:
-            _hcdn = hcdn_dict.get(x)
-            if _hcdn is not None:
-                return len(_hcdn) > 0
-            return None
-
-        sites["hcdn_2009"] = sites.site_no.apply(hcdn_2009)
-
-        return sites
-
-    def get_streamflow(
-        self, station_ids: Union[List[str], str], dates: Tuple[str, str], mmd: bool = False
-    ) -> pd.DataFrame:
-        """Get mean daily streamflow observations from USGS.
-
-        Parameters
-        ----------
-        station_ids : str, list
-            The gage ID(s)  of the USGS station.
-        dates : tuple
-            Start and end dates as a tuple (start, end).
-        mmd : bool
-            Convert cms to mm/day based on the contributing drainage area of the stations.
-
-        Returns
-        -------
-        pandas.DataFrame
-            Streamflow data observations in cubic meter per second (cms)
-        """
-        if not isinstance(station_ids, (str, list)):
-            raise InvalidInputType("ids", "str or list")
-
-        station_ids = station_ids if isinstance(station_ids, list) else [station_ids]
-
-        if not isinstance(dates, tuple) or len(dates) != 2:
-            raise InvalidInputType("dates", "tuple", "(start, end)")
-
-        start = pd.to_datetime(dates[0])
-        end = pd.to_datetime(dates[1])
-
-        query = {
-            "parameterCd": "00060",
-            "siteStatus": "all",
-            "outputDataTypeCd": "dv",
-            **self.query_byid(station_ids),
-        }
-        siteinfo = self.get_info(query)
-        check_dates = siteinfo.loc[
-            ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
-            "site_no",
-        ].tolist()
-        nas = [s for s in station_ids if s in check_dates]
-        if len(nas) > 0:
-            raise InvalidInputRange(
-                "Daily mean data is unavailable for the following stations"
-                + f" since they were established after {end}:\n"
-                + ", ".join(nas)
-            )
-
-        payload = {
-            "format": "json",
-            "sites": ",".join(station_ids),
-            "startDT": start.strftime("%Y-%m-%d"),
-            "endDT": end.strftime("%Y-%m-%d"),
-            "parameterCd": "00060",
-            "statCd": "00003",
-            "siteStatus": "all",
-        }
-
-        resp = self.session.post(f"{self.url}/dv", payload)
-
-        time_series = resp.json()["value"]["timeSeries"]
-        r_ts = {
-            t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"] for t in time_series
-        }
-
-        def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
-            discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
-            discharge.index = pd.to_datetime(discharge.index)
-            discharge.columns = [col]
-            return discharge
-
-        qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
-
-        # Convert cfs to cms
-        qobs = qobs.astype("float64") * 0.028316846592
-
-        if mmd:
-            nldi = NLDI()
-            basins = nldi.get_basins(station_ids)
-            eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
-            area = basins.to_crs(eck4).area
-            ms2mmd = 1000.0 * 24.0 * 3600.0
-            qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
-        return qobs
+        return [{**query, **output_type, "format": "rdb"} for query in _queries]
 
 
-def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
+def interactive_map(
+    bbox: Tuple[float, float, float, float],
+    crs: str = DEF_CRS,
+    dv: bool = False,
+    iv: bool = False,
+    param_cd: Optional[str] = None,
+) -> folium.Map:
     """Generate an interactive map including all USGS stations within a bounding box.
-
-    Notes
-    -----
-    Only stations that record(ed) daily streamflow data are included.
 
     Parameters
     ----------
     bbox : tuple
         List of corners in this order (west, south, east, north)
+    crs : str, optional
+        CRS of the input bounding box, defaults to EPSG:4326.
+    dv : bool, optional
+        Only include stations that record daily values, default to False.
+    iv : bool, optional
+        Only include stations that record instantaneous/real-time values, default to False.
+    param_cd : str, optional
+        Parameter code for further filtering the stations, defaults to None.
+        A list of parameter codes can be found
+        `here <https://help.waterdata.usgs.gov/codes-and-parameters/parameters>`__.
 
     Returns
     -------
     folium.Map
         Interactive map within a bounding box.
+
+    Examples
+    --------
+    >>> import pygeohydro as gh
+    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), dv=True, iv=True)
+    >>> n_stations = len(m.to_dict()["children"]) - 1
+    >>> n_stations
+    61
     """
+    bbox = MatchCRS().bounds(bbox, crs, DEF_CRS)
     geoutils.check_bbox(bbox)
 
     nwis = NWIS()
     query = nwis.query_bybox(bbox)
+
+    if iv and dv:
+        query["hasDataTypeCd"] = "dv,iv"
+        query["outputDataTypeCd"] = "dv,iv"
+    elif dv:
+        query["hasDataTypeCd"] = "dv"
+        query["outputDataTypeCd"] = "dv"
+    elif iv:
+        query["hasDataTypeCd"] = "iv"
+        query["outputDataTypeCd"] = "iv"
+
+    if param_cd is not None:
+        query["parameterCd"] = param_cd
+
     sites = nwis.get_info(query, expanded=True)
+
     sites["coords"] = list(sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False))
+    map_info = sites[["coords"]].drop_duplicates()
     sites["altitude"] = (
         sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
@@ -701,8 +760,6 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
         "huc_cd",
         "drain_area_va",
         "contrib_drain_area_va",
-        "begin_date",
-        "end_date",
         "hcdn_2009",
     ]
 
@@ -714,22 +771,35 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
         "HUC8",
         "Drainage Area",
         "Contributing Drainage Area",
-        "Begin date",
-        "End data",
         "HCDN 2009",
     ]
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
+    info_cols = cols_new
+
+    sites = sites.groupby("site_no").agg(set).reset_index()
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[info_cols]
 
     msgs = []
+    base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
     for row in sites.itertuples(index=False):
         msg = ""
         for col in sites:
+            if col == "Site No.":
+                value = row[sites.columns.get_loc(col)]
+            else:
+                value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
             msg += "".join(
-                ["<strong>", col, "</strong> : ", f"{row[sites.columns.get_loc(col)]}<br>"]
+                [
+                    "<strong>",
+                    col,
+                    "</strong> : ",
+                    f"{value}<br>",
+                ]
             )
+        site_no = row[sites.columns.get_loc("Site No.")]
+        msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
         msgs.append(msg[:-4])
 
-    sites["msg"] = msgs
+    map_info["msg"] = msgs
 
     west, south, east, north = bbox
     lon = (west + east) * 0.5
@@ -737,7 +807,7 @@ def interactive_map(bbox: Tuple[float, float, float, float]) -> folium.Map:
 
     imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=10)
 
-    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
+    for coords, msg in map_info[["coords", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
             location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
         ).add_to(imap)

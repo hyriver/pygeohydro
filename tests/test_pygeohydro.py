@@ -37,7 +37,7 @@ def geometry_urb():
 def test_nwis(geometry_nat):
     nwis = NWIS()
     qobs = nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-    info = nwis.get_info(nwis.query_byid(SID_NATURAL), expanded=True)
+    info = nwis.get_info(nwis.query_byid([SID_NATURAL]), expanded=True)
     info_box = nwis.get_info(nwis.query_bybox(geometry_nat.bounds))
     assert (
         abs(qobs.sum().item() - 27.630) < 1e-3 and info.hcdn_2009.item() and info_box.shape[0] == 36
@@ -77,9 +77,15 @@ def test_nid():
     assert len(nid) == 91457 and codes.loc[("Dam Type", "CN")].item() == "Concrete"
 
 
+@pytest.mark.parametrize("dv", [True, False])
+@pytest.mark.parametrize("iv", [True, False])
 @pytest.mark.flaky(max_runs=3)
-def test_plot(geometry_nat, geometry_urb):
-    gh.interactive_map(geometry_nat.bounds)
+def test_interactive_map(geometry_nat, dv, iv):
+    m = gh.interactive_map(geometry_nat.bounds, dv=dv, iv=iv)
+
+
+@pytest.mark.flaky(max_runs=3)
+def test_plot():
     nwis = NWIS()
     qobs = nwis.get_streamflow([SID_NATURAL, SID_URBAN], DATES_LONG)
     gh.plot.signatures(qobs, precipitation=qobs[f"USGS-{SID_NATURAL}"], output="data/gh.plot.png")
