@@ -25,6 +25,8 @@ Internal Changes
 - Use persistent caching for all send/receive requests that can significantly improve the
   network response time.
 - Explicitly include all the hard dependencies in ``setup.cfg``.
+- Refactor ``interactive_map`` and ``NWIS.get_info`` to make them more efficient and reduce
+  their code complexity.
 
 0.10.2 (2021-03-27)
 -------------------
