@@ -393,7 +393,7 @@ class NWIS:
     @staticmethod
     def query_bybox(bbox: Tuple[float, float, float, float]) -> Dict[str, str]:
         """Generate the geometry keys and values of an ArcGISRESTful query."""
-        geoutils.check_bbox(bbox)
+        ogc.utils.check_bbox(bbox)
         query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
 
         return query
@@ -724,20 +724,14 @@ def interactive_map(
     10
     """
     bbox = MatchCRS().bounds(bbox, crs, DEF_CRS)
-    geoutils.check_bbox(bbox)
+    ogc.utils.check_bbox(bbox)
 
     nwis = NWIS()
     query = nwis.query_bybox(bbox)
 
-    if iv and dv:
-        query["hasDataTypeCd"] = "dv,iv"
-        query["outputDataTypeCd"] = "dv,iv"
-    elif dv:
-        query["hasDataTypeCd"] = "dv"
-        query["outputDataTypeCd"] = "dv"
-    elif iv:
-        query["hasDataTypeCd"] = "iv"
-        query["outputDataTypeCd"] = "iv"
+    if dv or iv:
+        query["hasDataTypeCd"] = ",".join(i for i, j in zip(["dv", "iv"], [dv, iv]) if j)
+        query["outputDataTypeCd"] = query["hasDataTypeCd"]
 
     if param_cd is not None:
         query["parameterCd"] = param_cd
