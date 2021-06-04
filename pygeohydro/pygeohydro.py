@@ -415,39 +415,28 @@ class NWIS:
         pandas.DataFrame
             A typed dataframe containing the site information.
         """
-        output_type = [False, True] if expanded else [False]
         queries = [queries] if isinstance(queries, dict) else queries
 
-        site_list = []
-        for t in output_type:
-            payloads = self._validate_usgs_queries(queries, t)
-            urls, kwds = zip(*[(f"{self.url}/site", {"params": p}) for p in payloads])
+        payloads = self._validate_usgs_queries(queries, False)
+        sites = self._site_retrieve(payloads)
 
-            resp = ar.retrieve(urls, "text", kwds)
-            data = [r.split("\n") for r in resp if "\n" in r]
-            data = [[t.split("\t") for t in d if "#" not in t] for d in data]
-            data = [[dict(zip(d[0], s)) for s in d[2:]] for d in data]
-            site_list.append(pd.concat(pd.DataFrame.from_dict(d).dropna() for d in data))
+        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
 
         if expanded:
-            sites = pd.merge(
-                *site_list, on="site_no", how="outer", suffixes=("", "_overlap")
-            ).filter(regex="^(?!.*_overlap)")
-        else:
-            sites = site_list[0]
+            payloads = self._validate_usgs_queries(queries, True)
+            sites = sites.merge(
+                self._site_retrieve(payloads), on="site_no", how="outer", suffixes=("", "_overlap")
+            )
+            sites = sites.filter(regex="^(?!.*_overlap)")
+            float_cols += ["drain_area_va", "contrib_drain_area_va"]
+
+        sites[float_cols] = sites[float_cols].apply(pd.to_numeric, errors="coerce")
 
         try:
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
         except (AttributeError, KeyError):
             pass
-
-        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
-        if expanded:
-            float_cols += ["drain_area_va", "contrib_drain_area_va"]
-
-        for c in float_cols:
-            sites[c] = pd.to_numeric(sites[c], errors="coerce")
 
         site_ids = sites.site_no.tolist()
         gii = WaterData("gagesii", DEF_CRS)
@@ -587,6 +576,13 @@ class NWIS:
             except KeyError:
                 raise KeyError("Some stations have missing drainage area.")
         return qobs
+
+    def _site_retrieve(self, payloads: List[Dict[str, str]]) -> pd.DataFrame:
+        urls, kwds = zip(*[(f"{self.url}/site", {"params": p}) for p in payloads])
+        resp = ar.retrieve(urls, "text", kwds)
+        data = [t.split("\t") for r in resp for t in r.split("\n") if "#" not in t]
+        data = [dict(zip(data[0], s)) for s in data[2:-1]]
+        return pd.DataFrame.from_dict(data).dropna()
 
     @staticmethod
     def _validate_usgs_queries(
@@ -748,8 +744,7 @@ def interactive_map(
 
     sites = nwis.get_info(query, expanded=True)
 
-    sites["coords"] = list(sites[["dec_lat_va", "dec_long_va"]].itertuples(name=None, index=False))
-    map_info = sites[["coords"]].drop_duplicates()
+    sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
     sites["altitude"] = (
         sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
@@ -778,33 +773,22 @@ def interactive_map(
         "Contributing Drainage Area",
         "HCDN 2009",
     ]
-    info_cols = cols_new
 
     sites = sites.groupby("site_no").agg(set).reset_index()
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[info_cols]
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
 
     msgs = []
     base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
     for row in sites.itertuples(index=False):
-        msg = ""
-        for col in sites:
-            if col == "Site No.":
-                value = row[sites.columns.get_loc(col)]
-            else:
-                value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
-            msg += "".join(
-                [
-                    "<strong>",
-                    col,
-                    "</strong> : ",
-                    f"{value}<br>",
-                ]
-            )
-        site_no = row[sites.columns.get_loc("Site No.")]
+        site_no = row[sites.columns.get_loc(cols_new[0])]
+        msg = f"<strong>{cols_new[0]}</strong>: {site_no}<br>"
+        for col in cols_new[1:]:
+            value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
+            msg += f"<strong>{col}</strong>: {value}<br>"
         msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
         msgs.append(msg[:-4])
 
-    map_info["msg"] = msgs
+    sites["msg"] = msgs
 
     west, south, east, north = bbox
     lon = (west + east) * 0.5
@@ -812,9 +796,11 @@ def interactive_map(
 
     imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=10)
 
-    for coords, msg in map_info[["coords", "msg"]].itertuples(name=None, index=False):
+    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
-            location=coords, popup=folium.Popup(msg, max_width=250), icon=folium.Icon()
+            location=list(coords)[0][::-1],
+            popup=folium.Popup(msg, max_width=250),
+            icon=folium.Icon(),
         ).add_to(imap)
 
     return imap
