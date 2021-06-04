@@ -82,6 +82,12 @@ def test_nid():
 @pytest.mark.flaky(max_runs=3)
 def test_interactive_map(geometry_nat, dv, iv):
     m = gh.interactive_map(geometry_nat.bounds, dv=dv, iv=iv)
+    if dv and iv:
+        assert len(m.to_dict()["children"]) == 11
+    elif not dv and not iv:
+        assert len(m.to_dict()["children"]) == 37
+    else:
+        assert len(m.to_dict()["children"]) == 10
 
 
 @pytest.mark.flaky(max_runs=3)
