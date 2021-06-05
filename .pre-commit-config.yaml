@@ -27,7 +27,7 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 21.5b1
+    rev: 21.5b2
     hooks:
     - id: black
       name: Autoformat with black
@@ -69,7 +69,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.18.3
+    rev: v2.19.1
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
