@@ -534,7 +534,7 @@ class NWIS:
             }
             for s in tlz.partition_all(1500, sids)
         ]
-        urls, kwds = zip(*[(f"{self.url}/dv", {"params": p}) for p in payloads])
+        urls, kwds = zip(*((f"{self.url}/dv", {"params": p}) for p in payloads))
         resp = ar.retrieve(urls, "json", kwds)
 
         r_ts = {
@@ -543,14 +543,14 @@ class NWIS:
             for t in r["value"]["timeSeries"]
         }
 
-        no_data = [s for s, t in r_ts.items() if len(t) == 0]
+        no_data = {s for s, t in r_ts.items() if len(t) == 0}
         if len(no_data) > 0:
             logger.warning(
                 "The following stations are dropped since they don't have daily mean discharge "
                 + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}:\n"
                 + ", ".join(no_data)
             )
-            [r_ts.pop(s) for s in no_data]
+            _ = [r_ts.pop(s) for s in no_data]
 
         def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
             discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
@@ -578,7 +578,7 @@ class NWIS:
         return qobs
 
     def _site_retrieve(self, payloads: List[Dict[str, str]]) -> pd.DataFrame:
-        urls, kwds = zip(*[(f"{self.url}/site", {"params": p}) for p in payloads])
+        urls, kwds = zip(*((f"{self.url}/site", {"params": p}) for p in payloads))
         resp = ar.retrieve(urls, "text", kwds)
         data = [t.split("\t") for r in resp for t in r.split("\n") if "#" not in t]
         data = [dict(zip(data[0], s)) for s in data[2:-1]]
@@ -679,7 +679,9 @@ class NWIS:
 
         _queries = queries.copy()
         if expanded and any("outputDataTypeCd" in q or "outputDataType" in q for q in queries):
-            [q.pop(k) for k in ["outputDataTypeCd", "outputDataType"] for q in _queries if k in q]
+            _ = [
+                q.pop(k) for k in ["outputDataTypeCd", "outputDataType"] for q in _queries if k in q
+            ]
 
         output_type = {"siteOutput": "expanded"} if expanded else {"siteOutput": "basic"}
 
@@ -723,7 +725,7 @@ def interactive_map(
     >>> n_stations
     10
     """
-    bbox = MatchCRS().bounds(bbox, crs, DEF_CRS)
+    bbox = MatchCRS(crs, DEF_CRS).bounds(bbox)
     ogc.utils.check_bbox(bbox)
 
     nwis = NWIS()
