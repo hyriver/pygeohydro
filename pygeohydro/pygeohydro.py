@@ -510,17 +510,9 @@ class NWIS:
             ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
             "site_no",
         ]
-        nas = [s for s in sids if s in check_dates]
-        if len(nas) == len(sids):
+        sids = list(set(sids).difference({s for s in sids if s in check_dates}))
+        if len(sids) == 0:
             raise InvalidInputRange("Daily mean data is unavailable for any of the input stations.")
-
-        if len(nas) > 0:
-            logger.warning(
-                "The following stations are dropped since they don't have daily mean discharge "
-                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}:\n"
-                + ", ".join(nas)
-            )
-            sids = list(set(sids).difference(set(nas)))
 
         payloads = [
             {
@@ -541,16 +533,8 @@ class NWIS:
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
             for r in resp
             for t in r["value"]["timeSeries"]
+            if len(t["values"][0]["value"]) != 0
         }
-
-        no_data = {s for s, t in r_ts.items() if len(t) == 0}
-        if len(no_data) > 0:
-            logger.warning(
-                "The following stations are dropped since they don't have daily mean discharge "
-                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}:\n"
-                + ", ".join(no_data)
-            )
-            _ = [r_ts.pop(s) for s in no_data]
 
         def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
             discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
@@ -560,6 +544,12 @@ class NWIS:
 
         qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
 
+        if qobs.shape[1] != len(station_ids):
+            dropped = [s for s in station_ids if f"USGS-{s}" not in qobs]
+            logger.warning(
+                f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
+                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
+            )
         # Convert cfs to cms
         qobs = qobs.astype("float64") * 0.028316846592
 
