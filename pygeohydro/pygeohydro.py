@@ -16,6 +16,7 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
+from lxml import html
 from pygeoogc import WMS, MatchCRS, RetrySession, ServiceURL
 from pynhd import NLDI, WaterData
 from shapely.geometry import MultiPolygon, Point, Polygon
@@ -418,14 +419,17 @@ class NWIS:
         queries = [queries] if isinstance(queries, dict) else queries
 
         payloads = self._validate_usgs_queries(queries, False)
-        sites = self._site_retrieve(payloads)
+        sites = self.retrieve_rdb("site", payloads)
 
         float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
 
         if expanded:
             payloads = self._validate_usgs_queries(queries, True)
             sites = sites.merge(
-                self._site_retrieve(payloads), on="site_no", how="outer", suffixes=("", "_overlap")
+                self.retrieve_rdb("site", payloads),
+                on="site_no",
+                how="outer",
+                suffixes=("", "_overlap"),
             )
             sites = sites.filter(regex="^(?!.*_overlap)")
             float_cols += ["drain_area_va", "contrib_drain_area_va"]
@@ -567,16 +571,37 @@ class NWIS:
                 raise KeyError("Some stations have missing drainage area.")
         return qobs
 
-    def _site_retrieve(self, payloads: List[Dict[str, str]]) -> pd.DataFrame:
-        urls, kwds = zip(*((f"{self.url}/site", {"params": p}) for p in payloads))
+    def retrieve_rdb(self, service: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
+        """Retrieve and process requests with RDB format.
+
+        Parameters
+        ----------
+        service : str
+            Name of USGS REST service, valid values are ``site``, ``dv``, ``iv``,
+            ``gwlevels``, and ``stat``. Please consult USGS documentation
+            `here <https://waterservices.usgs.gov/rest>`__ for more information.
+        payloads : list of dict
+            List of target payloads.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Requested features as a pandas's DataFrame.
+        """
+        urls, kwds = zip(*((f"{self.url}/{service}", {"params": p}) for p in payloads))
         resp = ar.retrieve(urls, "text", kwds)
+        not_found = next(filter(lambda x: x[0] != "#", resp), None)
+        if not_found is not None:
+            body = html.fromstring(not_found)
+            logger.info(f'Server error message:\n{" ".join(body.xpath("body/h1/text()"))}')
+
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
+        if len(data) == 0:
+            raise ZeroMatched("Found no feature for the requested queries.")
+
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
         rdb_df = rdb_df[~rdb_df.agency_cd.str.contains("agency_cd|5s")].copy()
-
-        if len(rdb_df) == 0:
-            raise ZeroMatched("Found no feature for the requested query.")
         return rdb_df
 
     @staticmethod
