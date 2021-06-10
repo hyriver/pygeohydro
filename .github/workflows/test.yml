@@ -54,7 +54,7 @@ jobs:
         run: |-
           python -m pytest -n=auto --cov=pygeohydro --cov-report xml
       - name: Run codecov and upload the report
-        uses: codecov/codecov-action@v1.5.0
+        uses: codecov/codecov-action@v1.5.2
         with:
           file: ./coverage.xml
           flags: unittests
