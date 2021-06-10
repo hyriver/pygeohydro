@@ -50,3 +50,7 @@ class InvalidInputType(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+
+class ZeroMatched(ValueError):
+    """Exception raised when a function doesn't return any feature."""

@@ -21,7 +21,7 @@ from pynhd import NLDI, WaterData
 from shapely.geometry import MultiPolygon, Point, Polygon
 
 from . import helpers
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
+from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue, ZeroMatched
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -580,9 +580,14 @@ class NWIS:
     def _site_retrieve(self, payloads: List[Dict[str, str]]) -> pd.DataFrame:
         urls, kwds = zip(*((f"{self.url}/site", {"params": p}) for p in payloads))
         resp = ar.retrieve(urls, "text", kwds)
-        data = [t.split("\t") for r in resp for t in r.split("\n") if "#" not in t]
-        data = [dict(zip(data[0], s)) for s in data[2:-1]]
-        return pd.DataFrame.from_dict(data).dropna()
+        data = [r.strip().split("\n") for r in resp if r[0] == "#"]
+        data = [t.split("\t") for d in data for t in d if "#" not in t]
+        rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
+        rdb_df = rdb_df[~rdb_df.agency_cd.str.contains("agency_cd|5s")].copy()
+
+        if len(rdb_df) == 0:
+            raise ZeroMatched("Found no feature for the requested query.")
+        return rdb_df
 
     @staticmethod
     def _validate_usgs_queries(
