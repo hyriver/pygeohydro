@@ -1,6 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 import io
 import logging
+import re
 import sys
 import zipfile
 from collections import OrderedDict
@@ -16,7 +17,6 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from lxml import html
 from pygeoogc import WMS, MatchCRS, RetrySession, ServiceURL
 from pynhd import NLDI, WaterData
 from shapely.geometry import MultiPolygon, Point, Polygon
@@ -590,11 +590,13 @@ class NWIS:
         """
         urls, kwds = zip(*((f"{self.url}/{service}", {"params": p}) for p in payloads))
         resp = ar.retrieve(urls, "text", kwds)
-        not_found = next(filter(lambda x: x[0] != "#", resp), None)
-        if not_found is not None:
-            body = html.fromstring(not_found)
-            logger.info(f'Server error message:\n{" ".join(body.xpath("body/h1/text()"))}')
-
+        try:
+            not_found = next(filter(lambda x: x[0] != "#", resp), None)
+            if not_found is not None:
+                msg = re.findall("<p>(.*?)</p>", not_found.text)[1].rsplit(">", 1)[1]
+                logger.info(f'Server error message:\n{msg}')
+        except StopIteration:
+            pass
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
         if len(data) == 0:
