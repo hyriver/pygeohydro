@@ -3,51 +3,64 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  # pygeoogc deps
+  # async_retriever
+  - aiodns
+  - aiohttp
+  - aiohttp-client-cache
+  - aiosqlite
+  - brotlipy
+  - cchardet
   - cytoolz
+  - nest-asyncio
+  - orjson
+
+  # pygeoogc deps
   - defusedxml
   - owslib
+  - pydantic
   - pyyaml
   - pyproj
   - requests
   - requests-cache
-  - setuptools
   - shapely
   - simplejson
   - urllib3
 
   # pygeoutils deps
   - affine
+  - dask
   - geopandas
-  - numpy
   - netcdf4
-  - orjson
+  - numpy
   - rasterio
   - xarray
 
   # pynhd deps
   - networkx
+  - pandas
   - pyarrow
 
   # pygeohydro deps
-  - async_retriever
   - folium
   - lxml
   - matplotlib-base
-  - openpyxl
 
   # deps to speed up xarray and geopandas
   - pygeos
   - bottleneck
 
   # test deps
+  - nox
+  - psutil
   - pytest
+  - pytest-clarity
   - pytest-cov
+  - pytest-sugar
   - pytest-xdist
-  - flaky
 
   - pip
   - pip:
+    - git+https://github.com/cheginit/async_retriver.git
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git
