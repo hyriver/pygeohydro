@@ -250,12 +250,15 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     :width: 200
     :alt: Actual ET
 
-Additionally, we can pull all the US dams data using ``get_nid`` and ``get_nid_codes``:
+Additionally, we can pull all the US dams data using ``NID``:
 
 .. code-block:: python
 
-    nid = gh.get_nid()
-    codes = gh.get_nid_codes()
+    import geopandas as gpd
+
+    world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
+    conus = world[world.name == "United States of America"].geometry.iloc[0][0]
+    conus_dams = nid.bygeom(conus, "epsg:4326")
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/dams.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nid.ipynb
