@@ -2,23 +2,30 @@
 History
 =======
 
-0.11.0 (unreleased)
+0.11.0 (2021-06-19)
 -------------------
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-- Drop support for python 3.6 since many of the dependencies have done so, such as
-  ``xarray`` and ``pandas``.
+- Drop support for Python 3.6 since many of the dependencies such as ``xarray`` and ``pandas``
+  have done so.
+- Remove ``get_nid`` and ``get_nid_codes`` functions since NID now has a ArcGISRESTFul service.
 
 New Features
 ~~~~~~~~~~~~
+- Add a new class called ``NID`` for accessing the recently released National Inventory of Dams
+  web service. This service is based on ArcGIS's RESTful service. So now the user just need to
+  instantiate the class like so ``NID()`` and with three methods of ``AGRBase`` class, the
+  user can retrieve the data. These methods are: ``bygeom``, ``byids``, and ``bysql``. Moreover,
+  it has an ``attrs`` property that includes descriptions of the database fields with their units.
 - Refactor ``NWIS.get_info`` to be more generic by accepting any valid queries that are
   documented at
   `USGS Site Web Service <https://waterservices.usgs.gov/rest/Site-Service.html#outputDataTypeCd>`__.
 - Allow for passing a list of queries to ``NWIS.get_info`` and use ``async_retriever`` that
   significantly improves the network response time.
 - Add two new flags to ``interactive_map`` for limiting the stations to those with
-  daily values (``dv=True``) and/or instantaneous values (``iv=True``).
+  daily values (``dv=True``) and/or instantaneous values (``iv=True``). This function
+  now includes a link to stations webpage on USGS website.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
