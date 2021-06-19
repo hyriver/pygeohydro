@@ -6,12 +6,11 @@ on:
 name: Publish
 
 jobs:
-  build:
-    name: Create Release
+  changelog:
+    name: Create Release Notes
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v2.3.4
+      - uses: actions/checkout@v2.3.4
       - name: Generate Changelog
         run: |-
           echo "**Release Notes**" > ${{ github.workflow }}-CHANGELOG.rst
@@ -19,14 +18,31 @@ jobs:
           L1=$(grep -n $PAT HISTORY.rst | sed -n 1p | cut -d ":" -f 1)
           L2=$(grep -n $PAT HISTORY.rst | sed -n 2p | cut -d ":" -f 1)
           awk "NR > $L1 && NR < $L2 - 1" HISTORY.rst >> ${{ github.workflow }}-CHANGELOG.rst
-      - name: Release
+      - name: Convert rst to md
+        uses: docker://pandoc/core
+        with:
+          args: >-
+              ${{ github.workflow }}-CHANGELOG.rst
+              -t markdown
+              -o ${{ github.workflow }}-CHANGELOG.md
+      - name: Remove extra newlines
+        run: |-
+            sed -i -e :a -e '$!N;s/\n    / /;ta' ${{ github.workflow }}-CHANGELOG.md
+      - name: Github Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          body_path: ${{ github.workflow }}-CHANGELOG.rst
+          body_path: ${{ github.workflow }}-CHANGELOG.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  build:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.4
+        with:
+          fetch-depth: 0
       - name: Set up Python
         uses: actions/setup-python@master
         with:
@@ -35,14 +51,28 @@ jobs:
       - name: Install dependencies
         run: |
             python -m pip install --upgrade pip
-            pip install setuptools wheel setuptools-scm
+            pip install setuptools setuptools-scm wheel twine check-manifest
 
       - name: Build dist and wheel
         run: |
-            python setup.py sdist bdist_wheel
+            git clean -xdf
+            git restore -SW .
+            python -m build --sdist --wheel .
+
+      - name: Check built artifacts
+        run: |
+          python -m twine check dist/*
+          pwd
+          if [ -f dist/pygeohydro-0.0.0.tar.gz ]; then
+            echo "❌ INVALID VERSION NUMBER"
+            exit 1
+          else
+            echo "✅ Looks good"
+          fi
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@master
         with:
             user: __token__
             password: ${{ secrets.PYPI_PASSWORD }}
+            verbose: true

@@ -46,13 +46,13 @@ jobs:
         run: |-
           mamba info -a
           mamba list
-          python -m pip install --no-deps .
+          python -m pip install --no-deps --use-feature=in-tree-build .
       - name: Version info
         run: |-
           python -c "import pygeohydro; pygeohydro.show_versions()"
       - name: Run pytest
         run: |-
-          python -m pytest -n=auto --cov=pygeohydro --cov-report xml
+          pytest
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v1.5.2
         with:
