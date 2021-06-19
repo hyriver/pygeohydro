@@ -10,7 +10,6 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 import async_retriever as ar
 import cytoolz as tlz
 import folium
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoogc as ogc
@@ -18,8 +17,8 @@ import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, MatchCRS, RetrySession, ServiceURL
-from pynhd import NLDI, WaterData
-from shapely.geometry import MultiPolygon, Point, Polygon
+from pynhd import NLDI, AGRBase, WaterData
+from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue, ZeroMatched
@@ -34,113 +33,28 @@ logger.propagate = False
 DEF_CRS = "epsg:4326"
 
 
-class NID:
-    """Retrieve data from the National Inventory of Dams."""
+class NID(AGRBase):
+    """Retrieve data from the National Inventory of Dams web service."""
 
-    def __init__(self) -> None:
-        self.session = RetrySession()
-        self.base_url = "https://nid.sec.usace.army.mil/ords"
-        self.headers = {
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Connection": "keep-alive",
-            "Upgrade-Insecure-Requests": "1",
-            "DNT": "1",
-        }
-
-    def get_xlsx(self) -> io.BytesIO:
-        """Get the excel file that contains the dam data."""
-        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-QM2rrHvxwzROBqNYVD0WIlg2"})
-        payload = {"InFileName": "NID2019_U.xlsx"}
-        r = self.session.get(
-            f"{self.base_url}/NID_R.DOWNLOADFILE", payload=payload, headers=self.headers
+    def __init__(self):
+        super().__init__("nid2019_u", "*", DEF_CRS)
+        url = "/".join(
+            [
+                "https://ags02.sec.usace.army.mil/server/rest",
+                "services/Water_Resources/NID2019_U/MapServer",
+            ]
         )
-        return io.BytesIO(r.content)
-
-    def get_attrs(self, variables: List[str]) -> Dict[str, str]:
-        """Get descriptions of the NID variables."""
-        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-iaBJjzLW1v3a1s1mXEub0S7R"})
-
-        desc: Dict[str, str] = {}
-        for v in variables:
-            payload = {"p": f"105:10:10326760693796::NO::P10_COLUMN_NAME:{v}"}
-            page = self.session.get(f"{self.base_url}/f", payload=payload, headers=self.headers)
-            tables = pd.read_html(page.text)
-            desc[v] = tables[0]["Field Definition"].values[0]
-
-        return desc
-
-    def get_codes(self) -> str:
-        """Get the definitions of letter codes in NID database."""
-        self.headers.update({"Cookie": "ORA_WWV_APP_105=ORA_WWV-Bk16kg_4BwSK2anC36B4XBQn"})
-        payload = {"p": "105:21:16137342922753::NO:::"}
-        page = self.session.get(f"{self.base_url}/f", payload=payload, headers=self.headers)
-        return page.text
-
-
-def get_nid() -> gpd.GeoDataFrame:
-    """Get all dams in the US (over 91K) from National Inventory of Dams 2019.
-
-    Notes
-    -----
-    This function downloads a 25 MB excel file and convert it into a
-    GeoDataFrame. So, your net speed might be a bottleneck. Another
-    bottleneck is data loading since the dataset has more than 91K rows,
-    it might take sometime for Pandas to load the data into memory.
-
-    Returns
-    -------
-    geopandas.GeoDataFrame
-        A GeoDataFrame containing all the available dams in the database. This dataframe
-        has an ``attrs`` property that contains definitions of all the NID variables including
-        their units. You can access this dictionary by, for example, ``nid.attrs`` assuming
-        that ``nid`` is the dataframe. For example, ``nli.attrs["VOLUME"]`` returns the definition
-        of the ``VOLUME`` column in NID.
-    """
-    service = NID()
-    nid = pd.read_excel(service.get_xlsx(), engine="openpyxl", index_col=0)
-    attrs = service.get_attrs(nid.columns)
-
-    nid["INSPECTION_DATE"] = nid.INSPECTION_DATE.str.replace("3018", "2018")
-    for c in ["INSPECTION_DATE", "SUBMIT_DATE", "EAP_LAST_REV_DATE"]:
-        nid[c] = pd.to_datetime(nid[c])
-
-    for c in ["NUMBER_OF_LOCKS", "YEAR_COMPLETED"]:
-        nid[c] = nid[c].astype("Int16")
-
-    nid["geometry"] = [Point(x, y) for x, y in zip(nid.LONGITUDE, nid.LATITUDE)]
-    nid = gpd.GeoDataFrame(nid, crs="epsg:4326").drop(columns=["LONGITUDE", "LATITUDE"])
-    nid.loc[~nid.is_valid, "geometry"] = pd.NA
-    nid.attrs = attrs
-
-    return nid
-
-
-def get_nid_codes() -> pd.DataFrame:
-    """Get the definitions of letter codes in NID database.
-
-    Returns
-    -------
-    pandas.DataFrame
-        A multi-index dataframe where the first index is code categories and the second one is
-        letter codes. For example, ``tables.loc[('Core Type',  'A')]`` returns Bituminous Concrete.
-    """
-    tables_txt = NID().get_codes()
-
-    summary = [
-        s.split("summary=")[-1].split('"')[1::2][0]
-        for s in tables_txt.split("\n")
-        if "summary" in s
-    ]
-
-    tables = [
-        pd.read_html(tables_txt, attrs={"class": "t-Report-report", "summary": s})[0]
-        for s in summary[1:]
-    ]
-    tables = [
-        tb.rename(columns={"CODE": "Code", "VALUE": "Value"}).set_index("Code") for tb in tables
-    ]
-    return pd.concat(tables, keys=summary[1:]).rename_axis(["Category", "Code"])
+        self.service = self._init_service(url)
+        resp = RetrySession().get(
+            "/".join(
+                [
+                    "https://gist.githubusercontent.com/cheginit",
+                    "91af7f7427763057a18000c5309280dc/raw",
+                    "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
+                ]
+            )
+        )
+        self.attrs = pd.DataFrame(resp.json())
 
 
 def ssebopeta_byloc(
@@ -220,7 +134,7 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
+    _geometry = geoutils.pygeoutils._geo2polygon(geometry, geo_crs, DEF_CRS)
 
     f_list = _get_ssebopeta_urls(dates)
 
@@ -319,7 +233,7 @@ def nlcd(
     years = {"impervious": 2016, "cover": 2016, "canopy": 2016} if years is None else years
     layers = _nlcd_layers(years)
 
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
+    _geometry = geoutils.pygeoutils._geo2polygon(geometry, geo_crs, crs)
 
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
     r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
@@ -594,7 +508,7 @@ class NWIS:
             not_found = next(filter(lambda x: x[0] != "#", resp), None)
             if not_found is not None:
                 msg = re.findall("<p>(.*?)</p>", not_found.text)[1].rsplit(">", 1)[1]
-                logger.info(f'Server error message:\n{msg}')
+                logger.info(f"Server error message:\n{msg}")
         except StopIteration:
             pass
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]

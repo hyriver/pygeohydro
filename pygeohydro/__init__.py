@@ -4,10 +4,9 @@ from . import helpers, plot
 from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue, ZeroMatched
 from .print_versions import show_versions
 from .pygeohydro import (
+    NID,
     NWIS,
     cover_statistics,
-    get_nid,
-    get_nid_codes,
     interactive_map,
     nlcd,
     ssebopeta_bygeom,
