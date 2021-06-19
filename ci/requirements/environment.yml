@@ -60,7 +60,7 @@ dependencies:
 
   - pip
   - pip:
-    - git+https://github.com/cheginit/async_retriver.git
+    - git+https://github.com/cheginit/async_retriever.git
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git

@@ -94,7 +94,7 @@ dependencies:
     - jupyterlab-spellchecker
     - jupyterlab-unfold
 
-    - git+https://github.com/cheginit/async_retriver.git
+    - git+https://github.com/cheginit/async_retreiver.git
     - git+https://github.com/cheginit/pygeoogc.git
     - git+https://github.com/cheginit/pygeoutils.git
     - git+https://github.com/cheginit/pynhd.git
