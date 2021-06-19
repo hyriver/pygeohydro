@@ -114,8 +114,7 @@ main modules: ``pygeohydro``, ``plot``, and ``helpers``.
 The ``pygeohydro`` module can pull data from the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
-* `NID <https://nid.sec.usace.army.mil/ords/f?p=105:1::::::>`__ for accessing the National
-  Inventory of Dams in the US,
+* `NID <https://damsdev.net/>`__ for accessing the National Inventory of Dams in the US,
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, and canopy data,
@@ -222,6 +221,12 @@ Then, we can get the streamflow data in mm/day (by default the data are in cms) 
 
     qobs = nwis.get_streamflow(stations, dates, mmd=True)
     plot.signatures(qobs)
+
+Now, let's get dams that are within this bounding box and have a maximum storage larger than
+200 acre-feet.
+
+    nid = NID()
+    dams = nid.bygeom(bbox, "epsg:4326", sql_clause="MAX_STORAGE > 200")
 
 Moreover, we can get land use/land cove data using ``nlcd`` function, percentages of
 land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``:
