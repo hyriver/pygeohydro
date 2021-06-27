@@ -38,12 +38,7 @@ class NID(AGRBase):
 
     def __init__(self):
         super().__init__("nid2019_u", "*", DEF_CRS)
-        url = "/".join(
-            [
-                "https://ags02.sec.usace.army.mil/server/rest",
-                "services/Water_Resources/NID2019_U/MapServer",
-            ]
-        )
+        url = ServiceURL().restful.nid_2019
         self.service = self._init_service(url)
         resp = RetrySession().get(
             "/".join(
@@ -134,7 +129,7 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-    _geometry = geoutils.pygeoutils._geo2polygon(geometry, geo_crs, DEF_CRS)
+    _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
 
     f_list = _get_ssebopeta_urls(dates)
 
@@ -233,7 +228,7 @@ def nlcd(
     years = {"impervious": 2016, "cover": 2016, "canopy": 2016} if years is None else years
     layers = _nlcd_layers(years)
 
-    _geometry = geoutils.pygeoutils._geo2polygon(geometry, geo_crs, crs)
+    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
 
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
     r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
