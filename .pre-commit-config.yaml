@@ -21,7 +21,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.8.0
+    rev: 5.9.1
     hooks:
     - id: isort
       name: Sort imports with isort
@@ -83,7 +83,7 @@ repos:
       additional_dependencies: [flake8-comprehensions, flake8-builtins, flake8-blind-except, flake8-bugbear, flake8-use-fstring, flake8-docstrings, flake8-simplify]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.902
+    rev: v0.910
     hooks:
     - id: mypy
       name: Static type checking with mypy
