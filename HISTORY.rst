@@ -2,6 +2,28 @@
 History
 =======
 
+0.11.1 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add support for the recently released version of NLCD (2019), including the impervious
+  descriptor. Highlights of the new database are:
+
+    NLCD 2019 now offers land cover for years 2001, 2004, 2006, 2008, 2011, 2013, 2016, 2019,
+    and impervious surface and impervious descriptor products now updated to match each date
+    of land cover. These products update all previously released versions of landcover and
+    impervious products for CONUS (NLCD 2001, NLCD 2006, NLCD 2011, NLCD 2016) and are not
+    directly comparable to previous products. NLCD 2019 land cover and impervious surface product
+    versions of previous dates must be downloaded for proper comparison. NLCD 2019 also offers an
+    impervious surface descriptor product that identifies the type of each impervious surface pixel.
+    This product identifies types of roads, wind tower sites, building locations, and energy
+    production sites to allow deeper analysis of developed features.
+
+    -- `MRLC <https://www.mrlc.gov>`__
+
+- Add support for all the supported regions of NLCD database (CONUS, AK, HI, and PR).
+
 0.11.0 (2021-06-19)
 -------------------
 
