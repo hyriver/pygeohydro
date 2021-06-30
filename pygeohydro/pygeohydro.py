@@ -4,7 +4,6 @@ import logging
 import re
 import sys
 import zipfile
-from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 import async_retriever as ar
@@ -93,11 +92,10 @@ def ssebopeta_byloc(
                         "eta": [e[0] for e in src.sample([(lon, lat)])][0],
                     }
 
-        eta_list = ogc.utils.threading(_ssebop, f_list, max_workers=4)
-    eta = pd.DataFrame.from_records(eta_list)
+        eta = pd.DataFrame.from_records(ogc.utils.threading(_ssebop, f_list, max_workers=4))
     eta.columns = ["datetime", "eta (mm/day)"]
-    eta = eta.set_index("datetime")
-    return eta * 1e-3
+    eta = eta.sort_values("datetime").set_index("datetime") * 1e-3
+    return eta
 
 
 def ssebopeta_bygeom(
@@ -137,16 +135,15 @@ def ssebopeta_bygeom(
 
     with session.onlyipv4():
 
-        def _ssebop(url_stamped: Tuple[str, str]) -> Tuple[str, xr.DataArray]:
+        def _ssebop(url_stamped: Tuple[str, str]) -> xr.DataArray:
             dt, url = url_stamped
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
             ds = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
-            return dt, ds.expand_dims({"time": [dt]})
+            return ds.expand_dims({"time": [dt]})
 
-        resp_list = ogc.utils.threading(_ssebop, f_list, max_workers=4)
-        data = xr.merge(OrderedDict(sorted(resp_list, key=lambda x: x[0])).values())
+        data = xr.merge(ogc.utils.threading(_ssebop, f_list, max_workers=4)).sortby("time")
 
     eta = data.eta.copy()
     eta *= 1e-3
@@ -195,6 +192,7 @@ def nlcd(
     geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     resolution: float,
     years: Optional[Dict[str, Optional[int]]] = None,
+    region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
 ) -> xr.Dataset:
@@ -212,8 +210,11 @@ def nlcd(
         based on the geometry bounds and the given resolution.
     years : dict, optional
         The years for NLCD data as a dictionary, defaults to
-        {'impervious': 2016, 'cover': 2016, 'canopy': 2016}. Set the value of a layer to None,
-        to ignore it.
+        ``{'impervious': 2019, 'cover': 2019, 'canopy': 2019, "descriptor": 2019}``.
+        Set the value of a layer to None, to ignore it.
+    region : str, optional
+        Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
+        AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
     geo_crs : str, optional
         The CRS of the input geometry, defaults to epsg:4326.
     crs : str, optional
@@ -225,8 +226,16 @@ def nlcd(
      xarray.DataArray
          NLCD within a geometry
     """
-    years = {"impervious": 2016, "cover": 2016, "canopy": 2016} if years is None else years
-    layers = _nlcd_layers(years)
+    if resolution < 30:
+        logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
+
+    default_years = {"impervious": 2019, "cover": 2019, "canopy": 2019, "descriptor": 2019}
+    _years = default_years if years is None else years
+
+    if not isinstance(_years, dict):
+        raise InvalidInputType("years", "dict", f"{default_years}")
+
+    layers = _nlcd_layers(_years, region)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
 
@@ -252,26 +261,27 @@ def nlcd(
     return ds
 
 
-def _nlcd_layers(years: Dict[str, Optional[int]]) -> List[str]:
+def _nlcd_layers(years: Dict[str, Optional[int]], region: str) -> List[str]:
     """Get NLCD layers for the provided years dictionary."""
+    valid_regions = ["L48", "HI", "PR", "AK"]
+    region = region.upper()
+    if region not in valid_regions:
+        raise InvalidInputValue("region", valid_regions)
+
     nlcd_meta = helpers.nlcd_helper()
 
-    names = ["impervious", "cover", "canopy"]
+    names = ["impervious", "cover", "canopy", "descriptor"]
     avail_years = {n: nlcd_meta[f"{n}_years"] + [None] for n in names}
-
-    if not isinstance(years, dict):
-        raise InvalidInputType(
-            "years", "dict", "{'impervious': 2016, 'cover': 2016, 'canopy': 2016}"  # noqa: FS003
-        )
 
     if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
         vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
         raise InvalidInputValue("years", vals)
 
     layers = [
-        f'NLCD_{years["canopy"]}_Tree_Canopy_L48',
-        f'NLCD_{years["cover"]}_Land_Cover_Science_product_L48',
-        f'NLCD_{years["impervious"]}_Impervious_L48',
+        f'NLCD_{years["canopy"]}_Tree_Canopy_{region}',
+        f'NLCD_{years["cover"]}_Land_Cover_Science_product_{region}',
+        f'NLCD_{years["impervious"]}_Impervious_{region}',
+        f'NLCD_{years["impervious"]}_Impervious_Descriptor_{region}',
     ]
 
     nones = [lyr for lyr in layers if "None" in lyr]
