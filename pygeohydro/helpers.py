@@ -22,30 +22,39 @@ def nlcd_helper() -> Dict[str, Any]:
     dict
         Years where data is available and cover classes and categories, and roughness estimations.
     """
-    url = (
-        "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/"
-        + "NLCD_2016_Land_Cover_Science_product_L48.xml"
-    )
-    r = RetrySession().get(url)
+    session = RetrySession()
+    base_url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata"
+    base_path = "eainfo/detailed/attr/attrdomv/edom"
 
-    root = etree.fromstring(r.content)
+    def _get_xml(layer):
+        url = f"{base_url}/{layer}.xml"
+        root = etree.fromstring(session.get(url).text)
+        return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
-    clist = root[4][1][1].text.split("\n")[2:]
-    _colors = [i.split() for i in clist]
-    colors = {int(c): (float(r), float(g), float(b)) for c, r, g, b in _colors}
+    root, edomv, edomvd = _get_xml("nlcd_2019_land_cover_l48_20210604")
+    cover_classes = {}
+    for t, v in zip(edomv, edomvd):
+        cover_classes[t.text] = v.text
 
-    classes = {
-        root[4][0][3][i][0][0].text: root[4][0][3][i][0][1].text.split("-")[0].strip()
-        for i in range(3, len(root[4][0][3]))
-    }
+    clist = [i.split() for i in root.find("eainfo/overview/eadetcit").text.split("\n")[2:]]
+    colors = {int(c): (float(r), float(g), float(b)) for c, r, g, b in clist}
 
+    _, edomv, edomvd = _get_xml("nlcd_2019_impervious_descriptor_l48_20210604")
+    descriptors = {}
+    for t, v in zip(edomv, edomvd):
+        tag = t.text.split(" - ")
+        descriptors[tag[0]] = v.text if tag[-1].isnumeric() else f"{tag[-1]}: {v.text}"
+
+    cyear = [2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001]
     nlcd_meta = {
-        "impervious_years": [2016, 2011, 2006, 2001],
+        "cover_years": cyear,
+        "impervious_years": cyear,
+        "descriptor_years": cyear,
         "canopy_years": [2016, 2011],
-        "cover_years": [2016, 2013, 2011, 2008, 2006, 2004, 2001],
-        "classes": classes,
+        "classes": cover_classes,
         "categories": {
-            "Unclassified": ("0"),
+            "Background": ("127",),
+            "Unclassified": ("0",),
             "Water": ("11", "12"),
             "Developed": ("21", "22", "23", "24"),
             "Barren": ("31",),
@@ -55,6 +64,7 @@ def nlcd_helper() -> Dict[str, Any]:
             "Planted/Cultivated": ("81", "82"),
             "Wetlands": ("90", "95"),
         },
+        "descriptors": descriptors,
         "roughness": {
             "11": 0.001,
             "12": 0.022,
