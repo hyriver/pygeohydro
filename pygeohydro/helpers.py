@@ -1,10 +1,10 @@
 """Some helper function for PyGeoHydro."""
 from typing import Any, Dict
 
+import async_retriever as ar
 import defusedxml.ElementTree as etree
 import numpy as np
 import pandas as pd
-from pygeoogc import RetrySession
 
 
 def nlcd_helper() -> Dict[str, Any]:
@@ -22,13 +22,11 @@ def nlcd_helper() -> Dict[str, Any]:
     dict
         Years where data is available and cover classes and categories, and roughness estimations.
     """
-    session = RetrySession()
     base_url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata"
     base_path = "eainfo/detailed/attr/attrdomv/edom"
 
     def _get_xml(layer):
-        url = f"{base_url}/{layer}.xml"
-        root = etree.fromstring(session.get(url).text)
+        root = etree.fromstring(ar.retrieve([f"{base_url}/{layer}.xml"], "text")[0])
         return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
     root, edomv, edomvd = _get_xml("nlcd_2019_land_cover_l48_20210604")

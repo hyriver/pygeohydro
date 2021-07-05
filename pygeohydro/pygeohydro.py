@@ -15,7 +15,7 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, MatchCRS, RetrySession, ServiceURL
+from pygeoogc import WMS, RetrySession, ServiceURL
 from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -39,16 +39,19 @@ class NID(AGRBase):
         super().__init__("nid2019_u", "*", DEF_CRS)
         url = ServiceURL().restful.nid_2019
         self.service = self._init_service(url)
-        resp = RetrySession().get(
-            "/".join(
-                [
-                    "https://gist.githubusercontent.com/cheginit",
-                    "91af7f7427763057a18000c5309280dc/raw",
-                    "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
-                ]
-            )
+        rjson = ar.retrieve(
+            [
+                "/".join(
+                    [
+                        "https://gist.githubusercontent.com/cheginit",
+                        "91af7f7427763057a18000c5309280dc/raw",
+                        "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
+                    ]
+                )
+            ],
+            "json",
         )
-        self.attrs = pd.DataFrame(resp.json())
+        self.attrs = pd.DataFrame(rjson[0])
 
 
 def ssebopeta_byloc(
@@ -229,7 +232,7 @@ def nlcd(
     if resolution < 30:
         logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
-    default_years = {"impervious": 2019, "cover": 2019, "canopy": 2019, "descriptor": 2019}
+    default_years = {"impervious": 2016, "cover": 2016, "canopy": 2016, "descriptor": 2016}
     _years = default_years if years is None else years
 
     if not isinstance(_years, dict):
@@ -666,7 +669,7 @@ def interactive_map(
     >>> n_stations
     10
     """
-    bbox = MatchCRS(crs, DEF_CRS).bounds(bbox)
+    bbox = ogc.utils.match_crs(bbox, crs, DEF_CRS)
     ogc.utils.check_bbox(bbox)
 
     nwis = NWIS()
