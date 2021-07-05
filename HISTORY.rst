@@ -24,6 +24,10 @@ New Features
 
 - Add support for all the supported regions of NLCD database (CONUS, AK, HI, and PR).
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Migrate to using ``AsyncRetriever`` for handling communications with web services.
+
 0.11.0 (2021-06-19)
 -------------------
 
