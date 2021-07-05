@@ -45,8 +45,8 @@ def test_get_ssebopeta_urls():
 
 
 def test_nlcd():
-    gh.nlcd(GEOM.bounds, resolution=1e3)
-    years = {"impervious": None, "cover": 2016, "canopy": None}
+    _ = gh.nlcd(GEOM.bounds, resolution=1e3)
+    years = {"impervious": None, "cover": None, "canopy": 2016, "descriptor": None}
     lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
     st = gh.cover_statistics(lulc.cover)
     assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
