@@ -3,7 +3,6 @@
 The original script is from
 `xarray <https://github.com/pydata/xarray/blob/master/xarray/util/print_versions.py>`__
 """
-import configparser
 import importlib
 import locale
 import os
@@ -12,8 +11,10 @@ import re
 import struct
 import subprocess
 import sys
-from pathlib import Path
 from typing import IO, List, Optional, Tuple
+
+import cytoolz as tlz
+import pkg_resources
 
 
 def get_sys_info() -> List[Tuple[str, Optional[str]]]:
@@ -79,21 +80,31 @@ def show_versions(file: IO = sys.stdout) -> None:
         print to the given file-like object. Defaults to sys.stdout.
     """
     sys_info = get_sys_info()
-    config = configparser.ConfigParser()
-    config.read(Path(Path(__file__).parent, "..", "setup.cfg"))
-    req_list = re.sub(r"\[(.*?)\]", "", config.get("options", "install_requires").strip()).split(
-        "\n"
-    )
+    hyriver = [
+        "async-retriever",
+        "pygeoogc",
+        "pygeoutils",
+        "pynhd",
+        "py3dep",
+        "pygeohydro",
+        "pydaymet",
+    ]
+    _req_list = [hyriver]
+    for pname in hyriver:
+        try:
+            reqs = pkg_resources.working_set.by_key[pname].requires()  # type: ignore
+            _req_list.append([re.sub(r"\[(.*?)\]", "", str(r)) for r in reqs])
+        except KeyError:
+            continue
+
+    fix = {"netcdf4": "netCDF4", "pyyaml": "yaml"}
+    req_list = [fix[r] if r in fix else r for r in set(tlz.concat(_req_list))]
     deps = [
-        # package version
-        (config.get("metadata", "name"), lambda mod: mod.__version__),
-        # dependencies
+        # hyriver packages' deps
         *((r, lambda mod: mod.__version__) for r in req_list),
         # setup/test
         ("setuptools", lambda mod: mod.__version__),
         ("pip", lambda mod: mod.__version__),
-        ("conda", lambda mod: mod.__version__),
-        ("mamba", lambda mod: mod.__version__),
         ("pytest", lambda mod: mod.__version__),
         ("ward", lambda mod: mod.__version__),
     ]
@@ -115,8 +126,10 @@ def show_versions(file: IO = sys.stdout) -> None:
                 ver = ver_f(mod)
                 deps_blob.append((modname, ver))
             except (NotImplementedError, AttributeError):
-                deps_blob.append((modname, "installed"))
-
+                if modname == "pydantic":
+                    deps_blob.append((modname, mod.version.VERSION))  # type: ignore
+                else:
+                    deps_blob.append((modname, "installed"))
     print("\nINSTALLED VERSIONS", file=file)
     print("------------------", file=file)
 
@@ -124,5 +137,5 @@ def show_versions(file: IO = sys.stdout) -> None:
         print(f"{k}: {stat}", file=file)
 
     print("", file=file)
-    for k, stat in deps_blob:
+    for k, stat in sorted(deps_blob):
         print(f"{k}: {stat}", file=file)
