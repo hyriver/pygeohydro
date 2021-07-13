@@ -20,8 +20,8 @@ repos:
       name: Autoformat setup.cfg
       args: [--min-py3-version, "3.7"]
 
-  - repo: https://github.com/timothycrosley/isort
-    rev: 5.9.1
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.9.2
     hooks:
     - id: isort
       name: Sort imports with isort
@@ -69,13 +69,13 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.20.0
+    rev: v2.21.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
       args: [--py37-plus]
 
-  - repo: https://gitlab.com/pycqa/flake8
+  - repo: https://github.com/PyCQA/flake8
     rev: 3.9.2
     hooks:
     - id: flake8
