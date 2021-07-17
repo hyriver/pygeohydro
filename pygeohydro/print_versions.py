@@ -13,8 +13,9 @@ import subprocess
 import sys
 from typing import IO, List, Optional, Tuple
 
-import cytoolz as tlz
 import pkg_resources
+
+__all__ = ["show_versions"]
 
 
 def get_sys_info() -> List[Tuple[str, Optional[str]]]:
@@ -89,16 +90,12 @@ def show_versions(file: IO = sys.stdout) -> None:
         "pygeohydro",
         "pydaymet",
     ]
-    _req_list = [hyriver]
-    for pname in hyriver:
-        try:
-            reqs = pkg_resources.working_set.by_key[pname].requires()  # type: ignore
-            _req_list.append([re.sub(r"\[(.*?)\]", "", str(r)) for r in reqs])
-        except KeyError:
-            continue
+    reg = re.compile(r"\[(.*?)\]")
+    ws = pkg_resources.working_set.by_key  # type: ignore
+    _req_list = [reg.sub("", str(r)) for p in hyriver if p in ws for r in ws[p].requires()]
 
     fix = {"netcdf4": "netCDF4", "pyyaml": "yaml"}
-    req_list = [fix[r] if r in fix else r for r in set(tlz.concat(_req_list))]
+    req_list = [fix[r] if r in fix else r for r in set(_req_list + hyriver)]
     deps = [
         # hyriver packages' deps
         *((r, lambda mod: mod.__version__) for r in req_list),
@@ -112,24 +109,16 @@ def show_versions(file: IO = sys.stdout) -> None:
     deps_blob: List[Tuple[str, Optional[str]]] = []
     for (modname, ver_f) in deps:
         try:
-            if modname in sys.modules:
-                mod = sys.modules[modname]
-            else:
-                try:
-                    mod = importlib.import_module(modname)
-                except ModuleNotFoundError:
-                    mod = importlib.import_module(modname.replace("-", "_"))
+            mod = _get_mod(modname)
         except ModuleNotFoundError:
             deps_blob.append((modname, None))
         else:
             try:
-                ver = ver_f(mod)
-                deps_blob.append((modname, ver))
+                ver = mod.version.VERSION if modname == "pydantic" else ver_f(mod)
             except (NotImplementedError, AttributeError):
-                if modname == "pydantic":
-                    deps_blob.append((modname, mod.version.VERSION))  # type: ignore
-                else:
-                    deps_blob.append((modname, "installed"))
+                ver = "installed"
+            deps_blob.append((modname, ver))
+
     print("\nINSTALLED VERSIONS", file=file)
     print("------------------", file=file)
 
@@ -139,3 +128,12 @@ def show_versions(file: IO = sys.stdout) -> None:
     print("", file=file)
     for k, stat in sorted(deps_blob):
         print(f"{k}: {stat}", file=file)
+
+
+def _get_mod(modname: str):
+    try:
+        if modname in sys.modules:
+            return sys.modules[modname]
+        return importlib.import_module(modname)  # notc: TC300
+    except ModuleNotFoundError:
+        return importlib.import_module(modname.replace("-", "_"))
