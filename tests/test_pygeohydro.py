@@ -1,12 +1,12 @@
 """Tests for PyGeoHydro package."""
 import io
 
-import pytest
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
 from pygeohydro import NID, NWIS
 
+SMALL = 1e-3
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
 DATES = ("2005-01-01", "2005-01-31")
@@ -16,40 +16,58 @@ GEOM = Polygon(
 )
 
 
-def test_nwis():
-    nwis = NWIS()
-    qobs = nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-    info = nwis.get_info(nwis.query_byid([SID_NATURAL]), expanded=True)
-    info_box = nwis.get_info(nwis.query_bybox(GEOM.bounds))
-    assert (
-        abs(qobs.sum().item() - 27.630) < 1e-3 and info.hcdn_2009.item() and info_box.shape[0] == 36
-    )
+class TestNWIS:
+    "Test NWIS"
+    nwis: NWIS = NWIS()
+
+    def test_qobs(self):
+        qobs = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
+        assert abs(qobs.sum().item() - 27.630) < SMALL
+
+    def test_info(self):
+        query = {"sites": ",".join([SID_NATURAL])}
+        info = self.nwis.get_info(query, expanded=True)
+        assert info.hcdn_2009.item()
+
+    def test_info_box(self):
+        query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
+        info_box = self.nwis.get_info(query)
+        assert info_box.shape[0] == 36
+
+    def test_param_cd(self):
+        codes = self.nwis.get_parameter_codes("%discharge%")
+        assert (
+            codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
+            == "Discharge, cubic feet per second"
+        )
 
 
-def test_ssebopeta():
+class TestETA:
+    "Test ssebopeta"
     dates = ("2000-01-01", "2000-01-05")
-    coords = (GEOM.centroid.x, GEOM.centroid.y)
-    eta_p = gh.ssebopeta_byloc(coords, dates=dates)
-    eta_g = gh.ssebopeta_bygeom(GEOM, dates=dates)
-    assert (
-        abs(eta_p.mean().values[0] - 0.575) < 1e-3
-        and abs(eta_g.mean().values.item() - 0.576) < 1e-3
-    )
+    years = [2010, 2014, 2015]
+
+    def test_coords(self):
+        eta_p = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
+        assert abs(eta_p.mean().values[0] - 0.575) < SMALL
+
+    def test_geom(self):
+        eta_g = gh.ssebopeta_bygeom(GEOM, dates=self.dates)
+        assert abs(eta_g.mean().values.item() - 0.576) < SMALL
+
+    def test_get_ssebopeta_urls(self):
+        _ = gh.pygeohydro._get_ssebopeta_urls(self.years[0])
+        urls_dates = gh.pygeohydro._get_ssebopeta_urls(DATES_LONG)
+        urls_years = gh.pygeohydro._get_ssebopeta_urls(self.years)
+        assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
-def test_get_ssebopeta_urls():
-    gh.pygeohydro._get_ssebopeta_urls(2010)
-    urls_dates = gh.pygeohydro._get_ssebopeta_urls(DATES_LONG)
-    urls_years = gh.pygeohydro._get_ssebopeta_urls([2010, 2014, 2015])
-    assert len(urls_dates) == 3653 and len(urls_years) == 1095
-
-
-def test_nlcd():
-    _ = gh.nlcd(GEOM.bounds, resolution=1e3)
-    years = {"impervious": None, "cover": None, "canopy": 2016, "descriptor": None}
-    lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
-    st = gh.cover_statistics(lulc.cover)
-    assert abs(st["categories"]["Forest"] - 82.548) < 1e-3
+# def test_nlcd():
+#     _ = gh.nlcd(GEOM.bounds, resolution=1e3)
+#     years = {"impervious": None, "cover": None, "canopy": 2016, "descriptor": None}
+#     lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
+#     st = gh.cover_statistics(lulc.cover)
+#     assert abs(st["categories"]["Forest"] - 82.548) < SMALL
 
 
 class TestNID:
@@ -69,16 +87,10 @@ class TestNID:
         assert len(dams) == 5331
 
 
-@pytest.mark.parametrize("dv", [True, False])
-@pytest.mark.parametrize("iv", [True, False])
-def test_interactive_map(dv, iv):
-    m = gh.interactive_map(GEOM.bounds, dv=dv, iv=iv)
-    if dv and iv:
-        assert len(m.to_dict()["children"]) == 11
-    elif not dv and not iv:
-        assert len(m.to_dict()["children"]) == 37
-    else:
-        assert len(m.to_dict()["children"]) == 10
+def test_interactive_map():
+    nwis_kwds = {"hasDataTypeCd": "dv", "outputDataTypeCd": "dv", "parameterCd": "00060"}
+    m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
+    assert len(m.to_dict()["children"]) == 4
 
 
 def test_plot():
