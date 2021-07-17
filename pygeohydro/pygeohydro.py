@@ -37,8 +37,7 @@ class NID(AGRBase):
 
     def __init__(self):
         super().__init__("nid2019_u", "*", DEF_CRS)
-        url = ServiceURL().restful.nid_2019
-        self.service = self._init_service(url)
+        self.service = ServiceURL().restful.nid_2019
         rjson = ar.retrieve(
             [
                 "/".join(
@@ -95,7 +94,7 @@ def ssebopeta_byloc(
                         "eta": [e[0] for e in src.sample([(lon, lat)])][0],
                     }
 
-        eta = pd.DataFrame.from_records(ogc.utils.threading(_ssebop, f_list, max_workers=4))
+        eta = pd.DataFrame.from_records(_ssebop(f) for f in f_list)
     eta.columns = ["datetime", "eta (mm/day)"]
     eta = eta.sort_values("datetime").set_index("datetime") * 1e-3
     return eta
@@ -146,7 +145,7 @@ def ssebopeta_bygeom(
             ds = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
             return ds.expand_dims({"time": [dt]})
 
-        data = xr.merge(ogc.utils.threading(_ssebop, f_list, max_workers=4)).sortby("time")
+        data = xr.merge(_ssebop(f) for f in f_list).sortby("time")
 
     eta = data.eta.copy()
     eta *= 1e-3
@@ -303,24 +302,6 @@ class NWIS:
     def __init__(self) -> None:
         self.url = ServiceURL().restful.nwis
 
-    @staticmethod
-    def query_byid(ids: Iterable[str]) -> Dict[str, str]:
-        """Generate the geometry keys and values of an ArcGISRESTful query."""
-        if not isinstance(ids, (Sequence, Iterable)) or isinstance(ids, str):
-            raise InvalidInputType("ids", "list of str")
-
-        query = {"sites": ",".join(ids)}
-
-        return query
-
-    @staticmethod
-    def query_bybox(bbox: Tuple[float, float, float, float]) -> Dict[str, str]:
-        """Generate the geometry keys and values of an ArcGISRESTful query."""
-        ogc.utils.check_bbox(bbox)
-        query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-
-        return query
-
     def get_info(
         self, queries: Union[Dict[str, str], List[Dict[str, str]]], expanded: bool = False
     ) -> pd.DataFrame:
@@ -341,14 +322,14 @@ class NWIS:
         queries = [queries] if isinstance(queries, dict) else queries
 
         payloads = self._validate_usgs_queries(queries, False)
-        sites = self.retrieve_rdb("site", payloads)
+        sites = self.retrieve_rdb(f"{self.url}/site", payloads)
 
         float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
 
         if expanded:
             payloads = self._validate_usgs_queries(queries, True)
             sites = sites.merge(
-                self.retrieve_rdb("site", payloads),
+                self.retrieve_rdb(f"{self.url}/site", payloads),
                 on="site_no",
                 how="outer",
                 suffixes=("", "_overlap"),
@@ -390,8 +371,46 @@ class NWIS:
 
         return sites
 
+    def get_parameter_cods(self, keyword: str) -> pd.DataFrame:
+        """Search for parameter codes by name or number.
+
+        Notes
+        -----
+        NWIS guideline for keywords is as follows:
+
+            By default an exact search is made. To make a partial search the term
+            should be prefixed and suffixed with a % sign. The % sign matches zero
+            or more characters at the location. For example, to find all with "discharge"
+            enter %discharge% in the field. % will match any number of characters
+            (including zero characters) at the location.
+
+        Parameters
+        ----------
+        keyword : str
+            Keyword to search for parameters by name of number.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Matched parameter codes as a dataframe with their description.
+
+        Examples
+        --------
+        >>> from pygeohydro import NWIS
+        >>> nwis = NWIS()
+        >>> codes = nwis.get_parameter_cods("%discharge%")
+        >>> codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
+        'Discharge, cubic feet per second'
+        """
+        url = "https://help.waterdata.usgs.gov/code/parameter_cd_nm_query"
+        kwds = [{"parm_nm_cd": keyword, "fmt": "rdb"}]
+        return self.retrieve_rdb(url, kwds)
+
     def get_streamflow(
-        self, station_ids: Union[Sequence[str], str], dates: Tuple[str, str], mmd: bool = False
+        self,
+        station_ids: Union[Sequence[str], str],
+        dates: Tuple[str, str],
+        mmd: bool = False,
     ) -> pd.DataFrame:
         """Get mean daily streamflow observations from USGS.
 
@@ -401,7 +420,7 @@ class NWIS:
             The gage ID(s)  of the USGS station.
         dates : tuple
             Start and end dates as a tuple (start, end).
-        mmd : bool
+        mmd : bool, optional
             Convert cms to mm/day based on the contributing drainage area of the stations.
 
         Returns
@@ -426,7 +445,7 @@ class NWIS:
                 "parameterCd": "00060",
                 "siteStatus": "all",
                 "outputDataTypeCd": "dv",
-                **self.query_byid(s),
+                "sites": ",".join(s),
             }
             for s in tlz.partition_all(1500, sids)
         ]
@@ -453,8 +472,36 @@ class NWIS:
             for s in tlz.partition_all(1500, sids)
         ]
         urls, kwds = zip(*((f"{self.url}/dv", {"params": p}) for p in payloads))
-        resp = ar.retrieve(urls, "json", kwds)
+        qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds))
 
+        if qobs.shape[1] != len(station_ids):
+            dropped = [s for s in station_ids if f"USGS-{s}" not in qobs]
+            logger.warning(
+                f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
+                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
+            )
+
+        if mmd:
+            area = self._get_drainage_area(sids)
+            ms2mmd = 1000.0 * 24.0 * 3600.0
+            try:
+                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+            except KeyError:
+                raise KeyError("Some stations have missing drainage area.")
+        return qobs
+
+    @staticmethod
+    def _get_drainage_area(station_ids: List[str]) -> pd.DataFrame:
+        nldi = NLDI()
+        basins = nldi.get_basins(station_ids)
+        if isinstance(basins, tuple):
+            basins = basins[0]
+        eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
+        return basins.to_crs(eck4).area
+
+    @staticmethod
+    def _to_dataframe(resp: List[Dict[str, Any]]) -> pd.DataFrame:
+        """Convert json to dataframe."""
         r_ts = {
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
             for r in resp
@@ -469,31 +516,11 @@ class NWIS:
             return discharge
 
         qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
-
-        if qobs.shape[1] != len(station_ids):
-            dropped = [s for s in station_ids if f"USGS-{s}" not in qobs]
-            logger.warning(
-                f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
-                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
-            )
         # Convert cfs to cms
-        qobs = qobs.astype("float64") * 0.028316846592
+        return qobs.astype("float64") * 0.028316846592
 
-        if mmd:
-            nldi = NLDI()
-            basins = nldi.get_basins(sids)
-            if isinstance(basins, tuple):
-                basins = basins[0]
-            eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
-            area = basins.to_crs(eck4).area
-            ms2mmd = 1000.0 * 24.0 * 3600.0
-            try:
-                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
-            except KeyError:
-                raise KeyError("Some stations have missing drainage area.")
-        return qobs
-
-    def retrieve_rdb(self, service: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
+    @staticmethod
+    def retrieve_rdb(url: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
         """Retrieve and process requests with RDB format.
 
         Parameters
@@ -510,7 +537,7 @@ class NWIS:
         pandas.DataFrame
             Requested features as a pandas's DataFrame.
         """
-        urls, kwds = zip(*((f"{self.url}/{service}", {"params": p}) for p in payloads))
+        urls, kwds = zip(*((url, {"params": {**p, "format": "rdb"}}) for p in payloads))
         resp = ar.retrieve(urls, "text", kwds)
         try:
             not_found = next(filter(lambda x: x[0] != "#", resp), None)
@@ -525,7 +552,8 @@ class NWIS:
             raise ZeroMatched("Found no feature for the requested queries.")
 
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
-        rdb_df = rdb_df[~rdb_df.agency_cd.str.contains("agency_cd|5s")].copy()
+        if "agency_cd" in rdb_df:
+            rdb_df = rdb_df[~rdb_df.agency_cd.str.contains("agency_cd|5s")].copy()
         return rdb_df
 
     @staticmethod
@@ -617,17 +645,19 @@ class NWIS:
             "holeDepthMax",
             "holeDepthMaxVa",
         ]
-        not_valid = [k for query in queries for k in query if k not in valid_query_keys]
+
+        not_valid = list(tlz.concat(set(q).difference(set(valid_query_keys)) for q in queries))
         if len(not_valid) > 0:
             raise InvalidInputValue(f"query keys ({', '.join(not_valid)})", valid_query_keys)
 
         _queries = queries.copy()
-        if expanded and any("outputDataTypeCd" in q or "outputDataType" in q for q in queries):
+        if expanded:
             _ = [
                 q.pop(k) for k in ["outputDataTypeCd", "outputDataType"] for q in _queries if k in q
             ]
-
-        output_type = {"siteOutput": "expanded"} if expanded else {"siteOutput": "basic"}
+            output_type = {"siteOutput": "expanded"}
+        else:
+            output_type = {"siteOutput": "basic"}
 
         return [{**query, **output_type, "format": "rdb"} for query in _queries]
 
@@ -635,9 +665,7 @@ class NWIS:
 def interactive_map(
     bbox: Tuple[float, float, float, float],
     crs: str = DEF_CRS,
-    dv: bool = False,
-    iv: bool = False,
-    param_cd: Optional[str] = None,
+    nwis_kwds: Optional[Dict[str, Any]] = None,
 ) -> folium.Map:
     """Generate an interactive map including all USGS stations within a bounding box.
 
@@ -647,14 +675,10 @@ def interactive_map(
         List of corners in this order (west, south, east, north)
     crs : str, optional
         CRS of the input bounding box, defaults to EPSG:4326.
-    dv : bool, optional
-        Only include stations that record daily values, default to False.
-    iv : bool, optional
-        Only include stations that record instantaneous/real-time values, default to False.
-    param_cd : str, optional
-        Parameter code for further filtering the stations, defaults to None.
-        A list of parameter codes can be found
-        `here <https://help.waterdata.usgs.gov/codes-and-parameters/parameters>`__.
+    nwis_kwds : dict, optional
+        Optional keywords to include in the NWIS request as a dictionary like so:
+        ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
+        Default to None.
 
     Returns
     -------
@@ -664,7 +688,8 @@ def interactive_map(
     Examples
     --------
     >>> import pygeohydro as gh
-    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), dv=True, iv=True)
+    >>> nwis_kwds = {"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv"}
+    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
     >>> n_stations = len(m.to_dict()["children"]) - 1
     >>> n_stations
     10
@@ -673,14 +698,9 @@ def interactive_map(
     ogc.utils.check_bbox(bbox)
 
     nwis = NWIS()
-    query = nwis.query_bybox(bbox)
-
-    if dv or iv:
-        query["hasDataTypeCd"] = ",".join(i for i, j in zip(["dv", "iv"], [dv, iv]) if j)
-        query["outputDataTypeCd"] = query["hasDataTypeCd"]
-
-    if param_cd is not None:
-        query["parameterCd"] = param_cd
+    query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+    if isinstance(nwis_kwds, dict):
+        query.update(nwis_kwds)
 
     sites = nwis.get_info(query, expanded=True)
 
@@ -734,7 +754,11 @@ def interactive_map(
     lon = (west + east) * 0.5
     lat = (south + north) * 0.5
 
-    imap = folium.Map(location=(lat, lon), tiles="Stamen Terrain", zoom_start=10)
+    imap = folium.Map(
+        location=(lat, lon),
+        tiles="Stamen Terrain",
+        zoom_start=10,
+    )
 
     for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
