@@ -371,7 +371,7 @@ class NWIS:
 
         return sites
 
-    def get_parameter_cods(self, keyword: str) -> pd.DataFrame:
+    def get_parameter_codes(self, keyword: str) -> pd.DataFrame:
         """Search for parameter codes by name or number.
 
         Notes
@@ -398,7 +398,7 @@ class NWIS:
         --------
         >>> from pygeohydro import NWIS
         >>> nwis = NWIS()
-        >>> codes = nwis.get_parameter_cods("%discharge%")
+        >>> codes = nwis.get_parameter_codes("%discharge%")
         >>> codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
         'Discharge, cubic feet per second'
         """
