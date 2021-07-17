@@ -16,5 +16,22 @@ from .pygeohydro import (
 try:
     __version__ = get_distribution(__name__).version
 except DistributionNotFound:
-    # package is not installed
-    pass
+    __version__ = "999"
+
+__all__ = [
+    "NID",
+    "NWIS",
+    "cover_statistics",
+    "interactive_map",
+    "nlcd",
+    "ssebopeta_bygeom",
+    "ssebopeta_byloc",
+    "helpers",
+    "plot",
+    "InvalidInputRange",
+    "InvalidInputType",
+    "InvalidInputValue",
+    "ZeroMatched",
+    "show_versions",
+    "__version__",
+]
