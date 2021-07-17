@@ -32,8 +32,8 @@ Bug reports that follow these guidelines are easier to diagnose, and so are ofte
 **Environment**:
 
 <details><summary>Output of <tt>pygeohydro.show_versions()</tt></summary>
+<!-- Paste the output below and between the back ticks -->
+```
 
-<!-- Paste the output here pygeohydro.show_versions() here -->
-
-
+```
 </details>

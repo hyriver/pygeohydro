@@ -1,7 +1,6 @@
-<!-- Feel free to remove check-list items aren't relevant to your change -->
+<!-- Feel free to remove check-list items aren't relevant to your changes -->
 
  - [ ] Closes #xxxx
- - [ ] Tests added and passed `make coverage`
- - [ ] Passes `make lint`
- - [ ] User visible changes (including notable bug fixes) are documented in `HISTORY.rst`
- - [ ] After adding new functions/methods ran `make apidocs`
+ - [ ] Tests added and `nox` passes.
+ - [ ] Passes `pre-commit run --all-files`
+ - [ ] Changes and the contributor name are documented in `HISTORY.rst`.
