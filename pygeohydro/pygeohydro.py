@@ -420,17 +420,7 @@ class NWIS:
             Streamflow data observations in cubic meter per second (cms). The stations that
             don't provide mean daily discharge in the target period will be dropped.
         """
-        if not isinstance(station_ids, (str, Sequence, Iterable)):
-            raise InvalidInputType("ids", "str or list of str")
-
-        sids = [station_ids] if isinstance(station_ids, str) else station_ids
-
-        if not isinstance(dates, tuple) or len(dates) != 2:
-            raise InvalidInputType("dates", "tuple", "(start, end)")
-
-        start = pd.to_datetime(dates[0])
-        end = pd.to_datetime(dates[1])
-
+        sids, start, end = self._check_inputs(station_ids, dates)
         queries = [
             {
                 "parameterCd": "00060",
@@ -476,10 +466,27 @@ class NWIS:
             area = self._get_drainage_area(sids)
             ms2mmd = 1000.0 * 24.0 * 3600.0
             try:
-                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+                return qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
         return qobs
+
+    @staticmethod
+    def _check_inputs(
+        station_ids: Union[Sequence[str], str], dates: Tuple[str, str]
+    ) -> Tuple[Sequence[str], pd.DatetimeIndex, pd.DatetimeIndex]:
+        """Validate inputs."""
+        if not isinstance(station_ids, (str, Sequence, Iterable)):
+            raise InvalidInputType("ids", "str or list of str")
+
+        sids = [station_ids] if isinstance(station_ids, str) else station_ids
+
+        if not isinstance(dates, tuple) or len(dates) != 2:
+            raise InvalidInputType("dates", "tuple", "(start, end)")
+
+        start = pd.to_datetime(dates[0])
+        end = pd.to_datetime(dates[1])
+        return sids, start, end
 
     @staticmethod
     def _get_drainage_area(station_ids: List[str]) -> pd.DataFrame:
