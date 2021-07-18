@@ -4,9 +4,8 @@ Plots includes  daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
 import calendar
-import os
 from pathlib import Path
-from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union, ValuesView
+from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import matplotlib
 import pandas as pd
@@ -121,7 +120,7 @@ def signatures(
     plt.suptitle(title, size=16, y=title_ypos)
 
     if output is not None:
-        _check_dir(output)
+        Path(output).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(output, dpi=300, bbox_inches="tight")
 
 
@@ -225,26 +224,3 @@ def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.
         for c in daily
     ]
     return pd.concat(fdc, axis=1)
-
-
-def _check_dir(
-    fpath_itr: Optional[
-        Union[ValuesView[Optional[Union[str, Path]]], List[Optional[Union[str, Path]]], str, Path]
-    ]
-) -> None:
-    """Create parent directory for a file if doesn't exist."""
-    if isinstance(fpath_itr, (str, Path)):
-        fpath_itr = [fpath_itr]
-    elif not isinstance(fpath_itr, Iterable):
-        raise InvalidInputType("fpath_itr", "str or iterable")
-
-    for f in fpath_itr:
-        if f is None:
-            continue
-
-        parent = Path(f).parent
-        if not parent.is_dir():
-            try:
-                os.makedirs(parent)
-            except OSError:
-                raise OSError(f"Parent directory cannot be created: {parent}")
