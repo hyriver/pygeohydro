@@ -33,6 +33,8 @@ New Features
   * For handling more of NWIS's services make ``retrieve_rdb`` more general.
 - Add a new argument called ``nwis_kwds`` to ``interactive_map`` so any NWIS
   specific keywords can be passed for filtering stations.
+- Improve exception handling in ``get_streamflow`` method and simplify and improve
+  its performance for getting HCDN.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
