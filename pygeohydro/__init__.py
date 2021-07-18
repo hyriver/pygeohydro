@@ -1,7 +1,13 @@
 from pkg_resources import DistributionNotFound, get_distribution
 
 from . import helpers, plot
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue, ZeroMatched
+from .exceptions import (
+    DataNotAvailable,
+    InvalidInputRange,
+    InvalidInputType,
+    InvalidInputValue,
+    ZeroMatched,
+)
 from .print_versions import show_versions
 from .pygeohydro import (
     NID,
@@ -28,6 +34,7 @@ __all__ = [
     "ssebopeta_byloc",
     "helpers",
     "plot",
+    "DataNotAvailable",
     "InvalidInputRange",
     "InvalidInputType",
     "InvalidInputValue",
