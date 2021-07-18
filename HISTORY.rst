@@ -23,14 +23,15 @@ New Features
     -- `MRLC <https://www.mrlc.gov>`__
 
 - Add support for all the supported regions of NLCD database (CONUS, AK, HI, and PR).
-- New features in `NWIS` class are:
-  * Remove `query_*` methods since it's not convinient to pass
+- New features in ``NWIS`` class are:
+  * Remove ``query_*`` methods since it's not convenient to pass
   them directly as a dictionary.
-  * Add a new function called `get_parameter_codes` for getting a list of valid parameter codes.
-  * To decrease complexity of `get_streamflow` method add a new private function to handle some
-    of the tasks.
-  * For handling more of NWIS's services make `retrieve_rdb` more general.
-- Add a new argument called `nwis_kwds` to `interactive_map` so any NWIS
+  * Add a new function called ``get_parameter_codes`` to query parameters and get information
+  about them.
+  * To decrease complexity of ``get_streamflow`` method add a new private function to handle some
+  of the tasks.
+  * For handling more of NWIS's services make ``retrieve_rdb`` more general.
+- Add a new argument called ``nwis_kwds`` to ``interactive_map`` so any NWIS
   specific keywords can be passed for filtering stations.
 
 Internal Changes
