@@ -20,7 +20,13 @@ from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue, ZeroMatched
+from .exceptions import (
+    DataNotAvailable,
+    InvalidInputRange,
+    InvalidInputType,
+    InvalidInputValue,
+    ZeroMatched,
+)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -164,20 +170,18 @@ def _get_ssebopeta_urls(
 
     if isinstance(dates, tuple):
         if len(dates) != 2:
-            raise InvalidInputType(
-                "dates", "Start and end should be passed as a tuple of length 2."
-            )
+            raise InvalidInputType("dates", "(start, end)")
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
         if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2020-12-31"):
-            raise InvalidInputRange("SSEBop database ranges from 2000 to 2020.")
+            raise InvalidInputRange("SSEBop", ("2000", "2020"))
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
         seebop_yrs = np.arange(2000, 2020)
 
         if any(y not in seebop_yrs for y in years):
-            raise InvalidInputRange("SSEBop database ranges from 2000 to 2018.")
+            raise InvalidInputRange("SSEBop", ("2000", "2020"))
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
@@ -291,7 +295,7 @@ def _nlcd_layers(years: Dict[str, Optional[int]], region: str) -> List[str]:
         layers.remove(lyr)
 
     if len(layers) == 0:
-        raise InvalidInputRange("At least one of the layers should have a non-None year.")
+        raise InvalidInputType("years", "at least one non-None year.")
 
     return layers
 
@@ -345,29 +349,16 @@ class NWIS:
         except (AttributeError, KeyError):
             pass
 
-        site_ids = sites.site_no.tolist()
         gii = WaterData("gagesii", DEF_CRS)
-        hcdn_dict: Dict[str, str] = {}
-        try:
-            hcdn = gii.byid("staid", site_ids)
-            hcdn_dict.update(hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict())
-        except (AttributeError, KeyError):
-            for sid in site_ids:
-                try:
-                    hcdn = gii.byid("staid", sid)
-                    hcdn_dict.update(
-                        hcdn[["staid", "hcdn_2009"]].set_index("staid").hcdn_2009.to_dict()
-                    )
-                except (AttributeError, KeyError):
-                    hcdn_dict.update({sid: None})
 
-        def hcdn_2009(x: str) -> Optional[bool]:
-            _hcdn = hcdn_dict.get(x)
-            if _hcdn is not None:
-                return len(_hcdn) > 0
-            return None
+        def _get_hcdn(site_no: str) -> Optional[bool]:
+            hcdn = gii.byid("staid", site_no)
+            try:
+                return len(hcdn.hcdn_2009.iloc[0]) > 0
+            except (AttributeError, KeyError):
+                return None
 
-        sites["hcdn_2009"] = sites.site_no.apply(hcdn_2009)
+        sites["hcdn_2009"] = sites.site_no.apply(_get_hcdn)
 
         return sites
 
@@ -457,7 +448,7 @@ class NWIS:
         ]
         sids = list(set(sids).difference({s for s in sids if s in check_dates}))
         if len(sids) == 0:
-            raise InvalidInputRange("Daily mean data is unavailable for any of the input stations.")
+            raise DataNotAvailable("discharge")
 
         payloads = [
             {
@@ -486,8 +477,8 @@ class NWIS:
             ms2mmd = 1000.0 * 24.0 * 3600.0
             try:
                 qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
-            except KeyError:
-                raise KeyError("Some stations have missing drainage area.")
+            except KeyError as ex:
+                raise DataNotAvailable("drainage") from ex
         return qobs
 
     @staticmethod
@@ -549,7 +540,7 @@ class NWIS:
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
         if len(data) == 0:
-            raise ZeroMatched("Found no feature for the requested queries.")
+            raise ZeroMatched
 
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
         if "agency_cd" in rdb_df:
