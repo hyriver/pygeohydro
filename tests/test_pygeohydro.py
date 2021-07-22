@@ -1,6 +1,7 @@
 """Tests for PyGeoHydro package."""
 import io
 
+import pytest
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
