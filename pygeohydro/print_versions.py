@@ -134,6 +134,6 @@ def _get_mod(modname: str):
     try:
         if modname in sys.modules:
             return sys.modules[modname]
-        return importlib.import_module(modname)  # notc: TC300
+        return importlib.import_module(modname)  # noqa: TC300
     except ModuleNotFoundError:
         return importlib.import_module(modname.replace("-", "_"))
