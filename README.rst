@@ -236,7 +236,7 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     from pynhd import NLDI
 
     geometry = NLDI().get_basins("01031500").geometry[0]
-    lulc = gh.nlcd(geometry, 100, years={"impervious": None, "cover": 2016, "canopy": None})
+    lulc = gh.nlcd(geometry, 100, years={"cover": 2016})
     stats = gh.cover_statistics(lulc.cover)
     eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 

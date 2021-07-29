@@ -4,7 +4,7 @@ import logging
 import re
 import sys
 import zipfile
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import async_retriever as ar
 import cytoolz as tlz
@@ -197,7 +197,7 @@ def _get_ssebopeta_urls(
 def nlcd(
     geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     resolution: float,
-    years: Optional[Dict[str, Optional[int]]] = None,
+    years: Optional[Mapping[str, int]] = None,
     region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
@@ -215,9 +215,10 @@ def nlcd(
         The data resolution in meters. The width and height of the output are computed in pixel
         based on the geometry bounds and the given resolution.
     years : dict, optional
-        The years for NLCD data as a dictionary, defaults to
-        ``{'impervious': 2019, 'cover': 2019, 'canopy': 2019, "descriptor": 2019}``.
-        Set the value of a layer to None, to ignore it.
+        The years for NLCD layers as a dictionary, defaults to
+        ``{'impervious': 2016, 'cover': 2016, 'canopy': 2016, "descriptor": 2016}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': 2019}`` returns
+        only cover data for 2019.
     region : str, optional
         Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
         AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
@@ -236,7 +237,12 @@ def nlcd(
         logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
     default_years = {"impervious": 2016, "cover": 2016, "canopy": 2016, "descriptor": 2016}
-    _years = default_years if years is None else years
+
+    if years is None:
+        _years = default_years
+    else:
+        years_none = {"impervious": None, "cover": None, "canopy": None, "descriptor": None}
+        _years = tlz.merge(years_none, years)
 
     if not isinstance(_years, dict):
         raise InvalidInputType("years", "dict", f"{default_years}")
@@ -244,8 +250,9 @@ def nlcd(
     layers = _nlcd_layers(_years, region)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
-
-    wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
+    url = "https://www.mrlc.gov/geoserver/wms"
+    #     ServiceURL().wms.mrlc
+    wms = WMS(url, layers="NLCD_Land_Cover", outformat="image/geotiff", crs=crs)
     r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
 
     ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
@@ -267,7 +274,7 @@ def nlcd(
     return ds
 
 
-def _nlcd_layers(years: Dict[str, Optional[int]], region: str) -> List[str]:
+def _nlcd_layers(years: Mapping[str, Optional[int]], region: str) -> List[str]:
     """Get NLCD layers for the provided years dictionary."""
     valid_regions = ["L48", "HI", "PR", "AK"]
     region = region.upper()
@@ -285,7 +292,7 @@ def _nlcd_layers(years: Dict[str, Optional[int]], region: str) -> List[str]:
 
     layers = [
         f'NLCD_{years["canopy"]}_Tree_Canopy_{region}',
-        f'NLCD_{years["cover"]}_Land_Cover_Science_product_{region}',
+        f'NLCD_{years["cover"]}_Land_Cover_Science_Product_{region}',
         f'NLCD_{years["impervious"]}_Impervious_{region}',
         f'NLCD_{years["impervious"]}_Impervious_Descriptor_{region}',
     ]
@@ -298,6 +305,43 @@ def _nlcd_layers(years: Dict[str, Optional[int]], region: str) -> List[str]:
         raise InvalidInputType("years", "at least one non-None year.")
 
     return layers
+
+
+def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
+    """Percentages of the categorical NLCD cover data.
+
+    Parameters
+    ----------
+    ds : xarray.Dataset
+        Cover DataArray from a LULC Dataset from the ``nlcd`` function.
+
+    Returns
+    -------
+    dict
+        Statistics of NLCD cover data
+    """
+    nlcd_meta = helpers.nlcd_helper()
+    cover_arr = ds.values
+    total_pix = np.count_nonzero(~np.isnan(cover_arr))
+
+    class_percentage = dict(
+        zip(
+            [v.split(" -")[0].strip() for v in nlcd_meta["classes"].values()],
+            [
+                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
+                for cat in list(nlcd_meta["classes"].keys())
+            ],
+        )
+    )
+
+    cov = np.floor_divide(cover_arr[~np.isnan(cover_arr)], 10).astype("int")
+    cat_list = (
+        np.array([np.count_nonzero(cov == c) for c in range(10) if c != 6]) / total_pix * 100.0
+    )
+
+    category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
+
+    return {"classes": class_percentage, "categories": category_percentage}
 
 
 class NWIS:
@@ -766,40 +810,3 @@ def interactive_map(
         ).add_to(imap)
 
     return imap
-
-
-def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
-    """Percentages of the categorical NLCD cover data.
-
-    Parameters
-    ----------
-    ds : xarray.Dataset
-        Cover DataArray from a LULC Dataset from the ``nlcd`` function.
-
-    Returns
-    -------
-    dict
-        Statistics of NLCD cover data
-    """
-    nlcd_meta = helpers.nlcd_helper()
-    cover_arr = ds.values
-    total_pix = np.count_nonzero(~np.isnan(cover_arr))
-
-    class_percentage = dict(
-        zip(
-            list(nlcd_meta["classes"].values()),
-            [
-                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                for cat in list(nlcd_meta["classes"].keys())
-            ],
-        )
-    )
-
-    cov = np.floor_divide(cover_arr[~np.isnan(cover_arr)], 10).astype("int")
-    cat_list = (
-        np.array([np.count_nonzero(cov == c) for c in range(10) if c != 6]) / total_pix * 100.0
-    )
-
-    category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
-
-    return {"classes": class_percentage, "categories": category_percentage}

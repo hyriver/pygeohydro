@@ -29,7 +29,7 @@ def nlcd_helper() -> Dict[str, Any]:
         root = etree.fromstring(ar.retrieve([f"{base_url}/{layer}.xml"], "text")[0])
         return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
-    root, edomv, edomvd = _get_xml("nlcd_2019_land_cover_l48_20210604")
+    root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
     cover_classes = {}
     for t, v in zip(edomv, edomvd):
         cover_classes[t.text] = v.text
@@ -39,7 +39,7 @@ def nlcd_helper() -> Dict[str, Any]:
         int(c): (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0) for c, r, g, b in clist
     }
 
-    _, edomv, edomvd = _get_xml("nlcd_2019_impervious_descriptor_l48_20210604")
+    _, edomv, edomvd = _get_xml("nlcd_2013_impervious_descriptor_l48_20210604")
     descriptors = {}
     for t, v in zip(edomv, edomvd):
         tag = t.text.split(" - ")
