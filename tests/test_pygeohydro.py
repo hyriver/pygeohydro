@@ -64,10 +64,10 @@ class TestETA:
 
 def test_nlcd():
     _ = gh.nlcd(GEOM.bounds, resolution=1e3)
-    years = {"canopy": [2016, 2019]}
+    years = {"cover": [2016, 2019]}
     lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
     st = gh.cover_statistics(lulc.cover_2016)
-    assert abs(st["categories"]["Forest"] - 82.548) < SMALL
+    assert abs(st["categories"]["Barren"] - 84.357) < SMALL
 
 
 class TestNID:
