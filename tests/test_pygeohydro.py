@@ -63,12 +63,11 @@ class TestETA:
         assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
-@pytest.mark.xfail(reason="Service is under maintenance.")
 def test_nlcd():
     _ = gh.nlcd(GEOM.bounds, resolution=1e3)
-    years = {"impervious": None, "cover": None, "canopy": 2016, "descriptor": None}
+    years = {"canopy": [2016, 2019]}
     lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
-    st = gh.cover_statistics(lulc.cover)
+    st = gh.cover_statistics(lulc.cover_2016)
     assert abs(st["categories"]["Forest"] - 82.548) < SMALL
 
 
