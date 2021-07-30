@@ -94,19 +94,11 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
 
 |
 
-**NOTE**
-
-This software stack was formerly named `hydrodata <https://pypi.org/project/hydrodata>`__.
-Since an `R <https://github.com/mikejohnson51/HydroData>`__ package with the same name
-already exists, we decided to renamed our project to
-`HyRiver <https://github.com/cheginit/HyRiver>`__. The ``hydrodata`` package itself is
-renamed to `pygeohydro <https://pypi.org/project/pygeohydro>`__.
-Installing ``hydrodata`` installs ``pygeohydro`` from now on.
-
 Features
 --------
 
-PyGeoHydro is a part of `HyRiver <https://github.com/cheginit/HyRiver>`__ software stack that
+PyGeoHydro (formerly named `hydrodata <https://pypi.org/project/hydrodata>`__) is a part of
+`HyRiver <https://github.com/cheginit/HyRiver>`__ software stack that
 is designed to aid in watershed analysis through web services. This package provides
 access to some of the public web services that offer geospatial hydrology data. It has three
 main modules: ``pygeohydro``, ``plot``, and ``helpers``.
@@ -117,7 +109,8 @@ The ``pygeohydro`` module can pull data from the following web services:
 * `NID <https://damsdev.net/>`__ for accessing the National Inventory of Dams in the US,
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
-* `NLCD 2016 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, and canopy data,
+* `NLCD 2019 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, imperviousness
+  descriptor, and canopy data,
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, for both single pixel and gridded data.
 
@@ -130,11 +123,12 @@ The ``plot`` module includes two main functions:
 
 * ``signatures``: Hydrologic signature graphs.
 * ``cover_legends``: Official NLCD land cover legends for plotting a land cover dataset.
+* ``descriptor_legends``: Color map and legends for plotting a imperviousness descriptor dataset.
 
 The ``helpers`` module includes:
 
-* ``nlcd_helper``: A roughness coefficients lookup table for each land cover type which is
-  useful for overland flow routing among other applications.
+* ``nlcd_helper``: A roughness coefficients lookup table for each land cover and imperviousness
+  descriptortype which is useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
 
 Moreover, requests for additional databases and functionalities can be submitted via
@@ -222,12 +216,6 @@ Then, we can get the streamflow data in mm/day (by default the data are in cms) 
     qobs = nwis.get_streamflow(stations, dates, mmd=True)
     plot.signatures(qobs)
 
-Now, let's get dams that are within this bounding box and have a maximum storage larger than
-200 acre-feet.
-
-    nid = NID()
-    dams = nid.bygeom(bbox, "epsg:4326", sql_clause="MAX_STORAGE > 200")
-
 Moreover, we can get land use/land cove data using ``nlcd`` function, percentages of
 land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``:
 
@@ -236,8 +224,8 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     from pynhd import NLDI
 
     geometry = NLDI().get_basins("01031500").geometry[0]
-    lulc = gh.nlcd(geometry, 100, years={"cover": 2016})
-    stats = gh.cover_statistics(lulc.cover)
+    lulc = gh.nlcd(geometry, 100, years={"cover": [2016, 2019]})
+    stats = gh.cover_statistics(lulc.cover_2016)
     eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/lulc.png
@@ -250,8 +238,15 @@ land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_byge
     :width: 200
     :alt: Actual ET
 
-Additionally, we can pull all the US dams data using ``NID``:
+Additionally, we can pull all the US dams data using ``NID``. Let's get dams that are within this
+bounding box and have a maximum storage larger than 200 acre-feet.
 
+.. code-block:: python
+
+    nid = NID()
+    dams = nid.bygeom(bbox, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+
+We can get all the dams within CONUS using ``NID`` and plot them:
 .. code-block:: python
 
     import geopandas as gpd
@@ -259,6 +254,7 @@ Additionally, we can pull all the US dams data using ``NID``:
     world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
     conus = world[world.name == "United States of America"].geometry.iloc[0][0]
     conus_dams = nid.bygeom(conus, "epsg:4326")
+
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/dams.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nid.ipynb
