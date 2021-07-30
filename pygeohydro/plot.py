@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import matplotlib
+import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib import pyplot as plt
+from matplotlib import cm
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from . import helpers
@@ -200,10 +201,24 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles, units)
 
 
-def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[float]]:
+def descriptor_legends(
+    cmap_name: str = "tab20",
+) -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
-    bounds = list(nlcd_meta["colors"].keys())
+    bounds = list(map(int, nlcd_meta["descriptors"]))
+    bounds.remove(127)
+
+    cmap = cm.get_cmap(cmap_name, len(bounds))
+    norm = BoundaryNorm(bounds, cmap.N)
+    levels = bounds + [30]
+    return cmap, norm, levels
+
+
+def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
+    """Colormap (cmap) and their respective values (norm) for land cover data legends."""
+    nlcd_meta = helpers.nlcd_helper()
+    bounds = list(nlcd_meta["colors"])
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
     norm = BoundaryNorm(bounds, cmap.N)
