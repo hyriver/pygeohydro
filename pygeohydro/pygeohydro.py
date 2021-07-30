@@ -237,7 +237,7 @@ def nlcd(
     if resolution < 30:
         logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
-    default_years = {"impervious": [2019], "cover": [2019], "canopy": [2019], "descriptor": [2019]}
+    default_years = {"impervious": [2019], "cover": [2019], "canopy": [2016], "descriptor": [2019]}
     years = default_years if years is None else years
 
     if not isinstance(years, dict):
