@@ -5,10 +5,12 @@ History
 0.11.1 (unreleased)
 -------------------
 
+The biggest feature in this release is adding support for NLCD 2019.
+
 New Features
 ~~~~~~~~~~~~
 - Add support for the recently released version of NLCD (2019), including the impervious
-  descriptor. Highlights of the new database are:
+  descriptor layer. Highlights of the new database are:
 
     NLCD 2019 now offers land cover for years 2001, 2004, 2006, 2008, 2011, 2013, 2016, 2019,
     and impervious surface and impervious descriptor products now updated to match each date
@@ -23,6 +25,8 @@ New Features
     -- `MRLC <https://www.mrlc.gov>`__
 
 - Add support for all the supported regions of NLCD database (CONUS, AK, HI, and PR).
+- Add support for passing multiple years to the NLCD function, like so ``{"cover": [2016, 2019]}``.
+- Add ``plot.descriptor_legends`` function to plot the legend for the impervious descriptor layer.
 - New features in ``NWIS`` class are:
   * Remove ``query_*`` methods since it's not convenient to pass
   them directly as a dictionary.
