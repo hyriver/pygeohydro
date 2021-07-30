@@ -4,6 +4,7 @@ import logging
 import re
 import sys
 import zipfile
+from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 
 import async_retriever as ar
@@ -197,7 +198,7 @@ def _get_ssebopeta_urls(
 def nlcd(
     geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     resolution: float,
-    years: Optional[Mapping[str, int]] = None,
+    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
@@ -216,9 +217,9 @@ def nlcd(
         based on the geometry bounds and the given resolution.
     years : dict, optional
         The years for NLCD layers as a dictionary, defaults to
-        ``{'impervious': 2016, 'cover': 2016, 'canopy': 2016, "descriptor": 2016}``.
-        Layers that are not in years are ignored, e.g., ``{'cover': 2019}`` returns
-        only cover data for 2019.
+        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
+        land cover data for 2016 and 2019.
     region : str, optional
         Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
         AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
@@ -236,43 +237,39 @@ def nlcd(
     if resolution < 30:
         logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
-    default_years = {"impervious": 2016, "cover": 2016, "canopy": 2016, "descriptor": 2016}
+    default_years = {"impervious": [2019], "cover": [2019], "canopy": [2019], "descriptor": [2019]}
+    years = default_years if years is None else years
 
-    if years is None:
-        _years = default_years
-    else:
-        years_none = {"impervious": None, "cover": None, "canopy": None, "descriptor": None}
-        _years = tlz.merge(years_none, years)
-
-    if not isinstance(_years, dict):
+    if not isinstance(years, dict):
         raise InvalidInputType("years", "dict", f"{default_years}")
+
+    _years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
 
     layers = _nlcd_layers(_years, region)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
-    r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
+    r_dict = wms.getmap_bybox(
+        _geometry.bounds, resolution, box_crs=crs, kwargs={"styles": "raster"}
+    )
 
     ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
 
     if isinstance(ds, xr.DataArray):
         ds = ds.to_dataset()
 
-    for n in ds.keys():
-        if "cover" in n.lower():
-            ds = ds.rename({n: "cover"})
-            ds.cover.attrs["units"] = "classes"
-        elif "canopy" in n.lower():
-            ds = ds.rename({n: "canopy"})
-            ds.canopy.attrs["units"] = "%"
-        elif "impervious" in n.lower():
-            ds = ds.rename({n: "impervious"})
-            ds.impervious.attrs["units"] = "%"
-
+    units = OrderedDict(
+        (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
+    )
+    for lyr in layers:
+        name = [n for n in units if n in lyr.lower()][-1]
+        lyr_name = f"{name}_{lyr.split('_')[1]}"
+        ds = ds.rename({lyr: lyr_name})
+        ds[lyr_name].attrs["units"] = units[name]
     return ds
 
 
-def _nlcd_layers(years: Mapping[str, Optional[int]], region: str) -> List[str]:
+def _nlcd_layers(years: Mapping[str, List[int]], region: str) -> List[str]:
     """Get NLCD layers for the provided years dictionary."""
     valid_regions = ["L48", "HI", "PR", "AK"]
     region = region.upper()
@@ -282,27 +279,24 @@ def _nlcd_layers(years: Mapping[str, Optional[int]], region: str) -> List[str]:
     nlcd_meta = helpers.nlcd_helper()
 
     names = ["impervious", "cover", "canopy", "descriptor"]
-    avail_years = {n: nlcd_meta[f"{n}_years"] + [None] for n in names}
+    avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
 
-    if any(yr not in avail_years[lyr] for lyr, yr in years.items()):
+    if any(
+        yr not in avail_years[lyr] or lyr not in names for lyr, yrs in years.items() for yr in yrs
+    ):
         vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
         raise InvalidInputValue("years", vals)
 
-    layers = [
-        f'NLCD_{years["canopy"]}_Tree_Canopy_{region}',
-        f'NLCD_{years["cover"]}_Land_Cover_Science_Product_{region}',
-        f'NLCD_{years["impervious"]}_Impervious_{region}',
-        f'NLCD_{years["impervious"]}_Impervious_Descriptor_{region}',
+    layer_map = {
+        "canopy": lambda _: "Tree_Canopy",
+        "cover": lambda _: "Land_Cover_Science_Product",
+        "impervious": lambda _: "Impervious",
+        "descriptor": lambda x: "Impervious_Descriptor" if x == "AK" else "Impervious_descriptor",
+    }
+
+    return [
+        f"NLCD_{yr}_{layer_map[lyr](region)}_{region}" for lyr, yrs in years.items() for yr in yrs
     ]
-
-    nones = [lyr for lyr in layers if "None" in lyr]
-    for lyr in nones:
-        layers.remove(lyr)
-
-    if len(layers) == 0:
-        raise InvalidInputType("years", "at least one non-None year.")
-
-    return layers
 
 
 def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
