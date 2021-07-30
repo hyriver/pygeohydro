@@ -250,9 +250,7 @@ def nlcd(
     layers = _nlcd_layers(_years, region)
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
-    url = "https://www.mrlc.gov/geoserver/wms"
-    #     ServiceURL().wms.mrlc
-    wms = WMS(url, layers="NLCD_Land_Cover", outformat="image/geotiff", crs=crs)
+    wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
     r_dict = wms.getmap_bybox(_geometry.bounds, resolution, box_crs=crs)
 
     ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
