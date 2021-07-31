@@ -17,6 +17,7 @@ import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, RetrySession, ServiceURL
+from pygeoogc import utils as ogc_utils
 from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -572,14 +573,17 @@ class NWIS:
             Requested features as a pandas's DataFrame.
         """
         urls, kwds = zip(*((url, {"params": {**p, "format": "rdb"}}) for p in payloads))
-        resp = ar.retrieve(urls, "text", kwds)
         try:
+            resp = ar.retrieve(urls, "text", kwds)
             not_found = next(filter(lambda x: x[0] != "#", resp), None)
             if not_found is not None:
                 msg = re.findall("<p>(.*?)</p>", not_found.text)[1].rsplit(">", 1)[1]
                 logger.info(f"Server error message:\n{msg}")
+        except ar.ServiceError as ex:
+            raise ZeroMatched(ogc_utils.check_response(str(ex))) from ex
         except StopIteration:
             pass
+
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
         if len(data) == 0:
