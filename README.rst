@@ -33,18 +33,24 @@
     :target: https://github.com/cheginit/pydaymet/actions/workflows/test.yml
     :alt: Github Actions
 
-=========== ==================================================================== ============
-Package     Description                                                          Status
-=========== ==================================================================== ============
-PyNHD_      Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
-Py3DEP_     Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_ Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
-PyDaymet_   Access Daymet for daily climate data both single pixel and gridded   |pydaymet|
-PyGeoOGC_   Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
-PyGeoUtils_ Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
-=========== ==================================================================== ============
+.. |async| image:: https://github.com/cheginit/async_retriever/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/cheginit/async_retriever/actions/workflows/test.yml
+    :alt: Github Actions
+
+=============== ==================================================================== ============
+Package         Description                                                          Status
+=============== ==================================================================== ============
+PyNHD_          Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
+Py3DEP_         Access topographic data through National Map's 3DEP web service      |py3dep|
+PyGeoHydro_     Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
+PyDaymet_       Access Daymet for daily climate data both single pixel and gridded   |pydaymet|
+AsyncRetriever_ High-level API for asynchronous requests with persistent caching     |async|
+PyGeoOGC_       Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
+PyGeoUtils_     Convert responses from PyGeoOGC's supported web services to datasets |pygeoutils|
+=============== ==================================================================== ============
 
 .. _PyGeoHydro: https://github.com/cheginit/pygeohydro
+.. _AsyncRetriever: https://github.com/cheginit/async_retriever
 .. _PyGeoOGC: https://github.com/cheginit/pygeoogc
 .. _PyGeoUtils: https://github.com/cheginit/pygeoutils
 .. _PyNHD: https://github.com/cheginit/pynhd
