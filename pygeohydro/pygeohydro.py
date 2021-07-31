@@ -180,7 +180,7 @@ def _get_ssebopeta_urls(
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
-        seebop_yrs = np.arange(2000, 2020)
+        seebop_yrs = np.arange(2000, 2021)
 
         if any(y not in seebop_yrs for y in years):
             raise InvalidInputRange("SSEBop", ("2000", "2020"))
@@ -474,11 +474,14 @@ class NWIS:
         ]
 
         siteinfo = self.get_info(queries)
-        check_dates = siteinfo.loc[
-            ((siteinfo.stat_cd == "00003") & (start > siteinfo.end_date)),
+        sids = siteinfo.loc[
+            (
+                (siteinfo.stat_cd == "00003")
+                & (start < siteinfo.end_date)
+                & (end > siteinfo.begin_date)
+            ),
             "site_no",
-        ]
-        sids = list(set(sids).difference({s for s in sids if s in check_dates}))
+        ].tolist()
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
@@ -497,8 +500,8 @@ class NWIS:
         urls, kwds = zip(*((f"{self.url}/dv", {"params": p}) for p in payloads))
         qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds))
 
-        if qobs.shape[1] != len(station_ids):
-            dropped = [s for s in station_ids if f"USGS-{s}" not in qobs]
+        if qobs.shape[1] != len(sids):
+            dropped = [s for s in sids if f"USGS-{s}" not in qobs]
             logger.warning(
                 f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
                 + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
@@ -531,7 +534,7 @@ class NWIS:
         return sids, start, end
 
     @staticmethod
-    def _get_drainage_area(station_ids: List[str]) -> pd.DataFrame:
+    def _get_drainage_area(station_ids: Sequence[str]) -> pd.DataFrame:
         nldi = NLDI()
         basins = nldi.get_basins(station_ids)
         if isinstance(basins, tuple):
