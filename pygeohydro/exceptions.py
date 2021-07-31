@@ -12,7 +12,7 @@ class DataNotAvailable(Exception):
     """
 
     def __init__(self, data_name: str) -> None:
-        self.message = f"{data_name.capitalize()} is not available for the query requested."
+        self.message = f"{data_name.capitalize()} is not available for the requested query."
         super().__init__(self.message)
 
     def __str__(self) -> str:
