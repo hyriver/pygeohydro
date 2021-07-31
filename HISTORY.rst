@@ -5,7 +5,8 @@ History
 0.11.1 (unreleased)
 -------------------
 
-The biggest feature in this release is adding support for NLCD 2019.
+The highlight of this release is adding support for NLCD 2019 and singnificant improvements
+in NWIS support.
 
 New Features
 ~~~~~~~~~~~~
