@@ -2,7 +2,7 @@
 History
 =======
 
-0.11.1 (unreleased)
+0.11.1 (2021-07-31)
 -------------------
 
 The highlight of this release is adding support for NLCD 2019 and singnificant improvements
