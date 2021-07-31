@@ -305,7 +305,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
 
     Parameters
     ----------
-    ds : xarray.Dataset
+    ds : xarray.DataArray
         Cover DataArray from a LULC Dataset from the ``nlcd`` function.
 
     Returns
@@ -313,26 +313,31 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     dict
         Statistics of NLCD cover data
     """
+    if not isinstance(ds, xr.DataArray):
+        raise InvalidInputType("ds", "xarray.DataArray")
+
     nlcd_meta = helpers.nlcd_helper()
-    cover_arr = ds.values
-    total_pix = np.count_nonzero(~np.isnan(cover_arr))
+    _freq = dict(zip(*np.unique(ds, return_counts=True)))
+    freq = {}
+    total_count = 0
+    for k, v in _freq.items():
+        try:
+            freq[str(int(k))] = v
+            total_count += v
+        except ValueError:
+            freq["127"] = v
 
-    class_percentage = dict(
-        zip(
-            [v.split(" -")[0].strip() for v in nlcd_meta["classes"].values()],
-            [
-                cover_arr[cover_arr == int(cat)].shape[0] / total_pix * 100.0
-                for cat in list(nlcd_meta["classes"].keys())
-            ],
-        )
-    )
+    if any(c not in nlcd_meta["classes"] for c in freq):
+        raise InvalidInputValue("ds values", list(nlcd_meta["classes"]))  # noqa: TC003
 
-    cov = np.floor_divide(cover_arr[~np.isnan(cover_arr)], 10).astype("int")
-    cat_list = (
-        np.array([np.count_nonzero(cov == c) for c in range(10) if c != 6]) / total_pix * 100.0
-    )
-
-    category_percentage = dict(zip(list(nlcd_meta["categories"].keys()), cat_list))
+    class_percentage = {
+        nlcd_meta["classes"][k].split(" -")[0].strip(): v / total_count * 100.0
+        for k, v in freq.items()
+    }
+    category_percentage = {
+        k: sum(freq[c] for c in v if c in freq) / total_count * 100.0
+        for k, v in nlcd_meta["categories"].items()
+    }
 
     return {"classes": class_percentage, "categories": category_percentage}
 
