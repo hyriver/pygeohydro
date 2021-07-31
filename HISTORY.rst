@@ -2,6 +2,17 @@
 History
 =======
 
+0.11.2 (2021-07-31)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Refactor ``cover_statistics`` to address an issue with wrong category names and also
+  improve performance for large datasets by using ``numpy``'s functions.
+- Fix an issue with detecting wrong number of stations in ``NWIS.get_streamflow``.
+  Also, improve filtering stations that their start/end date don't match the user requested
+  interval.
+
 0.11.1 (2021-07-31)
 -------------------
 
@@ -154,7 +165,7 @@ Enhancements
 - Replaced ``simplejson`` with ``orjson`` to speed-up JSON operations.
 - Explicitly sort the time dimension of the ``ssebopeta_bygeom`` function.
 
-Bug fixes
+Bug Fixes
 ~~~~~~~~~
 - Fix an issue with the ``nlcd`` function where high resolution requests fail.
 
@@ -166,7 +177,7 @@ New Features
 - Added a new argument to ``plot.signatures`` for controlling the vertical position of the
   plot title, called ``title_ypos``. This could be useful for multi-line titles.
 
-Bug fixes
+Bug Fixes
 ~~~~~~~~~
 - Fixed an issue with the ``nlcd`` function where none layers are not dropped and cause the
   function to fails.
@@ -244,7 +255,7 @@ New Features
 - Added a new function called ``wms_toxarray`` for converting WMS request responses to
   ``xarray.DataArray`` or ``xarray.Dataset``.
 
-Bug fixes
+Bug Fixes
 ~~~~~~~~~
 - Re-projection issues for function with input geometry.
 - Start and end variables not being initialized when coords was used in ``Station``.
