@@ -67,7 +67,7 @@ def test_nlcd():
     years = {"cover": [2016, 2019]}
     lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
     st = gh.cover_statistics(lulc.cover_2016)
-    assert abs(st["categories"]["Barren"] - 84.357) < SMALL
+    assert abs(st["categories"]["Forest"] - 84.357) < SMALL
 
 
 class TestNID:
