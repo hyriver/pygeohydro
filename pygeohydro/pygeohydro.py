@@ -235,9 +235,6 @@ def nlcd(
      xarray.DataArray
          NLCD within a geometry
     """
-    if resolution < 30:
-        logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
-
     default_years = {"impervious": [2019], "cover": [2019], "canopy": [2016], "descriptor": [2019]}
     years = default_years if years is None else years
 
@@ -247,6 +244,44 @@ def nlcd(
     _years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
 
     layers = _nlcd_layers(_years, region)
+    return _get_nlcd_layers(layers, geometry, resolution, geo_crs, crs)
+
+
+def _get_nlcd_layers(
+    layers: Union[str, List[str]],
+    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
+    resolution: float,
+    geo_crs: str = DEF_CRS,
+    crs: str = DEF_CRS,
+) -> xr.Dataset:
+    """Get data from NLCD database (2016).
+
+    Download land use/land cover data from NLCD (2016) database within
+    a given geometry in epsg:4326.
+
+    Parameters
+    ----------
+    layers : str, list
+        The NLCD layers to be extracted.
+    geometry : Polygon, MultiPolygon, or tuple of length 4
+        The geometry or bounding box (west, south, east, north) for extracting the data.
+    resolution : float
+        The data resolution in meters. The width and height of the output are computed in pixel
+        based on the geometry bounds and the given resolution.
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+
+    Returns
+    -------
+     xarray.DataArray
+         NLCD within a geometry
+    """
+
+    if resolution < 30:
+        logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
     _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
     wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
