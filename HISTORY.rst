@@ -40,6 +40,7 @@ New Features
 - Add support for passing multiple years to the NLCD function, like so ``{"cover": [2016, 2019]}``.
 - Add ``plot.descriptor_legends`` function to plot the legend for the impervious descriptor layer.
 - New features in ``NWIS`` class are:
+
   * Remove ``query_*`` methods since it's not convenient to pass
   them directly as a dictionary.
   * Add a new function called ``get_parameter_codes`` to query parameters and get information
@@ -47,6 +48,7 @@ New Features
   * To decrease complexity of ``get_streamflow`` method add a new private function to handle some
   of the tasks.
   * For handling more of NWIS's services make ``retrieve_rdb`` more general.
+
 - Add a new argument called ``nwis_kwds`` to ``interactive_map`` so any NWIS
   specific keywords can be passed for filtering stations.
 - Improve exception handling in ``get_info`` method and simplify and improve
