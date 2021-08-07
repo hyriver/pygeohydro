@@ -290,7 +290,7 @@ def _get_nlcd_layers(
     )
 
     ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
-
+    attrs = ds.attrs
     if isinstance(ds, xr.DataArray):
         ds = ds.to_dataset()
 
@@ -302,6 +302,7 @@ def _get_nlcd_layers(
         lyr_name = f"{name}_{lyr.split('_')[1]}"
         ds = ds.rename({lyr: lyr_name})
         ds[lyr_name].attrs["units"] = units[name]
+    ds.attrs = attrs
     return ds
 
 
