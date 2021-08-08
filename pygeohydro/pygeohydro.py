@@ -536,8 +536,8 @@ class NWIS:
         urls, kwds = zip(*((f"{self.url}/dv", {"params": p}) for p in payloads))
         qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds))
 
-        if qobs.shape[1] != len(sids):
-            dropped = [s for s in sids if f"USGS-{s}" not in qobs]
+        dropped = [s for s in sids if f"USGS-{s}" not in qobs]
+        if len(dropped) > 0:
             logger.warning(
                 f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
                 + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
