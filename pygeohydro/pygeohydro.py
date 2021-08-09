@@ -279,7 +279,6 @@ def _get_nlcd_layers(
      xarray.DataArray
          NLCD within a geometry
     """
-
     if resolution < 30:
         logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
 
@@ -518,6 +517,7 @@ class NWIS:
             ),
             "site_no",
         ].tolist()
+
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
