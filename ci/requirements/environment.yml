@@ -12,7 +12,7 @@ dependencies:
   - cchardet
   - cytoolz
   - nest-asyncio
-  - orjson
+  - ujson
 
   # pygeoogc deps
   - defusedxml
