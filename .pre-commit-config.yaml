@@ -27,14 +27,14 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 21.7b0
+    rev: 21.8b0
     hooks:
     - id: black
       name: Autoformat with black
       args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.10.0
+    rev: v1.11.0
     hooks:
     - id: blacken-docs
       name: Autoformat codes in docstrings with blacken-docs
@@ -69,7 +69,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.24.0
+    rev: v2.25.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
