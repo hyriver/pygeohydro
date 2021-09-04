@@ -270,12 +270,9 @@ We can get all the dams within CONUS using ``NID`` and plot them:
 Contributing
 ------------
 
-PyGeoHydro offers some limited analysis tools. It could be more useful for
-the watershed modeling community to integrate more data exploratory and analysis
-capabilities to the package. Additionally, adding support for more databases such
-as water quality, phenology, and water level, are very welcome. If you are interested
-please get in touch. You can find more information about contributing to PyGeoHydro at our
-`Contributing <https://pygeohydro.readthedocs.io/en/latest/contributing.html>`__ webpage.
+Contributions are very welcomed. Please read
+`CONTRIBUTING.rst <https://github.com/cheginit/pygeoogc/blob/main/CONTRIBUTING.rst>`__
+file for instructions.
 
 Credits
 -------
