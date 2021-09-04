@@ -58,7 +58,7 @@ PyGeoUtils_     Convert responses from PyGeoOGC's supported web services to data
 .. _PyDaymet: https://github.com/cheginit/pydaymet
 
 PyGeoHydro: Retrieve Geospatial Hydrology Data
-==============================================
+----------------------------------------------
 
 .. image:: https://img.shields.io/pypi/v/pygeohydro.svg
     :target: https://pypi.python.org/pypi/pygeohydro
