@@ -176,7 +176,8 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     annual = daily.groupby(pd.Grouper(freq="Y")).sum()
 
     month_abbr = dict(enumerate(calendar.month_abbr))
-    mean_month = daily.groupby(daily.index.month).mean()
+    mean_month = daily.groupby(pd.Grouper(freq="M")).sum()
+    mean_month = mean_month.groupby(mean_month.index.month).mean()
     mean_month.index = mean_month.index.map(month_abbr)
 
     ranked = exceedance(daily)
