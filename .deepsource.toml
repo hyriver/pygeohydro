@@ -9,6 +9,7 @@ exclude_patterns = [
     "docs/**",
     "ci/**",
     "*/print_versions.py",
+    "*/__init__.py",
 ]
 
 [[analyzers]]
