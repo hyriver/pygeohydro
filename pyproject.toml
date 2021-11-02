@@ -11,8 +11,34 @@ build-backend = "setuptools.build_meta"
 fallback_version = "999"
 
 [tool.pytest.ini_options]
-addopts = '--doctest-modules --ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5'
+addopts = "--doctest-modules --ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
 doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
-markers = [
-    "slow",
+testpaths = [
+    "tests",
+    "pygeohydro",
 ]
+
+[tool.mypy]
+allow_redefinition = false
+check_untyped_defs = true
+ignore_errors = false
+implicit_reexport = false
+local_partial_types = true
+strict_optional = true
+strict_equality = true
+no_implicit_optional = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+warn_unreachable = true
+warn_no_return = true
+
+[tool.isort]
+profile = "black"
+default_section = "THIRDPARTY"
+known_first_party = "pygeohydro"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 100

@@ -11,6 +11,7 @@ dependencies:
   - brotlipy
   - cchardet
   - cytoolz
+  - importlib_metadata
   - nest-asyncio
   - ujson
 
@@ -19,30 +20,29 @@ dependencies:
   - owslib
   - pydantic
   - pyyaml
-  - pyproj
+  - pyproj>=1.2
   - requests
-  - requests-cache
+  - requests-cache>=0.8
   - shapely
   - urllib3
 
   # pygeoutils deps
-  - affine
-  - dask
-  - geopandas
+  - dask-core
+  - geopandas>=0.8
   - netcdf4
-  - numpy
-  - rasterio
-  - xarray
+  - numpy>=1.17
+  - rasterio>=1.2
+  - xarray>=0.17
 
   # pynhd deps
-  - networkx
-  - pandas
+  - networkx>=2.5
+  - pandas>=1.0
   - pyarrow
 
   # pygeohydro deps
   - folium
   - lxml
-  - matplotlib-base
+  - matplotlib-base>=3.0
 
   # deps to speed up xarray and geopandas
   - pygeos
@@ -50,7 +50,6 @@ dependencies:
 
   # test deps
   - psutil
-  - pytest
   - pytest-clarity
   - pytest-cov
   - pytest-sugar

@@ -1,5 +1,3 @@
-from pkg_resources import DistributionNotFound, get_distribution
-
 from . import helpers, plot
 from .exceptions import (
     DataNotAvailable,
@@ -20,8 +18,13 @@ from .pygeohydro import (
 )
 
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
+    import importlib.metadata as metadata
+except ImportError:
+    import importlib_metadata as metadata  # type: ignore[no-redef]
+
+try:
+    __version__ = metadata.version("pygeohydro")
+except Exception:
     __version__ = "999"
 
 __all__ = [

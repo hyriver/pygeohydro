@@ -6,6 +6,7 @@ import sys
 import zipfile
 from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
+from unittest.mock import patch
 
 import async_retriever as ar
 import cytoolz as tlz
@@ -87,7 +88,7 @@ def ssebopeta_byloc(
     f_list = _get_ssebopeta_urls(dates)
     session = RetrySession()
 
-    with session.onlyipv4():
+    with patch("socket.has_ipv6", False):
 
         def _ssebop(urls: Tuple[str, str]) -> Dict[str, Union[str, List[float]]]:
             dt, url = urls
@@ -143,7 +144,7 @@ def ssebopeta_bygeom(
 
     session = RetrySession()
 
-    with session.onlyipv4():
+    with patch("socket.has_ipv6", False):
 
         def _ssebop(url_stamped: Tuple[str, str]) -> xr.DataArray:
             dt, url = url_stamped
