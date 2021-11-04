@@ -33,7 +33,8 @@ dependencies:
   - netcdf4
   - numpy>=1.17
   - rasterio>=1.2
-  - xarray>=0.17
+  - xarray>=0.18
+  - rioxarray>=0.8
 
   # py3dep
   - click>=7.0
