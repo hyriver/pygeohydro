@@ -2,6 +2,15 @@
 History
 =======
 
+0.11.3 (unreleased)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Use ``importlib-metadata`` for getting the version insead of ``pkg_resources``
+  to decrease import time as discussed in this
+  `issue <https://github.com/pydata/xarray/issues/5676>`__.
+
 0.11.2 (2021-07-31)
 -------------------
 
