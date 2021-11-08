@@ -21,7 +21,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.9.3
+    rev: 5.10.0
     hooks:
     - id: isort
       name: Sort imports with isort
