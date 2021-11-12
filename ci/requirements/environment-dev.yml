@@ -72,9 +72,7 @@ dependencies:
   - pre-commit
   - psutil
   - pytest
-  - pytest-clarity
   - pytest-cov
-  - pytest-sugar
   - pytest-xdist
 
   - pip

@@ -50,9 +50,7 @@ dependencies:
 
   # test deps
   - psutil
-  - pytest-clarity
   - pytest-cov
-  - pytest-sugar
   - pytest-xdist
 
   - pip
