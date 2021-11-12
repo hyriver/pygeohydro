@@ -2,8 +2,13 @@
 History
 =======
 
-0.11.3 (unreleased)
+0.11.3 (2021-11-12)
 -------------------
+
+New Features
+~~~~~~~~~~~~
+- Use a `new <https://ags03.sec.usace.army.mil/server/rest/services/Dams_Public/MapServer/0>`__
+  MapService for National Inventory of Dams (NID).
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
