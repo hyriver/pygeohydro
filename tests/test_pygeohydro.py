@@ -78,7 +78,7 @@ class TestNID:
         assert len(dams) == 5
 
     def test_byids(self):
-        names = ['Guilford', 'Pingree Pond', 'First Davis Pond']
+        names = ["Guilford", "Pingree Pond", "First Davis Pond"]
         dams = self.nid.byids("NAME", names)
         assert len(dams) == len(names)
 
