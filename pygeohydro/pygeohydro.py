@@ -45,8 +45,8 @@ class NID(AGRBase):
     """Retrieve data from the National Inventory of Dams web service."""
 
     def __init__(self):
-        super().__init__("nid2019_u", "*", DEF_CRS)
-        self.service = ServiceURL().restful.nid_2019
+        super().__init__("dams", "*", DEF_CRS)
+        self.service = "https://ags03.sec.usace.army.mil/server/rest/services/Dams_Public/MapServer"
         rjson = ar.retrieve(
             [
                 "/".join(

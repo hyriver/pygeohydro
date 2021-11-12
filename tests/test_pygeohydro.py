@@ -78,13 +78,13 @@ class TestNID:
         assert len(dams) == 5
 
     def test_byids(self):
-        names = ["GUILFORD", "PINGREE POND", "FIRST DAVIS POND"]
-        dams = self.nid.byids("DAM_NAME", names)
+        names = ['Guilford', 'Pingree Pond', 'First Davis Pond']
+        dams = self.nid.byids("NAME", names)
         assert len(dams) == len(names)
 
     def test_bysql(self):
         dams = self.nid.bysql("DAM_HEIGHT > 50")
-        assert len(dams) == 5331
+        assert len(dams) == 5357
 
 
 def test_interactive_map():
