@@ -21,7 +21,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.10.0
+    rev: 5.10.1
     hooks:
     - id: isort
       name: Sort imports with isort
@@ -50,7 +50,7 @@ repos:
       name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.9.1
+    rev: 0.10.1
     hooks:
     - id: doc8
       name: Check documentation formats with doc8
@@ -98,7 +98,7 @@ repos:
       additional_dependencies: [types-all]
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.0
+    rev: 1.7.1
     hooks:
     - id: bandit
       name: Check for security issues with bandit
