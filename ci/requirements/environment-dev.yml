@@ -7,10 +7,10 @@ dependencies:
 
   # async_retriever
   - aiodns
-  - aiohttp
+  - aiohttp>=3.8.1
   - aiohttp-client-cache>=0.5.1
   - aiosqlite
-  - brotlipy
+  - brotli
   - cchardet
   - cytoolz
   - nest-asyncio
