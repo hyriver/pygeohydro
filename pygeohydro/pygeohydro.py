@@ -42,11 +42,24 @@ DEF_CRS = "epsg:4326"
 
 
 class NID(AGRBase):
-    """Retrieve data from the National Inventory of Dams web service."""
+    """Retrieve data from the National Inventory of Dams web service.
 
-    def __init__(self):
-        super().__init__("dams", "*", DEF_CRS)
-        self.service = "https://ags03.sec.usace.army.mil/server/rest/services/Dams_Public/MapServer"
+    Parameters
+    ----------
+    version : str, optional
+        The database version. Version 2 and 3 are available. Version 2 has
+        NID 2019 data and version 3 includes more recent data as well. At the
+        moment both services are experimental and might not always work. The
+        default version is 2.
+    """
+
+    def __init__(self, version: int = 2) -> None:
+        if version not in (2, 3):
+            raise InvalidInputValue("version", ["2", "3"])
+
+        layer = "nid2019_u" if version == 2 else "dams"
+        super().__init__(layer, "*", DEF_CRS)
+        self.service = getattr(ServiceURL().restful, f"nid_{int(version)}")
         rjson = ar.retrieve(
             [
                 "/".join(

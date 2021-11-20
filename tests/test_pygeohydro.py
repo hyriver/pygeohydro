@@ -71,20 +71,24 @@ def test_nlcd():
 
 
 class TestNID:
-    nid: NID = NID()
+    nid2: NID = NID(2)
+    nid3: NID = NID(3)
 
     def test_bygeom(self):
-        dams = self.nid.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
-        assert len(dams) == 5
+        dams2 = self.nid2.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+        dams3 = self.nid3.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+        assert len(dams2) == len(dams3) == 5
 
     def test_byids(self):
         names = ["Guilford", "Pingree Pond", "First Davis Pond"]
-        dams = self.nid.byids("NAME", names)
-        assert len(dams) == len(names)
+        dams2 = self.nid2.byids("NAME", [n.upper() for n in names])
+        dams3 = self.nid3.byids("NAME", names)
+        assert len(dams2) == len(dams3) == len(names)
 
     def test_bysql(self):
-        dams = self.nid.bysql("DAM_HEIGHT > 50")
-        assert len(dams) == 5357
+        dams2 = self.nid2.bysql("DAM_HEIGHT > 50")
+        dams3 = self.nid3.bysql("DAM_HEIGHT > 50")
+        assert len(dams2) == 5357 and len(dams3) == 5331
 
 
 def test_interactive_map():
