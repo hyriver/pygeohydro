@@ -14,7 +14,7 @@ repos:
       args: ['--fix=lf']
 
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v1.19.0
+    rev: v1.20.0
     hooks:
     - id: setup-cfg-fmt
       name: Autoformat setup.cfg
@@ -27,14 +27,14 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 21.10b0
+    rev: 21.11b1
     hooks:
     - id: black
       name: Autoformat with black
       args: [-t, py38, -l, "100"]
 
   - repo: https://github.com/asottile/blacken-docs
-    rev: v1.11.0
+    rev: v1.12.0
     hooks:
     - id: blacken-docs
       name: Autoformat codes in docstrings with blacken-docs
@@ -69,14 +69,14 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.29.0
+    rev: v2.29.1
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
       args: [--py37-plus]
 
   - repo: https://github.com/guilatrova/tryceratops
-    rev: v0.6.0
+    rev: v0.6.1
     hooks:
     - id: tryceratops
       name: Check try-exceptions blocks with tryceratops
