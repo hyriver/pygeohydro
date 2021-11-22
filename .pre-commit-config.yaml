@@ -76,7 +76,7 @@ repos:
       args: [--py37-plus]
 
   - repo: https://github.com/guilatrova/tryceratops
-    rev: v0.6.1
+    rev: v1.0.0
     hooks:
     - id: tryceratops
       name: Check try-exceptions blocks with tryceratops
