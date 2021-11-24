@@ -56,9 +56,9 @@ class TestETA:
         assert abs(eta_g.mean().values.item() - 0.576) < SMALL
 
     def test_get_ssebopeta_urls(self):
-        _ = gh.pygeohydro._get_ssebopeta_urls(self.years[0])
-        urls_dates = gh.pygeohydro._get_ssebopeta_urls(DATES_LONG)
-        urls_years = gh.pygeohydro._get_ssebopeta_urls(self.years)
+        _ = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years[0])
+        urls_dates = gh.pygeohydro.helpers.get_ssebopeta_urls(DATES_LONG)
+        urls_years = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years)
         assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
@@ -81,14 +81,45 @@ class TestNID:
 
     def test_byids(self):
         names = ["Guilford", "Pingree Pond", "First Davis Pond"]
-        dams2 = self.nid2.byids("NAME", [n.upper() for n in names])
+        dams2 = self.nid2.byids("DAM_NAME", [n.upper() for n in names])
         dams3 = self.nid3.byids("NAME", names)
         assert len(dams2) == len(dams3) == len(names)
 
     def test_bysql(self):
         dams2 = self.nid2.bysql("DAM_HEIGHT > 50")
         dams3 = self.nid3.bysql("DAM_HEIGHT > 50")
-        assert len(dams2) == 5357 and len(dams3) == 5331
+        assert len(dams2) == 5331 and len(dams3) == 5306
+
+
+class TestWaterQuality:
+    wq: gh.WaterQuality = gh.WaterQuality()
+
+    def test_bbox(self):
+        stations = self.wq.station_bybbox(
+            (-92.8, 44.2, -88.9, 46.0), {"characteristicName": "Caffeine"}
+        )
+        assert stations.shape[0] == 75
+
+    def test_distance(self):
+        stations = self.wq.station_bydistance(-92.8, 44.2, 30, {"characteristicName": "Caffeine"})
+        assert stations.shape[0] == 38
+
+    def test_data(self):
+        stations = [
+            "USGS-435221093001901",
+            "MN040-443119093050101",
+            "MN040-443602092510501",
+            "MN040-443656092474901",
+            "MN048-442839093085901",
+            "MN048-442849093085401",
+            "MN048-443122093050101",
+            "MN048-443128092593201",
+            "MN048-443129092592701",
+            "MN048-443140093042801",
+            "MN048-443141093042601",
+        ]
+        caff = self.wq.data_bystation(stations, {"characteristicName": "Caffeine"})
+        assert caff.shape[0] == 12
 
 
 def test_interactive_map():
