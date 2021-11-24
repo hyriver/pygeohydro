@@ -70,12 +70,12 @@ def test_nlcd():
     st = gh.cover_statistics(lulc.cover_2016)
     assert abs(st["categories"]["Forest"] - 84.357) < SMALL
 
+
 @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
 class TestNID:
     nid2: NID = NID(2)
     nid3: NID = NID(3)
 
-    
     def test_bygeom(self):
         dams2 = self.nid2.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
         dams3 = self.nid3.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
