@@ -1,7 +1,7 @@
 """Tests for PyGeoHydro package."""
 import io
-import pytest
 
+import pytest
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
@@ -17,25 +17,28 @@ GEOM = Polygon(
 )
 
 
-@pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
 class TestNWIS:
     "Test NWIS"
     nwis: NWIS = NWIS()
 
+    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_qobs(self):
         qobs = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
         assert abs(qobs.sum().item() - 27.630) < SMALL
 
+    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
         info = self.nwis.get_info(query, expanded=True)
         assert info.hcdn_2009.item()
 
+    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query)
         assert info_box.shape[0] == 36
 
+    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
         assert (
