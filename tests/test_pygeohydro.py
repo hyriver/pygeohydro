@@ -73,23 +73,20 @@ def test_nlcd():
 
 @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
 class TestNID:
-    nid2: NID = NID(2)
-    nid3: NID = NID(3)
-
     def test_bygeom(self):
-        dams2 = self.nid2.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
-        dams3 = self.nid3.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
+        dams2 = NID(2).bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+        dams3 = NID(3).bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
         assert len(dams2) == len(dams3) == 5
 
     def test_byids(self):
         names = ["Guilford", "Pingree Pond", "First Davis Pond"]
-        dams2 = self.nid2.byids("DAM_NAME", [n.upper() for n in names])
-        dams3 = self.nid3.byids("NAME", names)
+        dams2 = NID(2).byids("DAM_NAME", [n.upper() for n in names])
+        dams3 = NID(3).byids("NAME", names)
         assert len(dams2) == len(dams3) == len(names)
 
     def test_bysql(self):
-        dams2 = self.nid2.bysql("DAM_HEIGHT2 > 50")
-        dams3 = self.nid3.bysql("DAM_HEIGHT > 50")
+        dams2 = NID(2).bysql("DAM_HEIGHT > 50")
+        dams3 = NID(3).bysql("DAM_HEIGHT > 50")
         assert len(dams2) == 5331 and len(dams3) == 5306
 
 
