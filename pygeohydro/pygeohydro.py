@@ -733,10 +733,10 @@ class WaterQuality:
     -----
     This class has a number of convenience methods to retrieve data from the
     Water Quality Data. Since there are many parameter combinations that can be
-    used to retrieve data, a general method is provided to retrieve data from
-    any of the valid endpoints. You can use `get_json` to retrieve stations info
-    as a `geopandas.GeoDataFrame` or `get_csv` to retrieve stations data as a
-    `pandas.DataFrame`. You can construct a dictionary of the parameters and pass
+    used to retrieve data, a general method is also provided to retrieve data from
+    any of the valid endpoints. You can use ``get_json`` to retrieve stations info
+    as a ``geopandas.GeoDataFrame`` or ``get_csv`` to retrieve stations data as a
+    ``pandas.DataFrame``. You can construct a dictionary of the parameters and pass
     it to one of these functions. For more information on the parameters, please
     consult the
     `Water Quality Data documentation <https://www.waterqualitydata.us/webservices_documentation>`__.
