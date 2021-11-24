@@ -21,24 +21,20 @@ class TestNWIS:
     "Test NWIS"
     nwis: NWIS = NWIS()
 
-    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_qobs(self):
         qobs = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
         assert abs(qobs.sum().item() - 27.630) < SMALL
 
-    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
         info = self.nwis.get_info(query, expanded=True)
         assert info.hcdn_2009.item()
 
-    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query)
         assert info_box.shape[0] == 36
 
-    @pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
         assert (
@@ -74,14 +70,15 @@ def test_nlcd():
     st = gh.cover_statistics(lulc.cover_2016)
     assert abs(st["categories"]["Forest"] - 84.357) < SMALL
 
-
+@pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
 class TestNID:
     nid2: NID = NID(2)
     nid3: NID = NID(3)
 
+    
     def test_bygeom(self):
-        dams2 = self.nid2.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
-        dams3 = self.nid3.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+        dams2 = self.nid2.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
+        dams3 = self.nid3.bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE2 > 200")
         assert len(dams2) == len(dams3) == 5
 
     def test_byids(self):
@@ -91,7 +88,7 @@ class TestNID:
         assert len(dams2) == len(dams3) == len(names)
 
     def test_bysql(self):
-        dams2 = self.nid2.bysql("DAM_HEIGHT > 50")
+        dams2 = self.nid2.bysql("DAM_HEIGHT2 > 50")
         dams3 = self.nid3.bysql("DAM_HEIGHT > 50")
         assert len(dams2) == 5331 and len(dams3) == 5306
 
