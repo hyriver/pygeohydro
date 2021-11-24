@@ -10,6 +10,7 @@ from .print_versions import show_versions
 from .pygeohydro import (
     NID,
     NWIS,
+    WaterQuality,
     cover_statistics,
     interactive_map,
     nlcd,
@@ -30,6 +31,7 @@ except Exception:
 __all__ = [
     "NID",
     "NWIS",
+    "WaterQuality",
     "cover_statistics",
     "interactive_map",
     "nlcd",

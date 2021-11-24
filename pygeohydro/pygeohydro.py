@@ -1,78 +1,30 @@
 """Accessing data from the supported databases through their APIs."""
 import io
-import logging
 import re
-import sys
 import zipfile
-from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
 import async_retriever as ar
 import cytoolz as tlz
 import folium
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, RetrySession, ServiceURL
+from pygeoogc import RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
-from .exceptions import (
-    DataNotAvailable,
-    InvalidInputRange,
-    InvalidInputType,
-    InvalidInputValue,
-    ZeroMatched,
-)
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(""))
-logger.handlers = [handler]
-logger.propagate = False
+from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, ZeroMatched
+from .helpers import logger
 
 DEF_CRS = "epsg:4326"
-
-
-class NID(AGRBase):
-    """Retrieve data from the National Inventory of Dams web service.
-
-    Parameters
-    ----------
-    version : str, optional
-        The database version. Version 2 and 3 are available. Version 2 has
-        NID 2019 data and version 3 includes more recent data as well. At the
-        moment both services are experimental and might not always work. The
-        default version is 2.
-    """
-
-    def __init__(self, version: int = 2) -> None:
-        if version not in (2, 3):
-            raise InvalidInputValue("version", ["2", "3"])
-
-        layer = "nid2019_u" if version == 2 else "dams"
-        super().__init__(layer, "*", DEF_CRS)
-        self.service = getattr(ServiceURL().restful, f"nid_{int(version)}")
-        rjson = ar.retrieve(
-            [
-                "/".join(
-                    [
-                        "https://gist.githubusercontent.com/cheginit",
-                        "91af7f7427763057a18000c5309280dc/raw",
-                        "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
-                    ]
-                )
-            ],
-            "json",
-        )
-        self.attrs = pd.DataFrame(rjson[0])
 
 
 def ssebopeta_byloc(
@@ -98,7 +50,7 @@ def ssebopeta_byloc(
 
     lon, lat = coords
 
-    f_list = _get_ssebopeta_urls(dates)
+    f_list = helpers.get_ssebopeta_urls(dates)
     session = RetrySession()
 
     with patch("socket.has_ipv6", False):
@@ -153,7 +105,7 @@ def ssebopeta_bygeom(
     """
     _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
 
-    f_list = _get_ssebopeta_urls(dates)
+    f_list = helpers.get_ssebopeta_urls(dates)
 
     session = RetrySession()
 
@@ -173,41 +125,6 @@ def ssebopeta_bygeom(
     eta *= 1e-3
     eta.attrs.update({"units": "mm/day", "nodatavals": (np.nan,)})
     return eta
-
-
-def _get_ssebopeta_urls(
-    dates: Union[Tuple[str, str], Union[int, List[int]]]
-) -> List[Tuple[pd.DatetimeIndex, str]]:
-    """Get list of URLs for SSEBop dataset within a period or years."""
-    if not isinstance(dates, (tuple, list, int)):
-        raise InvalidInputType(
-            "dates", "tuple, list, or int", "(start, end), year, or [years, ...]"
-        )
-
-    if isinstance(dates, tuple):
-        if len(dates) != 2:
-            raise InvalidInputType("dates", "(start, end)")
-        start = pd.to_datetime(dates[0])
-        end = pd.to_datetime(dates[1])
-        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2020-12-31"):
-            raise InvalidInputRange("SSEBop", ("2000", "2020"))
-        date_range = pd.date_range(start, end)
-    else:
-        years = dates if isinstance(dates, list) else [dates]
-        seebop_yrs = np.arange(2000, 2021)
-
-        if any(y not in seebop_yrs for y in years):
-            raise InvalidInputRange("SSEBop", ("2000", "2020"))
-
-        d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
-        date_range = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
-
-    base_url = ServiceURL().http.ssebopeta
-    f_list = [
-        (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip") for d in date_range
-    ]
-
-    return f_list
 
 
 def nlcd(
@@ -257,96 +174,8 @@ def nlcd(
 
     _years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
 
-    layers = _nlcd_layers(_years, region)
-    return _get_nlcd_layers(layers, geometry, resolution, geo_crs, crs)
-
-
-def _get_nlcd_layers(
-    layers: Union[str, List[str]],
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
-    resolution: float,
-    geo_crs: str = DEF_CRS,
-    crs: str = DEF_CRS,
-) -> xr.Dataset:
-    """Get data from NLCD database (2016).
-
-    Download land use/land cover data from NLCD (2016) database within
-    a given geometry in epsg:4326.
-
-    Parameters
-    ----------
-    layers : str, list
-        The NLCD layers to be extracted.
-    geometry : Polygon, MultiPolygon, or tuple of length 4
-        The geometry or bounding box (west, south, east, north) for extracting the data.
-    resolution : float
-        The data resolution in meters. The width and height of the output are computed in pixel
-        based on the geometry bounds and the given resolution.
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-
-    Returns
-    -------
-     xarray.DataArray
-         NLCD within a geometry
-    """
-    if resolution < 30:
-        logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
-
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
-    wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
-    r_dict = wms.getmap_bybox(
-        _geometry.bounds, resolution, box_crs=crs, kwargs={"styles": "raster"}
-    )
-
-    ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
-    attrs = ds.attrs
-    if isinstance(ds, xr.DataArray):
-        ds = ds.to_dataset()
-
-    units = OrderedDict(
-        (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
-    )
-    for lyr in layers:
-        name = [n for n in units if n in lyr.lower()][-1]
-        lyr_name = f"{name}_{lyr.split('_')[1]}"
-        ds = ds.rename({lyr: lyr_name})
-        ds[lyr_name].attrs["units"] = units[name]
-    ds.attrs = attrs
-    return ds
-
-
-def _nlcd_layers(years: Mapping[str, List[int]], region: str) -> List[str]:
-    """Get NLCD layers for the provided years dictionary."""
-    valid_regions = ["L48", "HI", "PR", "AK"]
-    region = region.upper()
-    if region not in valid_regions:
-        raise InvalidInputValue("region", valid_regions)
-
-    nlcd_meta = helpers.nlcd_helper()
-
-    names = ["impervious", "cover", "canopy", "descriptor"]
-    avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
-
-    if any(
-        yr not in avail_years[lyr] or lyr not in names for lyr, yrs in years.items() for yr in yrs
-    ):
-        vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-        raise InvalidInputValue("years", vals)
-
-    layer_map = {
-        "canopy": lambda _: "Tree_Canopy",
-        "cover": lambda _: "Land_Cover_Science_Product",
-        "impervious": lambda _: "Impervious",
-        "descriptor": lambda x: "Impervious_Descriptor" if x == "AK" else "Impervious_descriptor",
-    }
-
-    return [
-        f"NLCD_{yr}_{layer_map[lyr](region)}_{region}" for lyr, yrs in years.items() for yr in yrs
-    ]
+    layers = helpers.nlcd_layers(_years, region)
+    return helpers.get_nlcd_layers(layers, geometry, resolution, geo_crs, crs)
 
 
 def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
@@ -366,29 +195,168 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
         raise InvalidInputType("ds", "xarray.DataArray")
 
     nlcd_meta = helpers.nlcd_helper()
-    _freq = dict(zip(*np.unique(ds, return_counts=True)))
-    freq = {}
-    total_count = 0
-    for k, v in _freq.items():
-        try:
-            freq[str(int(k))] = v
-            total_count += v
-        except ValueError:
-            freq["127"] = v
+    val, freq = np.unique(ds, return_counts=True)
+    nan_idx = np.argwhere(np.isnan(val))
+    val = np.delete(val, nan_idx).astype(int).astype(str)
+    freq = np.delete(freq, nan_idx)
+    freq_dict = dict(zip(val, freq))
+    total_count = freq.sum()
 
-    if any(c not in nlcd_meta["classes"] for c in freq):
+    if any(c not in nlcd_meta["classes"] for c in freq_dict):
         raise InvalidInputValue("ds values", list(nlcd_meta["classes"]))  # noqa: TC003
 
     class_percentage = {
         nlcd_meta["classes"][k].split(" -")[0].strip(): v / total_count * 100.0
-        for k, v in freq.items()
+        for k, v in freq_dict.items()
     }
     category_percentage = {
-        k: sum(freq[c] for c in v if c in freq) / total_count * 100.0
+        k: sum(freq_dict[c] for c in v if c in freq_dict) / total_count * 100.0
         for k, v in nlcd_meta["categories"].items()
     }
 
     return {"classes": class_percentage, "categories": category_percentage}
+
+
+def interactive_map(
+    bbox: Tuple[float, float, float, float],
+    crs: str = DEF_CRS,
+    nwis_kwds: Optional[Dict[str, Any]] = None,
+) -> folium.Map:
+    """Generate an interactive map including all USGS stations within a bounding box.
+
+    Parameters
+    ----------
+    bbox : tuple
+        List of corners in this order (west, south, east, north)
+    crs : str, optional
+        CRS of the input bounding box, defaults to EPSG:4326.
+    nwis_kwds : dict, optional
+        Optional keywords to include in the NWIS request as a dictionary like so:
+        ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
+        Default to None.
+
+    Returns
+    -------
+    folium.Map
+        Interactive map within a bounding box.
+
+    Examples
+    --------
+    >>> import pygeohydro as gh
+    >>> nwis_kwds = {"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv"}
+    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
+    >>> n_stations = len(m.to_dict()["children"]) - 1
+    >>> n_stations
+    10
+    """
+    bbox = ogc.utils.match_crs(bbox, crs, DEF_CRS)
+    ogc.utils.check_bbox(bbox)
+
+    nwis = NWIS()
+    query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+    if isinstance(nwis_kwds, dict):
+        query.update(nwis_kwds)
+
+    sites = nwis.get_info(query, expanded=True)
+
+    sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
+    sites["altitude"] = (
+        sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
+    )
+
+    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " square miles"
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " square miles"
+
+    cols_old = [
+        "site_no",
+        "station_nm",
+        "coords",
+        "altitude",
+        "huc_cd",
+        "drain_area_va",
+        "contrib_drain_area_va",
+        "hcdn_2009",
+    ]
+
+    cols_new = [
+        "Site No.",
+        "Station Name",
+        "Coordinate",
+        "Altitude",
+        "HUC8",
+        "Drainage Area",
+        "Contributing Drainage Area",
+        "HCDN 2009",
+    ]
+
+    sites = sites.groupby("site_no").agg(set).reset_index()
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
+
+    msgs = []
+    base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
+    for row in sites.itertuples(index=False):
+        site_no = row[sites.columns.get_loc(cols_new[0])]
+        msg = f"<strong>{cols_new[0]}</strong>: {site_no}<br>"
+        for col in cols_new[1:]:
+            value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
+            msg += f"<strong>{col}</strong>: {value}<br>"
+        msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
+        msgs.append(msg[:-4])
+
+    sites["msg"] = msgs
+
+    west, south, east, north = bbox
+    lon = (west + east) * 0.5
+    lat = (south + north) * 0.5
+
+    imap = folium.Map(
+        location=(lat, lon),
+        tiles="Stamen Terrain",
+        zoom_start=10,
+    )
+
+    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
+        folium.Marker(
+            location=list(coords)[0][::-1],
+            popup=folium.Popup(msg, max_width=250),
+            icon=folium.Icon(),
+        ).add_to(imap)
+
+    return imap
+
+
+class NID(AGRBase):
+    """Retrieve data from the National Inventory of Dams web service.
+
+    Parameters
+    ----------
+    version : str, optional
+        The database version. Version 2 and 3 are available. Version 2 has
+        NID 2019 data and version 3 includes more recent data as well. At the
+        moment both services are experimental and might not always work. The
+        default version is 2. More information can be found at https://damsdev.net.
+    """
+
+    def __init__(self, version: int = 2) -> None:
+        if version not in (2, 3):
+            raise InvalidInputValue("version", ["2", "3"])
+
+        layer = "nid2019_u" if version == 2 else "dams"
+        super().__init__(layer, "*", DEF_CRS)
+        self.service = getattr(ServiceURL().restful, f"nid_{int(version)}")
+        rjson = ar.retrieve(
+            [
+                "/".join(
+                    [
+                        "https://gist.githubusercontent.com/cheginit",
+                        "91af7f7427763057a18000c5309280dc/raw",
+                        "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
+                    ]
+                )
+            ],
+            "json",
+        )
+        self.attrs = pd.DataFrame(rjson[0])
 
 
 class NWIS:
@@ -758,109 +726,213 @@ class NWIS:
         return [{**query, **output_type, "format": "rdb"} for query in _queries]
 
 
-def interactive_map(
-    bbox: Tuple[float, float, float, float],
-    crs: str = DEF_CRS,
-    nwis_kwds: Optional[Dict[str, Any]] = None,
-) -> folium.Map:
-    """Generate an interactive map including all USGS stations within a bounding box.
+class WaterQuality:
+    """Water Quality Web Service http://www.waterqualitydata.us.
 
-    Parameters
-    ----------
-    bbox : tuple
-        List of corners in this order (west, south, east, north)
-    crs : str, optional
-        CRS of the input bounding box, defaults to EPSG:4326.
-    nwis_kwds : dict, optional
-        Optional keywords to include in the NWIS request as a dictionary like so:
-        ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
-        Default to None.
-
-    Returns
-    -------
-    folium.Map
-        Interactive map within a bounding box.
-
-    Examples
-    --------
-    >>> import pygeohydro as gh
-    >>> nwis_kwds = {"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv"}
-    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
-    >>> n_stations = len(m.to_dict()["children"]) - 1
-    >>> n_stations
-    10
+    Notes
+    -----
+    This class has a number of convenience methods to retrieve data from the
+    Water Quality Data. Since there are many parameter combinations that can be
+    used to retrieve data, a general method is provided to retrieve data from
+    any of the valid endpoints. You can use `get_json` to retrieve stations info
+    as a `geopandas.GeoDataFrame` or `get_csv` to retrieve stations data as a
+    `pandas.DataFrame`. You can construct a dictionary of the parameters and pass
+    it to one of these functions. For more information on the parameters, please
+    consult the
+    `Water Quality Data documentation <https://www.waterqualitydata.us/webservices_documentation>`__.
     """
-    bbox = ogc.utils.match_crs(bbox, crs, DEF_CRS)
-    ogc.utils.check_bbox(bbox)
 
-    nwis = NWIS()
-    query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-    if isinstance(nwis_kwds, dict):
-        query.update(nwis_kwds)
+    def __init__(self) -> None:
+        self.wq_url = "http://www.waterqualitydata.us"
+        self.keywords = self.get_param_table()
 
-    sites = nwis.get_info(query, expanded=True)
+    def _base_url(self, endpoint: str) -> str:
+        """Get the base URL for the target endpoint."""
+        valid_endpoints = [
+            "Station",
+            "Result",
+            "Activity",
+            "ActivityMetric",
+            "ProjectMonitoringLocationWeighting",
+            "ResultDetectionQuantitationLimit",
+            "BiologicalMetric",
+        ]
+        if endpoint.lower() not in map(str.lower, valid_endpoints):
+            raise InvalidInputValue("endpoint", valid_endpoints)
+        return f"{self.wq_url}/data/{endpoint}/search"
 
-    sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
-    sites["altitude"] = (
-        sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
-    )
+    def lookup_domain_values(self, endpoint: str) -> List[str]:
+        """Get the domain values for the target endpoint."""
+        valid_endpoints = [
+            "statecode",
+            "countycode",
+            "sitetype",
+            "organization",
+            "samplemedia",
+            "characteristictype",
+            "characteristicname",
+            "providers",
+        ]
+        if endpoint.lower() not in valid_endpoints:
+            raise InvalidInputValue("endpoint", valid_endpoints)
+        resp = ar.retrieve([f"{self.wq_url}/Codes/{endpoint}?mimeType=json"], "json")
+        return [r["value"] for r in resp[0]["codes"]]
 
-    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " square miles"
-    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " square miles"
+    def get_param_table(self) -> pd.DataFrame:
+        """Get the parameter table from the USGS Water Quality Web Service."""
+        params = pd.read_html(f"{self.wq_url}/webservices_documentation/")
+        params = params[0].iloc[:29].drop(columns="Discussion")
+        return params.groupby("REST parameter")["Argument"].apply(lambda x: ",".join(x))
 
-    cols_old = [
-        "site_no",
-        "station_nm",
-        "coords",
-        "altitude",
-        "huc_cd",
-        "drain_area_va",
-        "contrib_drain_area_va",
-        "hcdn_2009",
-    ]
+    def station_bybbox(
+        self, bbox: Tuple[float, float, float, float], wq_kwds: Optional[Dict[str, str]]
+    ) -> gpd.GeoDataFrame:
+        """Retrieve station info within bounding box.
 
-    cols_new = [
-        "Site No.",
-        "Station Name",
-        "Coordinate",
-        "Altitude",
-        "HUC8",
-        "Drainage Area",
-        "Contributing Drainage Area",
-        "HCDN 2009",
-    ]
+        Parameters
+        ----------
+        bbox : tuple of float
+            Bounding box coordinates (west, south, east, north) in epsg:4326.
+        wq_kwds : dict, optional
+            Water Quality Web Service keyword arguments. Default to None.
 
-    sites = sites.groupby("site_no").agg(set).reset_index()
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of station info within the bounding box.
+        """
+        kwds = {
+            "mimeType": "geojson",
+            "bBox": ",".join(f"{b:.06f}" for b in bbox),
+            "zip": "no",
+            "sorted": "no",
+        }
+        if wq_kwds is not None:
+            self._check_kwds(wq_kwds)
+            kwds.update(wq_kwds)
 
-    msgs = []
-    base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
-    for row in sites.itertuples(index=False):
-        site_no = row[sites.columns.get_loc(cols_new[0])]
-        msg = f"<strong>{cols_new[0]}</strong>: {site_no}<br>"
-        for col in cols_new[1:]:
-            value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
-            msg += f"<strong>{col}</strong>: {value}<br>"
-        msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
-        msgs.append(msg[:-4])
+        return self.get_json("station", kwds)
 
-    sites["msg"] = msgs
+    def station_bydistance(
+        self, lon: float, lat: float, radius: float, wq_kwds: Optional[Dict[str, str]]
+    ) -> gpd.GeoDataFrame:
+        """Retrieve station within a radius (decimal miles) of a point.
 
-    west, south, east, north = bbox
-    lon = (west + east) * 0.5
-    lat = (south + north) * 0.5
+        Parameters
+        ----------
+        lon : float
+            Longitude of point.
+        lat : float
+            Latitude of point.
+        radius : float
+            Radius (decimal miles) of search.
+        wq_kwds : dict, optional
+            Water Quality Web Service keyword arguments. Default to None.
 
-    imap = folium.Map(
-        location=(lat, lon),
-        tiles="Stamen Terrain",
-        zoom_start=10,
-    )
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of station info within the radius of the point.
+        """
+        kwds = {
+            "mimeType": "geojson",
+            "long": f"{lon:.06f}",
+            "lat": f"{lat:.06f}",
+            "within": f"{radius:.06f}",
+            "zip": "no",
+            "sorted": "no",
+        }
+        if wq_kwds is not None:
+            self._check_kwds(wq_kwds)
+            kwds.update(wq_kwds)
 
-    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
-        folium.Marker(
-            location=list(coords)[0][::-1],
-            popup=folium.Popup(msg, max_width=250),
-            icon=folium.Icon(),
-        ).add_to(imap)
+        return self.get_json("station", kwds)
 
-    return imap
+    def data_bystation(
+        self, station_ids: Union[str, List[str]], wq_kwds: Optional[Dict[str, str]]
+    ) -> pd.DataFrame:
+        """Retrieve data for a single station.
+
+        Parameters
+        ----------
+        station_ids : str or list of str
+            Station ID(s). The IDs should have the format "Agency code-Station ID".
+        wq_kwds : dict, optional
+            Water Quality Web Service keyword arguments. Default to None.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame of data for the stations.
+        """
+        siteid = set(station_ids) if isinstance(station_ids, list) else {station_ids}
+        if any("-" not in s for s in siteid):
+            valid_type = "list of hyphenated IDs like so 'agency code-station ID'"
+            raise InvalidInputType("station_ids", valid_type)
+        kwds = {
+            "mimeType": "csv",
+            "siteid": ";".join(siteid),
+            "zip": "yes",
+            "sorted": "no",
+        }
+        if wq_kwds is not None:
+            self._check_kwds(wq_kwds)
+            kwds.update(wq_kwds)
+
+        if len(siteid) > 10:
+            return self.get_csv("result", kwds, request_method="POST")
+        return self.get_csv("result", kwds)
+
+    def _check_kwds(self, wq_kwds: Dict[str, str]) -> None:
+        """Check the validity of the Water Quality Web Service keyword arguments."""
+        invalids = [k for k in wq_kwds if k not in self.keywords.index]
+        if len(invalids) > 0:
+            raise InvalidInputValue("wq_kwds", invalids)
+
+    def get_json(
+        self, endpoint: str, kwds: Dict[str, str], request_method: str = "GET"
+    ) -> gpd.GeoDataFrame:
+        """Get the JSON response from the Water Quality Web Service.
+
+        Parameters
+        ----------
+        endpoint : str
+            Endpoint of the Water Quality Web Service.
+        kwds : dict
+            Water Quality Web Service keyword arguments.
+        request_method : str, optional
+            HTTP request method. Default to GET.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            The web service response as a GeoDataFrame.
+        """
+        req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
+        r = ar.retrieve([self._base_url(endpoint)], "json", req_kwds, request_method=request_method)
+        return geoutils.json2geodf(r)
+
+    def get_csv(
+        self, endpoint: str, kwds: Dict[str, str], request_method: str = "GET"
+    ) -> pd.DataFrame:
+        """Get the CSV response from the Water Quality Web Service.
+
+        Parameters
+        ----------
+        endpoint : str
+            Endpoint of the Water Quality Web Service.
+        kwds : dict
+            Water Quality Web Service keyword arguments.
+        request_method : str, optional
+            HTTP request method. Default to GET.
+
+        Returns
+        -------
+        pandas.DataFrame
+            The web service response as a DataFrame.
+        """
+        req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
+        r = ar.retrieve(
+            [self._base_url(endpoint)], "binary", req_kwds, request_method=request_method
+        )
+        return pd.read_csv(io.BytesIO(r[0]), compression="zip")
