@@ -727,7 +727,7 @@ class NWIS:
 
 
 class WaterQuality:
-    """Water Quality Web Service http://www.waterqualitydata.us.
+    """Water Quality Web Service https://www.waterqualitydata.us.
 
     Notes
     -----
@@ -743,7 +743,7 @@ class WaterQuality:
     """
 
     def __init__(self) -> None:
-        self.wq_url = "http://www.waterqualitydata.us"
+        self.wq_url = "https://www.waterqualitydata.us"
         self.keywords = self.get_param_table()
 
     def _base_url(self, endpoint: str) -> str:
@@ -782,7 +782,7 @@ class WaterQuality:
         """Get the parameter table from the USGS Water Quality Web Service."""
         params = pd.read_html(f"{self.wq_url}/webservices_documentation/")
         params = params[0].iloc[:29].drop(columns="Discussion")
-        return params.groupby("REST parameter")["Argument"].apply(lambda x: ",".join(x))
+        return params.groupby("REST parameter")["Argument"].apply(",".join)
 
     def station_bybbox(
         self, bbox: Tuple[float, float, float, float], wq_kwds: Optional[Dict[str, str]]
