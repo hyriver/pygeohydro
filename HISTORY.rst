@@ -1,6 +1,20 @@
 =======
 History
 =======
+0.11.3 (2021-11-12)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add support for the
+  `Water Quality Portal <http://www.waterqualitydata.us>`__ Web Services. (:issue_hydro:`72`)
+- Add support for two version of NID web service. The original NID web service is considered
+  version 2 and the new NID is considered version 3. You can pass the version number to the
+  ``NID`` like so ``NID(2)``. The default version is 2.
+
+Bug Fixes
+~~~~~~~~~
+- Fix an issue with background percentage calculation in ``cover_statistics``.
 
 0.11.3 (2021-11-12)
 -------------------
