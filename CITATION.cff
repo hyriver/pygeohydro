@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Chegini"
+  given-names: "Taher"
+  orcid: "https://orcid.org/0000-0002-5430-6000"
+- family-names: "Li"
+  given-names: "Hong-Yi"
+  orcid: "https://orcid.org/0000-0002-9807-3851"
+- family-names: "Leung"
+  given-names: "L. Ruby"
+  orcid: "https://orcid.org/0000-0002-3221-9467"
+title: "HyRiver: Hydroclimate Data Retriever"
+version: 0.11
+doi: 10.21105/joss.03175
+date-released: 2021-10-27
+url: "https://github.com/cheginit/HyRiver"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Chegini"
+    given-names: "Taher"
+    orcid: "https://orcid.org/0000-0002-5430-6000"
+  - family-names: "Li"
+    given-names: "Hong-Yi"
+    orcid: "https://orcid.org/0000-0002-9807-3851"
+  - family-names: "Leung"
+    given-names: "L. Ruby"
+    orcid: "https://orcid.org/0000-0002-3221-9467"
+  doi: "10.21105/joss.03175"
+  journal: "Journal of Open Source Software"
+  month: 10
+  start: 1
+  end: 3
+  title: "HyRiver: Hydroclimate Data Retriever"
+  issue: 66
+  volume: 6
+  year: 2021
