@@ -623,8 +623,12 @@ class NWIS:
         def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
             discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
             discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
-            if utc:
-                discharge.index = discharge.index.tz_convert("UTC")
+            if discharge.index.tz is None:
+                tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
+                discharge.index = discharge.index.tz_localize(
+                    tz["defaultTimeZone"]["zoneAbbreviation"]
+                )
+            discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
             return discharge
 

@@ -31,8 +31,9 @@ class TestNWIS:
         )
 
     def test_qobs_iv(self):
-        qobs = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
-        assert abs(qobs.sum().item() - 569.99) < SMALL
+        iv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
+        dv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="dv")
+        assert abs(iv.mean().item() - dv.mean().item()) < 0.054
 
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
