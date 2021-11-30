@@ -460,8 +460,10 @@ class NWIS:
         self,
         station_ids: Union[Sequence[str], str],
         dates: Tuple[str, str],
+        freq: str = "dv",
         mmd: bool = False,
-    ) -> pd.DataFrame:
+        to_xarray: bool = False,
+    ) -> Union[pd.DataFrame, xr.Dataset]:
         """Get mean daily streamflow observations from USGS.
 
         Parameters
@@ -470,53 +472,94 @@ class NWIS:
             The gage ID(s)  of the USGS station.
         dates : tuple
             Start and end dates as a tuple (start, end).
+        freq : str, optional
+            The frequency of the streamflow data, defaults to ``dv`` (daily values).
+            Valid frequencies are ``dv`` (daily values), ``iv`` (instantaneous values).
+            Note that for ``iv`` the time zone for the input dates is assumed to be UTC.
         mmd : bool, optional
             Convert cms to mm/day based on the contributing drainage area of the stations.
+            Defaults to False.
+        to_xarray : bool, optional
+            Whether to return a xarray.Dataset. Defaults to False.
 
         Returns
         -------
-        pandas.DataFrame
+        pandas.DataFrame or xarray.Dataset
             Streamflow data observations in cubic meter per second (cms). The stations that
-            don't provide mean daily discharge in the target period will be dropped.
+            don't provide the requested discharge data in the target period will be dropped.
+            Note that when frequency is set to ``iv`` the time zone is converted to UTC.
         """
-        sids, start, end = self._check_inputs(station_ids, dates)
+        valid_freqs = ["dv", "iv"]
+        if freq not in valid_freqs:
+            raise InvalidInputValue("freq", valid_freqs)
+        utc = True if freq == "iv" else None
+        sids, start, end = self._check_inputs(station_ids, dates, utc)
+        param_cd = "00060"
         queries = [
             {
-                "parameterCd": "00060",
+                "parameterCd": param_cd,
                 "siteStatus": "all",
-                "outputDataTypeCd": "dv",
+                "outputDataTypeCd": freq,
                 "sites": ",".join(s),
             }
             for s in tlz.partition_all(1500, sids)
         ]
 
         siteinfo = self.get_info(queries)
-        sids = siteinfo.loc[
-            (
-                (siteinfo.stat_cd == "00003")
-                & (start < siteinfo.end_date)
-                & (end > siteinfo.begin_date)
-            ),
-            "site_no",
-        ].tolist()
+        cols = [
+            "station_nm",
+            "dec_lat_va",
+            "dec_long_va",
+            "alt_va",
+            "alt_acy_va",
+            "alt_datum_cd",
+            "huc_cd",
+            "begin_date",
+            "end_date",
+        ]
+        attr_df = siteinfo[siteinfo.parm_cd == param_cd].set_index("site_no")[cols].copy()
+        attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
+        attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
+        attr_df.index = "USGS-" + attr_df.index
+        params = {
+            "format": "json",
+            "parameterCd": param_cd,
+            "siteStatus": "all",
+        }
+        if freq == "dv":
+            sids = siteinfo.loc[
+                (
+                    (siteinfo.stat_cd == "00003")
+                    & (start.tz_localize(None) < siteinfo.end_date)
+                    & (end.tz_localize(None) > siteinfo.begin_date)
+                ),
+                "site_no",
+            ].tolist()
+            params.update({"statCd": "00003"})
+        else:
+            sids = siteinfo.loc[
+                (
+                    (start.tz_localize(None) < siteinfo.end_date)
+                    & (end.tz_localize(None) > siteinfo.begin_date)
+                ),
+                "site_no",
+            ].tolist()
 
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
+        time_fmt = "%Y-%m-%d" if utc is None else "%Y-%m-%dT%H:%M%z"
         payloads = [
             {
-                "format": "json",
                 "sites": ",".join(s),
-                "startDT": start.strftime("%Y-%m-%d"),
-                "endDT": end.strftime("%Y-%m-%d"),
-                "parameterCd": "00060",
-                "statCd": "00003",
-                "siteStatus": "all",
+                "startDT": start.strftime(time_fmt),
+                "endDT": end.strftime(time_fmt),
+                **params,
             }
             for s in tlz.partition_all(1500, sids)
         ]
-        urls, kwds = zip(*((f"{self.url}/dv", {"params": p}) for p in payloads))
-        qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds))
+        urls, kwds = zip(*((f"{self.url}/{freq}", {"params": p}) for p in payloads))
+        qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds), utc)
 
         dropped = [s for s in sids if f"USGS-{s}" not in qobs]
         if len(dropped) > 0:
@@ -529,14 +572,20 @@ class NWIS:
             area = self._get_drainage_area(sids)
             ms2mmd = 1000.0 * 24.0 * 3600.0
             try:
-                return qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
+        qobs.attrs = attr_df.to_dict(orient="index")
+        if to_xarray:
+            ds = qobs.to_xarray()
+            for v in ds.keys():
+                ds[v].attrs = qobs.attrs[v]
+            return ds
         return qobs
 
     @staticmethod
     def _check_inputs(
-        station_ids: Union[Sequence[str], str], dates: Tuple[str, str]
+        station_ids: Union[Sequence[str], str], dates: Tuple[str, str], utc: Optional[bool]
     ) -> Tuple[Sequence[str], pd.DatetimeIndex, pd.DatetimeIndex]:
         """Validate inputs."""
         if not isinstance(station_ids, (str, Sequence, Iterable)):
@@ -547,8 +596,8 @@ class NWIS:
         if not isinstance(dates, tuple) or len(dates) != 2:
             raise InvalidInputType("dates", "tuple", "(start, end)")
 
-        start = pd.to_datetime(dates[0])
-        end = pd.to_datetime(dates[1])
+        start = pd.to_datetime(dates[0], utc=utc)
+        end = pd.to_datetime(dates[1], utc=utc)
         return sids, start, end
 
     @staticmethod
@@ -557,22 +606,25 @@ class NWIS:
         basins = nldi.get_basins(station_ids)
         if isinstance(basins, tuple):
             basins = basins[0]
-        eck4 = "+proj=eck4 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs"
-        return basins.to_crs(eck4).area
+        return basins.to_crs("EPSG:6350").area
 
     @staticmethod
-    def _to_dataframe(resp: List[Dict[str, Any]]) -> pd.DataFrame:
+    def _to_dataframe(resp: List[Dict[str, Any]], utc: Optional[bool]) -> pd.DataFrame:
         """Convert json to dataframe."""
         r_ts = {
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
             for r in resp
             for t in r["value"]["timeSeries"]
-            if len(t["values"][0]["value"]) != 0
+            if len(t["values"][0]["value"]) > 0
         }
+        if len(r_ts) == 0:
+            raise DataNotAvailable("discharge")
 
         def to_df(col: str, dic: Dict[str, Any]) -> pd.DataFrame:
             discharge = pd.DataFrame.from_records(dic, exclude=["qualifiers"], index=["dateTime"])
-            discharge.index = pd.to_datetime(discharge.index)
+            discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
+            if utc:
+                discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
             return discharge
 
