@@ -495,10 +495,10 @@ class NWIS:
         utc = True if freq == "iv" else None
 
         sids, start, end = self._check_inputs(station_ids, dates, utc)
-        param_cd = "00060"
+
         queries = [
             {
-                "parameterCd": param_cd,
+                "parameterCd": "00060",
                 "siteStatus": "all",
                 "outputDataTypeCd": freq,
                 "sites": ",".join(s),
@@ -507,47 +507,29 @@ class NWIS:
         ]
 
         siteinfo = self.get_info(queries)
-        params = {
-            "format": "json",
-            "parameterCd": param_cd,
-            "siteStatus": "all",
-        }
-        if freq == "dv":
-            sids = siteinfo.loc[
-                (
-                    (siteinfo.stat_cd == "00003")
-                    & (start.tz_localize(None) < siteinfo.end_date)
-                    & (end.tz_localize(None) > siteinfo.begin_date)
-                ),
-                "site_no",
-            ].tolist()
-            params.update({"statCd": "00003"})
-        else:
-            sids = siteinfo.loc[
-                (
-                    (start.tz_localize(None) < siteinfo.end_date)
-                    & (end.tz_localize(None) > siteinfo.begin_date)
-                ),
-                "site_no",
-            ].tolist()
+        sids = siteinfo.loc[
+            (
+                (start.tz_localize(None) < siteinfo.end_date)
+                & (end.tz_localize(None) > siteinfo.begin_date)
+            ),
+            "site_no",
+        ].tolist()
 
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
+        params = {
+            "format": "json",
+            "parameterCd": "00060",
+            "siteStatus": "all",
+        }
+        if freq == "dv":
+            params.update({"statCd": "00003"})
+
         time_fmt = "%Y-%m-%d" if utc is None else "%Y-%m-%dT%H:%M%z"
         startDT = start.strftime(time_fmt)
         endDT = end.strftime(time_fmt)
-        payloads = [
-            {
-                "sites": ",".join(s),
-                "startDT": startDT,
-                "endDT": endDT,
-                **params,
-            }
-            for s in tlz.partition_all(1500, sids)
-        ]
-        urls, kwds = zip(*((f"{self.url}/{freq}", {"params": p}) for p in payloads))
-        qobs = self._to_dataframe(ar.retrieve(urls, "json", kwds), utc)
+        qobs = self._get_streamflow(sids, startDT, endDT, freq, params)
 
         dropped = [s for s in sids if f"USGS-{s}" not in qobs]
         if len(dropped) > 0:
@@ -595,12 +577,12 @@ class NWIS:
     @staticmethod
     def _check_inputs(
         station_ids: Union[Sequence[str], str], dates: Tuple[str, str], utc: Optional[bool]
-    ) -> Tuple[Sequence[str], pd.DatetimeIndex, pd.DatetimeIndex]:
+    ) -> Tuple[List[str], pd.DatetimeIndex, pd.DatetimeIndex]:
         """Validate inputs."""
         if not isinstance(station_ids, (str, Sequence, Iterable)):
             raise InvalidInputType("ids", "str or list of str")
 
-        sids = [station_ids] if isinstance(station_ids, str) else station_ids
+        sids = [station_ids] if isinstance(station_ids, str) else list(station_ids)
 
         if not isinstance(dates, tuple) or len(dates) != 2:
             raise InvalidInputType("dates", "tuple", "(start, end)")
@@ -617,9 +599,21 @@ class NWIS:
             basins = basins[0]
         return basins.to_crs("EPSG:6350").area
 
-    @staticmethod
-    def _to_dataframe(resp: List[Dict[str, Any]], utc: Optional[bool]) -> pd.DataFrame:
+    def _get_streamflow(
+        self, sids: List[str], startDT: str, endDT: str, freq: str, kwargs: Dict[str, str]
+    ) -> pd.DataFrame:
         """Convert json to dataframe."""
+        payloads = [
+            {
+                "sites": ",".join(s),
+                "startDT": startDT,
+                "endDT": endDT,
+                **kwargs,
+            }
+            for s in tlz.partition_all(1500, sids)
+        ]
+        urls, kwds = zip(*((f"{self.url}/{freq}", {"params": p}) for p in payloads))
+        resp = ar.retrieve(urls, "json", kwds)
         r_ts = {
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
             for r in resp
