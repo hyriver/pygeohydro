@@ -21,9 +21,18 @@ class TestNWIS:
     "Test NWIS"
     nwis: NWIS = NWIS()
 
-    def test_qobs(self):
-        qobs = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-        assert abs(qobs.sum().item() - 27.630) < SMALL
+    def test_qobs_dv(self):
+        df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
+        ds = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True, to_xarray=True)
+        col = f"USGS-{SID_NATURAL}"
+        assert (
+            abs(df[col].sum().item() - ds[col].sum().item()) < SMALL
+            and df.attrs[col]["huc_cd"] == ds[col].attrs["huc_cd"]
+        )
+
+    def test_qobs_iv(self):
+        qobs = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
+        assert abs(qobs.sum().item() - 569.99) < SMALL
 
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
