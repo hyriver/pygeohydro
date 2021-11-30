@@ -493,6 +493,7 @@ class NWIS:
         if freq not in valid_freqs:
             raise InvalidInputValue("freq", valid_freqs)
         utc = True if freq == "iv" else None
+
         sids, start, end = self._check_inputs(station_ids, dates, utc)
         param_cd = "00060"
         queries = [
@@ -506,21 +507,6 @@ class NWIS:
         ]
 
         siteinfo = self.get_info(queries)
-        cols = [
-            "station_nm",
-            "dec_lat_va",
-            "dec_long_va",
-            "alt_va",
-            "alt_acy_va",
-            "alt_datum_cd",
-            "huc_cd",
-            "begin_date",
-            "end_date",
-        ]
-        attr_df = siteinfo[siteinfo.parm_cd == param_cd].set_index("site_no")[cols].copy()
-        attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
-        attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
-        attr_df.index = "USGS-" + attr_df.index
         params = {
             "format": "json",
             "parameterCd": param_cd,
@@ -549,11 +535,13 @@ class NWIS:
             raise DataNotAvailable("discharge")
 
         time_fmt = "%Y-%m-%d" if utc is None else "%Y-%m-%dT%H:%M%z"
+        startDT = start.strftime(time_fmt)
+        endDT = end.strftime(time_fmt)
         payloads = [
             {
                 "sites": ",".join(s),
-                "startDT": start.strftime(time_fmt),
-                "endDT": end.strftime(time_fmt),
+                "startDT": startDT,
+                "endDT": endDT,
                 **params,
             }
             for s in tlz.partition_all(1500, sids)
@@ -564,8 +552,8 @@ class NWIS:
         dropped = [s for s in sids if f"USGS-{s}" not in qobs]
         if len(dropped) > 0:
             logger.warning(
-                f"Dropped {len(dropped)} stations since they don't have daily mean discharge "
-                + f"from {start.strftime('%Y-%m-%d')} to {end.strftime('%Y-%m-%d')}."
+                f"Dropped {len(dropped)} stations since they don't have discharge data"
+                + f"from {startDT} to {endDT}."
             )
 
         if mmd:
@@ -575,13 +563,34 @@ class NWIS:
                 qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
-        qobs.attrs = attr_df.to_dict(orient="index")
+
+        qobs.attrs = self._get_attrs(siteinfo).to_dict(orient="index")
         if to_xarray:
             ds = qobs.to_xarray()
             for v in ds.keys():
                 ds[v].attrs = qobs.attrs[v]
             return ds
         return qobs
+
+    @staticmethod
+    def _get_attrs(siteinfo: pd.DataFrame) -> pd.DataFrame:
+        """Get attributes of the stations that have streaflow data."""
+        cols = [
+            "station_nm",
+            "dec_lat_va",
+            "dec_long_va",
+            "alt_va",
+            "alt_acy_va",
+            "alt_datum_cd",
+            "huc_cd",
+            "begin_date",
+            "end_date",
+        ]
+        attr_df = siteinfo[siteinfo.parm_cd == "00060"].set_index("site_no")[cols].copy()
+        attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
+        attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
+        attr_df.index = "USGS-" + attr_df.index
+        return attr_df
 
     @staticmethod
     def _check_inputs(
