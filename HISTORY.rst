@@ -2,6 +2,19 @@
 History
 =======
 
+0.11.5 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add support for getting instantaneous streamflow from NWIS in addition to
+  the daily streamflow by adding ``freq`` argument to ``NWIS.get_streamflow``
+  that can be either ``iv`` or ``dv``. The default is ``dv`` to retain the previous
+  behaviour or the function. Also, convert the time zone of the data to UTC and add
+  attributes of the requested stations as ``attrs`` methods for the returned
+  ``pandas.DataFrame``. Additionally, add a new flag to ``NWIS.get_streamflow``
+  for returning the streamflow as ``xarray.Dataset``. (:issue_hydro:`75`)
+
 0.11.4 (2021-11-24)
 -------------------
 
