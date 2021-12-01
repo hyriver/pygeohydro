@@ -546,16 +546,19 @@ class NWIS:
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
 
-        qobs.attrs = self._get_attrs(siteinfo).to_dict(orient="index")
+        qobs.attrs = self._get_attrs(siteinfo, mmd).to_dict(orient="index")
         if to_xarray:
+            qobs.index = qobs.index.tz_localize(None)
+            qobs.index.name = "time"
             ds = qobs.to_xarray()
             for v in ds.keys():
                 ds[v].attrs = qobs.attrs[v]
+            ds.attrs["tz"] = "UTC"
             return ds
         return qobs
 
     @staticmethod
-    def _get_attrs(siteinfo: pd.DataFrame) -> pd.DataFrame:
+    def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> pd.DataFrame:
         """Get attributes of the stations that have streaflow data."""
         cols = [
             "station_nm",
@@ -572,6 +575,8 @@ class NWIS:
         attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
         attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
         attr_df.index = "USGS-" + attr_df.index
+        attr_df["units"] = "mm/day" if mmd else "cms"
+        attr_df["tz"] = "UTC"
         return attr_df
 
     @staticmethod
