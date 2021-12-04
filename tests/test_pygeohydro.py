@@ -38,7 +38,7 @@ class TestNWIS:
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
         info = self.nwis.get_info(query, expanded=True)
-        assert info.hcdn_2009.item()
+        assert abs(info.drain_sqkm.item() - 769.048) < SMALL and info.hcdn_2009.item()
 
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
