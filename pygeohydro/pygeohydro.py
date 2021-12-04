@@ -1,4 +1,5 @@
 """Accessing data from the supported databases through their APIs."""
+import contextlib
 import io
 import re
 import zipfile
@@ -264,8 +265,9 @@ def interactive_map(
         sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
 
-    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " square miles"
-    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " square miles"
+    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " smqi"
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " smqi"
+    sites["drain_sqkm"] = sites["drain_sqkm"].astype("str") + " sqkm"
 
     cols_old = [
         "site_no",
@@ -275,6 +277,7 @@ def interactive_map(
         "huc_cd",
         "drain_area_va",
         "contrib_drain_area_va",
+        "drain_sqkm",
         "hcdn_2009",
     ]
 
@@ -284,8 +287,9 @@ def interactive_map(
         "Coordinate",
         "Altitude",
         "HUC8",
-        "Drainage Area",
-        "Contributing Drainage Area",
+        "Drainage Area (NWIS)",
+        "Contributing Drainage Area (NWIS)",
+        "Drainage Area (GagesII)",
         "HCDN 2009",
     ]
 
@@ -410,14 +414,14 @@ class NWIS:
 
         gii = WaterData("gagesii", DEF_CRS)
 
-        def _get_hcdn(site_no: str) -> Optional[bool]:
-            hcdn = gii.byid("staid", site_no)
+        def _get_hcdn(site_no: str) -> Tuple[float, Optional[bool]]:
+            gage = gii.byid("staid", site_no)
             try:
-                return len(hcdn.hcdn_2009.iloc[0]) > 0
+                return gage.drain_sqkm.iloc[0], len(gage.hcdn_2009.iloc[0]) > 0
             except (AttributeError, KeyError):
-                return None
+                return np.nan, None
 
-        sites["hcdn_2009"] = sites.site_no.apply(_get_hcdn)
+        sites["drain_sqkm"], sites["hcdn_2009"] = zip(*[_get_hcdn(n) for n in sites.site_no])
 
         return sites
 
@@ -535,7 +539,7 @@ class NWIS:
         if len(dropped) > 0:
             logger.warning(
                 f"Dropped {len(dropped)} stations since they don't have discharge data"
-                + f"from {startDT} to {endDT}."
+                + f" from {startDT} to {endDT}."
             )
 
         if mmd:
@@ -665,14 +669,14 @@ class NWIS:
         urls, kwds = zip(*((url, {"params": {**p, "format": "rdb"}}) for p in payloads))
         try:
             resp = ar.retrieve(urls, "text", kwds)
-            not_found = next(filter(lambda x: x[0] != "#", resp), None)
-            if not_found is not None:
-                msg = re.findall("<p>(.*?)</p>", not_found.text)[1].rsplit(">", 1)[1]
-                logger.info(f"Server error message:\n{msg}")
         except ar.ServiceError as ex:
             raise ZeroMatched(ogc_utils.check_response(str(ex))) from ex
-        except StopIteration:
-            pass
+
+        with contextlib.suppress(StopIteration):
+            not_found = next(filter(lambda x: x[0] != "#", resp), None)
+            if not_found is not None:
+                msg = re.findall("<p>(.*?)</p>", not_found)[1].rsplit(">", 1)[1]
+                raise ZeroMatched(f"Server error message:\n{msg}")
 
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
