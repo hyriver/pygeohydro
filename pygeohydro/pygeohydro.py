@@ -17,6 +17,7 @@ import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
 from pygeoogc import RetrySession, ServiceURL
+from pygeoogc import ZeroMatched as ZeroMatchedOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
@@ -415,10 +416,10 @@ class NWIS:
         gii = WaterData("gagesii", DEF_CRS)
 
         def _get_hcdn(site_no: str) -> Tuple[float, Optional[bool]]:
-            gage = gii.byid("staid", site_no)
             try:
-                return gage.drain_sqkm.iloc[0], len(gage.hcdn_2009.iloc[0]) > 0
-            except (AttributeError, KeyError):
+                gage = gii.byid("staid", site_no)
+                return gage.drain_sqkm.iloc[0], len(gage.hcdn_2009.iloc[0]) > 0  # noqa: TC300
+            except (AttributeError, KeyError, ZeroMatchedOGC):
                 return np.nan, None
 
         sites["drain_sqkm"], sites["hcdn_2009"] = zip(*[_get_hcdn(n) for n in sites.site_no])
@@ -511,14 +512,7 @@ class NWIS:
         ]
 
         siteinfo = self.get_info(queries)
-        sids = siteinfo.loc[
-            (
-                (start.tz_localize(None) < siteinfo.end_date)
-                & (end.tz_localize(None) > siteinfo.begin_date)
-            ),
-            "site_no",
-        ].tolist()
-
+        sids = siteinfo.site_no.unique()
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
@@ -527,8 +521,19 @@ class NWIS:
             "parameterCd": "00060",
             "siteStatus": "all",
         }
+        cond = (
+            (siteinfo.parm_cd == "00060")
+            & (start.tz_localize(None) < siteinfo.end_date)
+            & (end.tz_localize(None) > siteinfo.begin_date)
+        )
         if freq == "dv":
             params.update({"statCd": "00003"})
+            cond = (
+                (siteinfo.stat_cd == "00003")
+                & (siteinfo.parm_cd == "00060")
+                & (start.tz_localize(None) < siteinfo.end_date)
+                & (end.tz_localize(None) > siteinfo.begin_date)
+            )
 
         time_fmt = "%Y-%m-%d" if utc is None else "%Y-%m-%dT%H:%M%z"
         startDT = start.strftime(time_fmt)
@@ -550,7 +555,7 @@ class NWIS:
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
 
-        qobs.attrs = self._get_attrs(siteinfo, mmd).to_dict(orient="index")
+        qobs.attrs = self._get_attrs(siteinfo.loc[cond], mmd).to_dict(orient="index")
         if to_xarray:
             qobs.index = qobs.index.tz_localize(None)
             qobs.index.name = "time"
@@ -565,6 +570,7 @@ class NWIS:
     def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> pd.DataFrame:
         """Get attributes of the stations that have streaflow data."""
         cols = [
+            "site_no",
             "station_nm",
             "dec_lat_va",
             "dec_long_va",
@@ -575,7 +581,7 @@ class NWIS:
             "begin_date",
             "end_date",
         ]
-        attr_df = siteinfo[siteinfo.parm_cd == "00060"].set_index("site_no")[cols].copy()
+        attr_df = siteinfo[cols].drop_duplicates().set_index("site_no")
         attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
         attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
         attr_df.index = "USGS-" + attr_df.index
@@ -591,7 +597,7 @@ class NWIS:
         if not isinstance(station_ids, (str, Sequence, Iterable)):
             raise InvalidInputType("ids", "str or list of str")
 
-        sids = [station_ids] if isinstance(station_ids, str) else list(station_ids)
+        sids = [station_ids] if isinstance(station_ids, str) else list(set(station_ids))
 
         if not isinstance(dates, tuple) or len(dates) != 2:
             raise InvalidInputType("dates", "tuple", "(start, end)")
