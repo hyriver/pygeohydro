@@ -26,8 +26,8 @@ class TestNWIS:
         ds = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True, to_xarray=True)
         col = f"USGS-{SID_NATURAL}"
         assert (
-            abs(df[col].sum().item() - ds[col].sum().item()) < SMALL
-            and df.attrs[col]["huc_cd"] == ds[col].attrs["huc_cd"]
+            abs(df[col].sum().item() - ds.sel(station_id=col).discharge.sum().item()) < SMALL
+            and df.attrs[col]["huc_cd"] == ds.sel(station_id=col).huc_cd.item()
         )
 
     def test_qobs_iv(self):
