@@ -572,7 +572,7 @@ class NWIS:
             )
 
             ds.attrs["tz"] = "UTC"
-            ds["discharge"].attrs["units"] = "cms"
+            ds["discharge"].attrs["units"] = "mm/day" if mmd else "cms"
             ds["dec_lat_va"].attrs["units"] = "decimal_degrees"
             ds["dec_long_va"].attrs["units"] = "decimal_degrees"
             ds["alt_va"].attrs["units"] = "ft"
