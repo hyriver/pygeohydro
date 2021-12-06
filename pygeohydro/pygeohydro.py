@@ -557,12 +557,25 @@ class NWIS:
 
         qobs.attrs = self._get_attrs(siteinfo.loc[cond], mmd).to_dict(orient="index")
         if to_xarray:
-            qobs.index = qobs.index.tz_localize(None)
-            qobs.index.name = "time"
-            ds = qobs.to_xarray()
-            for v in ds.keys():
-                ds[v].attrs = qobs.attrs[v]
+            ds = xr.Dataset(
+                data_vars={
+                    "discharge": (["time", "station_id"], qobs),
+                    **{
+                        attr: (["station_id"], v)
+                        for attr, *v in pd.DataFrame(qobs.attrs).iloc[:-2].itertuples()
+                    },
+                },
+                coords={
+                    "time": qobs.index.tz_localize(None).to_numpy(),
+                    "station_id": qobs.columns,
+                },
+            )
+
             ds.attrs["tz"] = "UTC"
+            ds["discharge"].attrs["units"] = "cms"
+            ds["dec_lat_va"].attrs["units"] = "decimal_degrees"
+            ds["dec_long_va"].attrs["units"] = "decimal_degrees"
+            ds["alt_va"].attrs["units"] = "ft"
             return ds
         return qobs
 
@@ -609,7 +622,7 @@ class NWIS:
     @staticmethod
     def _get_drainage_area(station_ids: Sequence[str]) -> pd.DataFrame:
         nldi = NLDI()
-        basins = nldi.get_basins(station_ids)
+        basins = nldi.get_basins(list(station_ids))
         if isinstance(basins, tuple):
             basins = basins[0]
         return basins.to_crs("EPSG:6350").area
