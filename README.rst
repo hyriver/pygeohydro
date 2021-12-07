@@ -106,12 +106,13 @@ Features
 PyGeoHydro (formerly named `hydrodata <https://pypi.org/project/hydrodata>`__) is a part of
 `HyRiver <https://github.com/cheginit/HyRiver>`__ software stack that
 is designed to aid in watershed analysis through web services. This package provides
-access to some of the public web services that offer geospatial hydrology data. It has three
+access to some public web services that offer geospatial hydrology data. It has three
 main modules: ``pygeohydro``, ``plot``, and ``helpers``.
 
 The ``pygeohydro`` module can pull data from the following web services:
 
-* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations,
+* `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations
+  (returned as a ``pandas.DataFrame`` or ``xarray.Dataset`` with station attributes),
 * `Water Quality Portal <https://www.waterqualitydata.us/>`__ for accessing current and
   historical water quality data from more than 1.5 million sites across the US,
 * `NID <https://damsdev.net/>`__ for accessing both versions of the National Inventory of Dams
@@ -132,12 +133,12 @@ The ``plot`` module includes two main functions:
 
 * ``signatures``: Hydrologic signature graphs.
 * ``cover_legends``: Official NLCD land cover legends for plotting a land cover dataset.
-* ``descriptor_legends``: Color map and legends for plotting a imperviousness descriptor dataset.
+* ``descriptor_legends``: Color map and legends for plotting an imperviousness descriptor dataset.
 
 The ``helpers`` module includes:
 
 * ``nlcd_helper``: A roughness coefficients lookup table for each land cover and imperviousness
-  descriptortype which is useful for overland flow routing among other applications.
+  descriptor type which is useful for overland flow routing among other applications.
 * ``nwis_error``: A dataframe for finding information about NWIS requests' errors.
 
 Moreover, requests for additional databases and functionalities can be submitted via
@@ -146,9 +147,9 @@ Moreover, requests for additional databases and functionalities can be submitted
 You can find some example notebooks `here <https://github.com/cheginit/HyRiver-examples>`__.
 
 You can also try using PyGeoHydro without installing
-it on you system by clicking on the binder badge. A Jupyter Lab
-instance with the HyRiver stack pre-installed will be launched in your web browser
-and you can start coding!
+it on your system by clicking on the binder badge. A Jupyter Lab
+instance with the HyRiver stack pre-installed will be launched in your web browser, and you
+can start coding!
 
 Please note that since this project is in early development stages, while the provided
 functionalities should be stable, changes in APIs are possible in new releases. But we
@@ -162,8 +163,8 @@ Installation
 
 You can install PyGeoHydro using ``pip`` after installing ``libgdal`` on your system
 (for example, in Ubuntu run ``sudo apt install libgdal-dev``). Moreover, PyGeoHydro has an optional
-dependency for using persistent caching, ``requests-cache``. We highly recommend to install
-this package as it can significantly speedup send/receive queries. You don't have to change
+dependency for using persistent caching, ``requests-cache``. We highly recommend installing
+this package as it can significantly speed up send/receive queries. You don't have to change
 anything in your code, since PyGeoHydro under-the-hood looks for ``requests-cache`` and
 if available, it will automatically use persistent caching:
 
@@ -182,7 +183,7 @@ Quick start
 -----------
 
 We can explore the available NWIS stations within a bounding box using ``interactive_map``
-function. It returns an interactive map and by clicking on an station some of the most
+function. It returns an interactive map and by clicking on a station some of the most
 important properties of stations are shown.
 
 .. code-block:: python
@@ -197,7 +198,7 @@ important properties of stations are shown.
     :alt: Interactive Map
 
 We can select all the stations within this boundary box that have daily mean streamflow data from
-2000-01-01 to 2010-12-31:
+``2000-01-01`` to ``2010-12-31``:
 
 .. code-block:: python
 
@@ -225,7 +226,7 @@ and plot them:
     qobs = nwis.get_streamflow(stations, dates, mmd=True)
     plot.signatures(qobs)
 
-By default, ``get_streamflow`` returns a ``pandas.DataFrame`` that has an ``attrs`` method
+By default, ``get_streamflow`` returns a ``pandas.DataFrame`` that has a ``attrs`` method
 containing metadata for all the stations. You can access it like so ``qobs.attrs``.
 Moreover, we can get the same data as ``xarray.Dataset`` as follows:
 
@@ -240,7 +241,8 @@ that the input dates are in UTC time zone and returns the data in UTC time zone 
 
 .. code-block:: python
 
-    qobs = nwis.get_streamflow("01646500", ("2005-01-01 12:00", "2005-01-12 15:00"), freq="iv")
+    date = ("2005-01-01 12:00", "2005-01-12 15:00")
+    qobs = nwis.get_streamflow("01646500", date, freq="iv")
 
 The ``WaterQuality`` has a number of convenience methods to retrieve data from the
 web service. Since there are many parameter combinations that can be
@@ -256,21 +258,23 @@ For example, let's find all the stations within a bounding box that have Caffein
 
     from pynhd import WaterQuality
 
+    bbox = (-92.8, 44.2, -88.9, 46.0)
+    kwds = {"characteristicName": "Caffeine"}
     wq = WaterQuality()
-    stations = self.wq.station_bybbox((-92.8, 44.2, -88.9, 46.0), {"characteristicName": "Caffeine"})
+    stations = wq.station_bybbox(bbox, kwds)
 
-Or the same criterion but within a 30 mile radius of a point:
+Or the same criterion but within a 30-mile radius of a point:
 
 .. code-block:: python
 
-    stations = self.wq.station_bydistance(-92.8, 44.2, 30, {"characteristicName": "Caffeine"})
+    stations = wq.station_bydistance(-92.8, 44.2, 30, kwds)
 
 Then we can get the data for all these stations the data like this:
 
 .. code-block:: python
 
     sids = stations.MonitoringLocationIdentifier.tolist()
-    caff = self.wq.data_bystation(sids, {"characteristicName": "Caffeine"})
+    caff = wq.data_bystation(sids, kwds)
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/water_quality.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/water_quality.ipynb
