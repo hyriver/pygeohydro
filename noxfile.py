@@ -4,7 +4,7 @@ from pathlib import Path
 import nox
 
 
-@nox.session(python="3.9")
+@nox.session(python="3.10")
 def tests(session):
     session.install(".[test]")
     hr_deps = ["async_retriever", "pygeoogc", "pygeoutils", "pynhd"]
