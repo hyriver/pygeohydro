@@ -234,7 +234,9 @@ Moreover, we can get the same data as ``xarray.Dataset`` as follows:
 
     qobs_ds = nwis.get_streamflow(stations, dates, to_xarray=True)
 
-In this case, metadata for each station can be accessed like so ``qobs_ds["USGS-01031450"]``.
+This ``xarray.Dataset`` has two dimensions: ``time`` and ``station_id``. It has
+10 variables including ``discharge`` with two dimensions while other variables
+that are station attitudes are one dimensional.
 
 We can also get instantaneous streamflow data using ``get_streamflow``. This method assumes
 that the input dates are in UTC time zone and returns the data in UTC time zone as well.
