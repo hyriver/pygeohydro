@@ -266,9 +266,11 @@ def interactive_map(
         sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
     )
 
-    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " smqi"
-    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " smqi"
+    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " sqmi"
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " sqmi"
     sites["drain_sqkm"] = sites["drain_sqkm"].astype("str") + " sqkm"
+    for c in ["drain_area_va", "contrib_drain_area_va", "drain_sqkm"]:
+        sites.loc[sites[c].str.contains("nan"), c] = "N/A"
 
     cols_old = [
         "site_no",
