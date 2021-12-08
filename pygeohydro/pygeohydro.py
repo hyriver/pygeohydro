@@ -555,7 +555,7 @@ class NWIS:
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
 
-        qobs.attrs = self._get_attrs(siteinfo.loc[cond], mmd).to_dict(orient="index")
+        qobs.attrs, long_names = self._get_attrs(siteinfo.loc[cond], mmd)
         if to_xarray:
             ds = xr.Dataset(
                 data_vars={
@@ -570,7 +570,8 @@ class NWIS:
                     "station_id": qobs.columns,
                 },
             )
-
+            for v, n in long_names.items():
+                ds[v].attrs["long_name"] = n
             ds.attrs["tz"] = "UTC"
             ds["discharge"].attrs["units"] = "mm/day" if mmd else "cms"
             ds["dec_lat_va"].attrs["units"] = "decimal_degrees"
@@ -580,27 +581,34 @@ class NWIS:
         return qobs
 
     @staticmethod
-    def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> pd.DataFrame:
+    def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> Tuple[Dict[str, Any], Dict[str, str]]:
         """Get attributes of the stations that have streaflow data."""
-        cols = [
-            "site_no",
-            "station_nm",
-            "dec_lat_va",
-            "dec_long_va",
-            "alt_va",
-            "alt_acy_va",
-            "alt_datum_cd",
-            "huc_cd",
-            "begin_date",
-            "end_date",
-        ]
-        attr_df = siteinfo[cols].drop_duplicates().set_index("site_no")
-        attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
-        attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
+        cols = {
+            "site_no": "site_identification_number",
+            "station_nm": "station_name",
+            "dec_lat_va": "latitude",
+            "dec_long_va": "longitude",
+            "alt_va": "altitude",
+            "alt_acy_va": "altitude_accuracy",
+            "alt_datum_cd": "altitude_datum",
+            "huc_cd": "hydrologic_unit_code",
+        }
+        if "begin_date" in siteinfo and "end_date" in siteinfo:
+            cols.update(
+                {
+                    "begin_date": "availablity_begin_date",
+                    "end_date": "availablity_end_date",
+                }
+            )
+        attr_df = siteinfo[cols.keys()].drop_duplicates().set_index("site_no")
+        if "begin_date" in attr_df and "end_date" in attr_df:
+            attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
+            attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
         attr_df.index = "USGS-" + attr_df.index
         attr_df["units"] = "mm/day" if mmd else "cms"
         attr_df["tz"] = "UTC"
-        return attr_df
+        _ = cols.pop("site_no")
+        return attr_df.to_dict(orient="index"), cols
 
     @staticmethod
     def _check_inputs(
