@@ -1,5 +1,6 @@
 """Tests for PyGeoHydro package."""
 import io
+import shutil
 
 import pytest
 from shapely.geometry import Polygon
@@ -143,6 +144,8 @@ def test_plot():
     gh.plot.signatures(qobs, precipitation=qobs[f"USGS-{SID_NATURAL}"], output="data/gh.plot.png")
     gh.plot.signatures(qobs[f"USGS-{SID_NATURAL}"], precipitation=qobs[f"USGS-{SID_NATURAL}"])
     _, _, levels = gh.plot.cover_legends()
+    shutil.rmtree("data")
+
     assert levels[-1] == 100
 
 
