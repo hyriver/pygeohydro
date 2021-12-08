@@ -9,6 +9,7 @@ import pygeohydro as gh
 from pygeohydro import NID, NWIS
 
 SMALL = 1e-3
+DEF_CRS = "epsg:4326"
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
 DATES = ("2005-01-01", "2005-01-31")
@@ -82,23 +83,35 @@ def test_nlcd():
     assert abs(st["categories"]["Forest"] - 84.357) < SMALL
 
 
-@pytest.mark.xfail(reason="NID service is experiemntal and unstable.")
+@pytest.mark.xfail(reason="The service is unstable.")
 class TestNID:
-    def test_bygeom(self):
-        dams2 = NID(2).bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
-        dams3 = NID(3).bygeom(GEOM, "epsg:4326", sql_clause="MAX_STORAGE > 200")
-        assert len(dams2) == len(dams3) == 5
+    sql_clause ="MAX_STORAGE > 200"
+    sql = "DAM_HEIGHT > 50"
+    names = ["Guilford", "Pingree Pond", "First Davis Pond"]
 
-    def test_byids(self):
-        names = ["Guilford", "Pingree Pond", "First Davis Pond"]
-        dams2 = NID(2).byids("DAM_NAME", [n.upper() for n in names])
-        dams3 = NID(3).byids("NAME", names)
-        assert len(dams2) == len(dams3) == len(names)
+    def test_bygeom2(self):
+        dams = NID(2).bygeom(GEOM, DEF_CRS, sql_clause=self.sql_clause)
+        assert len(dams) == 5
 
-    def test_bysql(self):
-        dams2 = NID(2).bysql("DAM_HEIGHT > 50")
-        dams3 = NID(3).bysql("DAM_HEIGHT > 50")
-        assert len(dams2) == 5331 and len(dams3) == 5306
+    def test_bygeom3(self):
+        dams = NID(3).bygeom(GEOM, DEF_CRS, sql_clause=self.sql_clause)
+        assert len(dams) == 5
+
+    def test_byids2(self):
+        dams = NID(2).byids("DAM_NAME", [n.upper() for n in self.names])
+        assert len(dams) == len(self.names)
+
+    def test_byids3(self):
+        dams = NID(3).byids("NAME", self.names)
+        assert len(dams) == len(self.names)
+
+    def test_bysql2(self):
+        dams = NID(2).bysql(self.sql)
+        assert len(dams) == 5331
+
+    def test_bysql3(self):
+        dams = NID(3).bysql(self.sql)
+        assert len(dams) == 5306
 
 
 class TestWaterQuality:
