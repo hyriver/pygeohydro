@@ -42,7 +42,7 @@ Package         Description                                                     
 =============== ==================================================================== ============
 PyNHD_          Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
 Py3DEP_         Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_     Access NWIS, NID, HCDN 2009, NLCD, and SSEBop databases              |pygeohydro|
+PyGeoHydro_     Access NWIS, NID, WQP, HCDN 2009, NLCD, and SSEBop databases         |pygeohydro|
 PyDaymet_       Access Daymet for daily climate data both single pixel and gridded   |pydaymet|
 AsyncRetriever_ High-level API for asynchronous requests with persistent caching     |async|
 PyGeoOGC_       Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
