@@ -13,7 +13,6 @@ dependencies:
   - brotli
   - cchardet
   - cytoolz
-  - nest-asyncio
   - ujson
 
   # pygeoogc deps
