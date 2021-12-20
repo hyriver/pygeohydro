@@ -85,7 +85,7 @@ def test_nlcd():
 
 @pytest.mark.xfail(reason="The service is unstable.")
 class TestNID:
-    sql_clause ="MAX_STORAGE > 200"
+    sql_clause = "MAX_STORAGE > 200"
     sql = "DAM_HEIGHT > 50"
     names = ["Guilford", "Pingree Pond", "First Davis Pond"]
 
