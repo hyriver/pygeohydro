@@ -2,6 +2,7 @@
 import io
 import shutil
 
+import geopandas as gpd
 import pytest
 from shapely.geometry import Polygon
 
@@ -75,17 +76,38 @@ class TestETA:
         assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
 
-def test_nlcd():
-    _ = gh.nlcd(GEOM.bounds, resolution=1e3)
-    years = {"cover": [2016, 2019]}
-    lulc = gh.nlcd(GEOM, years=years, resolution=1e3, crs="epsg:3542")
-    st = gh.cover_statistics(lulc.cover_2016)
-    assert abs(st["categories"]["Forest"] - 84.357) < SMALL
+class TestNLCD:
+    years = {"cover": [2016]}
+    res = 1e3
+
+    def test_bbox(self):
+        lulc = gh.nlcd_bygeom(GEOM.bounds, resolution=self.res)
+        self.assertion(lulc.cover_2019, 83.40)
+
+    def test_geodf(self):
+        geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
+        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs="epsg:3542")
+        self.assertion(lulc[0].cover_2016, 84.357)
+        self.assertion(lulc[1].cover_2016, 84.357)
+
+    def test_coords(self):
+        coords = list(GEOM.exterior.coords)
+        lulc = gh.nlcd_bycoords(coords)
+        assert lulc.cover_2019.sum() == 211
+
+    def test_nlcd_deprecated(self):
+        lulc = gh.nlcd(GEOM, years=self.years, resolution=self.res)
+        self.assertion(lulc.cover_2016, 83.4)
+
+    @staticmethod
+    def assertion(cover, expected):
+        st = gh.cover_statistics(cover)
+        assert abs(st["categories"]["Forest"] - expected) < SMALL
 
 
 @pytest.mark.xfail(reason="The service is unstable.")
 class TestNID:
-    sql_clause ="MAX_STORAGE > 200"
+    sql_clause = "MAX_STORAGE > 200"
     sql = "DAM_HEIGHT > 50"
     names = ["Guilford", "Pingree Pond", "First Davis Pond"]
 
