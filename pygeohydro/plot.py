@@ -202,15 +202,16 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles, units)
 
 
-def descriptor_legends(
-    cmap_name: str = "tab20",
-) -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
+def descriptor_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
-    bounds = list(map(int, nlcd_meta["descriptors"]))
-    bounds.remove(127)
+    bounds = [int(v) for v in nlcd_meta["descriptors"]]
+    try:
+        bounds.remove(127)
+    except ValueError:
+        pass
 
-    cmap = cm.get_cmap(cmap_name, len(bounds))
+    cmap = ListedColormap(list(nlcd_meta["colors"].values())[: len(bounds)])
     norm = BoundaryNorm(bounds, cmap.N)
     levels = bounds + [30]
     return cmap, norm, levels
@@ -220,6 +221,10 @@ def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"])
+    try:
+        bounds.remove(127)
+    except ValueError:
+        pass
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
     norm = BoundaryNorm(bounds, cmap.N)

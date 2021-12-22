@@ -52,8 +52,9 @@ def nlcd_helper() -> Dict[str, Any]:
 
     clist = [i.split() for i in root.find("eainfo/overview/eadetcit").text.split("\n")[2:]]
     colors = {
-        int(c): (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0) for c, r, g, b in clist
+        int(c): (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0, 1) for c, r, g, b in clist
     }
+    colors[0] = (*colors[0][:3], 0)
 
     _, edomv, edomvd = _get_xml("nlcd_2019_impervious_descriptor_l48_20210604")
     descriptors = {}
