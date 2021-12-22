@@ -1,19 +1,15 @@
 """Some helper function for PyGeoHydro."""
 import logging
 import sys
-from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import async_retriever as ar
 import defusedxml.ElementTree as etree
 import numpy as np
 import pandas as pd
-import pygeoutils as geoutils
-import xarray as xr
-from pygeoogc import WMS, ServiceURL
-from shapely.geometry import MultiPolygon, Polygon
+from pygeoogc import ServiceURL
 
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
+from .exceptions import InvalidInputRange, InvalidInputType
 
 __all__ = ["nlcd_helper", "nwis_errors"]
 
@@ -151,91 +147,3 @@ def get_ssebopeta_urls(
     ]
 
     return f_list
-
-
-def get_nlcd_layers(
-    layers: Union[str, List[str]],
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
-    resolution: float,
-    geo_crs: str = DEF_CRS,
-    crs: str = DEF_CRS,
-) -> xr.Dataset:
-    """Get data from NLCD database (2016).
-
-    Download land use/land cover data from NLCD (2016) database within
-    a given geometry in epsg:4326.
-
-    Parameters
-    ----------
-    layers : str, list
-        The NLCD layers to be extracted.
-    geometry : Polygon, MultiPolygon, or tuple of length 4
-        The geometry or bounding box (west, south, east, north) for extracting the data.
-    resolution : float
-        The data resolution in meters. The width and height of the output are computed in pixel
-        based on the geometry bounds and the given resolution.
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-
-    Returns
-    -------
-     xarray.DataArray
-         NLCD within a geometry
-    """
-    if resolution < 30:
-        logger.warning("NLCD resolution is 30 m, so finer resolutions are not recommended.")
-
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
-    wms = WMS(ServiceURL().wms.mrlc, layers=layers, outformat="image/geotiff", crs=crs)
-    r_dict = wms.getmap_bybox(
-        _geometry.bounds, resolution, box_crs=crs, kwargs={"styles": "raster"}
-    )
-
-    ds = geoutils.gtiff2xarray(r_dict, _geometry, crs)
-    attrs = ds.attrs
-    if isinstance(ds, xr.DataArray):
-        ds = ds.to_dataset()
-
-    units = OrderedDict(
-        (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
-    )
-    for lyr in layers:
-        name = [n for n in units if n in lyr.lower()][-1]
-        lyr_name = f"{name}_{lyr.split('_')[1]}"
-        ds = ds.rename({lyr: lyr_name})
-        ds[lyr_name].attrs["units"] = units[name]
-    ds.attrs = attrs
-    return ds
-
-
-def nlcd_layers(years: Mapping[str, List[int]], region: str) -> List[str]:
-    """Get NLCD layers for the provided years dictionary."""
-    valid_regions = ["L48", "HI", "PR", "AK"]
-    region = region.upper()
-    if region not in valid_regions:
-        raise InvalidInputValue("region", valid_regions)
-
-    nlcd_meta = nlcd_helper()
-
-    names = ["impervious", "cover", "canopy", "descriptor"]
-    avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
-
-    if any(
-        yr not in avail_years[lyr] or lyr not in names for lyr, yrs in years.items() for yr in yrs
-    ):
-        vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-        raise InvalidInputValue("years", vals)
-
-    layer_map = {
-        "canopy": lambda _: "Tree_Canopy",
-        "cover": lambda _: "Land_Cover_Science_Product",
-        "impervious": lambda _: "Impervious",
-        "descriptor": lambda x: "Impervious_Descriptor" if x == "AK" else "Impervious_descriptor",
-    }
-
-    return [
-        f"NLCD_{yr}_{layer_map[lyr](region)}_{region}" for lyr, yrs in years.items() for yr in yrs
-    ]
