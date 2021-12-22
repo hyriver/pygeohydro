@@ -120,7 +120,7 @@ The ``pygeohydro`` module can pull data from the following web services:
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2019 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, imperviousness
-  descriptor, and canopy data,
+  descriptor, and canopy data. You can get data using both geometries and coordinates.
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, for both single pixel and gridded data.
 
@@ -282,15 +282,18 @@ Then we can get the data for all these stations the data like this:
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/water_quality.ipynb
     :alt: Water Quality
 
-Moreover, we can get land use/land cove data using ``nlcd`` function, percentages of
-land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``:
+Moreover, we can get land use/land cove data using ``nlcd_bygeom`` or ``nlcd_bycoods`` functions,
+percentages of land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``.
+The ``nlcd_bycoords`` function returns a ``geopandas.GeoDataFrame`` with the NLCD
+layers as columns and input coordinates as the ``geometry`` column. Moreover, The ``nlcd_bygeom``
+function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the input.
 
 .. code-block:: python
 
     from pynhd import NLDI
 
     geometry = NLDI().get_basins("01031500").geometry[0]
-    lulc = gh.nlcd(geometry, 100, years={"cover": [2016, 2019]})
+    lulc = gh.nlcd_bygeom(geometry, 100, years={"cover": [2016, 2019]})
     stats = gh.cover_statistics(lulc.cover_2016)
     eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
