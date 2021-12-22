@@ -18,7 +18,7 @@ testpaths = [
     "pygeohydro",
 ]
 filterwarnings =[
-    "ignore:.*distutils package is deprecated.*"
+    "ignore:.*distutils.*"
 ]
 
 [tool.mypy]
