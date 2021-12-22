@@ -2,7 +2,9 @@
 import contextlib
 import io
 import re
+import warnings
 import zipfile
+from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
@@ -16,17 +18,24 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from pygeoogc import RetrySession, ServiceURL
+from pygeoogc import WMS, RetrySession, ServiceURL
 from pygeoogc import ZeroMatched as ZeroMatchedOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import NLDI, AGRBase, WaterData
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
-from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, ZeroMatched
+from .exceptions import (
+    DataNotAvailable,
+    InvalidInputType,
+    InvalidInputValue,
+    ServiceUnavailable,
+    ZeroMatched,
+)
 from .helpers import logger
 
 DEF_CRS = "epsg:4326"
+EXPIRE = -1
 
 
 def ssebopeta_byloc(
@@ -129,18 +138,151 @@ def ssebopeta_bygeom(
     return eta
 
 
-def nlcd(
+class _NLCD:
+    """Get data from NLCD database (2019).
+
+    Parameters
+    ----------
+    years : dict, optional
+        The years for NLCD layers as a dictionary, defaults to
+        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
+        land cover data for 2016 and 2019.
+    region : str, optional
+        Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
+        AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    validation : bool, optional
+        Validate the input arguments from the WMS service, defaults to True. Set this
+        to False if you are sure all the WMS settings such as layer and crs are correct
+        to avoid sending extra requests.
+    expire_after : int, optional
+        Expiration time for response caching in seconds, defaults to -1 (never expire).
+    disable_caching : bool, optional
+        If ``True``, disable caching requests, defaults to False.
+    """
+
+    def __init__(
+        self,
+        years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+        region: str = "L48",
+        crs: str = DEF_CRS,
+        validation: bool = True,
+        expire_after: float = EXPIRE,
+        disable_caching: bool = False,
+    ) -> None:
+        default_years = {
+            "impervious": [2019],
+            "cover": [2019],
+            "canopy": [2016],
+            "descriptor": [2019],
+        }
+        years = default_years if years is None else years
+        if not isinstance(years, dict):
+            raise InvalidInputType("years", "dict", f"{default_years}")
+        self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
+        self.region = region
+        self.crs = crs
+        self.validation = validation
+        self.expire_after = expire_after
+        self.disable_caching = disable_caching
+        self.layers = self.get_layers(self.region, self.years)
+        self.units = OrderedDict(
+            (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
+        )
+        self.types = OrderedDict(
+            (("impervious", "f4"), ("cover", "u1"), ("canopy", "f4"), ("descriptor", "u1"))
+        )
+        self.nodata = OrderedDict(
+            (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
+        )
+
+        self.wms = WMS(
+            ServiceURL().wms.mrlc,
+            layers=self.layers,
+            outformat="image/geotiff",
+            crs=self.crs,
+            validation=self.validation,
+            expire_after=self.expire_after,
+            disable_caching=self.disable_caching,
+        )
+
+    def get_response(
+        self, bounds: Tuple[float, float, float, float], resolution: float
+    ) -> Dict[str, bytes]:
+        """Get response from a url."""
+        return self.wms.getmap_bybox(bounds, resolution, self.crs, kwargs={"styles": "raster"})
+
+    def to_xarray(self, r_dict: Dict[str, bytes], geometry: Polygon) -> xr.DataArray:
+        """Convert response to xarray.DataArray."""
+        try:
+            ds = geoutils.gtiff2xarray(r_dict, geometry, self.crs)
+        except rio.RasterioIOError as ex:
+            raise ServiceUnavailable(self.wms.url) from ex
+        attrs = ds.attrs
+        if isinstance(ds, xr.DataArray):
+            ds = ds.to_dataset()
+        for lyr in self.layers:
+            name = [n for n in self.units if n in lyr.lower()][-1]
+            lyr_name = f"{name}_{lyr.split('_')[1]}"
+            ds = ds.rename({lyr: lyr_name})
+            ds[lyr_name].attrs["units"] = self.units[name]
+            ds[lyr_name] = ds[lyr_name].astype(self.types[name])
+            ds[lyr_name].attrs["nodatavals"] = (self.nodata[name],)
+        ds.attrs = attrs
+        return ds
+
+    @staticmethod
+    def get_layers(region: str, years: Dict[str, List[int]]) -> List[str]:
+        """Get NLCD layers for the provided years dictionary."""
+        valid_regions = ["L48", "HI", "PR", "AK"]
+        region = region.upper()
+        if region not in valid_regions:
+            raise InvalidInputValue("region", valid_regions)
+
+        nlcd_meta = helpers.nlcd_helper()
+
+        names = ["impervious", "cover", "canopy", "descriptor"]
+        avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
+
+        if any(
+            yr not in avail_years[lyr] or lyr not in names
+            for lyr, yrs in years.items()
+            for yr in yrs
+        ):
+            vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
+            raise InvalidInputValue("years", vals)
+
+        layer_map = {
+            "canopy": lambda _: "Tree_Canopy",
+            "cover": lambda _: "Land_Cover_Science_Product",
+            "impervious": lambda _: "Impervious",
+            "descriptor": lambda x: "Impervious_Descriptor"
+            if x == "AK"
+            else "Impervious_descriptor",
+        }
+
+        return [
+            f"NLCD_{yr}_{layer_map[lyr](region)}_{region}"
+            for lyr, yrs in years.items()
+            for yr in yrs
+        ]
+
+
+def nlcd_bygeom(
     geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     resolution: float,
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
+    validation: bool = True,
+    expire_after: float = EXPIRE,
+    disable_caching: bool = False,
 ) -> xr.Dataset:
-    """Get data from NLCD database (2016).
-
-    Download land use/land cover data from NLCD (2016) database within
-    a given geometry in epsg:4326.
+    """Get data from NLCD database (2019).
 
     Parameters
     ----------
@@ -155,8 +297,142 @@ def nlcd(
         Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
         land cover data for 2016 and 2019.
     region : str, optional
-        Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
-        AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
+        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
+        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
+        Both lower and upper cases are acceptable.
+    geo_crs : str, optional
+        The CRS of the input geometry, defaults to epsg:4326.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    validation : bool, optional
+        Validate the input arguments from the WMS service, defaults to True. Set this
+        to False if you are sure all the WMS settings such as layer and crs are correct
+        to avoid sending extra requests.
+    expire_after : int, optional
+        Expiration time for response caching in seconds, defaults to -1 (never expire).
+    disable_caching : bool, optional
+        If ``True``, disable caching requests, defaults to False.
+
+    Returns
+    -------
+    xarray.DataArray
+        NLCD within a geometry
+    """
+    if resolution < 30:
+        logger.warning("NLCD's resolution is 30 m, so finer resolutions are not recommended.")
+    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
+
+    nlcd = _NLCD(
+        years=years,
+        region=region,
+        crs=crs,
+        validation=validation,
+        expire_after=expire_after,
+        disable_caching=disable_caching,
+    )
+    r_dict = nlcd.get_response(_geometry.bounds, resolution)
+    ds = nlcd.to_xarray(r_dict, _geometry)
+    return ds
+
+
+def nlcd_bycoords(
+    coords: List[Tuple[float, float]],
+    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+    region: str = "L48",
+    crs: str = DEF_CRS,
+    validation: bool = True,
+    expire_after: float = EXPIRE,
+    disable_caching: bool = False,
+) -> gpd.GeoDataFrame:
+    """Get data from NLCD database (2019).
+
+    Parameters
+    ----------
+    coords : list of tuple
+        List of coordinates in the form of (longitude, latitude).
+    years : dict, optional
+        The years for NLCD layers as a dictionary, defaults to
+        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
+        land cover data for 2016 and 2019.
+    region : str, optional
+        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
+        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
+        Both lower and upper cases are acceptable.
+    crs : str, optional
+        The spatial reference system to be used for requesting the data, defaults to
+        epsg:4326.
+    validation : bool, optional
+        Validate the input arguments from the WMS service, defaults to True. Set this
+        to False if you are sure all the WMS settings such as layer and crs are correct
+        to avoid sending extra requests.
+    expire_after : int, optional
+        Expiration time for response caching in seconds, defaults to -1 (never expire).
+    disable_caching : bool, optional
+        If ``True``, disable caching requests, defaults to False.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        A GeoDataFrame with the NLCD data and the coordinates.
+    """
+    if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
+        raise InvalidInputType("coords", "list of (lon, lat)")
+
+    nlcd = _NLCD(
+        years=years,
+        region=region,
+        crs=crs,
+        validation=validation,
+        expire_after=expire_after,
+        disable_caching=disable_caching,
+    )
+    points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
+    bounds = points.to_crs(points.estimate_utm_crs()).buffer(35, cap_style=3)
+    bounds = bounds.to_crs(crs)
+    ds_list = [nlcd.to_xarray(nlcd.get_response(b.bounds, 30), b.bounds) for b in bounds]
+
+    def get_value(da: xr.DataArray, x: float, y: float) -> Union[int, float]:
+        nodata = da.attrs["nodatavals"][0]
+        return (
+            da.fillna(nodata).interp(x=[x], y=[y], method="nearest").astype(da.dtype).values[0][0]
+        )
+
+    values = {
+        v: [get_value(ds[v], x, y) for ds, (x, y) in zip(ds_list, coords)] for v in ds_list[0]
+    }
+    return points.to_frame("geometry").merge(
+        pd.DataFrame(values), left_index=True, right_index=True
+    )
+
+
+def nlcd(
+    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
+    resolution: float,
+    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+    region: str = "L48",
+    geo_crs: str = DEF_CRS,
+    crs: str = DEF_CRS,
+) -> xr.Dataset:
+    """Get data from NLCD database (2019).
+
+    Parameters
+    ----------
+    geometry : Polygon, MultiPolygon, or tuple of length 4
+        The geometry or bounding box (west, south, east, north) for extracting the data.
+    resolution : float
+        The data resolution in meters. The width and height of the output are computed in pixel
+        based on the geometry bounds and the given resolution.
+    years : dict, optional
+        The years for NLCD layers as a dictionary, defaults to
+        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
+        land cover data for 2016 and 2019.
+    region : str, optional
+        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
+        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
+        Both lower and upper cases are acceptable.
     geo_crs : str, optional
         The CRS of the input geometry, defaults to epsg:4326.
     crs : str, optional
@@ -165,19 +441,18 @@ def nlcd(
 
     Returns
     -------
-     xarray.DataArray
-         NLCD within a geometry
+    xarray.DataArray
+        NLCD within a geometry
     """
-    default_years = {"impervious": [2019], "cover": [2019], "canopy": [2016], "descriptor": [2019]}
-    years = default_years if years is None else years
-
-    if not isinstance(years, dict):
-        raise InvalidInputType("years", "dict", f"{default_years}")
-
-    _years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
-
-    layers = helpers.nlcd_layers(_years, region)
-    return helpers.get_nlcd_layers(layers, geometry, resolution, geo_crs, crs)
+    msg = " ".join(
+        [
+            "This function is deprecated and will be remove in future versions.",
+            "Please use `nlcd_bygeom` or `nlcd_bycoords` instead.",
+            "For now, this function calls `nlcd_bygeom` to retain the original functionality.",
+        ]
+    )
+    warnings.warn(msg, DeprecationWarning)
+    return nlcd_bygeom(geometry, resolution, years, region, geo_crs, crs)
 
 
 def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
@@ -198,9 +473,9 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
 
     nlcd_meta = helpers.nlcd_helper()
     val, freq = np.unique(ds, return_counts=True)
-    nan_idx = np.argwhere(np.isnan(val))
-    val = np.delete(val, nan_idx).astype(int).astype(str)
-    freq = np.delete(freq, nan_idx)
+    zero_idx = np.argwhere(val == 0)
+    val = np.delete(val, zero_idx).astype(str)
+    freq = np.delete(freq, zero_idx)
     freq_dict = dict(zip(val, freq))
     total_count = freq.sum()
 
