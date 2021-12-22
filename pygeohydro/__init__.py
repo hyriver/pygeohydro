@@ -4,6 +4,7 @@ from .exceptions import (
     InvalidInputRange,
     InvalidInputType,
     InvalidInputValue,
+    MissingCRS,
     ZeroMatched,
 )
 from .print_versions import show_versions
@@ -14,6 +15,8 @@ from .pygeohydro import (
     cover_statistics,
     interactive_map,
     nlcd,
+    nlcd_bycoords,
+    nlcd_bygeom,
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
@@ -35,6 +38,8 @@ __all__ = [
     "cover_statistics",
     "interactive_map",
     "nlcd",
+    "nlcd_bygeom",
+    "nlcd_bycoords",
     "ssebopeta_bygeom",
     "ssebopeta_byloc",
     "helpers",
@@ -42,6 +47,7 @@ __all__ = [
     "DataNotAvailable",
     "InvalidInputRange",
     "InvalidInputType",
+    "MissingCRS",
     "InvalidInputValue",
     "ZeroMatched",
     "show_versions",
