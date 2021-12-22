@@ -49,6 +49,7 @@ dependencies:
   - folium
   - lxml
   - matplotlib-base>=3.0
+  - scipy
 
   # optional deps to speed up xarray and geopandas
   - bottleneck
