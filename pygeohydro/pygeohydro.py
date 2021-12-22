@@ -29,6 +29,7 @@ from .exceptions import (
     DataNotAvailable,
     InvalidInputType,
     InvalidInputValue,
+    MissingCRS,
     ServiceUnavailable,
     ZeroMatched,
 )
@@ -272,7 +273,7 @@ class _NLCD:
 
 
 def nlcd_bygeom(
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
+    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float], gpd.GeoDataFrame],
     resolution: float,
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
@@ -281,13 +282,14 @@ def nlcd_bygeom(
     validation: bool = True,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
-) -> xr.Dataset:
+) -> Union[xr.Dataset, Dict[int, xr.Dataset]]:
     """Get data from NLCD database (2019).
 
     Parameters
     ----------
-    geometry : Polygon, MultiPolygon, or tuple of length 4
+    geometry : Polygon, MultiPolygon, tuple of length 4, or GeoDataFrame
         The geometry or bounding box (west, south, east, north) for extracting the data.
+        You can either pass a single geometry or a ``GeoDataFrame`` with a geometry column.
     resolution : float
         The data resolution in meters. The width and height of the output are computed in pixel
         based on the geometry bounds and the given resolution.
@@ -316,12 +318,21 @@ def nlcd_bygeom(
 
     Returns
     -------
-    xarray.DataArray
-        NLCD within a geometry
+    xarray.Dataset or dict of xarray.Dataset
+        NLCD within a geometry or a dict of NLCD datasets within corresponding geometries.
+        If dict, the keys are indices of the input ``GeoDataFrame``.
     """
     if resolution < 30:
         logger.warning("NLCD's resolution is 30 m, so finer resolutions are not recommended.")
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, crs)
+
+    if isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
+        single_geom = False
+        if geometry.crs is None:
+            raise MissingCRS
+        _geometry = geometry.to_crs(crs).geometry.to_dict()
+    else:
+        single_geom = True
+        _geometry = {0: geoutils.geo2polygon(geometry, geo_crs, crs)}
 
     nlcd = _NLCD(
         years=years,
@@ -331,8 +342,12 @@ def nlcd_bygeom(
         expire_after=expire_after,
         disable_caching=disable_caching,
     )
-    r_dict = nlcd.get_response(_geometry.bounds, resolution)
-    ds = nlcd.to_xarray(r_dict, _geometry)
+
+    ds = {
+        i: nlcd.to_xarray(nlcd.get_response(g.bounds, resolution), g) for i, g in _geometry.items()
+    }
+    if single_geom:
+        return ds[0]
     return ds
 
 
