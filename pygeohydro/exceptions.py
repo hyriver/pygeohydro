@@ -1,6 +1,29 @@
 """Customized PyGeoHydro exceptions."""
 from typing import Generator, List, Optional, Tuple, Union
 
+import pygeoogc as ogc
+
+
+class MissingCRS(Exception):
+    """Exception raised when input GeoDataFrame is missing CRS."""
+
+    def __init__(self) -> None:
+        self.message = "The input GeoDataFrame is missing CRS."
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class ServiceUnavailable(ogc.ServiceUnavailable):
+    """Exception raised when the service is not available.
+
+    Parameters
+    ----------
+    url : str
+        The server url
+    """
+
 
 class DataNotAvailable(Exception):
     """Exception raised for requested data is not available.
