@@ -282,8 +282,8 @@ Then we can get the data for all these stations the data like this:
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/water_quality.ipynb
     :alt: Water Quality
 
-Moreover, we can get land use/land cove data using ``nlcd_bygeom`` or ``nlcd_bycoods`` functions,
-percentages of land cover types using ``cover_statistics``, and actual ET with ``ssebopeta_bygeom``.
+Moreover, we can get land use/land cove data using ``nlcd_bygeom`` or ``nlcd_bycoods`` functions
+and percentages of land cover types using ``cover_statistics``.
 The ``nlcd_bycoords`` function returns a ``geopandas.GeoDataFrame`` with the NLCD
 layers as columns and input coordinates as the ``geometry`` column. Moreover, The ``nlcd_bygeom``
 function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the input.
@@ -292,14 +292,21 @@ function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the i
 
     from pynhd import NLDI
 
-    geometry = NLDI().get_basins("01031500").geometry[0]
+    basins = NLDI().get_basins(["01031450", "01031500", "01031510"])
     lulc = gh.nlcd_bygeom(geometry, 100, years={"cover": [2016, 2019]})
     stats = gh.cover_statistics(lulc.cover_2016)
-    eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/lulc.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nlcd.ipynb
     :alt: Land Use/Land Cover
+
+Next, let's use ``ssebopeta_bygeom`` to get actual ET data for a basin. Note that there's a
+``ssebopeta_bycoords`` function that returns an ETA time series for a single coordinate.
+
+.. code-block:: python
+
+    geometry = NLDI().get_basins("01315500").geometry[0]
+    eta = gh.ssebopeta_bygeom(geometry, dates=("2005-10-01", "2005-10-05"))
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/eta.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/ssebop.ipynb
