@@ -355,8 +355,6 @@ def nlcd_bycoords(
     coords: List[Tuple[float, float]],
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
-    crs: str = DEF_CRS,
-    validation: bool = True,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
 ) -> gpd.GeoDataFrame:
@@ -375,13 +373,6 @@ def nlcd_bycoords(
         Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
         ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
         Both lower and upper cases are acceptable.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-    validation : bool, optional
-        Validate the input arguments from the WMS service, defaults to True. Set this
-        to False if you are sure all the WMS settings such as layer and crs are correct
-        to avoid sending extra requests.
     expire_after : int, optional
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
@@ -398,14 +389,14 @@ def nlcd_bycoords(
     nlcd = _NLCD(
         years=years,
         region=region,
-        crs=crs,
-        validation=validation,
+        crs=DEF_CRS,
+        validation=False,
         expire_after=expire_after,
         disable_caching=disable_caching,
     )
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
     bounds = points.to_crs(points.estimate_utm_crs()).buffer(35, cap_style=3)
-    bounds = bounds.to_crs(crs)
+    bounds = bounds.to_crs(DEF_CRS)
     ds_list = [nlcd.to_xarray(nlcd.get_response(b.bounds, 30), b.bounds) for b in bounds]
 
     def get_value(da: xr.DataArray, x: float, y: float) -> Union[int, float]:
