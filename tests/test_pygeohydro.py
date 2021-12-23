@@ -62,6 +62,10 @@ class TestETA:
     years = [2010, 2014, 2015]
 
     def test_coords(self):
+        eta_p = gh.ssebopeta_bycoords((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
+        assert abs(eta_p.mean().values[0] - 0.575) < SMALL
+
+    def test_coords_deprecated(self):
         eta_p = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
         assert abs(eta_p.mean().values[0] - 0.575) < SMALL
 
