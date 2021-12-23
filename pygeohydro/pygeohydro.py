@@ -45,6 +45,38 @@ def ssebopeta_byloc(
 ) -> pd.DataFrame:
     """Daily actual ET for a location from SSEBop database in mm/day.
 
+    .. deprecated:: 0.11.5
+        Use :func:`ssebopeta_bycoords` instead.
+
+    Parameters
+    ----------
+    coords : tuple
+        Longitude and latitude of the location of interest as a tuple (lon, lat)
+    dates : tuple or list, optional
+        Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
+
+    Returns
+    -------
+    pandas.DataFrame
+        Daily actual ET for a location
+    """
+    msg = " ".join(
+        [
+            "This function is deprecated and will be remove in future versions.",
+            "Please use `ssebopeta_bycoords` instead.",
+            "For now, this function calls `ssebopeta_bycoords`.",
+        ]
+    )
+    warnings.warn(msg, DeprecationWarning)
+    return ssebopeta_bycoords(coords, dates)
+
+
+def ssebopeta_bycoords(
+    coords: Tuple[float, float],
+    dates: Union[Tuple[str, str], Union[int, List[int]]],
+) -> pd.DataFrame:
+    """Daily actual ET for a location from SSEBop database in mm/day.
+
     Parameters
     ----------
     coords : tuple
@@ -422,6 +454,9 @@ def nlcd(
     crs: str = DEF_CRS,
 ) -> xr.Dataset:
     """Get data from NLCD database (2019).
+
+    .. deprecated:: 0.11.5
+        Use :func:`nlcd_bygeom` or :func:`nlcd_bycoords`  instead.
 
     Parameters
     ----------
