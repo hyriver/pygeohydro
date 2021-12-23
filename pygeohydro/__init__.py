@@ -10,10 +10,7 @@ from .exceptions import (
 from .print_versions import show_versions
 from .pygeohydro import (
     NID,
-    NWIS,
-    WaterQuality,
     cover_statistics,
-    interactive_map,
     nlcd,
     nlcd_bycoords,
     nlcd_bygeom,
@@ -21,6 +18,7 @@ from .pygeohydro import (
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
+from .waterdata import NWIS, WaterQuality, interactive_map
 
 try:
     import importlib.metadata as metadata
