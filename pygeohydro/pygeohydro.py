@@ -366,7 +366,7 @@ def nlcd_bygeom(
         single_geom = True
         _geometry = {0: geoutils.geo2polygon(geometry, geo_crs, crs)}
 
-    nlcd = _NLCD(
+    nlcd_wms = _NLCD(
         years=years,
         region=region,
         crs=crs,
@@ -376,7 +376,8 @@ def nlcd_bygeom(
     )
 
     ds = {
-        i: nlcd.to_xarray(nlcd.get_response(g.bounds, resolution), g) for i, g in _geometry.items()
+        i: nlcd_wms.to_xarray(nlcd_wms.get_response(g.bounds, resolution), g)
+        for i, g in _geometry.items()
     }
     if single_geom:
         return ds[0]
@@ -418,7 +419,7 @@ def nlcd_bycoords(
     if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
         raise InvalidInputType("coords", "list of (lon, lat)")
 
-    nlcd = _NLCD(
+    nlcd_wms = _NLCD(
         years=years,
         region=region,
         crs=DEF_CRS,
@@ -429,7 +430,7 @@ def nlcd_bycoords(
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
     bounds = points.to_crs(points.estimate_utm_crs()).buffer(35, cap_style=3)
     bounds = bounds.to_crs(DEF_CRS)
-    ds_list = [nlcd.to_xarray(nlcd.get_response(b.bounds, 30), b.bounds) for b in bounds]
+    ds_list = [nlcd_wms.to_xarray(nlcd_wms.get_response(b.bounds, 30), b.bounds) for b in bounds]
 
     def get_value(da: xr.DataArray, x: float, y: float) -> Union[int, float]:
         nodata = da.attrs["nodatavals"][0]
