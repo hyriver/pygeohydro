@@ -840,16 +840,17 @@ class NWIS:
             "parameterCd": "00060",
             "siteStatus": "all",
         }
-        cond = (
-            (siteinfo.parm_cd == "00060")
-            & (start.tz_localize(None) < siteinfo.end_date)
-            & (end.tz_localize(None) > siteinfo.begin_date)
-        )
         if freq == "dv":
             params.update({"statCd": "00003"})
             cond = (
                 (siteinfo.stat_cd == "00003")
                 & (siteinfo.parm_cd == "00060")
+                & (start.tz_localize(None) < siteinfo.end_date)
+                & (end.tz_localize(None) > siteinfo.begin_date)
+            )
+        else:
+            cond = (
+                (siteinfo.parm_cd == "00060")
                 & (start.tz_localize(None) < siteinfo.end_date)
                 & (end.tz_localize(None) > siteinfo.begin_date)
             )
@@ -876,28 +877,33 @@ class NWIS:
 
         qobs.attrs, long_names = self._get_attrs(siteinfo.loc[cond], mmd)
         if to_xarray:
-            ds = xr.Dataset(
-                data_vars={
-                    "discharge": (["time", "station_id"], qobs),
-                    **{
-                        attr: (["station_id"], v)
-                        for attr, *v in pd.DataFrame(qobs.attrs).iloc[:-2].itertuples()
-                    },
-                },
-                coords={
-                    "time": qobs.index.tz_localize(None).to_numpy(),
-                    "station_id": qobs.columns,
-                },
-            )
-            for v, n in long_names.items():
-                ds[v].attrs["long_name"] = n
-            ds.attrs["tz"] = "UTC"
-            ds["discharge"].attrs["units"] = "mm/day" if mmd else "cms"
-            ds["dec_lat_va"].attrs["units"] = "decimal_degrees"
-            ds["dec_long_va"].attrs["units"] = "decimal_degrees"
-            ds["alt_va"].attrs["units"] = "ft"
-            return ds
+            return self._to_xarray(qobs, long_names, mmd)
         return qobs
+
+    @staticmethod
+    def _to_xarray(qobs: pd.DataFrame, long_names: Dict[str, str], mmd: bool) -> xr.Dataset:
+        """Convert a pandas.DataFrame to an xarray.Dataset."""
+        ds = xr.Dataset(
+            data_vars={
+                "discharge": (["time", "station_id"], qobs),
+                **{
+                    attr: (["station_id"], v)
+                    for attr, *v in pd.DataFrame(qobs.attrs).iloc[:-2].itertuples()
+                },
+            },
+            coords={
+                "time": qobs.index.tz_localize(None).to_numpy(),
+                "station_id": qobs.columns,
+            },
+        )
+        for v, n in long_names.items():
+            ds[v].attrs["long_name"] = n
+        ds.attrs["tz"] = "UTC"
+        ds["discharge"].attrs["units"] = "mm/day" if mmd else "cms"
+        ds["dec_lat_va"].attrs["units"] = "decimal_degrees"
+        ds["dec_long_va"].attrs["units"] = "decimal_degrees"
+        ds["alt_va"].attrs["units"] = "ft"
+        return ds
 
     @staticmethod
     def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> Tuple[Dict[str, Any], Dict[str, str]]:
