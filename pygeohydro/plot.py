@@ -4,13 +4,13 @@ Plots includes  daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
 import calendar
+import contextlib
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from matplotlib import cm
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from . import helpers
@@ -206,10 +206,8 @@ def descriptor_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = [int(v) for v in nlcd_meta["descriptors"]]
-    try:
+    with contextlib.suppress(ValueError):
         bounds.remove(127)
-    except ValueError:
-        pass
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values())[: len(bounds)])
     norm = BoundaryNorm(bounds, cmap.N)
@@ -221,10 +219,8 @@ def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"])
-    try:
+    with contextlib.suppress(ValueError):
         bounds.remove(127)
-    except ValueError:
-        pass
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
     norm = BoundaryNorm(bounds, cmap.N)
