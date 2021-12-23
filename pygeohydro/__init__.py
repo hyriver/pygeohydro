@@ -17,6 +17,7 @@ from .pygeohydro import (
     nlcd,
     nlcd_bycoords,
     nlcd_bygeom,
+    ssebopeta_bycoords,
     ssebopeta_bygeom,
     ssebopeta_byloc,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "nlcd_bycoords",
     "ssebopeta_bygeom",
     "ssebopeta_byloc",
+    "ssebopeta_bycoords",
     "helpers",
     "plot",
     "DataNotAvailable",
