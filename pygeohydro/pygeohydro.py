@@ -3,7 +3,7 @@ import io
 import warnings
 import zipfile
 from collections import OrderedDict
-from typing import Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 from unittest.mock import patch
 
 import async_retriever as ar
@@ -14,12 +14,17 @@ import pandas as pd
 import pygeoutils as geoutils
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, RetrySession, ServiceURL
-from pynhd import AGRBase
+from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
-from .exceptions import InvalidInputType, InvalidInputValue, MissingCRS, ServiceUnavailable
+from .exceptions import (
+    InvalidInputType,
+    InvalidInputValue,
+    MissingCRS,
+    ServiceUnavailable,
+    ZeroMatched,
+)
 from .helpers import logger
 
 DEF_CRS = "epsg:4326"
@@ -523,35 +528,256 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, fl
     return {"classes": class_percentage, "categories": category_percentage}
 
 
-class NID(AGRBase):
+class NID:
     """Retrieve data from the National Inventory of Dams web service.
 
     Parameters
     ----------
-    version : str, optional
-        The database version. Version 2 and 3 are available. Version 2 has
-        NID 2019 data and version 3 includes more recent data as well. At the
-        moment both services are experimental and might not always work. The
-        default version is 2. More information can be found at https://damsdev.net.
+    expire_after : int, optional
+        Expiration time for response caching in seconds, defaults to -1 (never expire).
+    disable_caching : bool, optional
+        If ``True``, disable caching requests, defaults to False.
     """
 
-    def __init__(self, version: int = 2) -> None:
-        if version not in (2, 3):
-            raise InvalidInputValue("version", ["2", "3"])
-
-        layer = "nid2019_u" if version == 2 else "dams"
-        super().__init__(layer, "*", DEF_CRS)
-        self.service = getattr(ServiceURL().restful, f"nid_{int(version)}")
-        rjson = ar.retrieve(
-            [
-                "/".join(
-                    [
-                        "https://gist.githubusercontent.com/cheginit",
-                        "91af7f7427763057a18000c5309280dc/raw",
-                        "d1b138e03e4ab98ba0e34c3226da8cb62a0e4703/nid_column_attrs.json",
-                    ]
-                )
-            ],
-            "json",
+    def __init__(
+        self,
+        expire_after: float = EXPIRE,
+        disable_caching: bool = False,
+    ) -> None:
+        self.base_url = ServiceURL().restful.nid
+        self.suggest_url = f"{self.base_url}/suggestions"
+        self.expire_after = expire_after
+        self.disable_caching = disable_caching
+        self.fields_meta = pd.DataFrame(
+            ar.retrieve(
+                [f"{self.base_url}/advanced-fields"],
+                "json",
+                expire_after=self.expire_after,
+                disable=self.disable_caching,
+            )[0]
         )
-        self.attrs = pd.DataFrame(rjson[0])
+        self.valid_fields = self.fields_meta.name.to_list()
+
+    def get_bygeom(self, geometry: int, geo_crs: str) -> gpd.GeoDataFrame:
+        """Retrieve NID data within a HUC.
+
+        Parameters
+        ----------
+        geometry : Polygon, MultiPolygon, or tuple of length 4
+            Geometry or bounding box (west, south, east, north) for extracting the data.
+        geo_crs : list of str
+            The CRS of the input geometry, defaults to epsg:4326.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of NID data
+
+        Examples
+        --------
+        >>> from pygeohydro import NID
+        >>> nid = NID()
+        >>> dams = nid.get_bygeom((-69.77, 45.07, -69.31, 45.45), "epsg:4326")
+        >>> print(dams.name.iloc[0])
+        Little Moose
+        """
+        _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
+        wbd = ArcGISRESTful(
+            ServiceURL().restful.wbd,
+            4,
+            outformat="json",
+            outfields="huc8",
+            expire_after=self.expire_after,
+            disable_caching=self.disable_caching,
+        )
+        resp = wbd.get_features(wbd.oids_bygeom(_geometry), return_geom=False)
+        huc_ids = [
+            tlz.get_in(["attributes", "huc8"], i) for r in resp for i in tlz.get_in(["features"], r)
+        ]
+
+        dams = self.get_byfilter([{"huc8": huc_ids}])[0]
+        return dams[dams.within(_geometry)].copy()
+
+    def get_byid(self, dam_ids: List[int]) -> gpd.GeoDataFrame:
+        """Get dams by their dam ID.
+
+        Parameters
+        ----------
+        dam_ids : list of int
+            List of the target dam IDs.
+
+        Returns
+        -------
+        pandas.DataFrame
+            NID data
+
+        Examples
+        --------
+        >>> from pygeohydro import NID
+        >>> nid = NID()
+        >>> dams = nid.get_byid(['514871', '459170', '514868', '463501', '463498'])
+        >>> print(dams.damHeight.max())
+        120.0
+        """
+        if not isinstance(dam_ids, list) and any(not isinstance(i, int) for i in dam_ids):
+            raise InvalidInputType("nid_ids", "list of int")
+
+        return self._to_geodf(
+            pd.DataFrame(self._get_json([f"{self.base_url}/dams/{i}/inventory" for i in dam_ids]))
+        )
+
+    def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
+        """Query dams by filters from the National Inventory of Dams web service.
+
+        Parameters
+        ----------
+        query_list : list of dict
+            List of dictionary of query parameters. For an exhaustive list of the parameters,
+            use the advanced fields dataframe that can be accessed via ``NID().fields_meta``.
+            Some filter require min/max values such as ``damHeight`` and ``drainageArea``.
+            For such filters, the min/max values should be passed like so:
+            ``{filter_key: ["[min1 max1]", "[min2 max2]"]}``.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            Query results.
+
+        Examples
+        --------
+        >>> from pygeohydro import NID
+        >>> nid = NID()
+        >>> query_list = [
+        ...    {"huc6": ["160502", "100500"], "drainageArea": ["[200 500]"]},
+        ...    {"nidId": ["CA01222"]},
+        ... ]
+        >>> dam_dfs = nid.get_byfilter(query_list)
+        >>> print(dams.name[0])
+        Stillwater Point Dam
+        """
+        invalid = [k for key in query_list for k in key if k not in self.valid_fields]
+        if invalid:
+            raise InvalidInputValue("query_dict", self.valid_fields)
+        params = [
+            {"sy": " ".join(f"@{s}:{fid}" for s, fids in key.items() for fid in fids)}
+            for key in query_list
+        ]
+        return [
+            self._to_geodf(pd.DataFrame(r))
+            for r in self._get_json([f"{self.base_url}/query"] * len(params), params)
+        ]
+
+    def get_suggestions(
+        self, text: str, context_key: str = ""
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Get suggestions from the National Inventory of Dams web service.
+
+        Parameters
+        ----------
+        text : str
+            Text to query for suggestions.
+        context_key : str, optional
+            Suggestion context, defaults to empty string, i.e., all context keys.
+            For a list of valid context keys, see ``NID().fields_meta``.
+
+        Returns
+        -------
+        tuple of pandas.DataFrame
+            The suggestions for the requested text as two DataFrames:
+            First, is suggestions found in the dams properties and
+            second, those found in the query fields such as states, huc6, etc.
+
+        Examples
+        --------
+        >>> from pygeohydro import NID
+        >>> nid = NID()
+        >>> dams, contexts = nid.get_suggestions("texas", "huc2")
+        >>> print(contexts.loc["HUC2", "value"])
+        12
+        """
+        if len(context_key) > 0 and context_key not in self.valid_fields:
+            raise InvalidInputValue("context", self.valid_fields)
+
+        params = [{"text": text, "contextKey": context_key}]
+        resp = self._get_json([f"{self.base_url}/suggestions"] * len(params), params)
+        dams = pd.DataFrame(resp[0]["dams"])
+        contexts = pd.DataFrame(resp[0]["contexts"])
+        return (
+            dams if dams.empty else dams.set_index("id"),
+            contexts if contexts.empty else contexts.set_index("name"),
+        )
+
+    def _get_json(
+        self, urls: List[str], params: Optional[List[Dict[str, str]]] = None
+    ) -> List[Dict[str, Any]]:
+        """Get JSON response from NID web service.
+
+        Parameters
+        ----------
+        urls : list of str
+            A list of query URLs.
+        params : dict, optional
+            A list of parameters to pass to the web service, defaults to ``None``.
+
+        Returns
+        -------
+        list of dict
+            List of JSON responses from the web service.
+        """
+        if not isinstance(urls, list):
+            raise InvalidInputType("urls", "list or str")
+
+        if params is None:
+            kwds = None
+        else:
+            kwds = [{"params": {**p, "out": "json"}} for p in params]
+        resp = ar.retrieve(
+            urls,
+            "json",
+            kwds,
+            expire_after=self.expire_after,
+            disable=self.disable_caching,
+        )
+        if len(resp) == 0:
+            raise ZeroMatched
+
+        failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
+        if failed:
+            idx, err_msgs = zip(*failed)
+            errs = " service requests failed with the following messages:\n"
+            errs += "\n".join(err_msgs)
+            if len(failed) == len(urls):
+                raise ZeroMatched(f"All{errs}")
+            resp = [r for i, r in enumerate(resp) if i not in idx]
+            logger.warning(f"Some{errs}")
+        return resp
+
+    @staticmethod
+    def _to_geodf(nid_df: pd.DataFrame) -> gpd.GeoDataFrame:
+        """Convert a NID dataframe to a GeoDataFrame.
+
+        Parameters
+        ----------
+        dams : pd.DataFrame
+            NID dataframe
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of NID data
+        """
+        return gpd.GeoDataFrame(
+            nid_df, geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude), crs=DEF_CRS
+        )
+
+    def __repr__(self) -> str:
+        """Print the services properties."""
+        resp = self._get_json([f"{self.base_url}/metadata"])[0]
+        return "\n".join(
+            [
+                "Connected to NID RESTful with the following properties:",
+                f"URL: {self.base_url}",
+                f"Date Refreshed: {resp['dateRefreshed']}",
+                f"Version: {resp['version']}",
+            ]
+        )
