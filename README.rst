@@ -115,8 +115,8 @@ The ``pygeohydro`` module can pull data from the following web services:
   (returned as a ``pandas.DataFrame`` or ``xarray.Dataset`` with station attributes),
 * `Water Quality Portal <https://www.waterqualitydata.us/>`__ for accessing current and
   historical water quality data from more than 1.5 million sites across the US,
-* `NID <https://damsdev.net/>`__ for accessing both versions of the National Inventory of Dams
-  web services,
+* `NID <https://nid.sec.usace.army.mil>`__ for accessing the National Inventory of Dams
+  web service,
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2019 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, imperviousness
@@ -318,17 +318,22 @@ bounding box and have a maximum storage larger than 200 acre-feet.
 .. code-block:: python
 
     nid = NID()
-    dams = nid.bygeom(bbox, "epsg:4326", sql_clause="MAX_STORAGE > 200")
+    dams = nid.get_bygeom((-65.77, 43.07, -69.31, 45.45), "epsg:4326")
+    dams = nid.inventory_byid(dams.id.to_list())
+    dams = dams[dams.maxStorage > 200]
 
-We can get all the dams within CONUS using ``NID`` and plot them:
+We can get also all dams within CONUS in NID with maximum storage larger than 200 acre-feet:
 
 .. code-block:: python
 
     import geopandas as gpd
 
     world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
-    conus = world[world.name == "United States of America"].geometry.iloc[0][0]
-    conus_dams = nid.bygeom(conus, "epsg:4326")
+    conus = world[world.name == "United States of America"].geometry.iloc[0].geoms[0]
+
+    dam_list = nid.get_byfilter([{"maxStorage": ["[200 5000]"]}])
+    dams = dam_list[0][dam_list[0].is_valid]
+    dams = dams[dams.within(conus)]
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/dams.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nid.ipynb
