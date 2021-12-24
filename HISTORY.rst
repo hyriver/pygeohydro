@@ -28,6 +28,9 @@ New Features
   indices of the input ``geopandas.GeoDataFrame``. (:issue_hydro:`80`)
 - The previous ``nlcd`` function is being deprecated. For now, it calls ``nlcd_bygeom``
   internally and retains the old behavior. This function will be removed in future versions.
+- Add support for the new National Inventory of Dams RESTful service. Remove the old ``NID``
+  class since its underlying web service is no longer available. Note that the new NID
+  service is very different from the old one, so this is considered a breaking change.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
