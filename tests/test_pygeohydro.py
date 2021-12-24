@@ -3,7 +3,7 @@ import io
 import shutil
 
 import geopandas as gpd
-import pytest
+from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
@@ -11,6 +11,7 @@ from pygeohydro import NID, NWIS
 
 SMALL = 1e-3
 DEF_CRS = "epsg:4326"
+ALT_CRS = "epsg:3542"
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
 DATES = ("2005-01-01", "2005-01-31")
@@ -90,7 +91,7 @@ class TestNLCD:
 
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
-        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs="epsg:3542")
+        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
         self.assertion(lulc[0].cover_2016, 84.357)
         self.assertion(lulc[1].cover_2016, 84.357)
 
@@ -109,35 +110,30 @@ class TestNLCD:
         assert abs(st["categories"]["Forest"] - expected) < SMALL
 
 
-@pytest.mark.xfail(reason="The service is unstable.")
 class TestNID:
-    sql_clause = "MAX_STORAGE > 200"
-    sql = "DAM_HEIGHT > 50"
-    names = ["Guilford", "Pingree Pond", "First Davis Pond"]
+    nid = NID()
 
-    def test_bygeom2(self):
-        dams = NID(2).bygeom(GEOM, DEF_CRS, sql_clause=self.sql_clause)
-        assert len(dams) == 5
+    def test_suggestion(self):
+        dams, contexts = self.nid.get_suggestions("texas", "huc2")
+        assert dams.empty and contexts.loc["HUC2", "value"] == "12"
 
-    def test_bygeom3(self):
-        dams = NID(3).bygeom(GEOM, DEF_CRS, sql_clause=self.sql_clause)
-        assert len(dams) == 5
+    def test_filter(self):
+        query_list = [
+            {"huc6": ["160502", "100500"], "drainageArea": ["[200 500]"]},
+            {"nidId": ["CA01222"]},
+        ]
+        dam_dfs = self.nid.get_byfilter(query_list)
+        assert dam_dfs[0].name[0] == "Stillwater Point Dam"
 
-    def test_byids2(self):
-        dams = NID(2).byids("DAM_NAME", [n.upper() for n in self.names])
-        assert len(dams) == len(self.names)
+    def test_id(self):
+        dams = self.nid.get_byid(["514871", "459170", "514868", "463501", "463498"])
+        assert abs(dams.damHeight.max() - 120) < SMALL
 
-    def test_byids3(self):
-        dams = NID(3).byids("NAME", self.names)
-        assert len(dams) == len(self.names)
-
-    def test_bysql2(self):
-        dams = NID(2).bysql(self.sql)
-        assert len(dams) == 5331
-
-    def test_bysql3(self):
-        dams = NID(3).bysql(self.sql)
-        assert len(dams) == 5306
+    def test_geom(self):
+        dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
+        bbox = ogc_utils.match_crs(GEOM.bounds, DEF_CRS, ALT_CRS)
+        dams_box = self.nid.get_bygeom(bbox, ALT_CRS)
+        assert dams_geo.name.iloc[0] == dams_box.name.iloc[0] == "Little Moose"
 
 
 class TestWaterQuality:
