@@ -598,7 +598,7 @@ class NID:
         dams = self.get_byfilter([{"huc8": huc_ids}])[0]
         return dams[dams.within(_geometry)].copy()
 
-    def get_byid(self, dam_ids: List[int]) -> gpd.GeoDataFrame:
+    def inventory_byid(self, dam_ids: List[int]) -> gpd.GeoDataFrame:
         """Get dams by their dam ID.
 
         Parameters
@@ -615,7 +615,7 @@ class NID:
         --------
         >>> from pygeohydro import NID
         >>> nid = NID()
-        >>> dams = nid.get_byid(['514871', '459170', '514868', '463501', '463498'])
+        >>> dams = nid.inventory_byid(['514871', '459170', '514868', '463501', '463498'])
         >>> print(dams.damHeight.max())
         120.0
         """

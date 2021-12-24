@@ -126,7 +126,7 @@ class TestNID:
         assert dam_dfs[0].name[0] == "Stillwater Point Dam"
 
     def test_id(self):
-        dams = self.nid.get_byid(["514871", "459170", "514868", "463501", "463498"])
+        dams = self.nid.inventory_byid(["514871", "459170", "514868", "463501", "463498"])
         assert abs(dams.damHeight.max() - 120) < SMALL
 
     def test_geom(self):
