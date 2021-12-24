@@ -18,15 +18,11 @@ from pygeoogc import ZeroMatched as ZeroMatchedOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import NLDI, WaterData
 
-from .exceptions import (
-    DataNotAvailable,
-    InvalidInputType,
-    InvalidInputValue,
-    ZeroMatched,
-)
+from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, ZeroMatched
 from .helpers import logger
 
 DEF_CRS = "epsg:4326"
+
 
 def interactive_map(
     bbox: Tuple[float, float, float, float],
