@@ -599,17 +599,27 @@ class NID:
         return dams[dams.within(_geometry)].copy()
 
     def inventory_byid(self, dam_ids: List[int]) -> gpd.GeoDataFrame:
-        """Get dams by their dam ID.
+        """Get extra attributes for dams based on their dam ID.
+
+        Notes
+        -----
+        This function is meant to be used for getting extra attributes for dams.
+        For example, first you need to use either ``get_bygeom`` or ``get_byfilter``
+        to get basic attributes of the target dams. Then you can use this function
+        to get extra attributes using the ``id`` column of the ``GeoDataFrame``
+        that ``get_bygeom`` or ``get_byfilter`` returns.
 
         Parameters
         ----------
         dam_ids : list of int
-            List of the target dam IDs.
+            List of the target dam IDs. Note that the dam IDs are not the
+            same as the NID IDs.
 
         Returns
         -------
         pandas.DataFrame
-            NID data
+            Dams with extra attributes in addition to the standard NID fields
+            that other ``NID`` methods return.
 
         Examples
         --------
@@ -671,6 +681,11 @@ class NID:
         self, text: str, context_key: str = ""
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Get suggestions from the National Inventory of Dams web service.
+
+        Notes
+        -----
+        This function is useful for exploring and/or narrowing down the filter fields
+        that are needed to query the dams using ``get_byfilter``.
 
         Parameters
         ----------
