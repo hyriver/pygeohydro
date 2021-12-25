@@ -537,16 +537,20 @@ class NID:
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
+    max_workers : int, optional
+        Maximum number of async requests, defaults to 50.
     """
 
     def __init__(
         self,
         expire_after: float = EXPIRE,
         disable_caching: bool = False,
+        max_workers: int = 50,
     ) -> None:
         self.base_url = ServiceURL().restful.nid
         self.suggest_url = f"{self.base_url}/suggestions"
         self.expire_after = expire_after
+        self.max_workers = max_workers
         self.disable_caching = disable_caching
         self.fields_meta = pd.DataFrame(
             ar.retrieve(
@@ -557,6 +561,36 @@ class NID:
             )[0]
         )
         self.valid_fields = self.fields_meta.name.to_list()
+        self.dam_type = {
+            -1: "Unknown",
+            1: "Arch",
+            2: "Buttress",
+            3: "Concrete",
+            4: "Earth",
+            5: "Gravity",
+            6: "Masonry",
+            7: "Multi-Arch",
+            8: "Rockfill",
+            9: "Roller-Compacted Concrete",
+            10: "Stone",
+            11: "Timber Crib",
+            12: "Other",
+        }
+        self.dam_purpose = {
+            -1: "Unknown",
+            1: "Debris Control",
+            2: "Fire Protection, Stock, Or Small Farm Pond",
+            3: "Fish and Wildlife Pond",
+            4: "Flood Risk Reduction",
+            5: "Grade Stabilization",
+            6: "Hydroelectric",
+            7: "Irrigation",
+            8: "Navigation",
+            9: "Recreation",
+            10: "Tailings",
+            11: "Water Supply",
+            12: "Other",
+        }
 
     def get_bygeom(self, geometry: int, geo_crs: str) -> gpd.GeoDataFrame:
         """Retrieve NID data within a HUC.
@@ -752,6 +786,7 @@ class NID:
             kwds,
             expire_after=self.expire_after,
             disable=self.disable_caching,
+            max_workers=self.max_workers,
         )
         if len(resp) == 0:
             raise ZeroMatched
