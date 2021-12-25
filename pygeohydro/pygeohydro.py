@@ -537,20 +537,16 @@ class NID:
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
-    max_workers : int, optional
-        Maximum number of async requests, defaults to 50.
     """
 
     def __init__(
         self,
         expire_after: float = EXPIRE,
         disable_caching: bool = False,
-        max_workers: int = 50,
     ) -> None:
         self.base_url = ServiceURL().restful.nid
         self.suggest_url = f"{self.base_url}/suggestions"
         self.expire_after = expire_after
-        self.max_workers = max_workers
         self.disable_caching = disable_caching
         self.fields_meta = pd.DataFrame(
             ar.retrieve(
@@ -562,7 +558,7 @@ class NID:
         )
         self.valid_fields = self.fields_meta.name.to_list()
         self.dam_type = {
-            -1: "Unknown",
+            -1: "N/A",
             1: "Arch",
             2: "Buttress",
             3: "Concrete",
@@ -577,7 +573,7 @@ class NID:
             12: "Other",
         }
         self.dam_purpose = {
-            -1: "Unknown",
+            -1: "N/A",
             1: "Debris Control",
             2: "Fire Protection, Stock, Or Small Farm Pond",
             3: "Fish and Wildlife Pond",
@@ -786,7 +782,6 @@ class NID:
             kwds,
             expire_after=self.expire_after,
             disable=self.disable_caching,
-            max_workers=self.max_workers,
         )
         if len(resp) == 0:
             raise ZeroMatched
