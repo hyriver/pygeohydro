@@ -589,7 +589,7 @@ class NID:
         }
 
     def get_bygeom(self, geometry: int, geo_crs: str) -> gpd.GeoDataFrame:
-        """Retrieve NID data within a HUC.
+        """Retrieve NID data within a geometry.
 
         Parameters
         ----------
