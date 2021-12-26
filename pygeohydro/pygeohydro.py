@@ -17,13 +17,13 @@ import pyproj
 import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
-from pygeoogc import utils as ogc_utils
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
 from .exceptions import (
     InvalidInputType,
     InvalidInputValue,
+    MissingColumns,
     MissingCRS,
     ServiceUnavailable,
     ZeroMatched,
@@ -44,8 +44,8 @@ def ssebopeta_byloc(
         Use :func:`ssebopeta_bycoords` instead. For now, this function calls
         :func:`ssebopeta_bycoords` but retains the same functionality, i.e.,
         returns a dataframe and accepts only a single coordinate. Whereas the
-        new function returns a ``xarray.DataArray`` and accepts a list of
-        coordinates.
+        new function returns a ``xarray.Dataset`` and accepts a dataframe
+        containing coordinates.
 
     Parameters
     ----------
@@ -67,21 +67,24 @@ def ssebopeta_byloc(
         ]
     )
     warnings.warn(msg, DeprecationWarning)
-    ds = ssebopeta_bycoords([coords], dates)
+    if not isinstance(coords, tuple) or len(coords) != 2:
+        raise InvalidInputType("coords", "(lon, lat)")
+    _coords = pd.DataFrame({"id": [0], "x": [coords[0]], "y": [coords[1]]})
+    ds = ssebopeta_bycoords(_coords, dates)
     return ds.to_dataframe().pivot_table(index="time", columns="location_id", values="eta")[0]
 
 
 def ssebopeta_bycoords(
-    coords: List[Tuple[float, float]],
+    coords: pd.DataFrame,
     dates: Union[Tuple[str, str], Union[int, List[int]]],
     crs: str = DEF_CRS,
 ) -> xr.Dataset:
-    """Daily actual ET for a list of coords from SSEBop database in mm/day.
+    """Daily actual ET for a dataframe of coords from SSEBop database in mm/day.
 
     Parameters
     ----------
-    coords : list of tuple
-        List of coordinates [(x, y), ...]
+    coords : pandas.DataFrame
+        A dataframe with ``id``, ``x``, ``y`` columns.
     dates : tuple or list, optional
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
     crs : str, optional
@@ -90,15 +93,21 @@ def ssebopeta_bycoords(
     Returns
     -------
     xarray.Dataset
-        Daily actual ET in mm/day
+        Daily actual ET in mm/day as a dataset with ``time`` and ``location_id`` dimensions.
+        The ``location_id`` dimension is the same as the ``id`` column in the input dataframe.
     """
-    if not isinstance(coords, list) or not isinstance(coords[0], (list, tuple)):
-        raise InvalidInputType("coords", "list of tuple", "[(lon, lat), ...]")
+    if not isinstance(coords, pd.DataFrame):
+        raise InvalidInputType("coords", "pandas.DataFrame")
 
-    if any(len(c) != 2 for c in coords):
-        raise InvalidInputType("coords", "list of tuple", "[(lon, lat), ...]")
+    req_cols = ["id", "x", "y"]
+    if not set(req_cols).issubset(coords.columns):
+        raise MissingColumns(req_cols)
 
-    _coords = set(ogc_utils.match_crs(coords, crs, DEF_CRS))
+    _coords = gpd.GeoSeries(
+        gpd.points_from_xy(coords["x"], coords["y"]), index=coords["id"], crs=crs
+    )
+    _coords = _coords.to_crs(DEF_CRS)
+    co_list = list(zip(_coords.x, _coords.y))
 
     f_list = helpers.get_ssebopeta_urls(dates)
     session = RetrySession()
@@ -112,22 +121,22 @@ def ssebopeta_bycoords(
             with rio.MemoryFile() as memfile:
                 memfile.write(z.read(z.filelist[0].filename))
                 with memfile.open() as src:
-                    return list(src.sample(_coords))
+                    return list(src.sample(co_list))
 
         time, eta = zip(*[(t, _ssebop(url)) for t, url in f_list])
-    x, y = zip(*set(coords))
-    eta_arr = np.array(eta, dtype="f8").reshape(len(time), -1) * 1e-3
+    eta_arr = np.array(eta).reshape(len(time), -1)
     ds = xr.Dataset(
         data_vars={
             "eta": (["time", "location_id"], eta_arr),
-            "x": (["location_id"], list(x)),
-            "y": (["location_id"], list(y)),
+            "x": (["location_id"], coords["x"].to_numpy()),
+            "y": (["location_id"], coords["y"].to_numpy()),
         },
         coords={
             "time": np.array(time, dtype="datetime64[ns]"),
-            "location_id": range(len(x)),
+            "location_id": coords["id"].to_numpy(),
         },
     )
+    ds["eta"] = ds["eta"].where(ds["eta"] != 9999, np.nan) * 1e-3
     ds.eta.attrs = {
         "units": "mm/day",
         "long_name": "Actual ET",
