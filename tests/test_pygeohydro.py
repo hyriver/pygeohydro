@@ -63,12 +63,8 @@ class TestETA:
     years = [2010, 2014, 2015]
 
     def test_coords(self):
-        eta_p = gh.ssebopeta_bycoords((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
-        assert abs(eta_p.mean().values[0] - 0.575) < SMALL
-
-    def test_coords_deprecated(self):
-        eta_p = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
-        assert abs(eta_p.mean().values[0] - 0.575) < SMALL
+        eta = gh.ssebopeta_bycoords(list(GEOM.exterior.coords), dates=self.dates)
+        assert abs(eta.eta.sum().item() - 11.5) < SMALL
 
     def test_geom(self):
         eta_g = gh.ssebopeta_bygeom(GEOM, dates=self.dates)
@@ -79,6 +75,10 @@ class TestETA:
         urls_dates = gh.pygeohydro.helpers.get_ssebopeta_urls(DATES_LONG)
         urls_years = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years)
         assert len(urls_dates) == 3653 and len(urls_years) == 1095
+
+    def test_loc(self):
+        eta = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
+        assert abs(eta.mean() - 0.575) < SMALL
 
 
 class TestNLCD:
