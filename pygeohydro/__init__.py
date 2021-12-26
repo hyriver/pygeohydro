@@ -4,6 +4,7 @@ from .exceptions import (
     InvalidInputRange,
     InvalidInputType,
     InvalidInputValue,
+    MissingColumns,
     MissingCRS,
     ZeroMatched,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "InvalidInputRange",
     "InvalidInputType",
     "MissingCRS",
+    "MissingColumns",
     "InvalidInputValue",
     "ZeroMatched",
     "show_versions",
