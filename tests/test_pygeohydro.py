@@ -3,6 +3,7 @@ import io
 import shutil
 
 import geopandas as gpd
+import pandas as pd
 from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
 
@@ -63,8 +64,17 @@ class TestETA:
     years = [2010, 2014, 2015]
 
     def test_coords(self):
-        eta = gh.ssebopeta_bycoords(list(GEOM.exterior.coords), dates=self.dates)
-        assert abs(eta.eta.sum().item() - 11.5) < SMALL
+        coords = pd.DataFrame(
+            [
+                ["s1", -72.77, 40.07],
+                ["s2", -70.31, 46.07],
+                ["s3", -69.31, 45.45],
+                ["s4", -69.77, 45.45],
+            ],
+            columns=["id", "x", "y"],
+        )
+        ds = gh.ssebopeta_bycoords(coords, dates=self.dates)
+        assert abs(ds.eta.sum().item() - 8.625) < SMALL and ds.eta.isnull().sum().item() == 5
 
     def test_geom(self):
         eta_g = gh.ssebopeta_bygeom(GEOM, dates=self.dates)
