@@ -1,5 +1,6 @@
 """Accessing data from the supported databases through their APIs."""
 import io
+import itertools
 import warnings
 import zipfile
 from collections import OrderedDict
@@ -12,9 +13,11 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoutils as geoutils
+import pyproj
 import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import utils as ogc_utils
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
@@ -38,18 +41,22 @@ def ssebopeta_byloc(
     """Daily actual ET for a location from SSEBop database in mm/day.
 
     .. deprecated:: 0.11.5
-        Use :func:`ssebopeta_bycoords` instead.
+        Use :func:`ssebopeta_bycoords` instead. For now, this function calls
+        :func:`ssebopeta_bycoords` but retains the same functionality, i.e.,
+        returns a dataframe and accepts only a single coordinate. Whereas the
+        new function returns a ``xarray.DataArray`` and accepts a list of
+        coordinates.
 
     Parameters
     ----------
     coords : tuple
-        Longitude and latitude of the location of interest as a tuple (lon, lat)
+        Longitude and latitude of a single location as a tuple (lon, lat)
     dates : tuple or list, optional
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
 
     Returns
     -------
-    pandas.DataFrame
+    pandas.Series
         Daily actual ET for a location
     """
     msg = " ".join(
@@ -60,54 +67,75 @@ def ssebopeta_byloc(
         ]
     )
     warnings.warn(msg, DeprecationWarning)
-    return ssebopeta_bycoords(coords, dates)
+    ds = ssebopeta_bycoords([coords], dates)
+    return ds.to_dataframe().pivot_table(index="time", columns="location_id", values="eta")[0]
 
 
 def ssebopeta_bycoords(
-    coords: Tuple[float, float],
+    coords: List[Tuple[float, float]],
     dates: Union[Tuple[str, str], Union[int, List[int]]],
-) -> pd.DataFrame:
-    """Daily actual ET for a location from SSEBop database in mm/day.
+    crs: str = DEF_CRS,
+) -> xr.Dataset:
+    """Daily actual ET for a list of coords from SSEBop database in mm/day.
 
     Parameters
     ----------
-    coords : tuple
-        Longitude and latitude of the location of interest as a tuple (lon, lat)
+    coords : list of tuple
+        List of coordinates [(x, y), ...]
     dates : tuple or list, optional
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
+    crs : str, optional
+        The CRS of the input coordinates, defaults to epsg:4326.
 
     Returns
     -------
-    pandas.DataFrame
-        Daily actual ET for a location
+    xarray.Dataset
+        Daily actual ET in mm/day
     """
-    if not (isinstance(coords, tuple) and len(coords) == 2):
-        raise InvalidInputType("coords", "tuple", "(lon, lat)")
+    if not isinstance(coords, list) or not isinstance(coords[0], (list, tuple)):
+        raise InvalidInputType("coords", "list of tuple", "[(lon, lat), ...]")
 
-    lon, lat = coords
+    if any(len(c) != 2 for c in coords):
+        raise InvalidInputType("coords", "list of tuple", "[(lon, lat), ...]")
+
+    _coords = set(ogc_utils.match_crs(coords, crs, DEF_CRS))
 
     f_list = helpers.get_ssebopeta_urls(dates)
     session = RetrySession()
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(urls: Tuple[str, str]) -> Dict[str, Union[str, List[float]]]:
-            dt, url = urls
+        def _ssebop(url: str) -> List[float]:
             r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
 
             with rio.MemoryFile() as memfile:
                 memfile.write(z.read(z.filelist[0].filename))
                 with memfile.open() as src:
-                    return {
-                        "dt": dt,
-                        "eta": [e[0] for e in src.sample([(lon, lat)])][0],
-                    }
+                    return list(src.sample(_coords))
 
-        eta = pd.DataFrame.from_records(_ssebop(f) for f in f_list)
-    eta.columns = ["datetime", "eta (mm/day)"]
-    eta = eta.sort_values("datetime").set_index("datetime") * 1e-3
-    return eta
+        time, eta = zip(*[(t, _ssebop(url)) for t, url in f_list])
+    x, y = zip(*set(coords))
+    eta_arr = np.array(eta, dtype="f8").reshape(len(time), -1) * 1e-3
+    ds = xr.Dataset(
+        data_vars={
+            "eta": (["time", "location_id"], eta_arr),
+            "x": (["location_id"], list(x)),
+            "y": (["location_id"], list(y)),
+        },
+        coords={
+            "time": np.array(time, dtype="datetime64[ns]"),
+            "location_id": range(len(x)),
+        },
+    )
+    ds.eta.attrs = {
+        "units": "mm/day",
+        "long_name": "Actual ET",
+        "nodatavals": (np.nan,),
+    }
+    ds.x.attrs = {"crs": pyproj.CRS(crs).to_string()}
+    ds.y.attrs = {"crs": pyproj.CRS(crs).to_string()}
+    return ds
 
 
 def ssebopeta_bygeom(
@@ -159,7 +187,9 @@ def ssebopeta_bygeom(
 
     eta = data.eta.copy()
     eta *= 1e-3
-    eta.attrs.update({"units": "mm/day", "nodatavals": (np.nan,)})
+    eta.attrs.update(
+        {"units": "mm/day", "nodatavals": (np.nan,), "crs": DEF_CRS, "long_name": "Actual ET"}
+    )
     return eta
 
 
@@ -641,8 +671,8 @@ class NID:
 
         Parameters
         ----------
-        dam_ids : list of int
-            List of the target dam IDs. Note that the dam IDs are not the
+        dam_ids : list of int or str
+            List of the target dam IDs (digists only). Note that the dam IDs are not the
             same as the NID IDs.
 
         Returns
@@ -655,16 +685,18 @@ class NID:
         --------
         >>> from pygeohydro import NID
         >>> nid = NID()
-        >>> dams = nid.inventory_byid(['514871', '459170', '514868', '463501', '463498'])
+        >>> dams = nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
         >>> print(dams.damHeight.max())
         120.0
         """
-        if not isinstance(dam_ids, list) and any(not isinstance(i, int) for i in dam_ids):
-            raise InvalidInputType("nid_ids", "list of int")
+        urls = [
+            f"{self.base_url}/dams/{i}/inventory"
+            for i in itertools.takewhile(lambda x: str(x).isdigit(), dam_ids)
+        ]
+        if len(urls) != len(dam_ids):
+            raise InvalidInputType("dam_ids", "list of digits")
 
-        return self._to_geodf(
-            pd.DataFrame(self._get_json([f"{self.base_url}/dams/{i}/inventory" for i in dam_ids]))
-        )
+        return self._to_geodf(pd.DataFrame(self._get_json(urls)))
 
     def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
         """Query dams by filters from the National Inventory of Dams web service.
@@ -692,7 +724,7 @@ class NID:
         ...    {"nidId": ["CA01222"]},
         ... ]
         >>> dam_dfs = nid.get_byfilter(query_list)
-        >>> print(dams.name[0])
+        >>> print(dam_dfs[0].name[0])
         Stillwater Point Dam
         """
         invalid = [k for key in query_list for k in key if k not in self.valid_fields]
