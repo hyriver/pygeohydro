@@ -2,7 +2,7 @@
 History
 =======
 
-0.12.0 (unreleased)
+0.12.0 (2021-12-27)
 -------------------
 
 New Features
@@ -28,9 +28,14 @@ New Features
   indices of the input ``geopandas.GeoDataFrame``. (:issue_hydro:`80`)
 - The previous ``nlcd`` function is being deprecated. For now, it calls ``nlcd_bygeom``
   internally and retains the old behavior. This function will be removed in future versions.
-- Add support for the new National Inventory of Dams RESTful service. Remove the old ``NID``
-  class since its underlying web service is no longer available. Note that the new NID
-  service is very different from the old one, so this is considered a breaking change.
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Set the request caching's expiration time to never expire. Add two flags to all
+  functions to control the caching: ``expire_after`` and ``disable_caching``.
+- Replace ``NID`` class with the new RESTful-based web service of National Inventory
+  of Dams. The new NID service is very different from the old one, so this is considered
+  a breaking change.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -40,6 +45,7 @@ Internal Changes
   any duplicates. Therefore, all the remaining station numbers will be unique. This
   prevents an issue with setting ``attrs`` where duplicate indexes cause an exception
   when being converted to a dict. (:issue_hydro:`75`)
+- Add all the missing types so ``mypy --strict`` passes.
 
 0.11.4 (2021-11-24)
 -------------------
