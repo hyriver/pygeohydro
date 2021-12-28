@@ -11,7 +11,8 @@ import re
 import struct
 import subprocess
 import sys
-from typing import IO, List, Optional, Tuple
+from types import ModuleType
+from typing import List, Optional, TextIO, Tuple
 
 import pkg_resources
 
@@ -72,7 +73,7 @@ def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     return blob
 
 
-def show_versions(file: IO = sys.stdout) -> None:
+def show_versions(file: TextIO = sys.stdout) -> None:
     """Print versions of all the dependencies.
 
     Parameters
@@ -114,7 +115,7 @@ def show_versions(file: IO = sys.stdout) -> None:
             deps_blob.append((modname, None))
         else:
             try:
-                ver = mod.version.VERSION if modname == "pydantic" else ver_f(mod)
+                ver = mod.version.VERSION if modname == "pydantic" else ver_f(mod)  # type: ignore
             except (NotImplementedError, AttributeError):
                 ver = "installed"
             deps_blob.append((modname, ver))
@@ -130,10 +131,10 @@ def show_versions(file: IO = sys.stdout) -> None:
         print(f"{k}: {stat}", file=file)
 
 
-def _get_mod(modname: str):
+def _get_mod(modname: str) -> ModuleType:
+    if modname in sys.modules:
+        return sys.modules[modname]
     try:
-        if modname in sys.modules:
-            return sys.modules[modname]
-        return importlib.import_module(modname)  # noqa: TC300
+        return importlib.import_module(modname)
     except ModuleNotFoundError:
         return importlib.import_module(modname.replace("-", "_"))

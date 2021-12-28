@@ -4,7 +4,7 @@ import itertools
 import warnings
 import zipfile
 from collections import OrderedDict
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
 import async_retriever as ar
@@ -184,18 +184,16 @@ def ssebopeta_bygeom(
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(url_stamped: Tuple[str, str]) -> xr.DataArray:
-            dt, url = url_stamped
+        def _ssebop(t: pd.DatetimeIndex, url: str) -> xr.Dataset:
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
-            return ds.expand_dims({"time": [dt]})
+            ds: xr.Dataset = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
+            return ds.expand_dims({"time": [t]})
 
-        data = xr.merge(_ssebop(f) for f in f_list).sortby("time")
+        data = xr.merge(_ssebop(t, url) for t, url in f_list)
 
-    eta = data.eta.copy()
-    eta *= 1e-3
+    eta: xr.DataArray = data.eta.copy() * 1e-3
     eta.attrs.update(
         {"units": "mm/day", "nodatavals": (np.nan,), "crs": DEF_CRS, "long_name": "Actual ET"}
     )
@@ -279,15 +277,14 @@ class _NLCD:
         """Get response from a url."""
         return self.wms.getmap_bybox(bounds, resolution, self.crs, kwargs={"styles": "raster"})
 
-    def to_xarray(self, r_dict: Dict[str, bytes], geometry: Polygon) -> xr.DataArray:
+    def to_xarray(self, r_dict: Dict[str, bytes], geometry: Polygon) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         try:
-            ds = geoutils.gtiff2xarray(r_dict, geometry, self.crs)
+            _ds = geoutils.gtiff2xarray(r_dict, geometry, self.crs)
         except rio.RasterioIOError as ex:
             raise ServiceUnavailable(self.wms.url) from ex
-        attrs = ds.attrs
-        if isinstance(ds, xr.DataArray):
-            ds = ds.to_dataset()
+        ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
+        ds.attrs = _ds.attrs
         for lyr in self.layers:
             name = [n for n in self.units if n in lyr.lower()][-1]
             lyr_name = f"{name}_{lyr.split('_')[1]}"
@@ -295,7 +292,6 @@ class _NLCD:
             ds[lyr_name].attrs["units"] = self.units[name]
             ds[lyr_name] = ds[lyr_name].astype(self.types[name])
             ds[lyr_name].attrs["nodatavals"] = (self.nodata[name],)
-        ds.attrs = attrs
         return ds
 
     @staticmethod
@@ -319,40 +315,35 @@ class _NLCD:
             vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
             raise InvalidInputValue("years", vals)
 
-        layer_map = {
-            "canopy": lambda _: "Tree_Canopy",
-            "cover": lambda _: "Land_Cover_Science_Product",
-            "impervious": lambda _: "Impervious",
-            "descriptor": lambda x: "Impervious_Descriptor"
-            if x == "AK"
-            else "Impervious_descriptor",
-        }
+        def layer_name(lyr: str) -> str:
+            if lyr == "canopy":
+                return "Tree_Canopy"
+            if lyr == "cover":
+                return "Land_Cover_Science_Product"
+            if lyr == "impervious":
+                return "Impervious"
+            return "Impervious_Descriptor" if region == "AK" else "Impervious_descriptor"
 
-        return [
-            f"NLCD_{yr}_{layer_map[lyr](region)}_{region}"
-            for lyr, yrs in years.items()
-            for yr in yrs
-        ]
+        return [f"NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
 
 
 def nlcd_bygeom(
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float], gpd.GeoDataFrame],
+    geometry: Union[gpd.GeoSeries, gpd.GeoDataFrame],
     resolution: float,
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
-    geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
     validation: bool = True,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
-) -> Union[xr.Dataset, Dict[int, xr.Dataset]]:
+) -> Dict[int, xr.Dataset]:
     """Get data from NLCD database (2019).
 
     Parameters
     ----------
-    geometry : Polygon, MultiPolygon, tuple of length 4, or GeoDataFrame
-        The geometry or bounding box (west, south, east, north) for extracting the data.
-        You can either pass a single geometry or a ``GeoDataFrame`` with a geometry column.
+    geometry : geopandas.GeoDataFrame or geopandas.GeoSeries
+        A GeoDataFrame or GeoSeries with the geometry to query. The indices are used
+        as keys in the output dictionary.
     resolution : float
         The data resolution in meters. The width and height of the output are computed in pixel
         based on the geometry bounds and the given resolution.
@@ -365,8 +356,6 @@ def nlcd_bygeom(
         Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
         ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
         Both lower and upper cases are acceptable.
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
@@ -381,21 +370,19 @@ def nlcd_bygeom(
 
     Returns
     -------
-    xarray.Dataset or dict of xarray.Dataset
-        NLCD within a geometry or a dict of NLCD datasets within corresponding geometries.
-        If dict, the keys are indices of the input ``GeoDataFrame``.
+    dict of xarray.Dataset or xarray.Dataset
+        A single or a ``dict`` of NLCD datasets. If dict, the keys are indices
+        of the input ``GeoDataFrame``.
     """
     if resolution < 30:
         logger.warning("NLCD's resolution is 30 m, so finer resolutions are not recommended.")
 
-    if isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
-        single_geom = False
-        if geometry.crs is None:
-            raise MissingCRS
-        _geometry = geometry.to_crs(crs).geometry.to_dict()
-    else:
-        single_geom = True
-        _geometry = {0: geoutils.geo2polygon(geometry, geo_crs, crs)}
+    if not isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
+        raise InvalidInputType("geometry", "GeoDataFrame or GeoSeries")
+
+    if geometry.crs is None:
+        raise MissingCRS
+    _geometry = geometry.to_crs(crs).geometry.to_dict()
 
     nlcd_wms = _NLCD(
         years=years,
@@ -410,8 +397,6 @@ def nlcd_bygeom(
         i: nlcd_wms.to_xarray(nlcd_wms.get_response(g.bounds, resolution), g)
         for i, g in _geometry.items()
     }
-    if single_geom:
-        return ds[0]
     return ds
 
 
@@ -465,9 +450,8 @@ def nlcd_bycoords(
 
     def get_value(da: xr.DataArray, x: float, y: float) -> Union[int, float]:
         nodata = da.attrs["nodatavals"][0]
-        return (
-            da.fillna(nodata).interp(x=[x], y=[y], method="nearest").astype(da.dtype).values[0][0]
-        )
+        dtype = da.dtype.type
+        return dtype(da.fillna(nodata).interp(x=[x], y=[y], method="nearest"))[0, 0]  # type: ignore
 
     values = {
         v: [get_value(ds[v], x, y) for ds, (x, y) in zip(ds_list, coords)] for v in ds_list[0]
@@ -514,7 +498,7 @@ def nlcd(
 
     Returns
     -------
-    xarray.DataArray
+    xarray.Dataset
         NLCD within a geometry
     """
     msg = " ".join(
@@ -525,10 +509,11 @@ def nlcd(
         ]
     )
     warnings.warn(msg, DeprecationWarning)
-    return nlcd_bygeom(geometry, resolution, years, region, geo_crs, crs)
+    geom = gpd.GeoSeries([geoutils.geo2polygon(geometry, geo_crs, crs)], crs=crs)
+    return nlcd_bygeom(geom, resolution, years, region, crs)[0]
 
 
-def cover_statistics(ds: xr.Dataset) -> Dict[str, Union[np.ndarray, Dict[str, float]]]:
+def cover_statistics(ds: xr.Dataset) -> Dict[str, Dict[str, float]]:
     """Percentages of the categorical NLCD cover data.
 
     Parameters
@@ -794,7 +779,7 @@ class NID:
         )
 
     def _get_json(
-        self, urls: List[str], params: Optional[List[Dict[str, str]]] = None
+        self, urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
     ) -> List[Dict[str, Any]]:
         """Get JSON response from NID web service.
 
@@ -817,7 +802,7 @@ class NID:
             kwds = None
         else:
             kwds = [{"params": {**p, "out": "json"}} for p in params]
-        resp = ar.retrieve(
+        resp: List[Dict[str, Any]] = ar.retrieve(  # type: ignore
             urls,
             "json",
             kwds,

@@ -4,9 +4,9 @@ import sys
 from typing import Any, Dict, List, Tuple, Union
 
 import async_retriever as ar
-import defusedxml.ElementTree as etree
 import numpy as np
 import pandas as pd
+from defusedxml import ElementTree
 from pygeoogc import ServiceURL
 
 from .exceptions import InvalidInputRange, InvalidInputType
@@ -41,8 +41,10 @@ def nlcd_helper() -> Dict[str, Any]:
     base_url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata"
     base_path = "eainfo/detailed/attr/attrdomv/edom"
 
-    def _get_xml(layer):
-        root = etree.fromstring(ar.retrieve([f"{base_url}/{layer}.xml"], "text")[0])
+    def _get_xml(
+        layer: str,
+    ) -> Tuple[Any, Any, Any]:
+        root = ElementTree.fromstring(ar.retrieve([f"{base_url}/{layer}.xml"], "text")[0])
         return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
@@ -143,6 +145,7 @@ def get_ssebopeta_urls(
         date_range = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
 
     base_url = ServiceURL().http.ssebopeta
+
     f_list = [
         (d, f"{base_url}/det{d.strftime('%Y%j')}.modisSSEBopETactual.zip") for d in date_range
     ]
