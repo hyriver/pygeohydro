@@ -31,6 +31,12 @@ New Features
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
+- The ``ssebop_byloc`` is being deprecated and replaced by ``ssebop_bycoords``.
+  The new function accepts a ``pandas.DataFrame`` as input that should include
+  three columns: ``id``, ``x``, and ``y``. It returns a ``xarray.Dataset`` with
+  two dimensions: ``time`` and ``location_id``. The ``id`` columns from the input
+  is used as the ``location_id`` dimension. The ``ssebop_byloc`` function still
+  retains the old behavior and will be removed in future versions.
 - Set the request caching's expiration time to never expire. Add two flags to all
   functions to control the caching: ``expire_after`` and ``disable_caching``.
 - Replace ``NID`` class with the new RESTful-based web service of National Inventory
