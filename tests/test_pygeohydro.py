@@ -95,10 +95,6 @@ class TestNLCD:
     years = {"cover": [2016]}
     res = 1e3
 
-    def test_bbox(self):
-        lulc = gh.nlcd_bygeom(GEOM.bounds, resolution=self.res)
-        self.assertion(lulc.cover_2019, 83.40)
-
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
