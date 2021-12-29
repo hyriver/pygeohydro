@@ -104,10 +104,10 @@ repos:
       files: pygeohydro
       additional_dependencies:
       - types-all
-      - pygeoogc
-      - async_retriever
-      - pygeoutils
-      - pynhd
+      - git+https://github.com/cheginit/async_retriever.git
+      - git+https://github.com/cheginit/pygeoogc.git
+      - git+https://github.com/cheginit/pygeoutils.git
+      - git+https://github.com/cheginit/pynhd.git
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.1
