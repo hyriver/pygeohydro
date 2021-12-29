@@ -22,6 +22,7 @@ from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, Z
 from .helpers import logger
 
 DEF_CRS = "epsg:4326"
+T_FMT = "%Y-%m-%d"
 EXPIRE = -1
 
 
@@ -327,16 +328,16 @@ class NWIS:
                 & (end.tz_localize(None) > siteinfo.begin_date)
             )
 
-        time_fmt = "%Y-%m-%d" if utc is None else "%Y-%m-%dT%H:%M%z"
-        startDT = start.strftime(time_fmt)
-        endDT = end.strftime(time_fmt)
-        qobs = self._get_streamflow(sids, startDT, endDT, freq, params)
+        time_fmt = T_FMT if utc is None else "%Y-%m-%dT%H:%M%z"
+        start_dt = start.strftime(time_fmt)
+        end_dt = end.strftime(time_fmt)
+        qobs = self._get_streamflow(sids, start_dt, end_dt, freq, params)
 
         dropped = [s for s in sids if f"USGS-{s}" not in qobs]
         if len(dropped) > 0:
             logger.warning(
                 f"Dropped {len(dropped)} stations since they don't have discharge data"
-                + f" from {startDT} to {endDT}."
+                + f" from {start_dt} to {end_dt}."
             )
 
         if mmd:
@@ -399,8 +400,8 @@ class NWIS:
             )
         attr_df = siteinfo[cols.keys()].drop_duplicates().set_index("site_no")
         if "begin_date" in attr_df and "end_date" in attr_df:
-            attr_df["begin_date"] = attr_df.begin_date.dt.strftime("%Y-%m-%d")
-            attr_df["end_date"] = attr_df.end_date.dt.strftime("%Y-%m-%d")
+            attr_df["begin_date"] = attr_df.begin_date.dt.strftime(T_FMT)
+            attr_df["end_date"] = attr_df.end_date.dt.strftime(T_FMT)
         attr_df.index = "USGS-" + attr_df.index
         attr_df["units"] = "mm/day" if mmd else "cms"
         attr_df["tz"] = "UTC"
