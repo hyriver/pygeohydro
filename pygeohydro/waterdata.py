@@ -446,8 +446,8 @@ class NWIS:
             for s in tlz.partition_all(1500, sids)
         ]
         urls, kwds = zip(*((f"{self.url}/{freq}", {"params": p}) for p in payloads))
-        resp: List[Dict[str, Any]] = ar.retrieve(  # type: ignore
-            urls, "json", list(kwds), expire_after=self.expire_after, disable=self.disable_caching
+        resp = ar.retrieve_json(
+            urls, list(kwds), expire_after=self.expire_after, disable=self.disable_caching
         )
         r_ts = {
             t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
@@ -495,9 +495,8 @@ class NWIS:
         """
         urls, kwds = zip(*((url, {"params": {**p, "format": "rdb"}}) for p in payloads))
         try:
-            resp: List[str] = ar.retrieve(  # type: ignore
+            resp = ar.retrieve_text(
                 urls,
-                "text",
                 list(kwds),
                 expire_after=self.expire_after,
                 disable=self.disable_caching,
@@ -670,9 +669,8 @@ class WaterQuality:
         ]
         if endpoint.lower() not in valid_endpoints:
             raise InvalidInputValue("endpoint", valid_endpoints)
-        resp: List[Dict[str, Any]] = ar.retrieve(  # type: ignore
+        resp = ar.retrieve_json(
             [f"{self.wq_url}/Codes/{endpoint}?mimeType=json"],
-            "json",
             expire_after=self.expire_after,
             disable=self.disable_caching,
         )
@@ -803,15 +801,15 @@ class WaterQuality:
             The web service response as a GeoDataFrame.
         """
         req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
-        r = ar.retrieve(
-            [self._base_url(endpoint)],
-            "json",
-            req_kwds,
-            request_method=request_method,
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
+        return geoutils.json2geodf(
+            ar.retrieve_json(
+                [self._base_url(endpoint)],
+                req_kwds,
+                request_method=request_method,
+                expire_after=self.expire_after,
+                disable=self.disable_caching,
+            )
         )
-        return geoutils.json2geodf(r)
 
     def get_csv(
         self, endpoint: str, kwds: Dict[str, str], request_method: str = "GET"
@@ -833,9 +831,8 @@ class WaterQuality:
             The web service response as a DataFrame.
         """
         req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
-        r: List[bytes] = ar.retrieve(  # type: ignore
+        r = ar.retrieve_binary(
             [self._base_url(endpoint)],
-            "binary",
             req_kwds,
             request_method=request_method,
             expire_after=self.expire_after,

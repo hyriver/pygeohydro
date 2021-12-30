@@ -573,9 +573,8 @@ class NID:
         self.expire_after = expire_after
         self.disable_caching = disable_caching
         self.fields_meta = pd.DataFrame(
-            ar.retrieve(
+            ar.retrieve_json(
                 [f"{self.base_url}/advanced-fields"],
-                "json",
                 expire_after=self.expire_after,
                 disable=self.disable_caching,
             )[0]
@@ -802,9 +801,8 @@ class NID:
             kwds = None
         else:
             kwds = [{"params": {**p, "out": "json"}} for p in params]
-        resp: List[Dict[str, Any]] = ar.retrieve(  # type: ignore
+        resp = ar.retrieve_json(
             urls,
-            "json",
             kwds,
             expire_after=self.expire_after,
             disable=self.disable_caching,
