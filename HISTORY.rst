@@ -2,6 +2,14 @@
 History
 =======
 
+0.12.1 (unreleased)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Use the three new ``ar.retrieve_*`` functions instead of the old ``ar.retrieve``
+  function to improve type hinting and to make the API more consistent.
+
 0.12.0 (2021-12-27)
 -------------------
 
