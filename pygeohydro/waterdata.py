@@ -433,14 +433,14 @@ class NWIS:
         return basins.to_crs("EPSG:6350").area
 
     def _get_streamflow(
-        self, sids: List[str], startDT: str, endDT: str, freq: str, kwargs: Dict[str, str]
+        self, sids: List[str], start_dt: str, end_dt: str, freq: str, kwargs: Dict[str, str]
     ) -> pd.DataFrame:
         """Convert json to dataframe."""
         payloads = [
             {
                 "sites": ",".join(s),
-                "startDT": startDT,
-                "endDT": endDT,
+                "startDT": start_dt,
+                "endDT": end_dt,
                 **kwargs,
             }
             for s in tlz.partition_all(1500, sids)
