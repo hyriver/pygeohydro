@@ -466,7 +466,14 @@ class NWIS:
             if discharge.index.tz is None:
                 tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
                 time_zone = tz["defaultTimeZone"]["zoneAbbreviation"]
-                time_zone = "US/Central" if time_zone == "CST" else time_zone
+                tz_dict = {
+                    "CST": "US/Central",
+                    "MST": "US/Mountain",
+                    "PST": "US/Pacific",
+                    "EST": "US/Eastern",
+                }
+                if time_zone in tz_dict:
+                    time_zone = tz_dict[time_zone]
                 discharge.index = discharge.index.tz_localize(time_zone)
             discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
