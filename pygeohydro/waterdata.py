@@ -465,9 +465,9 @@ class NWIS:
             discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
             if discharge.index.tz is None:
                 tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
-                discharge.index = discharge.index.tz_localize(
-                    tz["defaultTimeZone"]["zoneAbbreviation"]
-                )
+                time_zone = tz["defaultTimeZone"]["zoneAbbreviation"]
+                time_zone = "US/Central" if time_zone == "CST" else time_zone
+                discharge.index = discharge.index.tz_localize(time_zone)
             discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
             return discharge
