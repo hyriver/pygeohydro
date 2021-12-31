@@ -16,7 +16,7 @@ import xarray as xr
 from pygeoogc import ServiceURL
 from pygeoogc import ZeroMatched as ZeroMatchedOGC
 from pygeoogc import utils as ogc_utils
-from pynhd import NLDI, WaterData
+from pynhd import WaterData
 
 from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, ZeroMatched
 from .helpers import logger
@@ -197,8 +197,6 @@ class NWIS:
             sites = sites.filter(regex="^(?!.*_overlap)")
             float_cols += ["drain_area_va", "contrib_drain_area_va"]
 
-        sites[float_cols] = sites[float_cols].apply(pd.to_numeric, errors="coerce")
-
         try:
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
@@ -215,6 +213,9 @@ class NWIS:
                 return np.nan, None
 
         sites["drain_sqkm"], sites["hcdn_2009"] = zip(*[_get_hcdn(n) for n in sites.site_no])
+
+        float_cols += ["drain_sqkm"]
+        sites[float_cols] = sites[float_cols].apply(pd.to_numeric, errors="coerce")
 
         return sites
 
@@ -304,9 +305,6 @@ class NWIS:
         ]
 
         siteinfo = self.get_info(queries)
-        sids = siteinfo.site_no.unique()
-        if len(sids) == 0:
-            raise DataNotAvailable("discharge")
 
         params = {
             "format": "json",
@@ -315,40 +313,46 @@ class NWIS:
         }
         if freq == "dv":
             params.update({"statCd": "00003"})
-            cond = (
+            siteinfo = siteinfo[
                 (siteinfo.stat_cd == "00003")
                 & (siteinfo.parm_cd == "00060")
                 & (start.tz_localize(None) < siteinfo.end_date)
                 & (end.tz_localize(None) > siteinfo.begin_date)
-            )
+            ]
         else:
-            cond = (
+            siteinfo = siteinfo[
                 (siteinfo.parm_cd == "00060")
                 & (start.tz_localize(None) < siteinfo.end_date)
                 & (end.tz_localize(None) > siteinfo.begin_date)
-            )
+            ]
+        sids = siteinfo.site_no.unique()
+        if len(sids) == 0:
+            raise DataNotAvailable("discharge")
 
         time_fmt = T_FMT if utc is None else "%Y-%m-%dT%H:%M%z"
         start_dt = start.strftime(time_fmt)
         end_dt = end.strftime(time_fmt)
         qobs = self._get_streamflow(sids, start_dt, end_dt, freq, params)
 
-        dropped = [s for s in sids if f"USGS-{s}" not in qobs]
-        if len(dropped) > 0:
+        n_orig = len(sids)
+        sids = [s.split("-")[1] for s in qobs]
+        if len(sids) != n_orig:
             logger.warning(
-                f"Dropped {len(dropped)} stations since they don't have discharge data"
+                f"Dropped {n_orig - len(sids)} stations since they don't have discharge data"
                 + f" from {start_dt} to {end_dt}."
             )
-
+        siteinfo = siteinfo[siteinfo.site_no.isin(sids)]
         if mmd:
-            area = self._get_drainage_area(sids)
+            area_sqm = self._drainage_area_sqm(siteinfo, freq)
             ms2mmd = 1000.0 * 24.0 * 3600.0
             try:
-                qobs = qobs.apply(lambda x: x / area.loc[x.name.split("-")[-1]] * ms2mmd)
+                qobs = pd.DataFrame(
+                    {c: q / area_sqm.loc[c.split("-")[-1]] * ms2mmd for c, q in qobs.iteritems()}
+                )
             except KeyError as ex:
                 raise DataNotAvailable("drainage") from ex
 
-        qobs.attrs, long_names = self._get_attrs(siteinfo.loc[cond], mmd)
+        qobs.attrs, long_names = self._get_attrs(siteinfo, mmd)
         if to_xarray:
             return self._to_xarray(qobs, long_names, mmd)
         return qobs
@@ -425,12 +429,36 @@ class NWIS:
         end = pd.to_datetime(dates[1], utc=utc)
         return sids, start, end
 
-    def _get_drainage_area(self, station_ids: Sequence[str]) -> pd.DataFrame:
-        nldi = NLDI(self.expire_after, self.disable_caching)
-        basins = nldi.get_basins(list(station_ids))
-        if isinstance(basins, tuple):
-            basins = basins[0]
-        return basins.to_crs("EPSG:6350").area
+    def _drainage_area_sqm(self, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
+        """Get drainage area of the stations."""
+        area = siteinfo[["site_no", "drain_sqkm"]].copy()
+        if area["drain_sqkm"].isna().any():
+            sids = area[area["drain_sqkm"].isna()].site_no
+            queries = [
+                {
+                    "parameterCd": "00060",
+                    "siteStatus": "all",
+                    "outputDataTypeCd": freq,
+                    "sites": ",".join(s),
+                }
+                for s in tlz.partition_all(1500, sids)
+            ]
+            info = self.get_info(queries, expanded=True)
+
+            def get_idx(ids: List[str]) -> Tuple[pd.Index, pd.Index]:
+                return info.site_no.isin(ids), area.site_no.isin(ids)
+
+            i_idx, a_idx = get_idx(sids)
+            # Drainage areas in info are in sq mi and should be converted to sq km
+            area.loc[a_idx, "drain_sqkm"] = info.loc[i_idx, "contrib_drain_area_va"] * 0.38610
+            if area["drain_sqkm"].isna().any():
+                sids = area[area["drain_sqkm"].isna()].site_no
+                i_idx, a_idx = get_idx(sids)
+                area.loc[a_idx, "drain_sqkm"] = info.loc[i_idx, "drain_area_va"] * 0.38610
+
+        if area["drain_sqkm"].isna().all():
+            raise DataNotAvailable("drainage")
+        return area.set_index("site_no").drain_sqkm * 1e6
 
     def _get_streamflow(
         self, sids: List[str], start_dt: str, end_dt: str, freq: str, kwargs: Dict[str, str]
@@ -449,8 +477,13 @@ class NWIS:
         resp = ar.retrieve_json(
             urls, list(kwds), expire_after=self.expire_after, disable=self.disable_caching
         )
+
+        def get_site_id(site_cd: Dict[str, str]) -> str:
+            """Get site id."""
+            return f"{site_cd['agencyCode']}-{site_cd['value']}"
+
         r_ts = {
-            t["sourceInfo"]["siteCode"][0]["value"]: t["values"][0]["value"]
+            get_site_id(t["sourceInfo"]["siteCode"][0]): t["values"][0]["value"]
             for r in resp
             for t in r["value"]["timeSeries"]
             if len(t["values"][0]["value"]) > 0
@@ -479,7 +512,7 @@ class NWIS:
             discharge.columns = [col]
             return discharge
 
-        qobs = pd.concat([to_df(f"USGS-{s}", t) for s, t in r_ts.items()], axis=1)
+        qobs = pd.concat([to_df(s, t) for s, t in r_ts.items()], axis=1)
         # Convert cfs to cms
         return qobs.astype("float64") * 0.028316846592
 
