@@ -36,7 +36,7 @@ class TestNWIS:
         )
 
     def test_cst_tz(self):
-        q = self.nwis.get_streamflow("08075000", DATES, mmd=True)
+        q = self.nwis.get_streamflow(["08075000", "11092450"], DATES, mmd=True)
         assert q.index.tz.tzname("") == "UTC"
 
     def test_qobs_iv(self):
