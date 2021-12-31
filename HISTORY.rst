@@ -2,6 +2,20 @@
 History
 =======
 
+0.12.2 (2021-12-31)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- The ``NWIS.get_info`` now returns a ``geopandas.GeoDataFrame`` instead of a
+  ``pandas.DataFrame``.
+
+Bug Fixes
+~~~~~~~~~
+- Fix a bug in ``NWIS.get_streamflow`` where the drainage area might not be
+  computed correctly if target stations are not located at the outlet of
+  their upstream drainage area.
+
 0.12.1 (2021-12-31)
 -------------------
 
