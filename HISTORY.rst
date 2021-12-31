@@ -13,7 +13,8 @@ Internal Changes
 Bug Fixes
 ~~~~~~~~~
 - Fix an in issue with ``NWIS.get_streamflow`` where time zone of the data
-  was not being correctly determined when it was ``CST``.
+  was not being correctly determined when it was US specific abbreviations
+  such as ``CST``.
 
 0.12.0 (2021-12-27)
 -------------------
