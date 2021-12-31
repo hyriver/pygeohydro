@@ -164,7 +164,7 @@ class NWIS:
 
     def get_info(
         self, queries: Union[Dict[str, str], List[Dict[str, str]]], expanded: bool = False
-    ) -> pd.DataFrame:
+    ) -> gpd.GeoDataFrame:
         """Send multiple queries to USGS Site Web Service.
 
         Parameters
@@ -172,12 +172,13 @@ class NWIS:
         queries : dict or list of dict
             A single or a list of valid queries.
         expanded : bool, optional
-            Whether to get expanded sit information for example drainage area, default to False.
+            Whether to get expanded sit information for example drainage area,
+            default to False.
 
         Returns
         -------
-        pandas.DataFrame
-            A typed dataframe containing the site information.
+        geopandas.GeoDataFrame
+            A correctly typed ``GeoDataFrame`` containing site(s) information.
         """
         queries = [queries] if isinstance(queries, dict) else queries
 
@@ -197,11 +198,9 @@ class NWIS:
             sites = sites.filter(regex="^(?!.*_overlap)")
             float_cols += ["drain_area_va", "contrib_drain_area_va"]
 
-        try:
+        with contextlib.suppress(KeyError):
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
-        except (AttributeError, KeyError):
-            pass
 
         gii = WaterData("gagesii", DEF_CRS)
 
@@ -217,7 +216,11 @@ class NWIS:
         float_cols += ["drain_sqkm"]
         sites[float_cols] = sites[float_cols].apply(pd.to_numeric, errors="coerce")
 
-        return sites
+        return gpd.GeoDataFrame(
+            sites,
+            geometry=gpd.points_from_xy(sites.dec_long_va, sites.dec_lat_va),
+            crs="epsg:4326",
+        )
 
     def get_parameter_codes(self, keyword: str) -> pd.DataFrame:
         """Search for parameter codes by name or number.
