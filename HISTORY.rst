@@ -14,7 +14,7 @@ Bug Fixes
 ~~~~~~~~~
 - Fix a bug in ``NWIS.get_streamflow`` where the drainage area might not be
   computed correctly if target stations are not located at the outlet of
-  their upstream drainage area.
+  their watersheds.
 
 0.12.1 (2021-12-31)
 -------------------
