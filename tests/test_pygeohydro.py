@@ -35,6 +35,10 @@ class TestNWIS:
             and df.attrs[col]["huc_cd"] == ds.sel(station_id=col).huc_cd.item()
         )
 
+    def test_cst_tz(self):
+        q = self.nwis.get_streamflow("08075000", DATES, mmd=True)
+        assert q.index.tz.tzname("") == "UTC"
+
     def test_qobs_iv(self):
         iv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
         dv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="dv")
