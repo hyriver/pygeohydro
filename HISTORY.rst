@@ -10,6 +10,11 @@ Internal Changes
 - Use the three new ``ar.retrieve_*`` functions instead of the old ``ar.retrieve``
   function to improve type hinting and to make the API more consistent.
 
+Bug Fixes
+~~~~~~~~~
+- Fix an in issue with ``NWIS.get_streamflow`` where time zone of the data
+  was not being correctly determined when it was ``CST``.
+
 0.12.0 (2021-12-27)
 -------------------
 
