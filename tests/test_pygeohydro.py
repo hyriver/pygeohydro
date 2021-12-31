@@ -27,16 +27,20 @@ class TestNWIS:
     nwis: NWIS = NWIS()
 
     def test_qobs_dv(self):
-        df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-        ds = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True, to_xarray=True)
+        df = self.nwis.get_streamflow(SID_NATURAL, DATES)
+        ds = self.nwis.get_streamflow(SID_NATURAL, DATES, to_xarray=True)
         col = f"USGS-{SID_NATURAL}"
         assert (
             abs(df[col].sum().item() - ds.sel(station_id=col).discharge.sum().item()) < SMALL
             and df.attrs[col]["huc_cd"] == ds.sel(station_id=col).huc_cd.item()
         )
 
+    def test_qobs_mmd(self):
+        df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
+        assert abs(df[f"USGS-{SID_NATURAL}"].sum().item() - 27.814) < SMALL
+
     def test_cst_tz(self):
-        q = self.nwis.get_streamflow(["08075000", "11092450"], DATES, mmd=True)
+        q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
         assert q.index.tz.tzname("") == "UTC"
 
     def test_qobs_iv(self):
