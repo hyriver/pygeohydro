@@ -501,15 +501,17 @@ class NWIS:
             discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
             if discharge.index.tz is None:
                 tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
-                time_zone = tz["defaultTimeZone"]["zoneAbbreviation"]
                 tz_dict = {
                     "CST": "US/Central",
                     "MST": "US/Mountain",
                     "PST": "US/Pacific",
                     "EST": "US/Eastern",
                 }
-                if time_zone in tz_dict:
-                    time_zone = tz_dict[time_zone]
+                time_zone = tz_dict.get(
+                    tz["defaultTimeZone"]["zoneAbbreviation"],
+                    tz["defaultTimeZone"]["zoneAbbreviation"],
+                )
+
                 discharge.index = discharge.index.tz_localize(time_zone)
             discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
