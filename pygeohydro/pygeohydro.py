@@ -148,7 +148,7 @@ def ssebopeta_bycoords(
 
 
 def ssebopeta_bygeom(
-    geometry: Union[Polygon, Tuple[float, float, float, float]],
+    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
     dates: Union[Tuple[str, str], Union[int, List[int]]],
     geo_crs: str = DEF_CRS,
 ) -> xr.DataArray:
@@ -179,6 +179,10 @@ def ssebopeta_bygeom(
     _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
 
     f_list = helpers.get_ssebopeta_urls(dates)
+    if isinstance(geometry, (Polygon, MultiPolygon)):
+        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=_geometry, geo_crs=geo_crs)
+    else:
+        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray)
 
     session = RetrySession()
 
@@ -188,7 +192,7 @@ def ssebopeta_bygeom(
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds: xr.Dataset = geoutils.gtiff2xarray({"eta": content}, _geometry, DEF_CRS)
+            ds: xr.Dataset = gtiff2xarray(r_dict={"eta": content})
             return ds.expand_dims({"time": [t]})
 
         data = xr.merge(_ssebop(t, url) for t, url in f_list)
@@ -277,12 +281,20 @@ class _NLCD:
         """Get response from a url."""
         return self.wms.getmap_bybox(bounds, resolution, self.crs, kwargs={"styles": "raster"})
 
-    def to_xarray(self, r_dict: Dict[str, bytes], geometry: Polygon) -> xr.Dataset:
+    def to_xarray(
+        self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon]
+    ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
+        if isinstance(geometry, (Polygon, MultiPolygon)):
+            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs)
+        else:
+            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray)
+
         try:
-            _ds = geoutils.gtiff2xarray(r_dict, geometry, self.crs)
+            _ds = gtiff2xarray(r_dict=r_dict)
         except rio.RasterioIOError as ex:
             raise ServiceUnavailable(self.wms.url) from ex
+
         ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
         for lyr in self.layers:
