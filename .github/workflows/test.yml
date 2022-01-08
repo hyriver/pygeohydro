@@ -16,12 +16,14 @@ jobs:
   test:
     name: python ${{ matrix.python-version }}, ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    env:
+      REPO_NAME: ${{ github.event.repository.name }}
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       matrix:
-        python-version: [3.7, 3.8, 3.9, "3.10"]
+        python-version: [3.7, "3.10"]
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -49,20 +51,23 @@ jobs:
           miniforge-variant: Mambaforge
           environment-file: ci/requirements/environment.yml
           python-version: ${{ matrix.python-version }}
-          activate-environment: pygeohydro-tests
+          activate-environment: ${{ github.event.repository.name }}-tests
           use-mamba: true
           use-only-tar-bz2: true
-      - name: Install pygeohydro
+      - name: Install the package
         run: |-
           mamba info -a
           mamba list
-          python -m pip install --no-deps --use-feature=in-tree-build .
+          python -m pip install --no-deps .
       - name: Version info
         run: |-
-          python -c "import pygeohydro; pygeohydro.show_versions()"
+          python -c "import ${REPO_NAME}; ${REPO_NAME}.show_versions()"
       - name: Run pytest
         run: |-
           pytest
+      - name: Run typeguard
+        run: |-
+          pytest --typeguard-packages=${REPO_NAME}
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v2.1.0
         with:
