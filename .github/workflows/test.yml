@@ -67,6 +67,7 @@ jobs:
           pytest
       - name: Run typeguard
         run: |-
+          mamba install typeguard
           pytest --typeguard-packages=${REPO_NAME}
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v2.1.0
