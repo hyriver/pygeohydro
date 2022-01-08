@@ -7,14 +7,11 @@ import importlib
 import locale
 import os
 import platform
-import re
 import struct
 import subprocess
 import sys
 from types import ModuleType
 from typing import List, Optional, TextIO, Tuple
-
-import pkg_resources
 
 __all__ = ["show_versions"]
 
@@ -69,8 +66,27 @@ def get_sys_info() -> List[Tuple[str, Optional[str]]]:
             ("LOCALE", ".".join(str(i) for i in locale.getlocale())),
         ],
     )
+    blob.extend(netcdf_and_hdf5_versions())
 
     return blob
+
+
+def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
+    libhdf5_version = None
+    libnetcdf_version = None
+    try:
+        import netCDF4
+
+        libhdf5_version = netCDF4.__hdf5libversion__
+        libnetcdf_version = netCDF4.__netcdf4libversion__
+    except (ImportError, AttributeError):
+        try:
+            import h5py
+
+            libhdf5_version = h5py.version.hdf5_version
+        except (ImportError, AttributeError):
+            pass
+    return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
 
 def show_versions(file: TextIO = sys.stdout) -> None:
@@ -81,30 +97,62 @@ def show_versions(file: TextIO = sys.stdout) -> None:
     file : file-like, optional
         print to the given file-like object. Defaults to sys.stdout.
     """
-    sys_info = get_sys_info()
-    hyriver = [
-        "async-retriever",
-        "pygeoogc",
-        "pygeoutils",
-        "pynhd",
-        "py3dep",
-        "pygeohydro",
-        "pydaymet",
-    ]
-    reg = re.compile(r"\[(.*?)\]")
-    ws = pkg_resources.working_set.by_key  # type: ignore
-    _req_list = [reg.sub("", str(r)) for p in hyriver if p in ws for r in ws[p].requires()]
-
-    fix = {"netcdf4": "netCDF4", "pyyaml": "yaml"}
-    req_list = [fix[r] if r in fix else r for r in set(_req_list + hyriver)]
     deps = [
-        # hyriver packages' deps
-        *((r, lambda mod: mod.__version__) for r in req_list),
-        # setup/test
-        ("setuptools", lambda mod: mod.__version__),
-        ("pip", lambda mod: mod.__version__),
+        #  async_retriever
+        ("async-retriever", lambda mod: mod.__version__),
+        ("aiodns", lambda mod: mod.__version__),
+        ("aiohttp", lambda mod: mod.__version__),
+        ("aiohttp-client-cache", lambda mod: mod.__version__),
+        ("aiosqlite", lambda mod: mod.__version__),
+        ("brotli", lambda mod: mod.__version__),
+        ("cchardet", lambda mod: mod.__version__),
+        ("cytoolz", lambda mod: mod.__version__),
+        ("ujson", lambda mod: mod.__version__),
+        #  pygeoogc
+        ("pygeoogc", lambda mod: mod.__version__),
+        ("defusedxml", lambda mod: mod.__version__),
+        ("owslib", lambda mod: mod.__version__),
+        ("pydantic", lambda mod: mod.version.VERSION),
+        ("yaml", lambda mod: mod.__version__),
+        ("pyproj", lambda mod: mod.__version__),
+        ("requests", lambda mod: mod.__version__),
+        ("requests-cache", lambda mod: mod.__version__),
+        ("shapely", lambda mod: mod.__version__),
+        ("urllib3", lambda mod: mod.__version__),
+        #  pygeoutils
+        ("pygeoutils", lambda mod: mod.__version__),
+        ("dask", lambda mod: mod.__version__),
+        ("geopandas", lambda mod: mod.__version__),
+        ("netCDF4", lambda mod: mod.__version__),
+        ("numpy", lambda mod: mod.__version__),
+        ("rasterio", lambda mod: mod.__version__),
+        ("xarray", lambda mod: mod.__version__),
+        ("rioxarray", lambda mod: mod.__version__),
+        #  py3dep
+        ("py3dep", lambda mod: mod.__version__),
+        ("click", lambda mod: mod.__version__),
+        ("scipy", lambda mod: mod.__version__),
+        ("richdem", lambda mod: mod.pkg_resources.require("richdem")[0].version),
+        #  pynhd
+        ("pynhd", lambda mod: mod.__version__),
+        ("networkx", lambda mod: mod.__version__),
+        ("pandas", lambda mod: mod.__version__),
+        ("pyarrow", lambda mod: mod.__version__),
+        #  pygeohydro
+        ("pygeohydro", lambda mod: mod.__version__),
+        ("folium", lambda mod: mod.__version__),
+        ("lxml", lambda mod: mod.__version__),
+        ("matplotlib", lambda mod: mod.__version__),
+        #  pydaymet
+        ("pydaymet", lambda mod: mod.__version__),
+        #  misc
+        ("bottleneck", lambda mod: mod.__version__),
+        ("pygeos", lambda mod: mod.__version__),
+        ("tables", lambda mod: mod.__version__),
+        #  test
         ("pytest", lambda mod: mod.__version__),
-        ("ward", lambda mod: mod.__version__),
+        ("pytest-cov", lambda mod: mod.__version__),
+        ("xdist", lambda mod: mod.__version__),
     ]
 
     deps_blob: List[Tuple[str, Optional[str]]] = []
@@ -115,7 +163,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
             deps_blob.append((modname, None))
         else:
             try:
-                ver = mod.version.VERSION if modname == "pydantic" else ver_f(mod)  # type: ignore
+                ver = ver_f(mod)  # type: ignore
             except (NotImplementedError, AttributeError):
                 ver = "installed"
             deps_blob.append((modname, ver))
@@ -123,7 +171,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
     print("\nINSTALLED VERSIONS", file=file)
     print("------------------", file=file)
 
-    for k, stat in sys_info:
+    for k, stat in get_sys_info():
         print(f"{k}: {stat}", file=file)
 
     print("", file=file)
