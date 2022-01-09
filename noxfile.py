@@ -97,7 +97,7 @@ def activate_virtualenv_in_precommit_hooks(session):
 
 
 @nox.session(name="pre-commit", python="3.9")
-def precommit(session) -> None:
+def pre_commit(session) -> None:
     """Lint using pre-commit."""
     args = session.posargs or ["run", "--all-files"]
     session.install("pre-commit")
@@ -111,7 +111,7 @@ def tests(session):
     """Run the test suite."""
     install_deps(session, "test")
 
-    session.run("pytest", *session.posargs)
+    session.run("pytest", "--doctest-modules", *session.posargs)
     session.run("coverage", "report")
     session.run("coverage", "html")
 
