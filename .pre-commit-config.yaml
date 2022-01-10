@@ -1,5 +1,5 @@
 repos:
-  - repo: git://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
     hooks:
     - id: trailing-whitespace
@@ -96,7 +96,7 @@ repos:
       - flake8-simplify
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.930
+    rev: v0.931
     hooks:
     - id: mypy
       name: Static type checking with mypy
