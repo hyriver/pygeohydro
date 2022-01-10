@@ -328,7 +328,7 @@ class NWIS:
                 & (start.tz_localize(None) < siteinfo.end_date)
                 & (end.tz_localize(None) > siteinfo.begin_date)
             ]
-        sids = siteinfo.site_no.unique()
+        sids = list(siteinfo.site_no.unique())
         if len(sids) == 0:
             raise DataNotAvailable("discharge")
 
@@ -418,7 +418,7 @@ class NWIS:
     @staticmethod
     def _check_inputs(
         station_ids: Union[Sequence[str], str], dates: Tuple[str, str], utc: Optional[bool]
-    ) -> Tuple[List[str], pd.DatetimeIndex, pd.DatetimeIndex]:
+    ) -> Tuple[List[str], pd.Timestamp, pd.Timestamp]:
         """Validate inputs."""
         if not isinstance(station_ids, (str, Sequence, Iterable)):
             raise InvalidInputType("ids", "str or list of str")
@@ -464,7 +464,7 @@ class NWIS:
         return area.set_index("site_no").drain_sqkm * 1e6
 
     def _get_streamflow(
-        self, sids: List[str], start_dt: str, end_dt: str, freq: str, kwargs: Dict[str, str]
+        self, sids: Sequence[str], start_dt: str, end_dt: str, freq: str, kwargs: Dict[str, str]
     ) -> pd.DataFrame:
         """Convert json to dataframe."""
         payloads = [
@@ -476,9 +476,11 @@ class NWIS:
             }
             for s in tlz.partition_all(1500, sids)
         ]
-        urls, kwds = zip(*((f"{self.url}/{freq}", {"params": p}) for p in payloads))
         resp = ar.retrieve_json(
-            urls, list(kwds), expire_after=self.expire_after, disable=self.disable_caching
+            [f"{self.url}/{freq}"] * len(payloads),
+            [{"params": p} for p in payloads],
+            expire_after=self.expire_after,
+            disable=self.disable_caching,
         )
 
         def get_site_id(site_cd: Dict[str, str]) -> str:
@@ -538,11 +540,10 @@ class NWIS:
         pandas.DataFrame
             Requested features as a pandas's DataFrame.
         """
-        urls, kwds = zip(*((url, {"params": {**p, "format": "rdb"}}) for p in payloads))
         try:
             resp = ar.retrieve_text(
-                urls,
-                list(kwds),
+                [url] * len(payloads),
+                [{"params": {**p, "format": "rdb"}} for p in payloads],
                 expire_after=self.expire_after,
                 disable=self.disable_caching,
             )
@@ -721,7 +722,7 @@ class WaterQuality:
         )
         return [r["value"] for r in resp[0]["codes"]]
 
-    def get_param_table(self) -> pd.DataFrame:
+    def get_param_table(self) -> pd.Series:
         """Get the parameter table from the USGS Water Quality Web Service."""
         params = pd.read_html(f"{self.wq_url}/webservices_documentation/")
         params = params[0].iloc[:29].drop(columns="Discussion")
