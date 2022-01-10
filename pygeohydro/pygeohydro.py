@@ -4,6 +4,7 @@ import itertools
 import warnings
 import zipfile
 from collections import OrderedDict
+from numbers import Number
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
@@ -16,6 +17,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
+from defusedxml import ElementTree
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -32,12 +34,13 @@ from .helpers import logger
 
 DEF_CRS = "epsg:4326"
 EXPIRE = -1
+GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
 
 
 def ssebopeta_byloc(
     coords: Tuple[float, float],
     dates: Union[Tuple[str, str], Union[int, List[int]]],
-) -> pd.DataFrame:
+) -> pd.Series:
     """Daily actual ET for a location from SSEBop database in mm/day.
 
     .. deprecated:: 0.11.5
@@ -114,7 +117,7 @@ def ssebopeta_bycoords(
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(url: str) -> List[float]:
+        def _ssebop(url: str) -> List[np.ndarray]:  # type: ignore
             r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
 
@@ -124,7 +127,7 @@ def ssebopeta_bycoords(
                     return list(src.sample(co_list))
 
         time, eta = zip(*[(t, _ssebop(url)) for t, url in f_list])
-    eta_arr = np.array(eta).reshape(len(time), -1)
+    eta_arr = np.array(eta).reshape(len(time), -1)  # type: ignore
     ds = xr.Dataset(
         data_vars={
             "eta": (["time", "location_id"], eta_arr),
@@ -148,7 +151,7 @@ def ssebopeta_bycoords(
 
 
 def ssebopeta_bygeom(
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
+    geometry: GTYPE,
     dates: Union[Tuple[str, str], Union[int, List[int]]],
     geo_crs: str = DEF_CRS,
 ) -> xr.DataArray:
@@ -188,11 +191,11 @@ def ssebopeta_bygeom(
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(t: pd.DatetimeIndex, url: str) -> xr.Dataset:
+        def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray:
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds: xr.Dataset = gtiff2xarray(r_dict={"eta": content})
+            ds: xr.DataArray = gtiff2xarray(r_dict={"eta": content})
             return ds.expand_dims({"time": [t]})
 
         data = xr.merge(_ssebop(t, url) for t, url in f_list)
@@ -219,11 +222,7 @@ class _NLCD:
         AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-    validation : bool, optional
-        Validate the input arguments from the WMS service, defaults to True. Set this
-        to False if you are sure all the WMS settings such as layer and crs are correct
-        to avoid sending extra requests.
+        ``epsg:4326``.
     expire_after : int, optional
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
@@ -235,7 +234,6 @@ class _NLCD:
         years: Optional[Mapping[str, Union[int, List[int]]]] = None,
         region: str = "L48",
         crs: str = DEF_CRS,
-        validation: bool = True,
         expire_after: float = EXPIRE,
         disable_caching: bool = False,
     ) -> None:
@@ -250,8 +248,10 @@ class _NLCD:
             raise InvalidInputType("years", "dict", f"{default_years}")
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.region = region
+        self.valid_crs = self.get_valid_crs()
+        if pyproj.CRS(crs).to_string().lower() not in self.valid_crs:
+            raise InvalidInputValue("crs", self.valid_crs)
         self.crs = crs
-        self.validation = validation
         self.expire_after = expire_after
         self.disable_caching = disable_caching
         self.layers = self.get_layers(self.region, self.years)
@@ -270,10 +270,28 @@ class _NLCD:
             layers=self.layers,
             outformat="image/geotiff",
             crs=self.crs,
-            validation=self.validation,
+            validation=False,
             expire_after=self.expire_after,
             disable_caching=self.disable_caching,
         )
+
+    def __repr__(self) -> str:
+        """Return NLCD's WMS information."""
+        return self.wms.__repr__()
+
+    @staticmethod
+    def get_valid_crs() -> List[str]:
+        """Get valid CRS for NLCD layers."""
+        url = ["https://www.mrlc.gov/geoserver/ows"]
+        kwds = [{"params": {"service": "wms", "request": "GetCapabilities"}}]
+
+        ns = "http://www.opengis.net/wms"
+
+        def get_path(tag_list: List[str]) -> str:
+            return f"/{{{ns}}}".join([""] + tag_list)[1:]
+
+        root = ElementTree.fromstring(ar.retrieve_text(url, kwds)[0])
+        return [t.text.lower() for t in root.findall(get_path(["Capability", "Layer", "CRS"]))]
 
     def get_response(
         self, bounds: Tuple[float, float, float, float], resolution: float
@@ -282,7 +300,7 @@ class _NLCD:
         return self.wms.getmap_bybox(bounds, resolution, self.crs, kwargs={"styles": "raster"})
 
     def to_xarray(
-        self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon]
+        self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
     ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         if isinstance(geometry, (Polygon, MultiPolygon)):
@@ -345,7 +363,6 @@ def nlcd_bygeom(
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
     crs: str = DEF_CRS,
-    validation: bool = True,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
 ) -> Dict[int, xr.Dataset]:
@@ -371,10 +388,6 @@ def nlcd_bygeom(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    validation : bool, optional
-        Validate the input arguments from the WMS service, defaults to True. Set this
-        to False if you are sure all the WMS settings such as layer and crs are correct
-        to avoid sending extra requests.
     expire_after : int, optional
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
@@ -400,7 +413,6 @@ def nlcd_bygeom(
         years=years,
         region=region,
         crs=crs,
-        validation=validation,
         expire_after=expire_after,
         disable_caching=disable_caching,
     )
@@ -450,23 +462,22 @@ def nlcd_bycoords(
     nlcd_wms = _NLCD(
         years=years,
         region=region,
-        crs=DEF_CRS,
-        validation=False,
+        crs="epsg:3857",
         expire_after=expire_after,
         disable_caching=disable_caching,
     )
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
-    bounds = points.to_crs(points.estimate_utm_crs()).buffer(35, cap_style=3)
-    bounds = bounds.to_crs(DEF_CRS)
-    ds_list = [nlcd_wms.to_xarray(nlcd_wms.get_response(b.bounds, 30), b.bounds) for b in bounds]
+    points_proj = points.to_crs(nlcd_wms.crs)
+    bounds = points_proj.buffer(50, cap_style=3)
+    ds_list = [nlcd_wms.to_xarray(nlcd_wms.get_response(b.bounds, 30)) for b in bounds]
 
-    def get_value(da: xr.DataArray, x: float, y: float) -> Union[int, float]:
+    def get_value(da: xr.DataArray, x: float, y: float) -> Number:
         nodata = da.attrs["nodatavals"][0]
-        dtype = da.dtype.type
-        return dtype(da.fillna(nodata).interp(x=[x], y=[y], method="nearest"))[0, 0]  # type: ignore
+        value = da.fillna(nodata).interp(x=[x], y=[y], method="nearest")
+        return da.dtype.type(value)[0, 0]  # type: ignore
 
     values = {
-        v: [get_value(ds[v], x, y) for ds, (x, y) in zip(ds_list, coords)] for v in ds_list[0]
+        v: [get_value(ds[v], p.x, p.y) for ds, p in zip(ds_list, points_proj)] for v in ds_list[0]
     }
     return points.to_frame("geometry").merge(
         pd.DataFrame(values), left_index=True, right_index=True
@@ -474,7 +485,7 @@ def nlcd_bycoords(
 
 
 def nlcd(
-    geometry: Union[Polygon, MultiPolygon, Tuple[float, float, float, float]],
+    geometry: GTYPE,
     resolution: float,
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
@@ -516,8 +527,8 @@ def nlcd(
     msg = " ".join(
         [
             "This function is deprecated and will be remove in future versions.",
-            "Please use `nlcd_bygeom` or `nlcd_bycoords` instead.",
-            "For now, this function calls `nlcd_bygeom` to retain the original functionality.",
+            "Please use ``nlcd_bygeom`` or ``nlcd_bycoords`` instead.",
+            "For now, this function calls ``nlcd_bygeom`` to retain the original functionality.",
         ]
     )
     warnings.warn(msg, DeprecationWarning)
@@ -525,7 +536,7 @@ def nlcd(
     return nlcd_bygeom(geom, resolution, years, region, crs)[0]
 
 
-def cover_statistics(ds: xr.Dataset) -> Dict[str, Dict[str, float]]:
+def cover_statistics(ds: xr.DataArray) -> Dict[str, Dict[str, float]]:
     """Percentages of the categorical NLCD cover data.
 
     Parameters
@@ -542,7 +553,7 @@ def cover_statistics(ds: xr.Dataset) -> Dict[str, Dict[str, float]]:
         raise InvalidInputType("ds", "xarray.DataArray")
 
     nlcd_meta = helpers.nlcd_helper()
-    val, freq = np.unique(ds, return_counts=True)
+    val, freq = np.unique(ds, return_counts=True)  # type: ignore
     zero_idx = np.argwhere(val == 0)
     val = np.delete(val, zero_idx).astype(str)
     freq = np.delete(freq, zero_idx)
@@ -623,7 +634,7 @@ class NID:
             12: "Other",
         }
 
-    def get_bygeom(self, geometry: int, geo_crs: str) -> gpd.GeoDataFrame:
+    def get_bygeom(self, geometry: GTYPE, geo_crs: str) -> gpd.GeoDataFrame:
         """Retrieve NID data within a geometry.
 
         Parameters
@@ -856,7 +867,7 @@ class NID:
         resp = self._get_json([f"{self.base_url}/metadata"])[0]
         return "\n".join(
             [
-                "Connected to NID RESTful with the following properties:",
+                "NID RESTful information:",
                 f"URL: {self.base_url}",
                 f"Date Refreshed: {resp['dateRefreshed']}",
                 f"Version: {resp['version']}",
