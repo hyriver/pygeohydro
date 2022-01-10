@@ -4,11 +4,19 @@ import shutil
 
 import geopandas as gpd
 import pandas as pd
+import pytest
 from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
 from pygeohydro import NID, NWIS
+
+try:
+    import typeguard  # noqa: F401
+except ImportError:
+    has_typeguard = False
+else:
+    has_typeguard = True
 
 SMALL = 1e-3
 DEF_CRS = "epsg:4326"
@@ -106,13 +114,19 @@ class TestNLCD:
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
-        self.assertion(lulc[0].cover_2016, 84.357)
-        self.assertion(lulc[1].cover_2016, 84.357)
+        self.assertion(lulc[0].cover_2016, 84.328)
+        self.assertion(lulc[1].cover_2016, 84.328)
 
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
         lulc = gh.nlcd_bycoords(coords)
         assert lulc.cover_2019.sum() == 211
+
+    def test_consistency(self):
+        coords = [(-87.11890, 34.70421), (-88.83390, 40.17190), (-95.68978, 38.23926)]
+        lulc_m = gh.nlcd_bycoords(coords)
+        lulc_s = gh.nlcd_bycoords(coords[:1])
+        assert lulc_m.iloc[0]["cover_2019"] == lulc_s.iloc[0]["cover_2019"] == 24
 
     def test_nlcd_deprecated(self):
         lulc = gh.nlcd(GEOM, years=self.years, resolution=self.res)
@@ -131,6 +145,7 @@ class TestNID:
         dams, contexts = self.nid.get_suggestions("texas", "huc2")
         assert dams.empty and contexts.loc["HUC2", "value"] == "12"
 
+    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_filter(self):
         query_list = [
             {"huc6": ["160502", "100500"], "drainageArea": ["[200 500]"]},
@@ -140,9 +155,10 @@ class TestNID:
         assert dam_dfs[0].name[0] == "Stillwater Point Dam"
 
     def test_id(self):
-        dams = self.nid.inventory_byid(["514871", "459170", "514868", "463501", "463498"])
+        dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
         assert abs(dams.damHeight.max() - 120) < SMALL
 
+    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_geom(self):
         dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
         bbox = ogc_utils.match_crs(GEOM.bounds, DEF_CRS, ALT_CRS)
