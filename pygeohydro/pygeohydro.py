@@ -179,11 +179,9 @@ def ssebopeta_bygeom(
     xarray.DataArray
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
-    _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
-
     f_list = helpers.get_ssebopeta_urls(dates)
     if isinstance(geometry, (Polygon, MultiPolygon)):
-        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=_geometry, geo_crs=geo_crs)
+        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
     else:
         gtiff2xarray = tlz.partial(geoutils.gtiff2xarray)
 
@@ -199,8 +197,7 @@ def ssebopeta_bygeom(
             return ds.expand_dims({"time": [t]})
 
         data = xr.merge(_ssebop(t, url) for t, url in f_list)
-
-    eta: xr.DataArray = data.eta.copy() * 1e-3
+    eta: xr.DataArray = data.where(data.eta < data.eta.nodatavals[0]).eta.copy() * 1e-3
     eta.attrs.update(
         {"units": "mm/day", "nodatavals": (np.nan,), "crs": DEF_CRS, "long_name": "Actual ET"}
     )
