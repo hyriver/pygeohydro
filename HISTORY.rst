@@ -2,6 +2,14 @@
 History
 =======
 
+0.12.3 (unreleased)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Replace no data values of data in ``ssebopeta_bygeom`` with ``np.nan`` before
+  converting it to mm/day.
+
 0.12.2 (2021-12-31)
 -------------------
 
