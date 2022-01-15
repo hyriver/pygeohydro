@@ -17,8 +17,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from defusedxml import ElementTree
-from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL, utils as ogc_utils
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
@@ -245,7 +244,7 @@ class _NLCD:
             raise InvalidInputType("years", "dict", f"{default_years}")
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.region = region
-        self.valid_crs = self.get_valid_crs()
+        self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
         if pyproj.CRS(crs).to_string().lower() not in self.valid_crs:
             raise InvalidInputValue("crs", self.valid_crs)
         self.crs = crs
@@ -275,20 +274,6 @@ class _NLCD:
     def __repr__(self) -> str:
         """Return NLCD's WMS information."""
         return self.wms.__repr__()
-
-    @staticmethod
-    def get_valid_crs() -> List[str]:
-        """Get valid CRS for NLCD layers."""
-        url = ["https://www.mrlc.gov/geoserver/ows"]
-        kwds = [{"params": {"service": "wms", "request": "GetCapabilities"}}]
-
-        ns = "http://www.opengis.net/wms"
-
-        def get_path(tag_list: List[str]) -> str:
-            return f"/{{{ns}}}".join([""] + tag_list)[1:]
-
-        root = ElementTree.fromstring(ar.retrieve_text(url, kwds)[0])
-        return [t.text.lower() for t in root.findall(get_path(["Capability", "Layer", "CRS"]))]
 
     def get_response(
         self, bounds: Tuple[float, float, float, float], resolution: float
