@@ -9,6 +9,16 @@ Bug Fixes
 ~~~~~~~~~
 - Replace no data values of data in ``ssebopeta_bygeom`` with ``np.nan`` before
   converting it to mm/day.
+- Fix an inconsistency issue with CRS projection when using UTM in ``nlcd_*``.
+  Use ``EPSG:3857`` for all reprojections and get the data from NLCD in the same projection. (:issue_hydro:`85`)
+- Improve performance of ``nlcd_*`` functions by reducing number of service calls.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add type checking with ``typeguard`` and fix type hinting issues raised by
+  ``typeguard``.
+- Refactor ``show_versions`` to ensure getting correct versions of all
+  dependencies.
 
 0.12.2 (2021-12-31)
 -------------------
