@@ -17,7 +17,8 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL, utils as ogc_utils
+from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import utils as ogc_utils
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
