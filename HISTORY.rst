@@ -2,7 +2,15 @@
 History
 =======
 
-0.12.3 (unreleased)
+0.12.4 (unreleased)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Return a named tuple instead of a ``dict`` of percentages in the
+  ``cover_statistics`` function.
+
+0.12.3 (2022-01-15)
 -------------------
 
 Bug Fixes
@@ -10,7 +18,8 @@ Bug Fixes
 - Replace no data values of data in ``ssebopeta_bygeom`` with ``np.nan`` before
   converting it to mm/day.
 - Fix an inconsistency issue with CRS projection when using UTM in ``nlcd_*``.
-  Use ``EPSG:3857`` for all reprojections and get the data from NLCD in the same projection. (:issue_hydro:`85`)
+  Use ``EPSG:3857`` for all reprojections and get the data from NLCD in the same
+  projection. (:issue_hydro:`85`)
 - Improve performance of ``nlcd_*`` functions by reducing number of service calls.
 
 Internal Changes
