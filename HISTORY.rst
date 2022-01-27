@@ -8,7 +8,15 @@ History
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Return a named tuple instead of a ``dict`` of percentages in the
-  ``cover_statistics`` function.
+  ``cover_statistics`` function. It makes accessing the values easier.
+- Add ``pycln`` as a new ``pre-commit`` hooks for removing unused imports.
+- Remove time zone info from the inputs to ``plot.signatures`` to avoid
+  issues with the ``matplotlib`` backend.
+
+Bug Fixes
+~~~~~~~~~
+- Fix an issue in ``plot.signatures`` where the new ``matplotlib``
+  version requires a ``numpy`` array instead of a ``pandas.DataFrame``.
 
 0.12.3 (2022-01-15)
 -------------------
