@@ -1,7 +1,7 @@
 """Some helper function for PyGeoHydro."""
 import logging
 import sys
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, List, NamedTuple, Tuple, Union
 
 import async_retriever as ar
 import numpy as np
@@ -151,3 +151,10 @@ def get_ssebopeta_urls(
     ]
 
     return f_list
+
+
+class Stats(NamedTuple):
+    """Statistics for NLCD."""
+
+    classes: Dict[str, float]
+    categories: Dict[str, float]
