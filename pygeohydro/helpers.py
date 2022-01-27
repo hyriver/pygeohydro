@@ -142,7 +142,9 @@ def get_ssebopeta_urls(
             raise InvalidInputRange("SSEBop", ("2000", "2020"))
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
-        date_range = d_list[0] if len(d_list) == 1 else d_list[0].union_many(d_list[1:])
+        date_range = d_list.pop(0)
+        while d_list:
+            date_range = date_range.union(d_list.pop(0))
 
     base_url = ServiceURL().http.ssebopeta
 
