@@ -30,7 +30,7 @@ from .exceptions import (
     ServiceUnavailable,
     ZeroMatched,
 )
-from .helpers import logger
+from .helpers import Stats, logger
 
 DEF_CRS = "epsg:4326"
 EXPIRE = -1
@@ -519,7 +519,7 @@ def nlcd(
     return nlcd_bygeom(geom, resolution, years, region, crs)[0]
 
 
-def cover_statistics(ds: xr.DataArray) -> Dict[str, Dict[str, float]]:
+def cover_statistics(ds: xr.DataArray) -> Stats:
     """Percentages of the categorical NLCD cover data.
 
     Parameters
@@ -529,8 +529,8 @@ def cover_statistics(ds: xr.DataArray) -> Dict[str, Dict[str, float]]:
 
     Returns
     -------
-    dict
-        Statistics of NLCD cover data
+    Stats
+        A named tuple with the percentages of the cover classes and categories.
     """
     if not isinstance(ds, xr.DataArray):
         raise InvalidInputType("ds", "xarray.DataArray")
@@ -555,7 +555,7 @@ def cover_statistics(ds: xr.DataArray) -> Dict[str, Dict[str, float]]:
         for k, v in nlcd_meta["categories"].items()
     }
 
-    return {"classes": class_percentage, "categories": category_percentage}
+    return Stats(class_percentage, category_percentage)
 
 
 class NID:
