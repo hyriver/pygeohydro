@@ -170,6 +170,7 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     """
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
+    daily.index = daily.index.tz_localize(None)
 
     monthly = daily.groupby(pd.Grouper(freq="M")).sum()
 
