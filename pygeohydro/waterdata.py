@@ -109,8 +109,8 @@ def interactive_map(
         "HCDN 2009",
     ]
 
-    sites = sites.groupby("site_no").agg(set).reset_index()
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))[cols_new]
+    sites = sites.groupby("site_no")[cols_old[1:]].agg(set).reset_index()
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))
 
     msgs = []
     base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
