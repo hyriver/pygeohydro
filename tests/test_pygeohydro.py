@@ -114,8 +114,8 @@ class TestNLCD:
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
-        self.assertion(lulc[0].cover_2016, 84.328)
-        self.assertion(lulc[1].cover_2016, 84.328)
+        self.assertion(lulc[0].cover_2016, 84.357)
+        self.assertion(lulc[1].cover_2016, 84.357)
 
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
@@ -135,7 +135,7 @@ class TestNLCD:
     @staticmethod
     def assertion(cover, expected):
         st = gh.cover_statistics(cover)
-        assert abs(st["categories"]["Forest"] - expected) < SMALL
+        assert abs(st.categories["Forest"] - expected) < SMALL
 
 
 class TestNID:
