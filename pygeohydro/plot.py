@@ -67,7 +67,7 @@ def signatures(
         _unit = discharge.units[f]
         qxval = _discharge.index
 
-        ax.plot(qxval, _discharge)
+        ax.plot(qxval, _discharge.to_numpy())
         ax.set_ylabel(f"$Q$ ({_unit})")
 
         if prcp is not None:
