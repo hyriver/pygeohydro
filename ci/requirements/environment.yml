@@ -5,10 +5,10 @@ channels:
 dependencies:
   # async_retriever
   - aiodns
-  - aiohttp
+  - aiohttp>=3.8.1
   - aiohttp-client-cache>=0.5.1
   - aiosqlite
-  - brotlipy
+  - brotli
   - cchardet
   - cytoolz
   - importlib_metadata
@@ -30,8 +30,11 @@ dependencies:
   - geopandas>=0.8
   - netcdf4
   - numpy>=1.17
+  - pygeos
   - rasterio>=1.2
+  - scipy
   - xarray>=0.18
+  - rioxarray>=0.8
 
   # pynhd deps
   - networkx>=2.5
@@ -42,10 +45,8 @@ dependencies:
   - folium
   - lxml
   - matplotlib-base>=3.0
-  - scipy
 
-  # deps to speed up xarray and geopandas
-  - pygeos
+  # optional deps to speed up xarray
   - bottleneck
 
   # test deps
