@@ -2,7 +2,7 @@
 History
 =======
 
-0.12.4 (unreleased)
+0.12.4 (2022-02-04)
 -------------------
 
 Internal Changes
