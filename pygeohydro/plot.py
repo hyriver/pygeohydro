@@ -114,7 +114,7 @@ def signatures(
     ax.set_yscale("log")
     ax.set_xlim(0, 100)
     ax.set_xlabel("% Exceedance")
-    ax.set_ylabel(fr"$\log(Q)$ ({discharge.units['ranked']})")
+    ax.set_ylabel(rf"$\log(Q)$ ({discharge.units['ranked']})")
     ax.set_title("Flow Duration Curve")
 
     plt.tight_layout()
