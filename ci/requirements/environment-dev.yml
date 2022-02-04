@@ -31,13 +31,14 @@ dependencies:
   - geopandas>=0.8
   - netcdf4
   - numpy>=1.17
+  - pygeos
   - rasterio>=1.2
+  - scipy
   - xarray>=0.18
   - rioxarray>=0.8
 
   # py3dep
   - click>=7.0
-  - scipy
   - richdem>=0.3.4
 
   # pynhd deps
@@ -49,22 +50,24 @@ dependencies:
   - folium
   - lxml
   - matplotlib-base>=3.0
-  - scipy
 
-  # optional deps to speed up xarray and geopandas
+  # optional deps to speed up xarray and pydaymet
   - bottleneck
-  - pygeos
+  - numba
 
-  # plotting deps
+  # example notebooks' deps
   - cartopy
   - mapclassify
   - contextily
-  - colorcet
+  - geoviews
   - hvplot
   - osmnx
-  - rich
+  - tqdm
   - pytables
+  - ffmpeg
+  - jupyterlab_widgets
   - ipywidgets
+  - pygmo
 
   # dev deps
   - codespell
