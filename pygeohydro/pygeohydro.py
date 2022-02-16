@@ -719,12 +719,12 @@ class NID:
         >>> from pygeohydro import NID
         >>> nid = NID()
         >>> query_list = [
-        ...    {"huc6": ["160502", "100500"], "drainageArea": ["[200 500]"]},
+        ...    {"drainageArea": ["[200 500]"]},
         ...    {"nidId": ["CA01222"]},
         ... ]
         >>> dam_dfs = nid.get_byfilter(query_list)
         >>> print(dam_dfs[0].name[0])
-        Stillwater Point Dam
+        Prairie Portage
         """
         invalid = [k for key in query_list for k in key if k not in self.valid_fields]
         if invalid:
@@ -767,9 +767,9 @@ class NID:
         --------
         >>> from pygeohydro import NID
         >>> nid = NID()
-        >>> dams, contexts = nid.get_suggestions("texas", "huc2")
-        >>> print(contexts.loc["HUC2", "value"])
-        12
+        >>> dams, contexts = nid.get_suggestions("texas", "city")
+        >>> print(contexts.loc["CITY", "value"])
+        Texas City
         """
         if len(context_key) > 0 and context_key not in self.valid_fields:
             raise InvalidInputValue("context", self.valid_fields)

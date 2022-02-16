@@ -142,17 +142,17 @@ class TestNID:
     nid = NID()
 
     def test_suggestion(self):
-        dams, contexts = self.nid.get_suggestions("texas", "huc2")
-        assert dams.empty and contexts.loc["HUC2", "value"] == "12"
+        dams, contexts = self.nid.get_suggestions("texas", "city")
+        assert dams.empty and contexts.loc["CITY", "value"] == "Texas City"
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_filter(self):
         query_list = [
-            {"huc6": ["160502", "100500"], "drainageArea": ["[200 500]"]},
+            {"drainageArea": ["[200 500]"]},
             {"nidId": ["CA01222"]},
         ]
         dam_dfs = self.nid.get_byfilter(query_list)
-        assert dam_dfs[0].name[0] == "Stillwater Point Dam"
+        assert dam_dfs[0].name[0] == "Prairie Portage"
 
     def test_id(self):
         dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])

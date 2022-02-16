@@ -58,7 +58,7 @@ def nlcd_helper() -> Dict[str, Any]:
     }
     colors[0] = (*colors[0][:3], 0)
 
-    _, edomv, edomvd = _get_xml("nlcd_2019_impervious_descriptor_l48_20210604")
+    _, edomv, edomvd = _get_xml("nlcd_2016_impervious_descriptor_l48_20210604")
     descriptors = {}
     for t, v in zip(edomv, edomvd):
         tag = t.text.split(" - ")
