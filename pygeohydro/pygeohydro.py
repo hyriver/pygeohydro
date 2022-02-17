@@ -19,6 +19,7 @@ import rasterio as rio
 import xarray as xr
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
+from pynhd import AGRBase
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
@@ -855,4 +856,70 @@ class NID:
                 f"Date Refreshed: {resp['dateRefreshed']}",
                 f"Version: {resp['version']}",
             ]
+        )
+
+
+class WBD(AGRBase):
+    """Access Watershed Boundary Dataset (WBD).
+
+    Notes
+    -----
+    This file contains Hydrologic Unit (HU) polygon boundaries for the United States,
+    Puerto Rico, and the U.S. Virgin Islands.
+    For more info visit: https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer
+
+    Parameters
+    ----------
+    layer : str, optional
+        A valid service layer. Valid layers are:
+
+        - ``wbdline``
+        - ``huc2``
+        - ``huc4``
+        - ``huc6``
+        - ``huc8``
+        - ``huc10``
+        - ``huc12``
+        - ``huc14``
+        - ``huc16``
+
+    outfields : str or list, optional
+        Target field name(s), default to "*" i.e., all the fields.
+    crs : str, optional
+        Target spatial reference, default to ``EPSG:4326``
+    expire_after : int, optional
+        Expiration time for response caching in seconds, defaults to -1 (never expire).
+    disable_caching : bool, optional
+        If ``True``, disable caching requests, defaults to False.
+    """
+
+    def __init__(
+        self,
+        layer: str,
+        outfields: Union[str, List[str]] = "*",
+        crs: str = DEF_CRS,
+        expire_after: float = EXPIRE,
+        disable_caching: bool = False,
+    ):
+        self.valid_layers = {
+            "wbdline": "wbdline",
+            "huc2": "2-digit hu (region)",
+            "huc4": "4-digit hu (subregion)",
+            "huc6": "6-digit hu (basin)",
+            "huc8": "8-digit hu  (subbasin)",
+            "huc10": "10-digit hu (watershed)",
+            "huc12": "12-digit hu (subwatershed)",
+            "huc14": "14-digit hu",
+            "huc16": "16-digit hu",
+        }
+        _layer = self.valid_layers.get(layer)
+        if _layer is None:
+            raise InvalidInputValue("layer", list(self.valid_layers))
+        super().__init__(
+            ServiceURL().restful.wbd,
+            _layer,
+            outfields,
+            crs,
+            expire_after=expire_after,
+            disable_caching=disable_caching,
         )

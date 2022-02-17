@@ -11,6 +11,7 @@ from .exceptions import (
 from .print_versions import show_versions
 from .pygeohydro import (
     NID,
+    WBD,
     cover_statistics,
     nlcd,
     nlcd_bycoords,
@@ -33,6 +34,7 @@ except Exception:
 
 __all__ = [
     "NID",
+    "WBD",
     "NWIS",
     "WaterQuality",
     "cover_statistics",
