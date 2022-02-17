@@ -121,6 +121,8 @@ The ``pygeohydro`` module can pull data from the following web services:
   where human activity affects the natural flow of the watercourse,
 * `NLCD 2019 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, imperviousness
   descriptor, and canopy data. You can get data using both geometries and coordinates.
+* `WBD <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/>`__ for accessing
+  Hydrologic Unit (HU) polygon boundaries within the US (all HUC levels).
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, for both single pixel and gridded data.
 
@@ -340,6 +342,17 @@ We can get also all dams within CONUS in NID with maximum storage larger than 20
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/dams.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nid.ipynb
     :alt: Dams
+
+
+The ``WBD`` class allows us to get Hydrologic Unit (HU) polygon boundaries. Let's
+get the two Hudson HUC4s:
+
+.. code-block:: python
+
+    from pygeohydro import WBD
+
+    wbd = WBD("huc4")
+    hudson = wbd.byids("huc4", ["0202", "0203"])
 
 Contributing
 ------------
