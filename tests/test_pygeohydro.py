@@ -9,7 +9,7 @@ from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
-from pygeohydro import NID, NWIS
+from pygeohydro import NID, NWIS, WBD
 
 try:
     import typeguard  # noqa: F401
@@ -195,6 +195,12 @@ class TestWaterQuality:
         ]
         caff = self.wq.data_bystation(stations, {"characteristicName": "Caffeine"})
         assert caff.shape[0] == 12
+
+
+def test_wbd():
+    wbd = WBD("huc4")
+    hudson = wbd.byids("huc4", ["0202", "0203"])
+    assert ",".join(hudson.states) == 'CT,NJ,NY,RI,MA,NJ,NY,VT'
 
 
 def test_interactive_map():
