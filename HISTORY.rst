@@ -2,6 +2,21 @@
 History
 =======
 
+0.12.3 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add a new class called ``WBD`` for getting watershed boundary (HUC) data.
+
+.. code-block:: python
+
+    from pygeohydro import WBD
+
+    wbd = WBD("huc4")
+    hudson = wbd.byids("huc4", ["0202", "0203"])
+
+
 0.12.4 (2022-02-04)
 -------------------
 
