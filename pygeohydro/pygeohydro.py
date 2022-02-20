@@ -3,9 +3,9 @@ import io
 import itertools
 import warnings
 import zipfile
-from ssl import SSLContext
 from collections import OrderedDict
 from numbers import Number
+from ssl import SSLContext
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
