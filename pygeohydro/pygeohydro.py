@@ -3,6 +3,7 @@ import io
 import itertools
 import warnings
 import zipfile
+from ssl import SSLContext
 from collections import OrderedDict
 from numbers import Number
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
@@ -225,6 +226,9 @@ class _NLCD:
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to False to disable
+        SSL certification verification.
     """
 
     def __init__(
@@ -234,6 +238,7 @@ class _NLCD:
         crs: str = DEF_CRS,
         expire_after: float = EXPIRE,
         disable_caching: bool = False,
+        ssl: Union[SSLContext, bool, None] = None,
     ) -> None:
         default_years = {
             "impervious": [2019],
@@ -252,6 +257,7 @@ class _NLCD:
         self.crs = crs
         self.expire_after = expire_after
         self.disable_caching = disable_caching
+        self.ssl = ssl
         self.layers = self.get_layers(self.region, self.years)
         self.units = OrderedDict(
             (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
@@ -271,6 +277,7 @@ class _NLCD:
             validation=False,
             expire_after=self.expire_after,
             disable_caching=self.disable_caching,
+            ssl=self.ssl,
         )
 
     def __repr__(self) -> str:
@@ -349,6 +356,7 @@ def nlcd_bygeom(
     crs: str = DEF_CRS,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
+    ssl: Union[SSLContext, bool, None] = None,
 ) -> Dict[int, xr.Dataset]:
     """Get data from NLCD database (2019).
 
@@ -376,6 +384,9 @@ def nlcd_bygeom(
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to False to disable
+        SSL certification verification.
 
     Returns
     -------
@@ -399,6 +410,7 @@ def nlcd_bygeom(
         crs=crs,
         expire_after=expire_after,
         disable_caching=disable_caching,
+        ssl=ssl,
     )
 
     ds = {
@@ -414,6 +426,7 @@ def nlcd_bycoords(
     region: str = "L48",
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
+    ssl: Union[SSLContext, bool, None] = None,
 ) -> gpd.GeoDataFrame:
     """Get data from NLCD database (2019).
 
@@ -434,6 +447,9 @@ def nlcd_bycoords(
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to False to disable
+        SSL certification verification.
 
     Returns
     -------
@@ -449,6 +465,7 @@ def nlcd_bycoords(
         crs="epsg:3857",
         expire_after=expire_after,
         disable_caching=disable_caching,
+        ssl=ssl,
     )
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
     points_proj = points.to_crs(nlcd_wms.crs)
@@ -475,6 +492,7 @@ def nlcd(
     region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
+    ssl: Union[SSLContext, bool, None] = None,
 ) -> xr.Dataset:
     """Get data from NLCD database (2019).
 
@@ -502,6 +520,9 @@ def nlcd(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to False to disable
+        SSL certification verification.
 
     Returns
     -------
@@ -517,7 +538,7 @@ def nlcd(
     )
     warnings.warn(msg, DeprecationWarning)
     geom = gpd.GeoSeries([geoutils.geo2polygon(geometry, geo_crs, crs)], crs=crs)
-    return nlcd_bygeom(geom, resolution, years, region, crs)[0]
+    return nlcd_bygeom(geom, resolution, years, region, crs, ssl=ssl)[0]
 
 
 def cover_statistics(ds: xr.DataArray) -> Stats:
