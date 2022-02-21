@@ -296,9 +296,9 @@ function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the i
 
     from pynhd import NLDI
 
-    basins = NLDI().get_basins(["01031450", "01031500", "01031510"])
+    basins = NLDI().get_basins(["01031450", "01318500", "01031510"])
     lulc = gh.nlcd_bygeom(basins, 100, years={"cover": [2016, 2019]})
-    stats = gh.cover_statistics(lulc["01031450"].cover_2016)
+    stats = gh.cover_statistics(lulc["01318500"].cover_2016)
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/lulc.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nlcd.ipynb
