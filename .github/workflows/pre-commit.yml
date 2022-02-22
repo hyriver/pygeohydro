@@ -11,4 +11,12 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
+      with:
+        python-version: '3.9'
+        cache: 'pip'
+
+    - name: Install GDAL
+      run: |-
+        sudo apt-get update
+        sudo apt-get install gdal-bin libgdal-dev libspatialindex-dev
     - uses: pre-commit/action@v2.0.3
