@@ -268,7 +268,7 @@ class _NLCD:
         self.nodata = OrderedDict(
             (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
         )
-
+        print(self.layers)
         self.wms = WMS(
             ServiceURL().wms.mrlc,
             layers=self.layers,
@@ -308,7 +308,7 @@ class _NLCD:
         ds.attrs = _ds.attrs
         for lyr in self.layers:
             name = [n for n in self.units if n in lyr.lower()][-1]
-            lyr_name = f"{name}_{lyr.split('_')[1]}"
+            lyr_name = f"{name}_{lyr.split(':')[1].split('_')[1]}"
             ds = ds.rename({lyr: lyr_name})
             ds[lyr_name].attrs["units"] = self.units[name]
             ds[lyr_name] = ds[lyr_name].astype(self.types[name])
@@ -345,7 +345,7 @@ class _NLCD:
                 return "Impervious"
             return "Impervious_Descriptor" if region == "AK" else "Impervious_descriptor"
 
-        return [f"NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
+        return [f"mrlc_download:NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
 
 
 def nlcd_bygeom(
