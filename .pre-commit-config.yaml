@@ -112,7 +112,7 @@ repos:
       additional_dependencies:
       - types-all
       - git+https://github.com/cheginit/async_retriever.git
-      - git+https://github.com/cheginit/pygeoogc.git@main
+      - git+https://github.com/cheginit/pygeoogc.git
       - git+https://github.com/cheginit/pygeoutils.git
       - git+https://github.com/cheginit/pynhd.git
 
