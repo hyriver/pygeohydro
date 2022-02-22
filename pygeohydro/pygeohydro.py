@@ -345,7 +345,11 @@ class _NLCD:
                 return "Impervious"
             return "Impervious_Descriptor" if region == "AK" else "Impervious_descriptor"
 
-        return [f"mrlc_download:NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
+        return [
+            f"mrlc_download:NLCD_{yr}_{layer_name(lyr)}_{region}"
+            for lyr, yrs in years.items()
+            for yr in yrs
+        ]
 
 
 def nlcd_bygeom(
