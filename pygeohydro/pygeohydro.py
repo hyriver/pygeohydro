@@ -268,7 +268,6 @@ class _NLCD:
         self.nodata = OrderedDict(
             (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
         )
-        print(self.layers)
         self.wms = WMS(
             ServiceURL().wms.mrlc,
             layers=self.layers,
