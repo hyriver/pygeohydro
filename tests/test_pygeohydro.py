@@ -114,8 +114,8 @@ class TestNLCD:
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
-        self.assertion(lulc[0].cover_2016, 84.357)
-        self.assertion(lulc[1].cover_2016, 84.357)
+        self.assertion(lulc[0].cover_2016, 82.296)
+        self.assertion(lulc[1].cover_2016, 82.296)
 
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
@@ -130,7 +130,7 @@ class TestNLCD:
 
     def test_nlcd_deprecated(self):
         lulc = gh.nlcd(GEOM, years=self.years, resolution=self.res, ssl=False)
-        self.assertion(lulc.cover_2016, 83.4)
+        self.assertion(lulc.cover_2016, 81.548)
 
     @staticmethod
     def assertion(cover, expected):
