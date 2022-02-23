@@ -17,9 +17,5 @@ jobs:
     - name: Install GDAL
       run: |-
         sudo apt-get update
-        sudo apt-get install gdal-bin libgdal-dev libspatialindex-dev
-        pip install -U \
-        --global-option=build_ext \
-        --global-option="-I/usr/include/gdal" \
-        gdal==`gdal-config --version`
+        sudo apt-get install gdal-bin libgdal-dev libspatialindex-dev python-gdal
     - uses: pre-commit/action@v2.0.3
