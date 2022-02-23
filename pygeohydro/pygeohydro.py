@@ -18,7 +18,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase
 from shapely.geometry import MultiPolygon, Polygon
@@ -272,6 +272,17 @@ class _NLCD:
         self.version = "1.3.0"
         self.outformat = "image/geotiff"
 
+        self.wms = WMS(
+            ServiceURL().wms.mrlc,
+            layers=self.layers,
+            outformat="image/geotiff",
+            crs=self.crs,
+            validation=False,
+            expire_after=self.expire_after,
+            disable_caching=self.disable_caching,
+            ssl=self.ssl,
+        )
+
     def __repr__(self) -> str:
         """Print the services properties."""
         layers = self.layers if isinstance(self.layers, list) else [self.layers]
@@ -288,35 +299,36 @@ class _NLCD:
         self, bbox: Tuple[float, float, float, float], resolution: float
     ) -> Dict[str, bytes]:
         """Get response from a url."""
-        ogc_utils.check_bbox(bbox)
-        bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
+        return self.wms.getmap_bybox(bbox, resolution, self.crs)
+        # ogc_utils.check_bbox(bbox)
+        # bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
 
-        payload = {
-            "version": self.version,
-            "format": self.outformat,
-            "request": "GetMap",
-            "crs": self.crs,
-        }
+        # payload = {
+        #     "version": self.version,
+        #     "format": self.outformat,
+        #     "request": "GetMap",
+        #     "crs": self.crs,
+        # }
 
-        def _get_payloads(
-            args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
-        ) -> Tuple[str, Dict[str, str]]:
-            lyr, bnds = args
-            _bbox, counter, _width, _height = bnds
+        # def _get_payloads(
+        #     args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
+        # ) -> Tuple[str, Dict[str, str]]:
+        #     lyr, bnds = args
+        #     _bbox, counter, _width, _height = bnds
 
-            if pyproj.CRS(self.crs).is_geographic:
-                _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
-            _payload = payload.copy()
-            _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
-            _payload["width"] = str(_width)
-            _payload["height"] = str(_height)
-            _payload["layers"] = lyr
-            return f"{lyr}_dd_{counter}", _payload
+        #     if pyproj.CRS(self.crs).is_geographic:
+        #         _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
+        #     _payload = payload.copy()
+        #     _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
+        #     _payload["width"] = str(_width)
+        #     _payload["height"] = str(_height)
+        #     _payload["layers"] = lyr
+        #     return f"{lyr}_dd_{counter}", _payload
 
-        layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
-        session = ogc_utils.RetrySession()
-        rbinary = [session.get(self.url, p).content for p in payloads]
-        return dict(zip(layers, rbinary))
+        # layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
+        # session = ogc_utils.RetrySession()
+        # rbinary = [session.get(self.url, p).content for p in payloads]
+        # return dict(zip(layers, rbinary))
 
     def to_xarray(
         self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
