@@ -2,8 +2,7 @@ name: Linting
 
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch: # allows you to trigger manually
 
 jobs:
   pre-commit:
@@ -19,4 +18,8 @@ jobs:
       run: |-
         sudo apt-get update
         sudo apt-get install gdal-bin libgdal-dev libspatialindex-dev
+        pip install -U \
+        --global-option=build_ext \
+        --global-option="-I/usr/include/gdal" \
+        gdal==`gdal-config --version`
     - uses: pre-commit/action@v2.0.3
