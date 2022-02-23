@@ -18,7 +18,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase
 from shapely.geometry import MultiPolygon, Polygon
@@ -252,9 +252,9 @@ class _NLCD:
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.region = region
         self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
-        if pyproj.CRS(crs).to_string().lower() not in self.valid_crs:
+        self.crs = pyproj.CRS(crs).to_string().lower()
+        if self.crs not in self.valid_crs:
             raise InvalidInputValue("crs", self.valid_crs)
-        self.crs = crs
         self.expire_after = expire_after
         self.disable_caching = disable_caching
         self.ssl = ssl
@@ -268,26 +268,55 @@ class _NLCD:
         self.nodata = OrderedDict(
             (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
         )
-        self.wms = WMS(
-            ServiceURL().wms.mrlc,
-            layers=self.layers,
-            outformat="image/geotiff",
-            crs=self.crs,
-            validation=False,
-            expire_after=self.expire_after,
-            disable_caching=self.disable_caching,
-            ssl=self.ssl,
-        )
+        self.url = ServiceURL().wms.mrlc
+        self.version = "1.3.0"
+        self.outformat = "image/geotiff"
 
     def __repr__(self) -> str:
-        """Return NLCD's WMS information."""
-        return self.wms.__repr__()
+        """Print the services properties."""
+        layers = self.layers if isinstance(self.layers, list) else [self.layers]
+        return (
+            "Connected to the MRLC service:\n"
+            + f"URL: {self.url}\n"
+            + f"Version: {self.version}\n"
+            + f"Layers: {', '.join(lyr for lyr in layers)}\n"
+            + f"Output Format: {self.outformat}\n"
+            + f"Output CRS: {self.crs}"
+        )
 
     def get_response(
-        self, bounds: Tuple[float, float, float, float], resolution: float
+        self, bbox: Tuple[float, float, float, float], resolution: float
     ) -> Dict[str, bytes]:
         """Get response from a url."""
-        return self.wms.getmap_bybox(bounds, resolution, self.crs)
+        ogc_utils.check_bbox(bbox)
+        bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
+
+        payload = {
+            "version": self.version,
+            "format": self.outformat,
+            "request": "GetMap",
+            "crs": self.crs,
+        }
+
+        def _get_payloads(
+            args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
+        ) -> Tuple[str, Dict[str, str]]:
+            lyr, bnds = args
+            _bbox, counter, _width, _height = bnds
+
+            if pyproj.CRS(self.crs).is_geographic:
+                _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
+            _payload = payload.copy()
+            _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
+            _payload["width"] = str(_width)
+            _payload["height"] = str(_height)
+            _payload["layers"] = lyr
+            return f"{lyr}_dd_{counter}", _payload
+
+        layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
+        session = ogc_utils.RetrySession()
+        rbinary = [session.get(self.url, p).content for p in payloads]
+        return dict(zip(layers, rbinary))
 
     def to_xarray(
         self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
@@ -301,7 +330,7 @@ class _NLCD:
         try:
             _ds = gtiff2xarray(r_dict=r_dict)
         except rio.RasterioIOError as ex:
-            raise ServiceUnavailable(self.wms.url) from ex
+            raise ServiceUnavailable(self.url) from ex
 
         ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
