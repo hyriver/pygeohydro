@@ -287,7 +287,7 @@ class _NLCD:
         self, bounds: Tuple[float, float, float, float], resolution: float
     ) -> Dict[str, bytes]:
         """Get response from a url."""
-        return self.wms.getmap_bybox(bounds, resolution, self.crs, kwargs={"styles": "raster"})
+        return self.wms.getmap_bybox(bounds, resolution, self.crs)
 
     def to_xarray(
         self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
@@ -307,7 +307,7 @@ class _NLCD:
         ds.attrs = _ds.attrs
         for lyr in self.layers:
             name = [n for n in self.units if n in lyr.lower()][-1]
-            lyr_name = f"{name}_{lyr.split(':')[1].split('_')[1]}"
+            lyr_name = f"{name}_{lyr.split('_')[1]}"
             ds = ds.rename({lyr: lyr_name})
             ds[lyr_name].attrs["units"] = self.units[name]
             ds[lyr_name] = ds[lyr_name].astype(self.types[name])
@@ -344,11 +344,7 @@ class _NLCD:
                 return "Impervious"
             return "Impervious_Descriptor" if region == "AK" else "Impervious_descriptor"
 
-        return [
-            f"mrlc_download:NLCD_{yr}_{layer_name(lyr)}_{region}"
-            for lyr, yrs in years.items()
-            for yr in yrs
-        ]
+        return [f"NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
 
 
 def nlcd_bygeom(
