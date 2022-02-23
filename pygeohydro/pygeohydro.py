@@ -5,7 +5,6 @@ import warnings
 import zipfile
 from collections import OrderedDict
 from numbers import Number
-from ssl import SSLContext
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
@@ -18,7 +17,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase
 from shapely.geometry import MultiPolygon, Polygon
@@ -226,9 +225,6 @@ class _NLCD:
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to False to disable
-        SSL certification verification.
     """
 
     def __init__(
@@ -238,7 +234,6 @@ class _NLCD:
         crs: str = DEF_CRS,
         expire_after: float = EXPIRE,
         disable_caching: bool = False,
-        ssl: Union[SSLContext, bool, None] = None,
     ) -> None:
         default_years = {
             "impervious": [2019],
@@ -257,7 +252,6 @@ class _NLCD:
             raise InvalidInputValue("crs", self.valid_crs)
         self.expire_after = expire_after
         self.disable_caching = disable_caching
-        self.ssl = ssl
         self.layers = self.get_layers(self.region, self.years)
         self.units = OrderedDict(
             (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
@@ -271,17 +265,7 @@ class _NLCD:
         self.url = ServiceURL().wms.mrlc
         self.version = "1.3.0"
         self.outformat = "image/geotiff"
-
-        self.wms = WMS(
-            ServiceURL().wms.mrlc,
-            layers=self.layers,
-            outformat="image/geotiff",
-            crs=self.crs,
-            validation=False,
-            expire_after=self.expire_after,
-            disable_caching=self.disable_caching,
-            ssl=self.ssl,
-        )
+        self.session = RetrySession()
 
     def __repr__(self) -> str:
         """Print the services properties."""
@@ -299,36 +283,34 @@ class _NLCD:
         self, bbox: Tuple[float, float, float, float], resolution: float
     ) -> Dict[str, bytes]:
         """Get response from a url."""
-        return self.wms.getmap_bybox(bbox, resolution, self.crs)
-        # ogc_utils.check_bbox(bbox)
-        # bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
+        ogc_utils.check_bbox(bbox)
+        bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
 
-        # payload = {
-        #     "version": self.version,
-        #     "format": self.outformat,
-        #     "request": "GetMap",
-        #     "crs": self.crs,
-        # }
+        payload = {
+            "version": self.version,
+            "format": self.outformat,
+            "request": "GetMap",
+            "crs": self.crs,
+        }
 
-        # def _get_payloads(
-        #     args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
-        # ) -> Tuple[str, Dict[str, str]]:
-        #     lyr, bnds = args
-        #     _bbox, counter, _width, _height = bnds
+        def _get_payloads(
+            args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
+        ) -> Tuple[str, Dict[str, str]]:
+            lyr, bnds = args
+            _bbox, counter, _width, _height = bnds
 
-        #     if pyproj.CRS(self.crs).is_geographic:
-        #         _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
-        #     _payload = payload.copy()
-        #     _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
-        #     _payload["width"] = str(_width)
-        #     _payload["height"] = str(_height)
-        #     _payload["layers"] = lyr
-        #     return f"{lyr}_dd_{counter}", _payload
+            if pyproj.CRS(self.crs).is_geographic:
+                _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
+            _payload = payload.copy()
+            _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
+            _payload["width"] = str(_width)
+            _payload["height"] = str(_height)
+            _payload["layers"] = lyr
+            return f"{lyr}_dd_{counter}", _payload
 
-        # layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
-        # session = ogc_utils.RetrySession()
-        # rbinary = [session.get(self.url, p).content for p in payloads]
-        # return dict(zip(layers, rbinary))
+        layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
+        rbinary = [self.session.get(self.url, p).content for p in payloads]
+        return dict(zip(layers, rbinary))
 
     def to_xarray(
         self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
@@ -396,7 +378,6 @@ def nlcd_bygeom(
     crs: str = DEF_CRS,
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
-    ssl: Union[SSLContext, bool, None] = None,
 ) -> Dict[int, xr.Dataset]:
     """Get data from NLCD database (2019).
 
@@ -424,9 +405,6 @@ def nlcd_bygeom(
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to False to disable
-        SSL certification verification.
 
     Returns
     -------
@@ -450,7 +428,6 @@ def nlcd_bygeom(
         crs=crs,
         expire_after=expire_after,
         disable_caching=disable_caching,
-        ssl=ssl,
     )
 
     ds = {
@@ -466,7 +443,6 @@ def nlcd_bycoords(
     region: str = "L48",
     expire_after: float = EXPIRE,
     disable_caching: bool = False,
-    ssl: Union[SSLContext, bool, None] = None,
 ) -> gpd.GeoDataFrame:
     """Get data from NLCD database (2019).
 
@@ -487,9 +463,6 @@ def nlcd_bycoords(
         Expiration time for response caching in seconds, defaults to -1 (never expire).
     disable_caching : bool, optional
         If ``True``, disable caching requests, defaults to False.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to False to disable
-        SSL certification verification.
 
     Returns
     -------
@@ -505,7 +478,6 @@ def nlcd_bycoords(
         crs="epsg:3857",
         expire_after=expire_after,
         disable_caching=disable_caching,
-        ssl=ssl,
     )
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
     points_proj = points.to_crs(nlcd_wms.crs)
@@ -532,7 +504,6 @@ def nlcd(
     region: str = "L48",
     geo_crs: str = DEF_CRS,
     crs: str = DEF_CRS,
-    ssl: Union[SSLContext, bool, None] = None,
 ) -> xr.Dataset:
     """Get data from NLCD database (2019).
 
@@ -560,9 +531,6 @@ def nlcd(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to False to disable
-        SSL certification verification.
 
     Returns
     -------
@@ -578,7 +546,7 @@ def nlcd(
     )
     warnings.warn(msg, DeprecationWarning)
     geom = gpd.GeoSeries([geoutils.geo2polygon(geometry, geo_crs, crs)], crs=crs)
-    return nlcd_bygeom(geom, resolution, years, region, crs, ssl=ssl)[0]
+    return nlcd_bygeom(geom, resolution, years, region, crs)[0]
 
 
 def cover_statistics(ds: xr.DataArray) -> Stats:
