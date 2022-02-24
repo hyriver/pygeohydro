@@ -111,6 +111,11 @@ class TestNLCD:
     years = {"cover": [2016]}
     res = 1e3
 
+    @staticmethod
+    def assertion(cover, expected):
+        st = gh.cover_statistics(cover)
+        assert abs(st.categories["Forest"] - expected) < SMALL
+
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
@@ -127,15 +132,6 @@ class TestNLCD:
         lulc_m = gh.nlcd_bycoords(coords)
         lulc_s = gh.nlcd_bycoords(coords[:1])
         assert lulc_m.iloc[0]["cover_2019"] == lulc_s.iloc[0]["cover_2019"] == 24
-
-    def test_nlcd_deprecated(self):
-        lulc = gh.nlcd(GEOM, years=self.years, resolution=self.res)
-        self.assertion(lulc.cover_2016, 81.548)
-
-    @staticmethod
-    def assertion(cover, expected):
-        st = gh.cover_statistics(cover)
-        assert abs(st.categories["Forest"] - expected) < SMALL
 
 
 class TestNID:

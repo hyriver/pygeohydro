@@ -1,3 +1,4 @@
+import geopandas as gpd
 import pytest
 from shapely.geometry import Polygon
 
@@ -56,33 +57,39 @@ class TestNLCDExceptions:
     "Test NLCD Exceptions"
     years = {"cover": [2016, 2019]}
     res = 1e3
-    lulc = gh.nlcd(GEOM, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542")
+    geom = gpd.GeoSeries([GEOM], crs="EPSG:4326")
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_years_type(self):
         with pytest.raises(InvalidInputType) as ex:
-            _ = gh.nlcd(GEOM, years=2010, resolution=self.res)
+            _ = gh.nlcd_bygeom(self.geom, years=2010, resolution=self.res)
         assert "dict" in str(ex.value)
 
     def test_invalid_region(self):
         with pytest.raises(InvalidInputValue) as ex:
-            _ = gh.nlcd(GEOM, years=self.years, resolution=self.res, region="us")
+            _ = gh.nlcd_bygeom(self.geom, years=self.years, resolution=self.res, region="us")
         assert "L48" in str(ex.value)
 
     def test_invalid_years(self):
         with pytest.raises(InvalidInputValue) as ex:
-            _ = gh.nlcd(GEOM, years={"cover": 2020}, resolution=self.res)
+            _ = gh.nlcd_bygeom(self.geom, years={"cover": 2020}, resolution=self.res)
         assert "2019" in str(ex.value)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_cover_type(self):
         with pytest.raises(InvalidInputType) as ex:
-            _ = gh.cover_statistics(self.lulc)
+            lulc = gh.nlcd_bygeom(
+                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542"
+            )
+            _ = gh.cover_statistics(lulc[0])
         assert "DataArray" in str(ex.value)
 
     def test_invalid_cover_values(self):
         with pytest.raises(InvalidInputValue) as ex:
-            _ = gh.cover_statistics(self.lulc.cover_2016 * 2)
+            lulc = gh.nlcd_bygeom(
+                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542"
+            )
+            _ = gh.cover_statistics(lulc[0].cover_2016 * 2)
         assert "11" in str(ex.value)
 
 
