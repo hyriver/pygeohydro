@@ -17,6 +17,99 @@ from . import helpers
 from .exceptions import InvalidInputType
 
 
+class PlotDataType(NamedTuple):
+    """Data structure for plotting hydrologic signatures."""
+
+    daily: pd.DataFrame
+    monthly: pd.DataFrame
+    annual: pd.DataFrame
+    mean_monthly: pd.DataFrame
+    ranked: pd.DataFrame
+    bar_width: Dict[str, int]
+    titles: Dict[str, str]
+    units: Dict[str, str]
+
+
+def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
+    """Compute Flow duration (rank, sorted obs)."""
+    if isinstance(daily, pd.Series):
+        daily = daily.to_frame()
+
+    ranks = daily.rank(ascending=False, pct=True) * 100
+    fdc = [
+        pd.DataFrame({c: daily[c], f"{c}_rank": ranks[c]})
+        .sort_values(by=f"{c}_rank")
+        .reset_index(drop=True)
+        for c in daily
+    ]
+    return pd.concat(fdc, axis=1)
+
+
+def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
+    """Generae a structured data for plotting hydrologic signatures.
+
+    Parameters
+    ----------
+    daily : pandas.Series or pandas.DataFrame
+        The data to be processed
+
+    Returns
+    -------
+    PlotDataType
+        Containing ``daily, ``monthly``, ``annual``, ``mean_monthly``, ``ranked`` fields.
+    """
+    if isinstance(daily, pd.Series):
+        daily = daily.to_frame()
+    daily.index = daily.index.tz_localize(None)
+
+    monthly = daily.groupby(pd.Grouper(freq="M")).sum()
+
+    annual = daily.groupby(pd.Grouper(freq="Y")).sum()
+
+    month_abbr = dict(enumerate(calendar.month_abbr))
+    mean_month = daily.groupby(pd.Grouper(freq="M")).sum()
+    mean_month = mean_month.groupby(mean_month.index.month).mean()
+    mean_month.index = mean_month.index.map(month_abbr)
+
+    ranked = exceedance(daily)
+    _titles = [
+        "Total Hydrograph (daily)",
+        "Total Hydrograph (monthly)",
+        "Total Hydrograph (annual)",
+        "Regime Curve (monthly mean)",
+        "Flow Duration Curve",
+    ]
+    _units = [
+        "mm/day",
+        "mm/month",
+        "mm/year",
+        "mm/month",
+        "mm/day",
+    ]
+    fields = PlotDataType._fields
+    titles = dict(zip(fields[:-1], _titles))
+    units = dict(zip(fields[:-1], _units))
+    bar_width = dict(zip(fields[:-2], [1, 30, 365, 1]))
+    return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles, units)
+
+
+def _prepare_plot_data(
+    daily: Union[pd.DataFrame, pd.Series],
+    precipitation: Optional[Union[pd.DataFrame, pd.Series]] = None,
+) -> Tuple[PlotDataType, Optional[PlotDataType]]:
+    if not isinstance(daily, (pd.DataFrame, pd.Series)):
+        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
+
+    discharge = prepare_plot_data(daily)
+
+    if not isinstance(precipitation, (pd.DataFrame, pd.Series)) and precipitation is not None:
+        raise InvalidInputType("precipitation", "pd.DataFrame or pd.Series")
+
+    prcp = None if precipitation is None else prepare_plot_data(precipitation)
+
+    return discharge, prcp
+
+
 def signatures(
     daily: Union[pd.DataFrame, pd.Series],
     precipitation: Optional[pd.Series] = None,
@@ -125,84 +218,6 @@ def signatures(
         plt.savefig(output, dpi=300, bbox_inches="tight")
 
 
-class PlotDataType(NamedTuple):
-    """Data structure for plotting hydrologic signatures."""
-
-    daily: pd.DataFrame
-    monthly: pd.DataFrame
-    annual: pd.DataFrame
-    mean_monthly: pd.DataFrame
-    ranked: pd.DataFrame
-    bar_width: Dict[str, int]
-    titles: Dict[str, str]
-    units: Dict[str, str]
-
-
-def _prepare_plot_data(
-    daily: Union[pd.DataFrame, pd.Series],
-    precipitation: Optional[Union[pd.DataFrame, pd.Series]] = None,
-) -> Tuple[PlotDataType, Optional[PlotDataType]]:
-    if not isinstance(daily, (pd.DataFrame, pd.Series)):
-        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
-
-    discharge = prepare_plot_data(daily)
-
-    if not isinstance(precipitation, (pd.DataFrame, pd.Series)) and precipitation is not None:
-        raise InvalidInputType("precipitation", "pd.DataFrame or pd.Series")
-
-    prcp = None if precipitation is None else prepare_plot_data(precipitation)
-
-    return discharge, prcp
-
-
-def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
-    """Generae a structured data for plotting hydrologic signatures.
-
-    Parameters
-    ----------
-    daily : pandas.Series or pandas.DataFrame
-        The data to be processed
-
-    Returns
-    -------
-    PlotDataType
-        Containing ``daily, ``monthly``, ``annual``, ``mean_monthly``, ``ranked`` fields.
-    """
-    if isinstance(daily, pd.Series):
-        daily = daily.to_frame()
-    daily.index = daily.index.tz_localize(None)
-
-    monthly = daily.groupby(pd.Grouper(freq="M")).sum()
-
-    annual = daily.groupby(pd.Grouper(freq="Y")).sum()
-
-    month_abbr = dict(enumerate(calendar.month_abbr))
-    mean_month = daily.groupby(pd.Grouper(freq="M")).sum()
-    mean_month = mean_month.groupby(mean_month.index.month).mean()
-    mean_month.index = mean_month.index.map(month_abbr)
-
-    ranked = exceedance(daily)
-    _titles = [
-        "Total Hydrograph (daily)",
-        "Total Hydrograph (monthly)",
-        "Total Hydrograph (annual)",
-        "Regime Curve (monthly mean)",
-        "Flow Duration Curve",
-    ]
-    _units = [
-        "mm/day",
-        "mm/month",
-        "mm/year",
-        "mm/month",
-        "mm/day",
-    ]
-    fields = PlotDataType._fields
-    titles = dict(zip(fields[:-1], _titles))
-    units = dict(zip(fields[:-1], _units))
-    bar_width = dict(zip(fields[:-2], [1, 30, 365, 1]))
-    return PlotDataType(daily, monthly, annual, mean_month, ranked, bar_width, titles, units)
-
-
 def descriptor_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
@@ -227,18 +242,3 @@ def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     norm = BoundaryNorm(bounds, cmap.N)
     levels = bounds + [100]
     return cmap, norm, levels
-
-
-def exceedance(daily: Union[pd.DataFrame, pd.Series]) -> Union[pd.DataFrame, pd.Series]:
-    """Compute Flow duration (rank, sorted obs)."""
-    if isinstance(daily, pd.Series):
-        daily = daily.to_frame()
-
-    ranks = daily.rank(ascending=False, pct=True) * 100
-    fdc = [
-        pd.DataFrame({c: daily[c], f"{c}_rank": ranks[c]})
-        .sort_values(by=f"{c}_rank")
-        .reset_index(drop=True)
-        for c in daily
-    ]
-    return pd.concat(fdc, axis=1)

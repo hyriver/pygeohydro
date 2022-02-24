@@ -16,6 +16,24 @@ from typing import List, Optional, TextIO, Tuple
 __all__ = ["show_versions"]
 
 
+def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
+    libhdf5_version = None
+    libnetcdf_version = None
+    try:
+        import netCDF4
+
+        libhdf5_version = netCDF4.__hdf5libversion__
+        libnetcdf_version = netCDF4.__netcdf4libversion__
+    except (ImportError, AttributeError):
+        try:
+            import h5py
+
+            libhdf5_version = h5py.version.hdf5_version
+        except (ImportError, AttributeError):
+            pass
+    return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
+
+
 def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     """Return system information as a dict.
 
@@ -71,22 +89,13 @@ def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     return blob
 
 
-def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
-    libhdf5_version = None
-    libnetcdf_version = None
+def _get_mod(modname: str) -> ModuleType:
+    if modname in sys.modules:
+        return sys.modules[modname]
     try:
-        import netCDF4
-
-        libhdf5_version = netCDF4.__hdf5libversion__
-        libnetcdf_version = netCDF4.__netcdf4libversion__
-    except (ImportError, AttributeError):
-        try:
-            import h5py
-
-            libhdf5_version = h5py.version.hdf5_version
-        except (ImportError, AttributeError):
-            pass
-    return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
+        return importlib.import_module(modname)
+    except ModuleNotFoundError:
+        return importlib.import_module(modname.replace("-", "_"))
 
 
 def show_versions(file: TextIO = sys.stdout) -> None:
@@ -177,12 +186,3 @@ def show_versions(file: TextIO = sys.stdout) -> None:
     print("", file=file)
     for k, stat in sorted(deps_blob):
         print(f"{k}: {stat}", file=file)
-
-
-def _get_mod(modname: str) -> ModuleType:
-    if modname in sys.modules:
-        return sys.modules[modname]
-    try:
-        return importlib.import_module(modname)
-    except ModuleNotFoundError:
-        return importlib.import_module(modname.replace("-", "_"))
