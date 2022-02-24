@@ -3,10 +3,11 @@ import logging
 import sys
 from typing import Any, Dict, List, NamedTuple, Tuple, Union
 
+import async_retriever as ar
 import numpy as np
 import pandas as pd
 from defusedxml import ElementTree
-from pygeoogc import RetrySession, ServiceURL
+from pygeoogc import ServiceURL
 
 from .exceptions import InvalidInputRange, InvalidInputType
 
@@ -39,12 +40,11 @@ def nlcd_helper() -> Dict[str, Any]:
     """
     base_url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata"
     base_path = "eainfo/detailed/attr/attrdomv/edom"
-    session = RetrySession()
 
     def _get_xml(
         layer: str,
     ) -> Tuple[Any, Any, Any]:
-        root = ElementTree.fromstring(session.get(f"{base_url}/{layer}.xml").text)
+        root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"])[0])
         return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")

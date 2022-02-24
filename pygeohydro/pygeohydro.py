@@ -17,7 +17,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase
 from shapely.geometry import MultiPolygon, Polygon
@@ -38,44 +38,16 @@ EXPIRE = -1
 GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
 
 
-def ssebopeta_byloc(
-    coords: Tuple[float, float],
-    dates: Union[Tuple[str, str], Union[int, List[int]]],
-) -> pd.Series:
-    """Daily actual ET for a location from SSEBop database in mm/day.
-
-    .. deprecated:: 0.11.5
-        Use :func:`ssebopeta_bycoords` instead. For now, this function calls
-        :func:`ssebopeta_bycoords` but retains the same functionality, i.e.,
-        returns a dataframe and accepts only a single coordinate. Whereas the
-        new function returns a ``xarray.Dataset`` and accepts a dataframe
-        containing coordinates.
-
-    Parameters
-    ----------
-    coords : tuple
-        Longitude and latitude of a single location as a tuple (lon, lat)
-    dates : tuple or list, optional
-        Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
-
-    Returns
-    -------
-    pandas.Series
-        Daily actual ET for a location
-    """
-    msg = " ".join(
-        [
-            "This function is deprecated and will be remove in future versions.",
-            "Please use `ssebopeta_bycoords` instead.",
-            "For now, this function calls `ssebopeta_bycoords`.",
-        ]
-    )
-    warnings.warn(msg, DeprecationWarning)
-    if not isinstance(coords, tuple) or len(coords) != 2:
-        raise InvalidInputType("coords", "(lon, lat)")
-    _coords = pd.DataFrame({"id": [0], "x": [coords[0]], "y": [coords[1]]})
-    ds = ssebopeta_bycoords(_coords, dates)
-    return ds.to_dataframe().pivot_table(index="time", columns="location_id", values="eta")[0]
+__all__ = [
+    "ssebopeta_bycoords",
+    "ssebopeta_byloc",
+    "ssebopeta_bygeom",
+    "nlcd_bygeom",
+    "nlcd_bycoords",
+    "cover_statistics",
+    "NID",
+    "WBD",
+]
 
 
 def ssebopeta_bycoords(
@@ -151,6 +123,46 @@ def ssebopeta_bycoords(
     return ds
 
 
+def ssebopeta_byloc(
+    coords: Tuple[float, float],
+    dates: Union[Tuple[str, str], Union[int, List[int]]],
+) -> pd.Series:
+    """Daily actual ET for a location from SSEBop database in mm/day.
+
+    .. deprecated:: 0.11.5
+        Use :func:`ssebopeta_bycoords` instead. For now, this function calls
+        :func:`ssebopeta_bycoords` but retains the same functionality, i.e.,
+        returns a dataframe and accepts only a single coordinate. Whereas the
+        new function returns a ``xarray.Dataset`` and accepts a dataframe
+        containing coordinates.
+
+    Parameters
+    ----------
+    coords : tuple
+        Longitude and latitude of a single location as a tuple (lon, lat)
+    dates : tuple or list, optional
+        Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
+
+    Returns
+    -------
+    pandas.Series
+        Daily actual ET for a location
+    """
+    msg = " ".join(
+        [
+            "This function is deprecated and will be remove in future versions.",
+            "Please use `ssebopeta_bycoords` instead.",
+            "For now, this function calls `ssebopeta_bycoords`.",
+        ]
+    )
+    warnings.warn(msg, DeprecationWarning)
+    if not isinstance(coords, tuple) or len(coords) != 2:
+        raise InvalidInputType("coords", "(lon, lat)")
+    _coords = pd.DataFrame({"id": [0], "x": [coords[0]], "y": [coords[1]]})
+    ds = ssebopeta_bycoords(_coords, dates)
+    return ds.to_dataframe().pivot_table(index="time", columns="location_id", values="eta")[0]
+
+
 def ssebopeta_bygeom(
     geometry: GTYPE,
     dates: Union[Tuple[str, str], Union[int, List[int]]],
@@ -205,7 +217,7 @@ def ssebopeta_bygeom(
     return eta
 
 
-class _NLCD:
+class NLCD:
     """Get data from NLCD database (2019).
 
     Parameters
@@ -227,6 +239,40 @@ class _NLCD:
         If ``True``, disable caching requests, defaults to False.
     """
 
+    def get_layers(self) -> List[str]:
+        """Get NLCD layers for the provided years dictionary."""
+        valid_regions = ["L48", "HI", "PR", "AK"]
+        if self.region not in valid_regions:
+            raise InvalidInputValue("region", valid_regions)
+
+        nlcd_meta = helpers.nlcd_helper()
+
+        names = ["impervious", "cover", "canopy", "descriptor"]
+        avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
+
+        if any(
+            yr not in avail_years[lyr] or lyr not in names
+            for lyr, yrs in self.years.items()
+            for yr in yrs
+        ):
+            vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
+            raise InvalidInputValue("years", vals)
+
+        def layer_name(lyr: str) -> str:
+            if lyr == "canopy":
+                return "Tree_Canopy"
+            if lyr == "cover":
+                return "Land_Cover_Science_Product"
+            if lyr == "impervious":
+                return "Impervious"
+            return "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
+
+        return [
+            f"NLCD_{yr}_{layer_name(lyr)}_{self.region}"
+            for lyr, yrs in self.years.items()
+            for yr in yrs
+        ]
+
     def __init__(
         self,
         years: Optional[Mapping[str, Union[int, List[int]]]] = None,
@@ -245,14 +291,12 @@ class _NLCD:
         if not isinstance(years, dict):
             raise InvalidInputType("years", "dict", f"{default_years}")
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
-        self.region = region
+        self.region = region.upper()
         self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
         self.crs = pyproj.CRS(crs).to_string().lower()
         if self.crs not in self.valid_crs:
             raise InvalidInputValue("crs", self.valid_crs)
-        self.expire_after = expire_after
-        self.disable_caching = disable_caching
-        self.layers = self.get_layers(self.region, self.years)
+        self.layers = self.get_layers()
         self.units = OrderedDict(
             (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
         )
@@ -262,55 +306,22 @@ class _NLCD:
         self.nodata = OrderedDict(
             (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
         )
-        self.url = ServiceURL().wms.mrlc
-        self.version = "1.3.0"
-        self.outformat = "image/geotiff"
-        self.session = RetrySession()
 
-    def __repr__(self) -> str:
-        """Print the services properties."""
-        layers = self.layers if isinstance(self.layers, list) else [self.layers]
-        return (
-            "Connected to the MRLC service:\n"
-            + f"URL: {self.url}\n"
-            + f"Version: {self.version}\n"
-            + f"Layers: {', '.join(lyr for lyr in layers)}\n"
-            + f"Output Format: {self.outformat}\n"
-            + f"Output CRS: {self.crs}"
+        self.wms = WMS(
+            ServiceURL().wms.mrlc,
+            layers=self.layers,
+            outformat="image/geotiff",
+            crs=self.crs,
+            validation=False,
+            expire_after=expire_after,
+            disable_caching=disable_caching,
         )
 
     def get_response(
         self, bbox: Tuple[float, float, float, float], resolution: float
     ) -> Dict[str, bytes]:
         """Get response from a url."""
-        ogc_utils.check_bbox(bbox)
-        bounds = ogc_utils.bbox_decompose(bbox, resolution, self.crs, 8000000)
-
-        payload = {
-            "version": self.version,
-            "format": self.outformat,
-            "request": "GetMap",
-            "crs": self.crs,
-        }
-
-        def _get_payloads(
-            args: Tuple[str, Tuple[Tuple[float, float, float, float], str, int, int]]
-        ) -> Tuple[str, Dict[str, str]]:
-            lyr, bnds = args
-            _bbox, counter, _width, _height = bnds
-
-            if pyproj.CRS(self.crs).is_geographic:
-                _bbox = (_bbox[1], _bbox[0], _bbox[3], _bbox[2])
-            _payload = payload.copy()
-            _payload["bbox"] = f'{",".join(str(c) for c in _bbox)}'
-            _payload["width"] = str(_width)
-            _payload["height"] = str(_height)
-            _payload["layers"] = lyr
-            return f"{lyr}_dd_{counter}", _payload
-
-        layers, payloads = zip(*(_get_payloads(i) for i in itertools.product(self.layers, bounds)))
-        rbinary = [self.session.get(self.url, p).content for p in payloads]
-        return dict(zip(layers, rbinary))
+        return self.wms.getmap_bybox(bbox, resolution, self.crs)
 
     def to_xarray(
         self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
@@ -324,7 +335,7 @@ class _NLCD:
         try:
             _ds = gtiff2xarray(r_dict=r_dict)
         except rio.RasterioIOError as ex:
-            raise ServiceUnavailable(self.url) from ex
+            raise ServiceUnavailable(self.wms.url) from ex
 
         ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
@@ -337,37 +348,9 @@ class _NLCD:
             ds[lyr_name].attrs["nodatavals"] = (self.nodata[name],)
         return ds
 
-    @staticmethod
-    def get_layers(region: str, years: Dict[str, List[int]]) -> List[str]:
-        """Get NLCD layers for the provided years dictionary."""
-        valid_regions = ["L48", "HI", "PR", "AK"]
-        region = region.upper()
-        if region not in valid_regions:
-            raise InvalidInputValue("region", valid_regions)
-
-        nlcd_meta = helpers.nlcd_helper()
-
-        names = ["impervious", "cover", "canopy", "descriptor"]
-        avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
-
-        if any(
-            yr not in avail_years[lyr] or lyr not in names
-            for lyr, yrs in years.items()
-            for yr in yrs
-        ):
-            vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-            raise InvalidInputValue("years", vals)
-
-        def layer_name(lyr: str) -> str:
-            if lyr == "canopy":
-                return "Tree_Canopy"
-            if lyr == "cover":
-                return "Land_Cover_Science_Product"
-            if lyr == "impervious":
-                return "Impervious"
-            return "Impervious_Descriptor" if region == "AK" else "Impervious_descriptor"
-
-        return [f"NLCD_{yr}_{layer_name(lyr)}_{region}" for lyr, yrs in years.items() for yr in yrs]
+    def __repr__(self) -> str:
+        """Print the services properties."""
+        return self.wms.__repr__()
 
 
 def nlcd_bygeom(
@@ -422,7 +405,7 @@ def nlcd_bygeom(
         raise MissingCRS
     _geometry = geometry.to_crs(crs).geometry.to_dict()
 
-    nlcd_wms = _NLCD(
+    nlcd_wms = NLCD(
         years=years,
         region=region,
         crs=crs,
@@ -472,7 +455,7 @@ def nlcd_bycoords(
     if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
         raise InvalidInputType("coords", "list of (lon, lat)")
 
-    nlcd_wms = _NLCD(
+    nlcd_wms = NLCD(
         years=years,
         region=region,
         crs="epsg:3857",
@@ -495,58 +478,6 @@ def nlcd_bycoords(
     return points.to_frame("geometry").merge(
         pd.DataFrame(values), left_index=True, right_index=True
     )
-
-
-def nlcd(
-    geometry: GTYPE,
-    resolution: float,
-    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
-    region: str = "L48",
-    geo_crs: str = DEF_CRS,
-    crs: str = DEF_CRS,
-) -> xr.Dataset:
-    """Get data from NLCD database (2019).
-
-    .. deprecated:: 0.11.5
-        Use :func:`nlcd_bygeom` or :func:`nlcd_bycoords`  instead.
-
-    Parameters
-    ----------
-    geometry : Polygon, MultiPolygon, or tuple of length 4
-        The geometry or bounding box (west, south, east, north) for extracting the data.
-    resolution : float
-        The data resolution in meters. The width and height of the output are computed in pixel
-        based on the geometry bounds and the given resolution.
-    years : dict, optional
-        The years for NLCD layers as a dictionary, defaults to
-        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
-        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
-        land cover data for 2016 and 2019.
-    region : str, optional
-        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
-        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
-        Both lower and upper cases are acceptable.
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
-    crs : str, optional
-        The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
-
-    Returns
-    -------
-    xarray.Dataset
-        NLCD within a geometry
-    """
-    msg = " ".join(
-        [
-            "This function is deprecated and will be remove in future versions.",
-            "Please use ``nlcd_bygeom`` or ``nlcd_bycoords`` instead.",
-            "For now, this function calls ``nlcd_bygeom`` to retain the original functionality.",
-        ]
-    )
-    warnings.warn(msg, DeprecationWarning)
-    geom = gpd.GeoSeries([geoutils.geo2polygon(geometry, geo_crs, crs)], crs=crs)
-    return nlcd_bygeom(geom, resolution, years, region, crs)[0]
 
 
 def cover_statistics(ds: xr.DataArray) -> Stats:
@@ -647,6 +578,109 @@ class NID:
             12: "Other",
         }
 
+    def _get_json(
+        self, urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
+    ) -> List[Dict[str, Any]]:
+        """Get JSON response from NID web service.
+
+        Parameters
+        ----------
+        urls : list of str
+            A list of query URLs.
+        params : dict, optional
+            A list of parameters to pass to the web service, defaults to ``None``.
+
+        Returns
+        -------
+        list of dict
+            List of JSON responses from the web service.
+        """
+        if not isinstance(urls, list):
+            raise InvalidInputType("urls", "list or str")
+
+        if params is None:
+            kwds = None
+        else:
+            kwds = [{"params": {**p, "out": "json"}} for p in params]
+        resp = ar.retrieve_json(
+            urls,
+            kwds,
+            expire_after=self.expire_after,
+            disable=self.disable_caching,
+        )
+        if len(resp) == 0:
+            raise ZeroMatched
+
+        failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
+        if failed:
+            idx, err_msgs = zip(*failed)
+            errs = " service requests failed with the following messages:\n"
+            errs += "\n".join(err_msgs)
+            if len(failed) == len(urls):
+                raise ZeroMatched(f"All{errs}")
+            resp = [r for i, r in enumerate(resp) if i not in idx]
+            logger.warning(f"Some{errs}")
+        return resp
+
+    @staticmethod
+    def _to_geodf(nid_df: pd.DataFrame) -> gpd.GeoDataFrame:
+        """Convert a NID dataframe to a GeoDataFrame.
+
+        Parameters
+        ----------
+        dams : pd.DataFrame
+            NID dataframe
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            GeoDataFrame of NID data
+        """
+        return gpd.GeoDataFrame(
+            nid_df, geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude), crs=DEF_CRS
+        )
+
+    def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
+        """Query dams by filters from the National Inventory of Dams web service.
+
+        Parameters
+        ----------
+        query_list : list of dict
+            List of dictionary of query parameters. For an exhaustive list of the parameters,
+            use the advanced fields dataframe that can be accessed via ``NID().fields_meta``.
+            Some filter require min/max values such as ``damHeight`` and ``drainageArea``.
+            For such filters, the min/max values should be passed like so:
+            ``{filter_key: ["[min1 max1]", "[min2 max2]"]}``.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            Query results.
+
+        Examples
+        --------
+        >>> from pygeohydro import NID
+        >>> nid = NID()
+        >>> query_list = [
+        ...    {"drainageArea": ["[200 500]"]},
+        ...    {"nidId": ["CA01222"]},
+        ... ]
+        >>> dam_dfs = nid.get_byfilter(query_list)
+        >>> print(dam_dfs[0].name[0])
+        Prairie Portage
+        """
+        invalid = [k for key in query_list for k in key if k not in self.valid_fields]
+        if invalid:
+            raise InvalidInputValue("query_dict", self.valid_fields)
+        params = [
+            {"sy": " ".join(f"@{s}:{fid}" for s, fids in key.items() for fid in fids)}
+            for key in query_list
+        ]
+        return [
+            self._to_geodf(pd.DataFrame(r))
+            for r in self._get_json([f"{self.base_url}/query"] * len(params), params)
+        ]
+
     def get_bygeom(self, geometry: GTYPE, geo_crs: str) -> gpd.GeoDataFrame:
         """Retrieve NID data within a geometry.
 
@@ -727,47 +761,6 @@ class NID:
 
         return self._to_geodf(pd.DataFrame(self._get_json(urls)))
 
-    def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
-        """Query dams by filters from the National Inventory of Dams web service.
-
-        Parameters
-        ----------
-        query_list : list of dict
-            List of dictionary of query parameters. For an exhaustive list of the parameters,
-            use the advanced fields dataframe that can be accessed via ``NID().fields_meta``.
-            Some filter require min/max values such as ``damHeight`` and ``drainageArea``.
-            For such filters, the min/max values should be passed like so:
-            ``{filter_key: ["[min1 max1]", "[min2 max2]"]}``.
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-            Query results.
-
-        Examples
-        --------
-        >>> from pygeohydro import NID
-        >>> nid = NID()
-        >>> query_list = [
-        ...    {"drainageArea": ["[200 500]"]},
-        ...    {"nidId": ["CA01222"]},
-        ... ]
-        >>> dam_dfs = nid.get_byfilter(query_list)
-        >>> print(dam_dfs[0].name[0])
-        Prairie Portage
-        """
-        invalid = [k for key in query_list for k in key if k not in self.valid_fields]
-        if invalid:
-            raise InvalidInputValue("query_dict", self.valid_fields)
-        params = [
-            {"sy": " ".join(f"@{s}:{fid}" for s, fids in key.items() for fid in fids)}
-            for key in query_list
-        ]
-        return [
-            self._to_geodf(pd.DataFrame(r))
-            for r in self._get_json([f"{self.base_url}/query"] * len(params), params)
-        ]
-
     def get_suggestions(
         self, text: str, context_key: str = ""
     ) -> Tuple[pd.DataFrame, pd.DataFrame]:
@@ -811,68 +804,6 @@ class NID:
         return (
             dams if dams.empty else dams.set_index("id"),
             contexts if contexts.empty else contexts.set_index("name"),
-        )
-
-    def _get_json(
-        self, urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
-    ) -> List[Dict[str, Any]]:
-        """Get JSON response from NID web service.
-
-        Parameters
-        ----------
-        urls : list of str
-            A list of query URLs.
-        params : dict, optional
-            A list of parameters to pass to the web service, defaults to ``None``.
-
-        Returns
-        -------
-        list of dict
-            List of JSON responses from the web service.
-        """
-        if not isinstance(urls, list):
-            raise InvalidInputType("urls", "list or str")
-
-        if params is None:
-            kwds = None
-        else:
-            kwds = [{"params": {**p, "out": "json"}} for p in params]
-        resp = ar.retrieve_json(
-            urls,
-            kwds,
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
-        )
-        if len(resp) == 0:
-            raise ZeroMatched
-
-        failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
-        if failed:
-            idx, err_msgs = zip(*failed)
-            errs = " service requests failed with the following messages:\n"
-            errs += "\n".join(err_msgs)
-            if len(failed) == len(urls):
-                raise ZeroMatched(f"All{errs}")
-            resp = [r for i, r in enumerate(resp) if i not in idx]
-            logger.warning(f"Some{errs}")
-        return resp
-
-    @staticmethod
-    def _to_geodf(nid_df: pd.DataFrame) -> gpd.GeoDataFrame:
-        """Convert a NID dataframe to a GeoDataFrame.
-
-        Parameters
-        ----------
-        dams : pd.DataFrame
-            NID dataframe
-
-        Returns
-        -------
-        geopandas.GeoDataFrame
-            GeoDataFrame of NID data
-        """
-        return gpd.GeoDataFrame(
-            nid_df, geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude), crs=DEF_CRS
         )
 
     def __repr__(self) -> str:
