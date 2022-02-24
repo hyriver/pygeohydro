@@ -23,9 +23,15 @@ repos:
   - repo: https://github.com/hadialqattan/pycln
     rev: v1.2.0
     hooks:
-      - id: pycln
-        name: Find and remove unused import statements
-        args: [--config=pyproject.toml]
+    - id: pycln
+      name: Find and remove unused import statements
+      args: [--config=pyproject.toml]
+
+  - repo: https://github.com/bwhmather/ssort
+    rev: v0.10.2
+    hooks:
+    - id: ssort
+      name: Sorting top level statements with ssort
 
   - repo: https://github.com/PyCQA/isort
     rev: 5.10.1
