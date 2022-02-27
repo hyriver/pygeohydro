@@ -498,7 +498,7 @@ def overland_roughness(cover_da: xr.DataArray) -> xr.DataArray:
     if not isinstance(cover_da, xr.DataArray):
         raise InvalidInputType("cover_da", "xarray.DataArray")
 
-    roughness = cover_da.copy()
+    roughness = cover_da.astype(np.float64)
     roughness = roughness.rio.write_nodata(np.nan)
     roughness.name = "roughness"
     roughness.attrs["long_name"] = "overland roughness"
