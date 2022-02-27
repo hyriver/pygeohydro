@@ -121,6 +121,7 @@ class TestNLCD:
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
         self.assertion(lulc[0].cover_2016, 82.296)
         self.assertion(lulc[1].cover_2016, 82.296)
+        assert lulc[0].cover_2016.rio.nodata == 127
 
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
