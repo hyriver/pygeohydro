@@ -133,6 +133,12 @@ class TestNLCD:
         lulc_s = gh.nlcd_bycoords(coords[:1])
         assert lulc_m.iloc[0]["cover_2019"] == lulc_s.iloc[0]["cover_2019"] == 24
 
+    def test_roughness(self):
+        geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
+        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
+        roughness = gh.overland_roughness(lulc[0].cover_2016)
+        assert abs(roughness.mean().item() - 0.3163) < SMALL
+
 
 class TestNID:
     nid = NID()
