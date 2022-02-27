@@ -130,6 +130,7 @@ Also, it has two other functions:
 
 * ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
 * ``cover_statistics``: Categorical statistics of land use/land cover data.
+* ``overland_roughness``: Estimate overland roughness from land use/land cover data.
 
 The ``plot`` module includes two main functions:
 
@@ -286,11 +287,12 @@ Then we can get the data for all these stations the data like this:
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/water_quality.ipynb
     :alt: Water Quality
 
-Moreover, we can get land use/land cove data using ``nlcd_bygeom`` or ``nlcd_bycoods`` functions
-and percentages of land cover types using ``cover_statistics``.
-The ``nlcd_bycoords`` function returns a ``geopandas.GeoDataFrame`` with the NLCD
-layers as columns and input coordinates as the ``geometry`` column. Moreover, The ``nlcd_bygeom``
-function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the input.
+Moreover, we can get land use/land cove data using ``nlcd_bygeom`` or ``nlcd_bycoods`` functions,
+percentages of land cover types using ``cover_statistics``, and overland roughness using
+``overland_roughness``. The ``nlcd_bycoords`` function returns a ``geopandas.GeoDataFrame``
+with the NLCD layers as columns and input coordinates as the ``geometry`` column. Moreover,
+the ``nlcd_bygeom`` function accepts both a single geometry or a ``geopandas.GeoDataFrame``
+as the input.
 
 .. code-block:: python
 
@@ -299,6 +301,7 @@ function accepts both a single geometry or a ``geopandas.GeoDataFrame`` as the i
     basins = NLDI().get_basins(["01031450", "01318500", "01031510"])
     lulc = gh.nlcd_bygeom(basins, 100, years={"cover": [2016, 2019]})
     stats = gh.cover_statistics(lulc["01318500"].cover_2016)
+    roughness = gh.overland_roughness(lulc["01318500"].cover_2019)
 
 .. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/lulc.png
     :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/nlcd.ipynb
