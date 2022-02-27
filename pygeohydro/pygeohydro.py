@@ -347,6 +347,7 @@ class NLCD:
             ds[lyr_name].attrs["units"] = self.units[name]
             ds[lyr_name] = ds[lyr_name].astype(self.types[name])
             ds[lyr_name].attrs["nodatavals"] = (self.nodata[name],)
+            ds[lyr_name] = ds[lyr_name].rio.write_nodata(self.nodata[name])
         return ds
 
     def __repr__(self) -> str:
