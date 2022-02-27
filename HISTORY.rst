@@ -7,6 +7,8 @@ History
 
 New Features
 ~~~~~~~~~~~~
+- Add a new function named ``overland_roughness`` for getting the overland
+  roughness values from land cover data.
 - Add a new class called ``WBD`` for getting watershed boundary (HUC) data.
 
 .. code-block:: python
