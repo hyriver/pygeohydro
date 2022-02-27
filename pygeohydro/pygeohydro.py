@@ -498,13 +498,15 @@ def overland_roughness(cover_da: xr.DataArray) -> xr.DataArray:
     if not isinstance(cover_da, xr.DataArray):
         raise InvalidInputType("cover_da", "xarray.DataArray")
 
-    meta = helpers.nlcd_helper()
-    get_roughness = np.vectorize(meta["roughness"].get, excluded=["default"])
     roughness = cover_da.copy()
-    roughness.data = get_roughness(cover_da.astype(str), np.nan)
+    roughness = roughness.rio.write_nodata(np.nan)
     roughness.name = "roughness"
     roughness.attrs["long_name"] = "overland roughness"
     roughness.attrs["units"] = "-"
+
+    meta = helpers.nlcd_helper()
+    get_roughness = np.vectorize(meta["roughness"].get, excluded=["default"])
+    roughness.data = get_roughness(cover_da.astype(str), np.nan)
     return roughness
 
 

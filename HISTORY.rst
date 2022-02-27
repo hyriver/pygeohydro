@@ -5,6 +5,11 @@ History
 0.12.3 (unreleased)
 -------------------
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Write ``nodata`` attribute using ``rioxarray`` in ``nlcd_bygeom`` since the
+  clipping operation of ``rioxarray`` uses this value as the fill value.
+
 New Features
 ~~~~~~~~~~~~
 - Add a new function named ``overland_roughness`` for getting the overland
