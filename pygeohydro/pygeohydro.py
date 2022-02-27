@@ -45,6 +45,7 @@ __all__ = [
     "nlcd_bygeom",
     "nlcd_bycoords",
     "cover_statistics",
+    "overland_roughness",
     "NID",
     "WBD",
 ]
@@ -480,24 +481,50 @@ def nlcd_bycoords(
     )
 
 
-def cover_statistics(ds: xr.DataArray) -> Stats:
+def overland_roughness(cover_da: xr.DataArray) -> xr.DataArray:
+    """Estimate overland roughness from land cover data.
+
+    Parameters
+    ----------
+    cover_da : xarray.DataArray
+        Land cover DataArray from a LULC Dataset from the ``nlcd_bygeom`` function.
+
+    Returns
+    -------
+    xarray.DataArray
+        Overland roughness
+    """
+    if not isinstance(cover_da, xr.DataArray):
+        raise InvalidInputType("cover_da", "xarray.DataArray")
+
+    meta = helpers.nlcd_helper()
+    get_roughness = np.vectorize(meta["roughness"].get, excluded=["default"])
+    roughness = cover_da.copy()
+    roughness.data = get_roughness(cover_da.astype(str), np.nan)
+    roughness.name = "roughness"
+    roughness.attrs["long_name"] = "overland roughness"
+    roughness.attrs["units"] = "-"
+    return roughness
+
+
+def cover_statistics(cover_da: xr.DataArray) -> Stats:
     """Percentages of the categorical NLCD cover data.
 
     Parameters
     ----------
-    ds : xarray.DataArray
-        Cover DataArray from a LULC Dataset from the ``nlcd`` function.
+    cover_da : xarray.DataArray
+        Land cover DataArray from a LULC Dataset from the ``nlcd_bygeom`` function.
 
     Returns
     -------
     Stats
         A named tuple with the percentages of the cover classes and categories.
     """
-    if not isinstance(ds, xr.DataArray):
-        raise InvalidInputType("ds", "xarray.DataArray")
+    if not isinstance(cover_da, xr.DataArray):
+        raise InvalidInputType("cover_da", "xarray.DataArray")
 
     nlcd_meta = helpers.nlcd_helper()
-    val, freq = np.unique(ds, return_counts=True)  # type: ignore
+    val, freq = np.unique(cover_da, return_counts=True)  # type: ignore
     zero_idx = np.argwhere(val == 0)
     val = np.delete(val, zero_idx).astype(str)
     freq = np.delete(freq, zero_idx)
