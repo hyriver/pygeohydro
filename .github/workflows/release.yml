@@ -42,6 +42,8 @@ jobs:
   build:
     name: Create Release
     runs-on: ubuntu-latest
+    env:
+      REPO_NAME: ${{ github.event.repository.name }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -66,7 +68,7 @@ jobs:
         run: |
           python -m twine check dist/*
           pwd
-          if [ -f dist/pygeohydro-0.0.0.tar.gz ]; then
+          if [ -f dist/${REPO_NAME}-0.0.0.tar.gz ]; then
             echo "❌ INVALID VERSION NUMBER"
             exit 1
           else
