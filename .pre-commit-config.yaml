@@ -21,14 +21,14 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v1.2.0
+    rev: v1.2.4
     hooks:
     - id: pycln
       name: Find and remove unused import statements
       args: [--config=pyproject.toml]
 
   - repo: https://github.com/bwhmather/ssort
-    rev: v0.10.2
+    rev: v0.11.0
     hooks:
     - id: ssort
       name: Sorting top level statements with ssort
@@ -123,7 +123,7 @@ repos:
       - git+https://github.com/cheginit/pynhd.git
 
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.2
+    rev: 1.7.3
     hooks:
     - id: bandit
       name: Check for security issues with bandit
