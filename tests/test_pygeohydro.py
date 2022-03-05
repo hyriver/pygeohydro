@@ -206,6 +206,11 @@ def test_wbd():
     assert ",".join(hudson.states) == "CT,NJ,NY,RI,MA,NJ,NY,VT"
 
 
+def test_camels():
+    attrs, qobs = gh.get_camels()
+    assert attrs.shape[0] == qobs.station_id.shape[0] == 671
+
+
 def test_interactive_map():
     nwis_kwds = {"hasDataTypeCd": "dv", "outputDataTypeCd": "dv", "parameterCd": "00060"}
     m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
