@@ -48,6 +48,7 @@ dependencies:
 
   # pygeohydro deps
   - folium
+  - h5netcdf
   - lxml
   - matplotlib-base>=3.0
 
