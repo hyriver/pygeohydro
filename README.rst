@@ -42,7 +42,7 @@ Package         Description                                                     
 =============== ==================================================================== ============
 PyNHD_          Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
 Py3DEP_         Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_     Access NWIS, NID, WQP, HCDN 2009, NLCD, and SSEBop databases         |pygeohydro|
+PyGeoHydro_     Access NWIS, NID, WQP, HCDN 2009, NLCD, CAMELS, and SSEBop databases |pygeohydro|
 PyDaymet_       Access Daymet for daily climate data both single pixel and gridded   |pydaymet|
 AsyncRetriever_ High-level API for asynchronous requests with persistent caching     |async|
 PyGeoOGC_       Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
@@ -113,6 +113,8 @@ The ``pygeohydro`` module can pull data from the following web services:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations
   (returned as a ``pandas.DataFrame`` or ``xarray.Dataset`` with station attributes),
+* `CAMELS <https://ral.ucar.edu/solutions/products/camels>`__ for accessing streamflow
+  observations (1980-2014) and basin-level attributes of 671 stations within CONUS.
 * `Water Quality Portal <https://www.waterqualitydata.us/>`__ for accessing current and
   historical water quality data from more than 1.5 million sites across the US,
 * `NID <https://nid.sec.usace.army.mil>`__ for accessing the National Inventory of Dams
@@ -250,6 +252,18 @@ that the input dates are in UTC time zone and returns the data in UTC time zone 
 
     date = ("2005-01-01 12:00", "2005-01-12 15:00")
     qobs = nwis.get_streamflow("01646500", date, freq="iv")
+
+We can get the CAMELS dataset as a ``geopandas.GeoDataFrame`` that includes geometry and
+basin-level attributes of 671 natural watersheds within CONUS and their streamflow
+observations between 1980-2014 as a ``xarray.Dataset``, like so:
+
+.. code-block:: python
+
+    attrs, qobs = gh.get_camels()
+
+.. image:: https://raw.githubusercontent.com/cheginit/HyRiver-examples/main/notebooks/_static/camels.png
+    :target: https://github.com/cheginit/HyRiver-examples/blob/main/notebooks/camels.ipynb
+    :alt: CAMELS
 
 The ``WaterQuality`` has a number of convenience methods to retrieve data from the
 web service. Since there are many parameter combinations that can be
