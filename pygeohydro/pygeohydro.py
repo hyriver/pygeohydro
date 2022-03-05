@@ -39,6 +39,7 @@ GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
 
 
 __all__ = [
+    "get_camels",
     "ssebopeta_bycoords",
     "ssebopeta_byloc",
     "ssebopeta_bygeom",
@@ -49,6 +50,31 @@ __all__ = [
     "NID",
     "WBD",
 ]
+
+
+def get_camels() -> Tuple[gpd.GeoDataFrame, xr.Dataset]:
+    """Get streaflow and basin attributes of all 671 stations in CAMELS dataset.
+
+    Notes
+    -----
+    For more info on CAMELS visit: https://ral.ucar.edu/solutions/products/camels
+
+    Returns
+    -------
+    tuple of geopandas.GeoDataFrame and xarray.Dataset
+        The first is basin attributes as a ``geopandas.GeoDataFrame`` and the second
+        is streamflow data and basin attributes as an ``xarray.Dataset``.
+    """
+    base_url = "https://www.hydroshare.org/resource/658c359b8c83494aac0f58145b1b04e6/data/contents"
+    urls = [
+        f"{base_url}/camels_attributes_v2.0.feather",
+        f"{base_url}/camels_attrs_v2_streamflow_v1p2.nc",
+    ]
+    resp = ar.retrieve_binary(urls)
+
+    attrs = gpd.read_feather(io.BytesIO(resp[0]))
+    qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")
+    return attrs, qobs
 
 
 def ssebopeta_bycoords(
@@ -240,40 +266,6 @@ class NLCD:
         If ``True``, disable caching requests, defaults to False.
     """
 
-    def get_layers(self) -> List[str]:
-        """Get NLCD layers for the provided years dictionary."""
-        valid_regions = ["L48", "HI", "PR", "AK"]
-        if self.region not in valid_regions:
-            raise InvalidInputValue("region", valid_regions)
-
-        nlcd_meta = helpers.nlcd_helper()
-
-        names = ["impervious", "cover", "canopy", "descriptor"]
-        avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
-
-        if any(
-            yr not in avail_years[lyr] or lyr not in names
-            for lyr, yrs in self.years.items()
-            for yr in yrs
-        ):
-            vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-            raise InvalidInputValue("years", vals)
-
-        def layer_name(lyr: str) -> str:
-            if lyr == "canopy":
-                return "Tree_Canopy"
-            if lyr == "cover":
-                return "Land_Cover_Science_Product"
-            if lyr == "impervious":
-                return "Impervious"
-            return "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
-
-        return [
-            f"NLCD_{yr}_{layer_name(lyr)}_{self.region}"
-            for lyr, yrs in self.years.items()
-            for yr in yrs
-        ]
-
     def __init__(
         self,
         years: Optional[Mapping[str, Union[int, List[int]]]] = None,
@@ -317,6 +309,40 @@ class NLCD:
             expire_after=expire_after,
             disable_caching=disable_caching,
         )
+
+    def get_layers(self) -> List[str]:
+        """Get NLCD layers for the provided years dictionary."""
+        valid_regions = ["L48", "HI", "PR", "AK"]
+        if self.region not in valid_regions:
+            raise InvalidInputValue("region", valid_regions)
+
+        nlcd_meta = helpers.nlcd_helper()
+
+        names = ["impervious", "cover", "canopy", "descriptor"]
+        avail_years = {n: nlcd_meta[f"{n}_years"] for n in names}
+
+        if any(
+            yr not in avail_years[lyr] or lyr not in names
+            for lyr, yrs in self.years.items()
+            for yr in yrs
+        ):
+            vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
+            raise InvalidInputValue("years", vals)
+
+        def layer_name(lyr: str) -> str:
+            if lyr == "canopy":
+                return "Tree_Canopy"
+            if lyr == "cover":
+                return "Land_Cover_Science_Product"
+            if lyr == "impervious":
+                return "Impervious"
+            return "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
+
+        return [
+            f"NLCD_{yr}_{layer_name(lyr)}_{self.region}"
+            for lyr, yrs in self.years.items()
+            for yr in yrs
+        ]
 
     def get_response(
         self, bbox: Tuple[float, float, float, float], resolution: float

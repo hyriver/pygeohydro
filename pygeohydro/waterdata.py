@@ -695,17 +695,17 @@ class WaterQuality:
         If ``True``, disable caching requests, defaults to False.
     """
 
-    def get_param_table(self) -> pd.Series:
-        """Get the parameter table from the USGS Water Quality Web Service."""
-        params = pd.read_html(f"{self.wq_url}/webservices_documentation/")
-        params = params[0].iloc[:29].drop(columns="Discussion")
-        return params.groupby("REST parameter")["Argument"].apply(",".join)
-
     def __init__(self, expire_after: float = EXPIRE, disable_caching: bool = False) -> None:
         self.wq_url = "https://www.waterqualitydata.us"
         self.keywords = self.get_param_table()
         self.expire_after = expire_after
         self.disable_caching = disable_caching
+
+    def get_param_table(self) -> pd.Series:
+        """Get the parameter table from the USGS Water Quality Web Service."""
+        params = pd.read_html(f"{self.wq_url}/webservices_documentation/")
+        params = params[0].iloc[:29].drop(columns="Discussion")
+        return params.groupby("REST parameter")["Argument"].apply(",".join)
 
     def lookup_domain_values(self, endpoint: str) -> List[str]:
         """Get the domain values for the target endpoint."""
