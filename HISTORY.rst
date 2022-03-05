@@ -5,13 +5,13 @@ History
 0.12.3 (unreleased)
 -------------------
 
-Internal Changes
-~~~~~~~~~~~~~~~~
-- Write ``nodata`` attribute using ``rioxarray`` in ``nlcd_bygeom`` since the
-  clipping operation of ``rioxarray`` uses this value as the fill value.
-
 New Features
 ~~~~~~~~~~~~
+- Add a new function called ``get_camels`` for getting the
+  `CAMELS <https://ral.ucar.edu/solutions/products/camels>`__ dataset. The function
+  returns a ``geopandas.GeoDataFrame`` that includes basin-level attributes
+  for all 671 stations in the dataset and a ``xarray.Dataset`` that contains
+  streamflow data for all 671 stations and their basin-level attributes.
 - Add a new function named ``overland_roughness`` for getting the overland
   roughness values from land cover data.
 - Add a new class called ``WBD`` for getting watershed boundary (HUC) data.
@@ -22,6 +22,11 @@ New Features
 
     wbd = WBD("huc4")
     hudson = wbd.byids("huc4", ["0202", "0203"])
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Write ``nodata`` attribute using ``rioxarray`` in ``nlcd_bygeom`` since the
+  clipping operation of ``rioxarray`` uses this value as the fill value.
 
 
 0.12.4 (2022-02-04)
