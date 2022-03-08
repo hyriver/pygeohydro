@@ -206,6 +206,7 @@ def test_wbd():
     assert ",".join(hudson.states) == "CT,NJ,NY,RI,MA,NJ,NY,VT"
 
 
+@pytest.mark.xfail(reason="Hydroshare is unstable.")
 def test_camels():
     attrs, qobs = gh.get_camels()
     assert attrs.shape[0] == qobs.station_id.shape[0] == 671
