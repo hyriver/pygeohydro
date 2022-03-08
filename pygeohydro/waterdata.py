@@ -298,7 +298,7 @@ class NWIS:
                 },
             },
             coords={
-                "time": qobs.index.tz_localize(None).to_numpy(),
+                "time": qobs.index.tz_localize(None).to_numpy("datetime64[ns]"),
                 "station_id": qobs.columns,
             },
         )
@@ -315,23 +315,23 @@ class NWIS:
     def _get_attrs(siteinfo: pd.DataFrame, mmd: bool) -> Tuple[Dict[str, Any], Dict[str, str]]:
         """Get attributes of the stations that have streaflow data."""
         cols = {
-            "site_no": "site_identification_number",
-            "station_nm": "station_name",
+            "site_no": "site identification number",
+            "station_nm": "station name",
             "dec_lat_va": "latitude",
             "dec_long_va": "longitude",
             "alt_va": "altitude",
-            "alt_acy_va": "altitude_accuracy",
-            "alt_datum_cd": "altitude_datum",
-            "huc_cd": "hydrologic_unit_code",
+            "alt_acy_va": "altitude accuracy",
+            "alt_datum_cd": "altitude datum",
+            "huc_cd": "hydrologic unit code",
         }
         if "begin_date" in siteinfo and "end_date" in siteinfo:
             cols.update(
                 {
-                    "begin_date": "availablity_begin_date",
-                    "end_date": "availablity_end_date",
+                    "begin_date": "availability begin date",
+                    "end_date": "availability end date",
                 }
             )
-        attr_df = siteinfo[cols.keys()].drop_duplicates().set_index("site_no")
+        attr_df = siteinfo[cols.keys()].groupby("site_no").first()
         if "begin_date" in attr_df and "end_date" in attr_df:
             attr_df["begin_date"] = attr_df.begin_date.dt.strftime(T_FMT)
             attr_df["end_date"] = attr_df.end_date.dt.strftime(T_FMT)
