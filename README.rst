@@ -105,7 +105,7 @@ Features
 
 PyGeoHydro (formerly named `hydrodata <https://pypi.org/project/hydrodata>`__) is a part of
 `HyRiver <https://github.com/cheginit/HyRiver>`__ software stack that
-is designed to aid in watershed analysis through web services. This package provides
+is designed to aid in hydroclimate analysis through web services. This package provides
 access to some public web services that offer geospatial hydrology data. It has three
 main modules: ``pygeohydro``, ``plot``, and ``helpers``.
 
