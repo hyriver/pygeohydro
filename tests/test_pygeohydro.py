@@ -118,25 +118,25 @@ class TestNLCD:
 
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
-        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
+        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
         self.assertion(lulc[0].cover_2016, 82.296)
         self.assertion(lulc[1].cover_2016, 82.296)
         assert lulc[0].cover_2016.rio.nodata == 127
 
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
-        lulc = gh.nlcd_bycoords(coords)
+        lulc = gh.nlcd_bycoords(coords, ssl=False)
         assert lulc.cover_2019.sum() == 211
 
     def test_consistency(self):
         coords = [(-87.11890, 34.70421), (-88.83390, 40.17190), (-95.68978, 38.23926)]
-        lulc_m = gh.nlcd_bycoords(coords)
-        lulc_s = gh.nlcd_bycoords(coords[:1])
+        lulc_m = gh.nlcd_bycoords(coords, ssl=False)
+        lulc_s = gh.nlcd_bycoords(coords[:1], ssl=False)
         assert lulc_m.iloc[0]["cover_2019"] == lulc_s.iloc[0]["cover_2019"] == 24
 
     def test_roughness(self):
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
-        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS)
+        lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
         roughness = gh.overland_roughness(lulc[0].cover_2016)
         assert abs(roughness.mean().item() - 0.3163) < SMALL
 
