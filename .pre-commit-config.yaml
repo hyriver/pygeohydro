@@ -28,7 +28,7 @@ repos:
       args: [--config=pyproject.toml]
 
   - repo: https://github.com/bwhmather/ssort
-    rev: v0.11.3
+    rev: v0.11.5
     hooks:
     - id: ssort
       name: Sorting top level statements with ssort
@@ -40,7 +40,7 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 22.1.0
+    rev: 22.3.0
     hooks:
     - id: black
       name: Autoformat with black
@@ -63,7 +63,7 @@ repos:
       name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.10.1
+    rev: 0.11.0
     hooks:
     - id: doc8
       name: Check documentation formats with doc8
@@ -109,7 +109,7 @@ repos:
       - flake8-simplify
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.941
+    rev: v0.942
     hooks:
     - id: mypy
       name: Static type checking with mypy
