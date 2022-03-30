@@ -27,21 +27,10 @@ EXPIRE = -1
 
 
 class NWIS:
-    """Access NWIS web service.
+    """Access NWIS web service."""
 
-    Parameters
-    ----------
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
-
-    """
-
-    def __init__(self, expire_after: float = EXPIRE, disable_caching: bool = False) -> None:
+    def __init__(self) -> None:
         self.url = ServiceURL().restful.nwis
-        self.expire_after = expire_after
-        self.disable_caching = disable_caching
 
     def retrieve_rdb(self, url: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
         """Retrieve and process requests with RDB format.
@@ -62,10 +51,7 @@ class NWIS:
         """
         try:
             resp = ar.retrieve_text(
-                [url] * len(payloads),
-                [{"params": {**p, "format": "rdb"}} for p in payloads],
-                expire_after=self.expire_after,
-                disable=self.disable_caching,
+                [url] * len(payloads), [{"params": {**p, "format": "rdb"}} for p in payloads]
             )
         except ar.ServiceError as ex:
             raise ZeroMatched(ogc_utils.check_response(str(ex))) from ex
@@ -403,10 +389,7 @@ class NWIS:
             for s in tlz.partition_all(1500, sids)
         ]
         resp = ar.retrieve_json(
-            [f"{self.url}/{freq}"] * len(payloads),
-            [{"params": p} for p in payloads],
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
+            [f"{self.url}/{freq}"] * len(payloads), [{"params": p} for p in payloads]
         )
 
         def get_site_id(site_cd: Dict[str, str]) -> str:
@@ -557,8 +540,6 @@ def interactive_map(
     bbox: Tuple[float, float, float, float],
     crs: str = DEF_CRS,
     nwis_kwds: Optional[Dict[str, Any]] = None,
-    expire_after: float = EXPIRE,
-    disable_caching: bool = False,
 ) -> folium.Map:
     """Generate an interactive map including all USGS stations within a bounding box.
 
@@ -572,10 +553,6 @@ def interactive_map(
         Optional keywords to include in the NWIS request as a dictionary like so:
         ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
         Default to None.
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
 
     Returns
     -------
@@ -594,7 +571,7 @@ def interactive_map(
     bbox = ogc.utils.match_crs(bbox, crs, DEF_CRS)
     ogc.utils.check_bbox(bbox)
 
-    nwis = NWIS(expire_after, disable_caching)
+    nwis = NWIS()
     query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
     if isinstance(nwis_kwds, dict):
         query.update(nwis_kwds)
@@ -686,20 +663,11 @@ class WaterQuality:
     it to one of these functions. For more information on the parameters, please
     consult the
     `Water Quality Data documentation <https://www.waterqualitydata.us/webservices_documentation>`__.
-
-    Parameters
-    ----------
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
     """
 
-    def __init__(self, expire_after: float = EXPIRE, disable_caching: bool = False) -> None:
+    def __init__(self) -> None:
         self.wq_url = "https://www.waterqualitydata.us"
         self.keywords = self.get_param_table()
-        self.expire_after = expire_after
-        self.disable_caching = disable_caching
 
     def get_param_table(self) -> pd.Series:
         """Get the parameter table from the USGS Water Quality Web Service."""
@@ -721,11 +689,7 @@ class WaterQuality:
         ]
         if endpoint.lower() not in valid_endpoints:
             raise InvalidInputValue("endpoint", valid_endpoints)
-        resp = ar.retrieve_json(
-            [f"{self.wq_url}/Codes/{endpoint}?mimeType=json"],
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
-        )
+        resp = ar.retrieve_json([f"{self.wq_url}/Codes/{endpoint}?mimeType=json"])
         return [r["value"] for r in resp[0]["codes"]]
 
     def _base_url(self, endpoint: str) -> str:
@@ -764,13 +728,7 @@ class WaterQuality:
         """
         req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
         return geoutils.json2geodf(
-            ar.retrieve_json(
-                [self._base_url(endpoint)],
-                req_kwds,
-                request_method=request_method,
-                expire_after=self.expire_after,
-                disable=self.disable_caching,
-            )
+            ar.retrieve_json([self._base_url(endpoint)], req_kwds, request_method=request_method)
         )
 
     def _check_kwds(self, wq_kwds: Dict[str, str]) -> None:
@@ -863,13 +821,7 @@ class WaterQuality:
             The web service response as a DataFrame.
         """
         req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
-        r = ar.retrieve_binary(
-            [self._base_url(endpoint)],
-            req_kwds,
-            request_method=request_method,
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
-        )
+        r = ar.retrieve_binary([self._base_url(endpoint)], req_kwds, request_method=request_method)
         return pd.read_csv(io.BytesIO(r[0]), compression="zip")
 
     def data_bystation(

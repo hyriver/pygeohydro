@@ -5,6 +5,7 @@ import warnings
 import zipfile
 from collections import OrderedDict
 from numbers import Number
+from ssl import SSLContext
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
 
@@ -265,10 +266,9 @@ class NLCD:
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
+        SSL certification verification.
     """
 
     def __init__(
@@ -276,8 +276,7 @@ class NLCD:
         years: Optional[Mapping[str, Union[int, List[int]]]] = None,
         region: str = "L48",
         crs: str = DEF_CRS,
-        expire_after: float = EXPIRE,
-        disable_caching: bool = False,
+        ssl: Union[SSLContext, bool, None] = None,
     ) -> None:
         default_years = {
             "impervious": [2019],
@@ -311,8 +310,7 @@ class NLCD:
             outformat="image/geotiff",
             crs=self.crs,
             validation=False,
-            expire_after=expire_after,
-            disable_caching=disable_caching,
+            ssl=ssl,
         )
 
     def get_layers(self) -> List[str]:
@@ -392,8 +390,7 @@ def nlcd_bygeom(
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
     crs: str = DEF_CRS,
-    expire_after: float = EXPIRE,
-    disable_caching: bool = False,
+    ssl: Union[SSLContext, bool, None] = None,
 ) -> Dict[int, xr.Dataset]:
     """Get data from NLCD database (2019).
 
@@ -417,10 +414,9 @@ def nlcd_bygeom(
     crs : str, optional
         The spatial reference system to be used for requesting the data, defaults to
         epsg:4326.
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
+        SSL certification verification.
 
     Returns
     -------
@@ -438,13 +434,7 @@ def nlcd_bygeom(
         raise MissingCRS
     _geometry = geometry.to_crs(crs).geometry.to_dict()
 
-    nlcd_wms = NLCD(
-        years=years,
-        region=region,
-        crs=crs,
-        expire_after=expire_after,
-        disable_caching=disable_caching,
-    )
+    nlcd_wms = NLCD(years=years, region=region, crs=crs, ssl=ssl)
 
     ds = {
         i: nlcd_wms.to_xarray(nlcd_wms.get_response(g.bounds, resolution), g)
@@ -457,8 +447,7 @@ def nlcd_bycoords(
     coords: List[Tuple[float, float]],
     years: Optional[Mapping[str, Union[int, List[int]]]] = None,
     region: str = "L48",
-    expire_after: float = EXPIRE,
-    disable_caching: bool = False,
+    ssl: Union[SSLContext, bool, None] = None,
 ) -> gpd.GeoDataFrame:
     """Get data from NLCD database (2019).
 
@@ -475,10 +464,9 @@ def nlcd_bycoords(
         Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
         ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
         Both lower and upper cases are acceptable.
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
+    ssl : bool or SSLContext, optional
+        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
+        SSL certification verification.
 
     Returns
     -------
@@ -488,13 +476,7 @@ def nlcd_bycoords(
     if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
         raise InvalidInputType("coords", "list of (lon, lat)")
 
-    nlcd_wms = NLCD(
-        years=years,
-        region=region,
-        crs="epsg:3857",
-        expire_after=expire_after,
-        disable_caching=disable_caching,
-    )
+    nlcd_wms = NLCD(years=years, region=region, crs="epsg:3857", ssl=ssl)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
     points_proj = points.to_crs(nlcd_wms.crs)
     bounds = points_proj.buffer(50, cap_style=3)
@@ -581,32 +563,12 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
 
 
 class NID:
-    """Retrieve data from the National Inventory of Dams web service.
+    """Retrieve data from the National Inventory of Dams web service."""
 
-    Parameters
-    ----------
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
-    """
-
-    def __init__(
-        self,
-        expire_after: float = EXPIRE,
-        disable_caching: bool = False,
-    ) -> None:
+    def __init__(self) -> None:
         self.base_url = ServiceURL().restful.nid
         self.suggest_url = f"{self.base_url}/suggestions"
-        self.expire_after = expire_after
-        self.disable_caching = disable_caching
-        self.fields_meta = pd.DataFrame(
-            ar.retrieve_json(
-                [f"{self.base_url}/advanced-fields"],
-                expire_after=self.expire_after,
-                disable=self.disable_caching,
-            )[0]
-        )
+        self.fields_meta = pd.DataFrame(ar.retrieve_json([f"{self.base_url}/advanced-fields"])[0])
         self.valid_fields = self.fields_meta.name.to_list()
         self.dam_type = {
             -1: "N/A",
@@ -663,12 +625,7 @@ class NID:
             kwds = None
         else:
             kwds = [{"params": {**p, "out": "json"}} for p in params]
-        resp = ar.retrieve_json(
-            urls,
-            kwds,
-            expire_after=self.expire_after,
-            disable=self.disable_caching,
-        )
+        resp = ar.retrieve_json(urls, kwds)
         if len(resp) == 0:
             raise ZeroMatched
 
@@ -766,14 +723,7 @@ class NID:
         Little Moose
         """
         _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
-        wbd = ArcGISRESTful(
-            ServiceURL().restful.wbd,
-            4,
-            outformat="json",
-            outfields="huc8",
-            expire_after=self.expire_after,
-            disable_caching=self.disable_caching,
-        )
+        wbd = ArcGISRESTful(ServiceURL().restful.wbd, 4, outformat="json", outfields="huc8")
         resp = wbd.get_features(wbd.oids_bygeom(_geometry), return_geom=False)
         huc_ids = [
             tlz.get_in(["attributes", "huc8"], i) for r in resp for i in tlz.get_in(["features"], r)
@@ -907,21 +857,10 @@ class WBD(AGRBase):
     outfields : str or list, optional
         Target field name(s), default to "*" i.e., all the fields.
     crs : str, optional
-        Target spatial reference, default to ``EPSG:4326``
-    expire_after : int, optional
-        Expiration time for response caching in seconds, defaults to -1 (never expire).
-    disable_caching : bool, optional
-        If ``True``, disable caching requests, defaults to False.
+        Target spatial reference, default to ``EPSG:4326``.
     """
 
-    def __init__(
-        self,
-        layer: str,
-        outfields: Union[str, List[str]] = "*",
-        crs: str = DEF_CRS,
-        expire_after: float = EXPIRE,
-        disable_caching: bool = False,
-    ):
+    def __init__(self, layer: str, outfields: Union[str, List[str]] = "*", crs: str = DEF_CRS):
         self.valid_layers = {
             "wbdline": "wbdline",
             "huc2": "2-digit hu (region)",
@@ -936,11 +875,4 @@ class WBD(AGRBase):
         _layer = self.valid_layers.get(layer)
         if _layer is None:
             raise InvalidInputValue("layer", list(self.valid_layers))
-        super().__init__(
-            ServiceURL().restful.wbd,
-            _layer,
-            outfields,
-            crs,
-            expire_after=expire_after,
-            disable_caching=disable_caching,
-        )
+        super().__init__(ServiceURL().restful.wbd, _layer, outfields, crs)
