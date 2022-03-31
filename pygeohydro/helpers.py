@@ -44,7 +44,7 @@ def nlcd_helper() -> Dict[str, Any]:
     def _get_xml(
         layer: str,
     ) -> Tuple[Any, Any, Any]:
-        root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"])[0])
+        root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
         return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
