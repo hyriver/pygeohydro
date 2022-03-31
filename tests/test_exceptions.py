@@ -62,24 +62,26 @@ class TestNLCDExceptions:
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_years_type(self):
         with pytest.raises(InvalidInputType) as ex:
-            _ = gh.nlcd_bygeom(self.geom, years=2010, resolution=self.res)
+            _ = gh.nlcd_bygeom(self.geom, years=2010, resolution=self.res, ssl=False)
         assert "dict" in str(ex.value)
 
     def test_invalid_region(self):
         with pytest.raises(InvalidInputValue) as ex:
-            _ = gh.nlcd_bygeom(self.geom, years=self.years, resolution=self.res, region="us")
+            _ = gh.nlcd_bygeom(
+                self.geom, years=self.years, resolution=self.res, region="us", ssl=False
+            )
         assert "L48" in str(ex.value)
 
     def test_invalid_years(self):
         with pytest.raises(InvalidInputValue) as ex:
-            _ = gh.nlcd_bygeom(self.geom, years={"cover": 2020}, resolution=self.res)
+            _ = gh.nlcd_bygeom(self.geom, years={"cover": 2020}, resolution=self.res, ssl=False)
         assert "2019" in str(ex.value)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_cover_type(self):
         with pytest.raises(InvalidInputType) as ex:
             lulc = gh.nlcd_bygeom(
-                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542"
+                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542", ssl=False
             )
             _ = gh.cover_statistics(lulc[0])
         assert "DataArray" in str(ex.value)
@@ -87,7 +89,7 @@ class TestNLCDExceptions:
     def test_invalid_cover_values(self):
         with pytest.raises(InvalidInputValue) as ex:
             lulc = gh.nlcd_bygeom(
-                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542"
+                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542", ssl=False
             )
             _ = gh.cover_statistics(lulc[0].cover_2016 * 2)
         assert "11" in str(ex.value)
