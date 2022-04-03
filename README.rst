@@ -109,7 +109,7 @@ is designed to aid in hydroclimate analysis through web services. This package p
 access to some public web services that offer geospatial hydrology data. It has three
 main modules: ``pygeohydro``, ``plot``, and ``helpers``.
 
-The ``pygeohydro`` module can pull data from the following web services:
+PyGeoHydro supports the following datasets:
 
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations
   (returned as a ``pandas.DataFrame`` or ``xarray.Dataset`` with station attributes),
@@ -148,10 +148,31 @@ The ``helpers`` module includes:
 
 You can find some example notebooks `here <https://github.com/cheginit/HyRiver-examples>`__.
 
-Moreover, to fully utilize the capabilities of these web services, under-the-hood, PyGeoHydro uses
+Moreover, under the hood, PyGeoHydro uses
 `AsyncRetriever <https://github.com/cheginit/async_retriever>`__
-for retrieving topographic data asynchronously with persistent caching. This improves the
-reliability and speed of data retrieval significantly.
+for making requests asynchronously with persistent caching. This improves the
+reliability and speed of data retrieval significantly. AsyncRetriever caches all request/response
+pairs and upon making an already cached request, it will retrieve the responses from the cache
+if the server's response is unchanged.
+
+You can control the request/response caching behavior by setting the following
+environment variables:
+
+* ``HYRIVER_CACHE_NAME``: Path to the caching SQLite database. It defaults to
+  ``./cache/aiohttp_cache.sqlite``
+* ``HYRIVER_CACHE_EXPIRE``: Expiration time for cached requests in seconds. It defaults to
+  -1 (never expire).
+* ``HYRIVER_CACHE_DISABLE``: Disable reading/writing from/to the cache. The default is false.
+
+For example, in your code before making any requests you can do:
+
+.. code-block:: python
+
+    import os
+
+    os.environ["HYRIVER_CACHE_NAME"] = "path/to/file.sqlite"
+    os.environ["HYRIVER_CACHE_EXPIRE"] = "3600"
+    os.environ["HYRIVER_CACHE_DISABLE"] = "true"
 
 You can also try using PyGeoHydro without installing
 it on your system by clicking on the binder badge. A Jupyter Lab
