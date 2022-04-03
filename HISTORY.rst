@@ -2,7 +2,7 @@
 History
 =======
 
-0.12.3 (unreleased)
+0.13.0 (2022-04-03)
 -------------------
 
 New Features
@@ -22,6 +22,25 @@ New Features
 
     wbd = WBD("huc4")
     hudson = wbd.byids("huc4", ["0202", "0203"])
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Remove caching-related arguments from all functions since now they
+  can be set globally via three environmental variables:
+
+  * ``HYRIVER_CACHE_NAME``: Path to the caching SQLite database.
+  * ``HYRIVER_CACHE_EXPIRE``: Expiration time for cached requests in seconds.
+  * ``HYRIVER_CACHE_DISABLE``: Disable reading/writing from/to the cache file.
+
+  You can do this like so:
+
+.. code-block:: python
+
+    import os
+
+    os.environ["HYRIVER_CACHE_NAME"] = "path/to/file.sqlite"
+    os.environ["HYRIVER_CACHE_EXPIRE"] = "3600"
+    os.environ["HYRIVER_CACHE_DISABLE"] = "true"
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
