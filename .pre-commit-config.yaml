@@ -14,7 +14,7 @@ repos:
       args: ['--fix=lf']
 
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v1.20.0
+    rev: v1.20.1
     hooks:
     - id: setup-cfg-fmt
       name: Autoformat setup.cfg
@@ -63,7 +63,7 @@ repos:
       name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.11.0
+    rev: 0.11.1
     hooks:
     - id: doc8
       name: Check documentation formats with doc8
