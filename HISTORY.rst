@@ -7,6 +7,7 @@ History
 
 New Features
 ~~~~~~~~~~~~
+- Add a new flag to ``nlcd_*`` functions called ``ssl`` for disabling SSL verification.
 - Add a new function called ``get_camels`` for getting the
   `CAMELS <https://ral.ucar.edu/solutions/products/camels>`__ dataset. The function
   returns a ``geopandas.GeoDataFrame`` that includes basin-level attributes
