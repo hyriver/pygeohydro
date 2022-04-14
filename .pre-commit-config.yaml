@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.2.0
     hooks:
     - id: trailing-whitespace
     - id: requirements-txt-fixer
@@ -82,7 +82,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.1
+    rev: v2.32.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
