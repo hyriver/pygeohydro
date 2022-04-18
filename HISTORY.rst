@@ -2,6 +2,16 @@
 History
 =======
 
+0.13.1 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add a new function called ``get_us_states`` to the ``helpers`` module for obtaining
+  a GeoDataFrame of the US states. It has an optional argument for returning the
+  ``contiguous`` states, ``continental`` states, ``commonwealths`` states, or
+  US ``territories``. The data are retrieved from the Census' Tiger 2021 database.
+
 0.13.0 (2022-04-03)
 -------------------
 
