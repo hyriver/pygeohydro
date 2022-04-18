@@ -1,18 +1,18 @@
 """Some helper function for PyGeoHydro."""
+import io
 import logging
 import sys
-import io
 from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
 
 import async_retriever as ar
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 from defusedxml import ElementTree
 from pygeoogc import ServiceURL
-import geopandas as gpd
 
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 from . import us_abbrs
+from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
 
 __all__ = ["nlcd_helper", "nwis_errors"]
 
@@ -24,6 +24,7 @@ handler = logging.StreamHandler(sys.stdout)
 handler.setFormatter(logging.Formatter(""))
 logger.handlers = [handler]
 logger.propagate = False
+
 
 def nlcd_helper() -> Dict[str, Any]:
     """Get legends and properties of the NLCD cover dataset.
@@ -166,14 +167,14 @@ class Stats(NamedTuple):
 
 def get_us_states(only: Optional[str] = None) -> gpd.GeoDataFrame:
     """Get US states as a GeoDataFrame from Census' Tiger 2021 database.
-    
+
     Parameters
     ----------
     only : bool, optional
         Whether to return only the ``contiguous`` states, ``continental`` states,
         ``commonwealths`` states, or US ``territories``. The default is ``None``
         which returns all states.
-    
+
     Returns
     -------
     geopandas.GeoDataFrame

@@ -234,7 +234,10 @@ def test_nwis_errors():
     assert err.shape[0] == 7
 
 
-@pytest.mark.parametrize("only,expected", [(None, 56), ("contiguous", 48), ("continental", 49), ("commonwealths", 4), ("territories", 5)])
+@pytest.mark.parametrize(
+    "only,expected",
+    [(None, 56), ("contiguous", 48), ("continental", 49), ("commonwealths", 4), ("territories", 5)],
+)
 def test_us_states(only, expected):
     states = gh.helpers.get_us_states(only)
     assert states.shape[0] == expected
