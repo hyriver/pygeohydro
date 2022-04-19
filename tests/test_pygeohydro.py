@@ -72,7 +72,7 @@ class TestNWIS:
             codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
             == "Discharge, cubic feet per second"
         )
-    
+
     def test_ice_negative(self):
         ice = self.nwis.get_streamflow("01139000", ("2020-12-14", "2020-12-22"))
         assert ice.isna().sum().item() == 7
