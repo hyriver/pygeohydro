@@ -400,7 +400,6 @@ class NWIS:
             get_site_id(t["sourceInfo"]["siteCode"][0]): t["values"][0]["value"]
             for r in resp
             for t in r["value"]["timeSeries"]
-            if len(t["values"][0]["value"]) > 0
         }
         if len(r_ts) == 0:
             raise DataNotAvailable("discharge")
@@ -409,6 +408,7 @@ class NWIS:
             discharge = pd.DataFrame.from_records(
                 values, exclude=["qualifiers"], index=["dateTime"]
             )
+            discharge["value"] = pd.to_numeric(discharge["value"], errors="coerce")
             discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
             if discharge.index.tz is None:
                 tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
@@ -429,8 +429,9 @@ class NWIS:
             return discharge
 
         qobs = pd.concat([to_df(s, t) for s, t in r_ts.items()], axis=1)
+        qobs[qobs.le(0)] = np.nan
         # Convert cfs to cms
-        return qobs.astype("float64") * 0.028316846592
+        return qobs * np.float_power(0.3048, 3)
 
     def get_streamflow(
         self,
