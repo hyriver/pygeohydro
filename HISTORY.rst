@@ -12,6 +12,12 @@ New Features
   ``contiguous`` states, ``continental`` states, ``commonwealths`` states, or
   US ``territories``. The data are retrieved from the Census' Tiger 2021 database.
 
+Bug Fixes
+~~~~~~~~~
+- Fix an issue in ``NWIS.get_streamflow`` where ``-9999`` values were not being
+  filtered out. According to NWIS, these values are reserved for ice-affected
+  data. This fix sets these values to ``numpy.nan``.
+
 0.13.0 (2022-04-03)
 -------------------
 
