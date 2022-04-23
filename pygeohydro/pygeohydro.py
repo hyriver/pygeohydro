@@ -569,7 +569,7 @@ class NID:
         self.base_url = ServiceURL().restful.nid
         self.suggest_url = f"{self.base_url}/suggestions"
         self.fields_meta = pd.DataFrame(ar.retrieve_json([f"{self.base_url}/advanced-fields"])[0])
-        self.valid_fields = self.fields_meta.name.to_list()
+        self.valid_fields = self.fields_meta.name
         self.dam_type = {
             -1: "N/A",
             1: "Arch",
@@ -687,9 +687,10 @@ class NID:
         >>> print(dam_dfs[0].name[0])
         Prairie Portage
         """
-        invalid = [k for key in query_list for k in key if k not in self.valid_fields]
+        fields = self.valid_fields.to_list()
+        invalid = [k for key in query_list for k in key if k not in fields]
         if invalid:
-            raise InvalidInputValue("query_dict", self.valid_fields)
+            raise InvalidInputValue("query_dict", fields)
         params = [
             {"sy": " ".join(f"@{s}:{fid}" for s, fids in key.items() for fid in fids)}
             for key in query_list
@@ -805,8 +806,9 @@ class NID:
         >>> print(contexts.loc["CITY", "value"])
         Texas City
         """
-        if len(context_key) > 0 and context_key not in self.valid_fields:
-            raise InvalidInputValue("context", self.valid_fields)
+        fields = self.valid_fields.to_list()
+        if len(context_key) > 0 and context_key not in fields:
+            raise InvalidInputValue("context", fields)
 
         params = [{"text": text, "contextKey": context_key}]
         resp = self._get_json([f"{self.base_url}/suggestions"] * len(params), params)
