@@ -222,7 +222,7 @@ class NWIS:
         for c in sites.select_dtypes("object"):
             sites[c] = sites[c].str.strip().astype(str)
 
-        numeric_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va", "count_nu"]
+        numeric_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
 
         if expanded:
             payloads = self._validate_usgs_queries(queries, True)
@@ -262,6 +262,8 @@ class NWIS:
             sites["drain_sqkm"] = np.nan
 
         numeric_cols += ["drain_sqkm"]
+        if "count_nu" in sites:
+            numeric_cols.append("count_nu")
         sites[numeric_cols] = sites[numeric_cols].apply(pd.to_numeric, errors="coerce")
 
         return gpd.GeoDataFrame(
