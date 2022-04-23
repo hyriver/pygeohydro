@@ -11,6 +11,8 @@ New Features
   a GeoDataFrame of the US states. It has an optional argument for returning the
   ``contiguous`` states, ``continental`` states, ``commonwealths`` states, or
   US ``territories``. The data are retrieved from the Census' Tiger 2021 database.
+- In the ``NID`` class keep the ``valid_fields`` property as a ``pandas.Series``
+  instead of a ``list``, so it can be searched easier via its ``str`` accessor.
 
 Bug Fixes
 ~~~~~~~~~
