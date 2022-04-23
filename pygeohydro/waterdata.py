@@ -1,6 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 import contextlib
 import io
+import logging
 import re
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -178,7 +179,10 @@ class NWIS:
         return [{**query, **output_type, "format": "rdb"} for query in _queries]
 
     def get_info(
-        self, queries: Union[Dict[str, str], List[Dict[str, str]]], expanded: bool = False
+        self,
+        queries: Union[Dict[str, str], List[Dict[str, str]]],
+        expanded: bool = False,
+        fix_names: bool = True,
     ) -> gpd.GeoDataFrame:
         """Send multiple queries to USGS Site Web Service.
 
@@ -189,6 +193,9 @@ class NWIS:
         expanded : bool, optional
             Whether to get expanded sit information for example drainage area,
             default to False.
+        fix_names : bool, optional
+            If ``True``, reformat station names and some small annoyances,
+            defaults to ``True``.
 
         Returns
         -------
@@ -200,7 +207,22 @@ class NWIS:
         payloads = self._validate_usgs_queries(queries, False)
         sites = self.retrieve_rdb(f"{self.url}/site", payloads)
 
-        float_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
+        def fix_station_nm(station_nm: str) -> str:
+            name = station_nm.title().rsplit(" ", 1)
+            if len(name) == 1:
+                return name[0]
+
+            name[0] = name[0] if name[0][-1] == "," else f"{name[0]},"
+            name[1] = name[1].replace(".", "")
+            return " ".join((name[0], name[1].upper() if len(name[1]) == 2 else name[1].title()))
+
+        if fix_names and "station_nm" in sites:
+            sites["station_nm"] = [fix_station_nm(n) for n in sites["station_nm"]]
+
+        for c in sites.select_dtypes("object"):
+            sites[c] = sites[c].str.strip().astype(str)
+
+        numeric_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va", "count_nu"]
 
         if expanded:
             payloads = self._validate_usgs_queries(queries, True)
@@ -211,25 +233,36 @@ class NWIS:
                 suffixes=("", "_overlap"),
             )
             sites = sites.filter(regex="^(?!.*_overlap)")
-            float_cols += ["drain_area_va", "contrib_drain_area_va"]
+            numeric_cols += ["drain_area_va", "contrib_drain_area_va"]
 
         with contextlib.suppress(KeyError):
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
 
         gii = WaterData("gagesii", DEF_CRS)
+        logging.getLogger("pynhd.core").setLevel(logging.ERROR)
+        try:
+            gages = gii.byid("staid", sites.site_no.to_list())
+        except ZeroMatchedOGC:
+            gages = gpd.GeoDataFrame()
+        logging.getLogger("pynhd.core").setLevel(logging.INFO)
 
-        def _get_hcdn(site_no: str) -> Tuple[float, Optional[bool]]:
-            try:
-                gage = gii.byid("staid", site_no)
-                return gage.drain_sqkm.iloc[0], len(gage.hcdn_2009.iloc[0]) > 0  # noqa: TC300
-            except (AttributeError, KeyError, ZeroMatchedOGC):
-                return np.nan, None
+        if len(gages) > 0:
+            sites = pd.merge(
+                sites,
+                gages[["staid", "drain_sqkm", "hcdn_2009"]],
+                left_on="site_no",
+                right_on="staid",
+                how="left",
+            )
+            sites = sites.drop(columns=["staid"])
+            sites["hcdn_2009"] = sites.hcdn_2009 == "yes"
+        else:
+            sites["hcdn_2009"] = False
+            sites["drain_sqkm"] = np.nan
 
-        sites["drain_sqkm"], sites["hcdn_2009"] = zip(*[_get_hcdn(n) for n in sites.site_no])
-
-        float_cols += ["drain_sqkm"]
-        sites[float_cols] = sites[float_cols].apply(pd.to_numeric, errors="coerce")
+        numeric_cols += ["drain_sqkm"]
+        sites[numeric_cols] = sites[numeric_cols].apply(pd.to_numeric, errors="coerce")
 
         return gpd.GeoDataFrame(
             sites,
