@@ -3,7 +3,7 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python>=3.9
+  - python>=3.10
 
   # async_retriever
   - aiodns
@@ -23,7 +23,7 @@ dependencies:
   - pyproj>=1.2
   - requests
   - requests-cache>=0.8
-  - shapely
+  - shapely>=1.8
   - urllib3
 
   # pygeoutils deps
@@ -69,6 +69,7 @@ dependencies:
   - jupyterlab_widgets
   - ipywidgets
   - pygmo
+  - proplot
 
   # dev deps
   - codespell
