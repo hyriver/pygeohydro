@@ -43,14 +43,14 @@ dependencies:
 
   # pynhd deps
   - networkx>=2.5
-  - pandas>=1.4
+  - pandas>=1.0
   - pyarrow>=1.0.1
 
   # pygeohydro deps
   - folium
   - h5netcdf
   - lxml
-  - matplotlib-base>=3.0
+  - proplot
 
   # optional deps to speed up xarray and pydaymet
   - bottleneck
@@ -69,7 +69,6 @@ dependencies:
   - jupyterlab_widgets
   - ipywidgets
   - pygmo
-  - proplot
 
   # dev deps
   - codespell
