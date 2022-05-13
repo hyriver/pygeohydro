@@ -239,7 +239,7 @@ class NWIS:
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
 
-        gii = WaterData("gagesii", DEF_CRS)
+        gii = WaterData("gagesii", DEF_CRS, False)
         logging.getLogger("pynhd.core").setLevel(logging.ERROR)
         try:
             gages = gii.byid("staid", sites.site_no.to_list())
@@ -440,9 +440,12 @@ class NWIS:
             raise DataNotAvailable("discharge")
 
         def to_df(col: str, values: Dict[str, Any]) -> pd.DataFrame:
-            discharge = pd.DataFrame.from_records(
-                values, exclude=["qualifiers"], index=["dateTime"]
-            )
+            try:
+                discharge = pd.DataFrame.from_records(
+                    values, exclude=["qualifiers"], index=["dateTime"]
+                )
+            except KeyError:
+                return pd.DataFrame()
             discharge["value"] = pd.to_numeric(discharge["value"], errors="coerce")
             discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
             if discharge.index.tz is None:
@@ -464,6 +467,8 @@ class NWIS:
             return discharge
 
         qobs = pd.concat([to_df(s, t) for s, t in r_ts.items()], axis=1)
+        if len(qobs) == 0:
+            raise DataNotAvailable("discharge")
         qobs[qobs.le(0)] = np.nan
         # Convert cfs to cms
         return qobs * np.float_power(0.3048, 3)
