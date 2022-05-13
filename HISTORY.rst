@@ -14,6 +14,14 @@ New Features
 - In the ``NID`` class keep the ``valid_fields`` property as a ``pandas.Series``
   instead of a ``list``, so it can be searched easier via its ``str`` accessor.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Refactor the ``plot.signatures`` function to use ``proplot`` instead of ``matplotlib``.
+- Improve performance of ``NWIS.get_streamflow`` by not validating the layer name
+  when instantiating the ``WaterData`` class. Also, make the function more robust
+  by checking if streamflow data is available for each station and throw a warning
+  if not.
+
 Bug Fixes
 ~~~~~~~~~
 - Fix an issue in ``NWIS.get_streamflow`` where ``-9999`` values were not being
