@@ -21,7 +21,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v1.3.2
+    rev: v1.3.3
     hooks:
     - id: pycln
       name: Find and remove unused import statements
@@ -63,7 +63,7 @@ repos:
       name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.11.1
+    rev: 0.11.2
     hooks:
     - id: doc8
       name: Check documentation formats with doc8
