@@ -52,7 +52,8 @@ class NWIS:
         """
         try:
             resp = ar.retrieve_text(
-                [url] * len(payloads), [{"params": {**p, "format": "rdb"}} for p in payloads]
+                [url] * len(payloads),
+                [{"params": {**p, "format": "rdb"}} for p in payloads],
             )
         except ar.ServiceError as ex:
             raise ZeroMatched(ogc_utils.check_response(str(ex))) from ex
@@ -364,7 +365,9 @@ class NWIS:
 
     @staticmethod
     def _check_inputs(
-        station_ids: Union[Sequence[str], str], dates: Tuple[str, str], utc: Optional[bool]
+        station_ids: Union[Sequence[str], str],
+        dates: Tuple[str, str],
+        utc: Optional[bool],
     ) -> Tuple[List[str], pd.Timestamp, pd.Timestamp]:
         """Validate inputs."""
         if not isinstance(station_ids, (str, Sequence, Iterable)):
@@ -411,7 +414,12 @@ class NWIS:
         return area.set_index("site_no").drain_sqkm * 1e6
 
     def _get_streamflow(
-        self, sids: Sequence[str], start_dt: str, end_dt: str, freq: str, kwargs: Dict[str, str]
+        self,
+        sids: Sequence[str],
+        start_dt: str,
+        end_dt: str,
+        freq: str,
+        kwargs: Dict[str, str],
     ) -> pd.DataFrame:
         """Convert json to dataframe."""
         payloads = [
