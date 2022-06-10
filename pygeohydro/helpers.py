@@ -49,7 +49,11 @@ def nlcd_helper() -> Dict[str, Any]:
         layer: str,
     ) -> Tuple[Any, Any, Any]:
         root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
-        return root, root.findall(f"{base_path}/edomv"), root.findall(f"{base_path}/edomvd")
+        return (
+            root,
+            root.findall(f"{base_path}/edomv"),
+            root.findall(f"{base_path}/edomvd"),
+        )
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
     cover_classes = {}
@@ -122,7 +126,7 @@ def nwis_errors() -> pd.DataFrame:
 
 
 def get_ssebopeta_urls(
-    dates: Union[Tuple[str, str], Union[int, List[int]]]
+    dates: Union[Tuple[str, str], int, List[int]]
 ) -> List[Tuple[pd.Timestamp, str]]:
     """Get list of URLs for SSEBop dataset within a period or years."""
     if not isinstance(dates, (tuple, list, int)):
