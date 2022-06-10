@@ -85,13 +85,12 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     ----------
     daily : pandas.Series or pandas.DataFrame
         The data to be processed
-    ranked : bool, optional
-        Whether to sort the data by rank for plotting flow duration curve, defaults to False.
 
     Returns
     -------
-    NamedTuple
-        Containing ``daily, ``mean_monthly``, ``ranked`` fields.
+    PlotDataType
+        Containing ``daily, ``mean_monthly``, ``ranked``, ``titles``,
+        and ``units`` fields.
     """
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
@@ -147,7 +146,7 @@ def signatures(
 
     Parameters
     ----------
-    daily : pd.DataFrame or pd.Series
+    discharge : pd.DataFrame or pd.Series
         The streamflows in mm/day. The column names are used as labels
         on the plot and the column values should be daily streamflow.
     precipitation : pd.Series, optional
@@ -168,7 +167,11 @@ def signatures(
 
     cycle = "colorblind10"
     fig, axs = pplt.subplots(
-        [[1, 1, 1, 1], [2, 2, 3, 3]], refwidth=6.5, refheight=2.2, share=0, facecolor="w"
+        [[1, 1, 1, 1], [2, 2, 3, 3]],
+        refwidth=6.5,
+        refheight=2.2,
+        share=0,
+        facecolor="w",
     )
     axs.format(titleloc="uc", toplabels=(title,), lw=0.7)
 
