@@ -26,7 +26,13 @@ SID_URBAN = "11092450"
 DATES = ("2005-01-01", "2005-01-31")
 DATES_LONG = ("2000-01-01", "2009-12-31")
 GEOM = Polygon(
-    [[-69.77, 45.07], [-69.31, 45.07], [-69.31, 45.45], [-69.77, 45.45], [-69.77, 45.07]]
+    [
+        [-69.77, 45.07],
+        [-69.31, 45.07],
+        [-69.31, 45.45],
+        [-69.77, 45.45],
+        [-69.77, 45.07],
+    ]
 )
 
 
@@ -217,7 +223,11 @@ def test_camels():
 
 
 def test_interactive_map():
-    nwis_kwds = {"hasDataTypeCd": "dv", "outputDataTypeCd": "dv", "parameterCd": "00060"}
+    nwis_kwds = {
+        "hasDataTypeCd": "dv",
+        "outputDataTypeCd": "dv",
+        "parameterCd": "00060",
+    }
     m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
     assert len(m.to_dict()["children"]) == 4
 
@@ -240,7 +250,13 @@ def test_nwis_errors():
 
 @pytest.mark.parametrize(
     "only,expected",
-    [(None, 56), ("contiguous", 48), ("continental", 49), ("commonwealths", 4), ("territories", 5)],
+    [
+        (None, 56),
+        ("contiguous", 48),
+        ("continental", 49),
+        ("commonwealths", 4),
+        ("territories", 5),
+    ],
 )
 def test_us_states(only, expected):
     states = gh.helpers.get_us_states(only)

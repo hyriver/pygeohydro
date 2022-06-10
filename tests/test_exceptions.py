@@ -14,7 +14,13 @@ else:
 
 SID_NATURAL = "01031500"
 GEOM = Polygon(
-    [[-69.77, 45.07], [-69.31, 45.07], [-69.31, 45.45], [-69.77, 45.45], [-69.77, 45.07]]
+    [
+        [-69.77, 45.07],
+        [-69.31, 45.07],
+        [-69.31, 45.45],
+        [-69.77, 45.45],
+        [-69.77, 45.07],
+    ]
 )
 
 
@@ -81,7 +87,11 @@ class TestNLCDExceptions:
     def test_invalid_cover_type(self):
         with pytest.raises(InvalidInputType) as ex:
             lulc = gh.nlcd_bygeom(
-                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542", ssl=False
+                self.geom,
+                years={"cover": [2016, 2019]},
+                resolution=1e3,
+                crs="epsg:3542",
+                ssl=False,
             )
             _ = gh.cover_statistics(lulc[0])
         assert "DataArray" in str(ex.value)
@@ -89,7 +99,11 @@ class TestNLCDExceptions:
     def test_invalid_cover_values(self):
         with pytest.raises(InvalidInputValue) as ex:
             lulc = gh.nlcd_bygeom(
-                self.geom, years={"cover": [2016, 2019]}, resolution=1e3, crs="epsg:3542", ssl=False
+                self.geom,
+                years={"cover": [2016, 2019]},
+                resolution=1e3,
+                crs="epsg:3542",
+                ssl=False,
             )
             _ = gh.cover_statistics(lulc[0].cover_2016 * 2)
         assert "11" in str(ex.value)
