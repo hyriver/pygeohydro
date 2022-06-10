@@ -85,7 +85,7 @@ def get_camels() -> Tuple[gpd.GeoDataFrame, xr.Dataset]:
 
 def ssebopeta_bycoords(
     coords: pd.DataFrame,
-    dates: Union[Tuple[str, str], Union[int, List[int]]],
+    dates: Union[Tuple[str, str], int, List[int]],
     crs: str = DEF_CRS,
 ) -> xr.Dataset:
     """Daily actual ET for a dataframe of coords from SSEBop database in mm/day.
@@ -133,7 +133,7 @@ def ssebopeta_bycoords(
                     return list(src.sample(co_list))
 
         time, eta = zip(*[(t, _ssebop(url)) for t, url in f_list])
-    eta_arr = np.array(eta).reshape(len(time), -1)  # type: ignore
+    eta_arr = np.array(eta).reshape(len(time), -1)
     ds = xr.Dataset(
         data_vars={
             "eta": (["time", "location_id"], eta_arr),
@@ -158,7 +158,7 @@ def ssebopeta_bycoords(
 
 def ssebopeta_byloc(
     coords: Tuple[float, float],
-    dates: Union[Tuple[str, str], Union[int, List[int]]],
+    dates: Union[Tuple[str, str], int, List[int]],
 ) -> pd.Series:
     """Daily actual ET for a location from SSEBop database in mm/day.
 
@@ -198,7 +198,7 @@ def ssebopeta_byloc(
 
 def ssebopeta_bygeom(
     geometry: GTYPE,
-    dates: Union[Tuple[str, str], Union[int, List[int]]],
+    dates: Union[Tuple[str, str], int, List[int]],
     geo_crs: str = DEF_CRS,
 ) -> xr.DataArray:
     """Get daily actual ET for a region from SSEBop database.
@@ -245,7 +245,12 @@ def ssebopeta_bygeom(
         data = xr.merge(_ssebop(t, url) for t, url in f_list)
     eta: xr.DataArray = data.where(data.eta < data.eta.nodatavals[0]).eta.copy() * 1e-3
     eta.attrs.update(
-        {"units": "mm/day", "nodatavals": (np.nan,), "crs": DEF_CRS, "long_name": "Actual ET"}
+        {
+            "units": "mm/day",
+            "nodatavals": (np.nan,),
+            "crs": DEF_CRS,
+            "long_name": "Actual ET",
+        }
     )
     return eta
 
@@ -295,10 +300,20 @@ class NLCD:
             raise InvalidInputValue("crs", self.valid_crs)
         self.layers = self.get_layers()
         self.units = OrderedDict(
-            (("impervious", "%"), ("cover", "classes"), ("canopy", "%"), ("descriptor", "classes"))
+            (
+                ("impervious", "%"),
+                ("cover", "classes"),
+                ("canopy", "%"),
+                ("descriptor", "classes"),
+            )
         )
         self.types = OrderedDict(
-            (("impervious", "f4"), ("cover", "u1"), ("canopy", "f4"), ("descriptor", "u1"))
+            (
+                ("impervious", "f4"),
+                ("cover", "u1"),
+                ("canopy", "f4"),
+                ("descriptor", "u1"),
+            )
         )
         self.nodata = OrderedDict(
             (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
@@ -354,7 +369,9 @@ class NLCD:
         return self.wms.getmap_bybox(bbox, resolution, self.crs)
 
     def to_xarray(
-        self, r_dict: Dict[str, bytes], geometry: Union[Polygon, MultiPolygon, None] = None
+        self,
+        r_dict: Dict[str, bytes],
+        geometry: Union[Polygon, MultiPolygon, None] = None,
     ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         if isinstance(geometry, (Polygon, MultiPolygon)):
@@ -540,7 +557,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
         raise InvalidInputType("cover_da", "xarray.DataArray")
 
     nlcd_meta = helpers.nlcd_helper()
-    val, freq = np.unique(cover_da, return_counts=True)  # type: ignore
+    val, freq = np.unique(cover_da, return_counts=True)
     zero_idx = np.argwhere(val == 0)
     val = np.delete(val, zero_idx).astype(str)
     freq = np.delete(freq, zero_idx)
@@ -655,7 +672,9 @@ class NID:
             GeoDataFrame of NID data
         """
         return gpd.GeoDataFrame(
-            nid_df, geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude), crs=DEF_CRS
+            nid_df,
+            geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude),
+            crs=DEF_CRS,
         )
 
     def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
