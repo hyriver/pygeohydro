@@ -46,4 +46,4 @@ jobs:
           activate-environment: ${{ github.event.repository.name }}-tests
           use-mamba: true
           use-only-tar-bz2: true
-      - uses: pre-commit/action@v2.0.3
+      - uses: pre-commit/action@v3.0.0
