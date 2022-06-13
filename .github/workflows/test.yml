@@ -37,26 +37,32 @@ jobs:
           echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
-
-      - name: Setup micromamba
-        uses: mamba-org/provision-with-micromamba@main
+      - name: Cache conda
+        uses: actions/cache@v3
         with:
-          environment-file: ${{ env.CONDA_ENV_FILE }}
-          environment-name: ${{ env.REPO_NAME }}-tests
-          extra-specs: |
-            python=${{ env.PYTHON_VERSION }}
-          # cache-env: true
-          # cache-env-key: "${{runner.os}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
-
-      # We only want to install this on one run, because otherwise we'll have
-      # duplicate annotations.
+          path: ${{ env.CONDA }}/envs
+          key: "${{runner.os}}-py${{matrix.python-version}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}"
+      - name: Setup conda
+        uses: conda-incubator/setup-miniconda@v2.1.1
+        with:
+          channel-priority: strict
+          miniforge-version: latest
+          miniforge-variant: Mambaforge
+          python-version: ${{ matrix.python-version }}
+          activate-environment: ${{ env.REPO_NAME }}-tests
+          use-mamba: true
+          use-only-tar-bz2: true
+      - name: Update environment
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: mamba env update -n ${{ env.REPO_NAME }}-tests -f ${{ env.CONDA_ENV_FILE }}
       - name: Install error reporter
         if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
         run: |
           python -m pip install pytest-github-actions-annotate-failures
-
       - name: Install the package
         run: |-
+          mamba info -a
+          mamba list
           python -m pip install --no-deps .
       - name: Version info
         run: |-
@@ -66,7 +72,7 @@ jobs:
           pytest
       - name: Run typeguard
         run: |-
-          micromamba install typeguard
+          mamba install typeguard
           pytest --typeguard-packages=${REPO_NAME}
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v3
