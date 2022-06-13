@@ -374,13 +374,17 @@ class NWIS:
             raise InvalidInputType("ids", "str or list of str")
 
         sids = [station_ids] if isinstance(station_ids, str) else list(set(station_ids))
+        sids_df = pd.Series(sids, dtype=str)
+        sids_df = sids_df.str.lower().str.replace("usgs-", "").str.zfill(8)
+        if not sids_df.str.isnumeric().all():
+            raise InvalidInputType("station_ids", "only digits")
 
         if not isinstance(dates, tuple) or len(dates) != 2:
             raise InvalidInputType("dates", "tuple", "(start, end)")
 
         start = pd.to_datetime(dates[0], utc=utc)
         end = pd.to_datetime(dates[1], utc=utc)
-        return sids, start, end
+        return sids_df.to_list(), start, end
 
     def _drainage_area_sqm(self, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
         """Get drainage area of the stations."""
