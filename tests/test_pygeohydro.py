@@ -165,7 +165,7 @@ class TestNID:
             {"nidId": ["CA01222"]},
         ]
         dam_dfs = self.nid.get_byfilter(query_list)
-        assert dam_dfs[0].name[0] == "Prairie Portage"
+        assert dam_dfs[0].loc[dam_dfs[0].name == "Prairie Portage"].id.item() == "496613"
 
     def test_id(self):
         dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
