@@ -56,8 +56,8 @@ jobs:
 
       - name: Install the package
         run: |-
-          mamba info -a
-          mamba list
+          conda info -a
+          conda list
           python -m pip install --no-deps .
       - name: Version info
         run: |-
