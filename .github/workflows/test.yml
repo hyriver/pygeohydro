@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@v3
       - name: Set environment variables
         run: |-
+          echo "TODAY=$(date +'%Y-%m-%d')" >> $GITHUB_ENV
           echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
           echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
 
