@@ -80,8 +80,8 @@ class TestNWIS:
         )
 
     def test_ice_negative(self):
-        ice = self.nwis.get_streamflow("01139000", ("2020-12-14", "2020-12-22"))
-        assert ice.isna().sum().item() == 7
+        ice = self.nwis.get_streamflow("01139000", ("2021-12-23", "2021-12-29"))
+        assert ice.isna().sum().item() == 5
 
 
 class TestETA:
