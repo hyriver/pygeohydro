@@ -35,7 +35,7 @@ dependencies:
   - rasterio>=1.2
   - scipy
   - xarray>=0.18
-  - rioxarray>=0.8
+  - rioxarray>=0.10
 
   # py3dep
   - click>=7.0

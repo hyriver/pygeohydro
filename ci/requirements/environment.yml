@@ -34,7 +34,7 @@ dependencies:
   - rasterio>=1.2
   - scipy
   - xarray>=0.18
-  - rioxarray>=0.8
+  - rioxarray>=0.10
 
   # pynhd deps
   - networkx>=2.5
