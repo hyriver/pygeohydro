@@ -33,6 +33,7 @@ dependencies:
   - numpy>=1.17
   - pygeos
   - rasterio>=1.2
+  - gdal>=3,<3.4
   - scipy
   - xarray>=0.18
   - rioxarray>=0.8
