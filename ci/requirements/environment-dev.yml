@@ -17,7 +17,7 @@ dependencies:
 
   # pygeoogc deps
   - defusedxml
-  - owslib
+  - owslib<0.26.0
   - pydantic
   - pyyaml
   - pyproj>=1.2
@@ -33,7 +33,6 @@ dependencies:
   - numpy>=1.17
   - pygeos
   - rasterio>=1.2
-  - gdal<3.5
   - scipy
   - xarray>=0.18
   - rioxarray>=0.8
