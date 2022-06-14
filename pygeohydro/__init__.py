@@ -1,3 +1,6 @@
+"""Top-level package for PyGeoHydro."""
+import importlib.metadata
+
 from . import helpers, plot
 from .exceptions import (
     DataNotAvailable,
@@ -23,14 +26,7 @@ from .pygeohydro import (
 )
 from .waterdata import NWIS, WaterQuality, interactive_map
 
-try:
-    import importlib.metadata
-except ImportError:
-    import importlib_metadata
-
-    __version__ = importlib_metadata.version("pygeohydro")
-else:
-    __version__ = importlib.metadata.version("pygeohydro")
+__version__ = importlib.metadata.version("pygeohydro")
 
 __all__ = [
     "NID",
