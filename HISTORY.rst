@@ -2,6 +2,26 @@
 History
 =======
 
+0.13.2 (2022-06-14)
+-------------------
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Set the minimum supported version of Python to 3.8 since many of the
+  dependencies such as ``xarray``, ``pandas``, ``rioxarray`` have dropped support
+  for Python 3.7.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Remove ``USGS`` prefixes from the input station IDs in ``NWIS.get_streamflow``
+  function. Also, check if the remaining parts of the IDs are all digits and throw
+  an exception if otherwise. Additionally, make sure that IDs have at least 8 chars by
+  adding leading zeros (:issue_hydro:`99`).
+- Use `micromamba <https://github.com/marketplace/actions/provision-with-micromamba>`__
+  for running tests
+  and use `nox <https://github.com/marketplace/actions/setup-nox>`__
+  for linting in CI.
+
 0.13.1 (2022-06-11)
 -------------------
 
