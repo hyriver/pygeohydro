@@ -4,46 +4,14 @@ on:
   pull_request:
   workflow_dispatch: # allows you to trigger manually
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   pre-commit:
-    name: python ${{ matrix.python-version }}, ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    env:
-      REPO_NAME: ${{ github.event.repository.name }}
-    defaults:
-      run:
-        shell: bash -l {0}
-    strategy:
-      matrix:
-        python-version: [3.9]
-        os: [ubuntu-latest]
-
+    runs-on: ubuntu-latest
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
       - uses: actions/checkout@v3
-      - name: Set environment variables
-        run: |-
-          echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
-          echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
-      - name: Cache conda
-        uses: actions/cache@v3
-        with:
-          path: ~/conda_pkgs_dir
-          key:
-            ${{ runner.os }}-conda-py${{ matrix.python-version }}-${{
-            hashFiles('ci/requirements/environment.yml') }}
-      - name: Setup conda
-        uses: conda-incubator/setup-miniconda@v2.1.1
-        with:
-          channel-priority: strict
-          miniforge-version: latest
-          miniforge-variant: Mambaforge
-          environment-file: ci/requirements/environment.yml
-          python-version: ${{ matrix.python-version }}
-          activate-environment: ${{ github.event.repository.name }}-tests
-          use-mamba: true
-          use-only-tar-bz2: true
-      - uses: pre-commit/action@v3.0.0
+      - uses: excitedleigh/setup-nox@v2.1.0
+      - run: nox -s pre-commit
