@@ -16,7 +16,7 @@ dependencies:
 
   # pygeoogc deps
   - defusedxml
-  - owslib<0.26.0
+  - owslib<0.26
   - pydantic
   - pyyaml
   - pyproj>=1.2
