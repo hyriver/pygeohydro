@@ -28,7 +28,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v1.3.3
+    rev: v2.0.1
     hooks:
     - id: pycln
       name: Find and remove unused import statements
@@ -47,7 +47,7 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 22.3.0
+    rev: 22.6.0
     hooks:
     - id: black
       name: Autoformat with black
