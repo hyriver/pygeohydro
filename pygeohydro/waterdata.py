@@ -33,7 +33,8 @@ class NWIS:
     def __init__(self) -> None:
         self.url = ServiceURL().restful.nwis
 
-    def retrieve_rdb(self, url: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
+    @staticmethod
+    def retrieve_rdb(url: str, payloads: List[Dict[str, str]]) -> pd.DataFrame:
         """Retrieve and process requests with RDB format.
 
         Parameters

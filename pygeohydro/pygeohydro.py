@@ -618,8 +618,9 @@ class NID:
             12: "Other",
         }
 
+    @staticmethod
     def _get_json(
-        self, urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
+        urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
     ) -> List[Dict[str, Any]]:
         """Get JSON response from NID web service.
 
