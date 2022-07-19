@@ -28,7 +28,7 @@ repos:
       args: [--min-py3-version, "3.7"]
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.0.2
+    rev: v2.0.4
     hooks:
     - id: pycln
       name: Find and remove unused import statements
@@ -87,7 +87,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.1
+    rev: v2.37.2
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
