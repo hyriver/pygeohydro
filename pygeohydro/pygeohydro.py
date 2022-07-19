@@ -704,8 +704,8 @@ class NID:
         ...    {"nidId": ["CA01222"]},
         ... ]
         >>> dam_dfs = nid.get_byfilter(query_list)
-        >>> print(dam_dfs[0].name[0])
-        Prairie Portage
+        >>> print(dam_dfs[0].loc[dam_dfs[0].name == "Prairie Portage"].id.item())
+        496613
         """
         fields = self.valid_fields.to_list()
         invalid = [k for key in query_list for k in key if k not in fields]
