@@ -573,7 +573,8 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
     }
     category_percentage = {
         k: sum(freq_dict[c] for c in v if c in freq_dict) / total_count * 100.0
-        for k, v in nlcd_meta["categories"].items() if k != "Background"
+        for k, v in nlcd_meta["categories"].items()
+        if k != "Background"
     }
 
     return Stats(class_percentage, category_percentage)
