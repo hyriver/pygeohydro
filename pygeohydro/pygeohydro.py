@@ -558,7 +558,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
 
     nlcd_meta = helpers.nlcd_helper()
     val, freq = np.unique(cover_da, return_counts=True)
-    zero_idx = np.argwhere(val == 0)
+    zero_idx = np.argwhere(val == 127)
     val = np.delete(val, zero_idx).astype(str)
     freq = np.delete(freq, zero_idx)
     freq_dict = dict(zip(val, freq))
