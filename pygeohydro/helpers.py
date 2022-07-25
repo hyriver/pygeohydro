@@ -81,7 +81,6 @@ def nlcd_helper() -> Dict[str, Any]:
         "classes": cover_classes,
         "categories": {
             "Background": ("127",),
-            "Unclassified": ("0",),
             "Water": ("11", "12"),
             "Developed": ("21", "22", "23", "24"),
             "Barren": ("31",),
