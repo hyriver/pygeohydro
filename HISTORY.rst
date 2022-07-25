@@ -8,6 +8,7 @@ History
 Bug Fixes
 ~~~~~~~~~
 - The background value in ``cover_statistics`` function should have been 127 not 0.
+  Also, dropped the background value from the return statistics.
 
 0.13.2 (2022-06-14)
 -------------------
