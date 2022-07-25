@@ -2,6 +2,13 @@
 History
 =======
 
+0.13.3 (2022-05-25)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- The background value in ``cover_statistics`` function should have been 127 not 0.
+
 0.13.2 (2022-06-14)
 -------------------
 
