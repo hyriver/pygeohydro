@@ -134,8 +134,3 @@ repos:
       name: Check for security issues with bandit
       args: [-lll, --recursive, pygeohydro]
       files: .py$
-
-  - repo: https://github.com/citation-file-format/cff-converter-python
-    rev: 44e8fc9174119805b64b0b333aa69d285a866673
-    hooks:
-    - id: validate-cff
