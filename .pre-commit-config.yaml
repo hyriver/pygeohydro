@@ -35,7 +35,7 @@ repos:
       args: [--config=pyproject.toml]
 
   - repo: https://github.com/bwhmather/ssort
-    rev: v0.11.5
+    rev: v0.11.6
     hooks:
     - id: ssort
       name: Sorting top level statements with ssort
@@ -68,7 +68,7 @@ repos:
       name: Check directives in rst files
 
   - repo: https://github.com/PyCQA/doc8
-    rev: 0.11.2
+    rev: v1.0.0
     hooks:
     - id: doc8
       name: Check documentation formats with doc8
@@ -87,7 +87,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.2
+    rev: v2.37.3
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
