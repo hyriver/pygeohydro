@@ -79,7 +79,7 @@ def get_camels() -> Tuple[gpd.GeoDataFrame, xr.Dataset]:
     resp = ar.retrieve_binary(urls)
 
     attrs = gpd.read_feather(io.BytesIO(resp[0]))
-    qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")
+    qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")  # type: ignore
     return attrs, qobs
 
 
