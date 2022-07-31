@@ -171,6 +171,10 @@ class TestNID:
         dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
         assert abs(dams.damHeight.max() - 120) < SMALL
 
+    def test_stage_id(self):
+        dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498], stage_nid=True)
+        assert abs(dams.damHeight.max() - 120) < SMALL
+
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_geom(self):
         dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
