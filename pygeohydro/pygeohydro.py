@@ -5,6 +5,7 @@ import warnings
 import zipfile
 from collections import OrderedDict
 from numbers import Number
+from pathlib import Path
 from ssl import SSLContext
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
 from unittest.mock import patch
@@ -618,6 +619,126 @@ class NID:
             11: "Water Supply",
             12: "Other",
         }
+        self.nid_inventory_path = Path("cache", "nid_inventory.feather")
+
+    def stage_nid_inventory(self, fname: Union[str, Path, None] = None) -> None:
+        """Download the entire NID inventory data and save to a feather file.
+
+        Parameters
+        ----------
+        fname : str, pathlib.Path, optional
+            The path to the file to save the data to, defaults to
+            ``./cache/nid_inventory.feather``.
+        """
+        fname = self.nid_inventory_path if fname is None else Path(fname)
+        if fname.suffix != ".feather":
+            fname = fname.with_suffix(".feather")
+
+        self.nid_inventory_path = fname
+        if not self.nid_inventory_path.exists():
+            url = "/".join(
+                [
+                    "https://usace-cwbi-prod-il2-nld2-docs.s3-us-gov-west-1.amazonaws.com",
+                    "national-export/dams/nation/7783878c-6db4-46aa-99ef-8c283109ea78/nation.gpkg",
+                ]
+            )
+            ar.stream_write([url], [fname.with_suffix(".gpkg")])
+            dams = gpd.read_file(fname.with_suffix(".gpkg"))
+            dams = dams.astype(
+                {
+                    "name": str,
+                    "otherNames": str,
+                    "formerNames": str,
+                    "nidId": str,
+                    "otherStructureId": str,
+                    "federalId": str,
+                    "ownerNames": str,
+                    "ownerTypeIds": str,
+                    "primaryOwnerTypeId": "Int8",
+                    "stateFedId": str,
+                    "separateStructuresCount": "Int8",
+                    "designerNames": str,
+                    "nonFederalDamOnFederalId": "Int8",
+                    "stateRegulatedId": "int8",
+                    "jurisdictionAuthorityId": "Int8",
+                    "stateRegulatoryAgency": str,
+                    "permittingAuthorityId": "Int8",
+                    "inspectionAuthorityId": "Int8",
+                    "enforcementAuthorityId": "Int8",
+                    "sourceAgency": str,
+                    "latitude": "f8",
+                    "longitude": "f8",
+                    "county": str,
+                    "state": str,
+                    "city": str,
+                    "distance": "f8",
+                    "riverName": str,
+                    "congDist": str,
+                    "countyState": str,
+                    "location": str,
+                    "fedOwnerIds": str,
+                    "fedFundingIds": str,
+                    "fedDesignIds": str,
+                    "fedConstructionIds": str,
+                    "fedRegulatoryIds": str,
+                    "fedInspectionIds": str,
+                    "fedOperationIds": str,
+                    "fedOtherIds": str,
+                    "primaryPurposeId": "Int8",
+                    "purposeIds": str,
+                    "primaryDamTypeId": "Int8",
+                    "damTypeIds": str,
+                    "coreTypeIds": str,
+                    "foundationTypeIds": str,
+                    "damHeight": "f8",
+                    "hydraulicHeight": "f8",
+                    "structuralHeight": "f8",
+                    "nidHeight": "f8",
+                    "nidHeightId": "f8",
+                    "damLength": "f8",
+                    "volume": "f8",
+                    "yearCompleted": "Int32",
+                    "yearCompletedId": "Int8",
+                    "nidStorage": "f8",
+                    "maxStorage": "f8",
+                    "normalStorage": "f8",
+                    "surfaceArea": "f8",
+                    "drainageArea": "f8",
+                    "maxDischarge": "f8",
+                    "spillwayTypeId": "Int8",
+                    "spillwayWidth": "f8",
+                    "numberOfLocks": "Int32",
+                    "lengthOfLocks": "f8",
+                    "widthOfLocks": "f8",
+                    "yearsModified": str,
+                    "outletGateTypes": str,
+                    "dataUpdated": "int64",
+                    "inspectionDate": str,
+                    "inspectionFrequency": "f4",
+                    "hazardId": "Int8",
+                    "conditionAssessId": "Int8",
+                    "conditionAssessDate": "int64",
+                    "eapId": "Int8",
+                    "eapLastRevDate": "int64",
+                    "websiteUrl": str,
+                    "privateDamId": "Int8",
+                    "politicalPartyId": "Int8",
+                    "id": "int32",
+                    "systemId": "int32",
+                    "huc2": str,
+                    "huc4": str,
+                    "huc6": str,
+                    "huc8": str,
+                    "zipcode": str,
+                    "nation": str,
+                    "stateKey": str,
+                    "femaRegion": str,
+                    "femaCommunity": str,
+                }
+            )
+            dams.loc[dams.yearCompleted < 1000, "yearCompleted"] = pd.NA
+            dams.to_feather(fname)
+            fname.with_suffix(".gpkg").unlink()
 
     @staticmethod
     def _get_json(
@@ -754,7 +875,7 @@ class NID:
         dams = self.get_byfilter([{"huc8": huc_ids}])[0]
         return dams[dams.within(_geometry)].copy()
 
-    def inventory_byid(self, dam_ids: List[int]) -> gpd.GeoDataFrame:
+    def inventory_byid(self, dam_ids: List[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
 
         Notes
@@ -770,6 +891,11 @@ class NID:
         dam_ids : list of int or str
             List of the target dam IDs (digists only). Note that the dam IDs are not the
             same as the NID IDs.
+        stage_nid : bool, optional
+            Whether to get the entire NID and then query locally or query from the
+            NID web service which tends to be very slow for large number of requests.
+            Defaults to ``False``. The staged NID database is saved as a `feather` file
+            in `./cache/nid_inventory.feather`.
 
         Returns
         -------
@@ -791,6 +917,11 @@ class NID:
         ]
         if len(urls) != len(dam_ids):
             raise InvalidInputType("dam_ids", "list of digits")
+
+        if stage_nid:
+            self.stage_nid_inventory()
+            dams = gpd.read_feather(self.nid_inventory_path)
+            return dams[dams.id.isin(tlz.map(int, dam_ids))].copy()
 
         return self._to_geodf(pd.DataFrame(self._get_json(urls)))
 
