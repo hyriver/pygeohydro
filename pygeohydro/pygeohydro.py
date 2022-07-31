@@ -317,7 +317,7 @@ class NLCD:
             )
         )
         self.nodata = OrderedDict(
-            (("impervious", 0), ("cover", 127), ("canopy", 0), ("descriptor", 127))
+            (("impervious", np.nan), ("cover", 127), ("canopy", np.nan), ("descriptor", 127))
         )
 
         self.wms = WMS(
@@ -376,9 +376,9 @@ class NLCD:
     ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         if isinstance(geometry, (Polygon, MultiPolygon)):
-            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs)
+            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255)
         else:
-            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray)
+            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, nodata=255)
 
         try:
             _ds = gtiff2xarray(r_dict=r_dict)
@@ -391,6 +391,7 @@ class NLCD:
             name = [n for n in self.units if n in lyr.lower()][-1]
             lyr_name = f"{name}_{lyr.split('_')[1]}"
             ds = ds.rename({lyr: lyr_name})
+            ds[lyr_name] = ds[lyr_name].where(ds[lyr_name] < 255, self.nodata[name])
             ds[lyr_name].attrs["units"] = self.units[name]
             ds[lyr_name] = ds[lyr_name].astype(self.types[name])
             ds[lyr_name].attrs["nodatavals"] = (self.nodata[name],)
