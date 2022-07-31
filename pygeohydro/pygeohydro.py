@@ -376,7 +376,9 @@ class NLCD:
     ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         if isinstance(geometry, (Polygon, MultiPolygon)):
-            gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255)
+            gtiff2xarray = tlz.partial(
+                geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255
+            )
         else:
             gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, nodata=255)
 
