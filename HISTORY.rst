@@ -5,6 +5,14 @@ History
 0.13.3 (unreleased)
 -------------------
 
+New Features
+~~~~~~~~~~~~
+- Add a new argument to ``NID.inventory_byid`` class for staging the entire NID dataset
+  prior to inventory queries. There a new public method called ``NID.stage_nid_inventory``
+  that can be used to download the entire NID dataset and save it as a ``feather`` file.
+  This is useful inventory queries with large number of IDs and is much more efficient
+  than querying the NID web service.
+
 Bug Fixes
 ~~~~~~~~~
 - The background value in ``cover_statistics`` function should have been 127 not 0.
