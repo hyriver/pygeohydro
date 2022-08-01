@@ -32,8 +32,8 @@ dependencies:
   - pygeos
   - rasterio>=1.2
   - scipy
-  - xarray>=0.18
-  - rioxarray>=0.10
+  - xarray>=2022.03.0
+  - rioxarray>=0.11
 
   # pynhd deps
   - networkx>=2.5

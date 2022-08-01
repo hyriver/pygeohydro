@@ -34,8 +34,8 @@ dependencies:
   - pygeos
   - rasterio>=1.2
   - scipy
-  - xarray>=0.18
-  - rioxarray>=0.10
+  - xarray>=2022.03.0
+  - rioxarray>=0.11
 
   # py3dep
   - click>=7.0
