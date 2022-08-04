@@ -38,7 +38,7 @@ dependencies:
   - rioxarray>=0.11
 
   # py3dep
-  - rich-click>=7.0
+  - rich-click
   - richdem>=0.3.4
 
   # pynhd deps
