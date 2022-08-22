@@ -76,7 +76,7 @@ repos:
   #     name: Lint docstrings with Darglint
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.1.0
+    rev: v2.2.1
     hooks:
     - id: codespell
       name: Checks for common misspellings in text files.
@@ -95,7 +95,7 @@ repos:
       name: Check try-exceptions blocks with tryceratops
 
   - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.3
+    rev: 5.0.4
     hooks:
     - id: flake8
       name: Linting with flake8
