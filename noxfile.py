@@ -39,8 +39,8 @@ def install_deps(session, extra):
     for d in dirs:
         shutil.rmtree(d, ignore_errors=True)
 
-    patters = ["*.egg-info", "*.egg", "*.pyc", "*~", "**/__pycache__"]
-    for p in patters:
+    patterns = ["*.egg-info", "*.egg", "*.pyc", "*~", "**/__pycache__"]
+    for p in patterns:
         for f in Path.cwd().rglob(p):
             shutil.rmtree(f, ignore_errors=True)
 
