@@ -2,6 +2,15 @@
 History
 =======
 
+0.14.0 (unreleased)
+-------------------
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Append "Error" to all exception classes for conforming to PEP-8 naming conventions.
+- Deprecate ``ssebopeta_byloc`` since it's been replaced with ``ssebopeta_bycoords``
+  since version 0.13.0.
+
 0.13.3 (2022-07-31)
 -------------------
 
