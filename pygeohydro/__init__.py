@@ -1,15 +1,15 @@
 """Top-level package for PyGeoHydro."""
-import importlib.metadata
+from importlib.metadata import version, PackageNotFoundError
 
 from . import helpers, plot
 from .exceptions import (
-    DataNotAvailable,
-    InvalidInputRange,
-    InvalidInputType,
-    InvalidInputValue,
-    MissingColumns,
-    MissingCRS,
-    ZeroMatched,
+    DataNotAvailableError,
+    InputRangeError,
+    InputTypeError,
+    InputValueError,
+    MissingColumnError,
+    MissingCRSError,
+    ZeroMatchedError,
 )
 from .print_versions import show_versions
 from .pygeohydro import (
@@ -22,11 +22,13 @@ from .pygeohydro import (
     overland_roughness,
     ssebopeta_bycoords,
     ssebopeta_bygeom,
-    ssebopeta_byloc,
 )
 from .waterdata import NWIS, WaterQuality, interactive_map
 
-__version__ = importlib.metadata.version("pygeohydro")
+try:
+    __version__ = version("pygeohydro")
+except PackageNotFoundError:
+    __version__ = "999"
 
 __all__ = [
     "NID",
@@ -44,13 +46,13 @@ __all__ = [
     "ssebopeta_bycoords",
     "helpers",
     "plot",
-    "DataNotAvailable",
-    "InvalidInputRange",
-    "InvalidInputType",
-    "MissingCRS",
-    "MissingColumns",
-    "InvalidInputValue",
-    "ZeroMatched",
+    "DataNotAvailableError",
+    "InputRangeError",
+    "InputTypeError",
+    "MissingCRSError",
+    "MissingColumnError",
+    "InputValueError",
+    "ZeroMatchedError",
     "show_versions",
     "__version__",
 ]
