@@ -2,7 +2,7 @@
 History
 =======
 
-0.13.5 (unreleased)
+0.13.5 (2022-08-29)
 -------------------
 
 Breaking Changes
@@ -10,6 +10,11 @@ Breaking Changes
 - Append "Error" to all exception classes for conforming to PEP-8 naming conventions.
 - Deprecate ``ssebopeta_byloc`` since it's been replaced with ``ssebopeta_bycoords``
   since version 0.13.0.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Bump the minimum versions of ``pygeoogc`` and ``pygeoutils`` to 0.13.5 and that of
+  ``async-retriever`` to 0.3.5.
 
 0.13.3 (2022-07-31)
 -------------------
