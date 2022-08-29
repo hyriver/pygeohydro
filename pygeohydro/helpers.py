@@ -12,7 +12,7 @@ from defusedxml import ElementTree
 from pygeoogc import ServiceURL
 
 from . import us_abbrs
-from .exceptions import InvalidInputRange, InvalidInputType, InvalidInputValue
+from .exceptions import InputRangeError, InputTypeError, InputValueError
 
 __all__ = ["nlcd_helper", "nwis_errors"]
 
@@ -129,24 +129,22 @@ def get_ssebopeta_urls(
 ) -> List[Tuple[pd.Timestamp, str]]:
     """Get list of URLs for SSEBop dataset within a period or years."""
     if not isinstance(dates, (tuple, list, int)):
-        raise InvalidInputType(
-            "dates", "tuple, list, or int", "(start, end), year, or [years, ...]"
-        )
+        raise InputTypeError("dates", "tuple, list, or int", "(start, end), year, or [years, ...]")
 
     if isinstance(dates, tuple):
         if len(dates) != 2:
-            raise InvalidInputType("dates", "(start, end)")
+            raise InputTypeError("dates", "(start, end)")
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
         if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2020-12-31"):
-            raise InvalidInputRange("SSEBop", ("2000", "2020"))
+            raise InputRangeError("SSEBop", ("2000", "2020"))
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
         seebop_yrs = np.arange(2000, 2021)
 
         if any(y not in seebop_yrs for y in years):
-            raise InvalidInputRange("SSEBop", ("2000", "2020"))
+            raise InputRangeError("SSEBop", ("2000", "2020"))
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list.pop(0)
@@ -186,7 +184,7 @@ def get_us_states(only: Optional[str] = None) -> gpd.GeoDataFrame:
     """
     valid_only = ["contiguous", "continental", "territories", "commonwealths"]
     if only is not None and only not in valid_only:
-        raise InvalidInputValue("only", valid_only)
+        raise InputValueError("only", valid_only)
 
     url = "https://www2.census.gov/geo/tiger/TIGER2021/STATE/tl_2021_us_state.zip"
     us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))

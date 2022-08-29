@@ -4,7 +4,7 @@ from typing import Generator, List, Optional, Tuple, Union
 import pygeoogc as ogc
 
 
-class MissingColumns(Exception):
+class MissingColumnError(Exception):
     """Exception raised when a required column is missing from a dataframe.
 
     Parameters
@@ -21,7 +21,7 @@ class MissingColumns(Exception):
         return self.message
 
 
-class MissingCRS(Exception):
+class MissingCRSError(Exception):
     """Exception raised when input GeoDataFrame is missing CRS."""
 
     def __init__(self) -> None:
@@ -32,7 +32,7 @@ class MissingCRS(Exception):
         return self.message
 
 
-class ServiceUnavailable(ogc.ServiceUnavailable):
+class ServiceUnavailableError(ogc.ServiceUnavailableError):
     """Exception raised when the service is not available.
 
     Parameters
@@ -42,7 +42,7 @@ class ServiceUnavailable(ogc.ServiceUnavailable):
     """
 
 
-class DataNotAvailable(Exception):
+class DataNotAvailableError(Exception):
     """Exception raised for requested data is not available.
 
     Parameters
@@ -59,7 +59,7 @@ class DataNotAvailable(Exception):
         return self.message
 
 
-class InvalidInputValue(Exception):
+class InputValueError(Exception):
     """Exception raised for invalid input.
 
     Parameters
@@ -82,7 +82,7 @@ class InvalidInputValue(Exception):
         return self.message
 
 
-class InvalidInputRange(Exception):
+class InputRangeError(Exception):
     """Exception raised when a function argument is not in the valid range.
 
     Parameters
@@ -101,7 +101,7 @@ class InvalidInputRange(Exception):
         return self.message
 
 
-class InvalidInputType(Exception):
+class InputTypeError(Exception):
     """Exception raised when a function argument type is invalid.
 
     Parameters
@@ -124,7 +124,7 @@ class InvalidInputType(Exception):
         return self.message
 
 
-class ZeroMatched(ValueError):
+class ZeroMatchedError(ValueError):
     """Exception raised when a function argument is missing.
 
     Parameters

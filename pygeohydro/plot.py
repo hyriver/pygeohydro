@@ -13,7 +13,7 @@ import proplot as pplt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from . import helpers
-from .exceptions import InvalidInputType
+from .exceptions import InputTypeError
 
 __all__ = ["signatures", "prepare_plot_data", "exceedance", "mean_monthly"]
 DF = TypeVar("DF", pd.DataFrame, pd.Series)
@@ -118,12 +118,12 @@ def _prepare_plot_data(
     precipitation: Optional[Union[pd.DataFrame, pd.Series]] = None,
 ) -> Tuple[PlotDataType, Optional[PlotDataType]]:
     if not isinstance(daily, (pd.DataFrame, pd.Series)):
-        raise InvalidInputType("daily", "pd.DataFrame or pd.Series")
+        raise InputTypeError("daily", "pd.DataFrame or pd.Series")
 
     discharge = prepare_plot_data(daily)
 
     if not isinstance(precipitation, (pd.DataFrame, pd.Series)) and precipitation is not None:
-        raise InvalidInputType("precipitation", "pd.DataFrame or pd.Series")
+        raise InputTypeError("precipitation", "pd.DataFrame or pd.Series")
 
     prcp = None if precipitation is None else prepare_plot_data(precipitation)
 

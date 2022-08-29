@@ -15,11 +15,11 @@ import pygeoogc as ogc
 import pygeoutils as geoutils
 import xarray as xr
 from pygeoogc import ServiceURL
-from pygeoogc import ZeroMatched as ZeroMatchedOGC
+from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import WaterData
 
-from .exceptions import DataNotAvailable, InvalidInputType, InvalidInputValue, ZeroMatched
+from .exceptions import DataNotAvailableError, InputTypeError, InputValueError, ZeroMatchedError
 from .helpers import logger
 
 DEF_CRS = "epsg:4326"
@@ -57,18 +57,18 @@ class NWIS:
                 [{"params": {**p, "format": "rdb"}} for p in payloads],
             )
         except ar.ServiceError as ex:
-            raise ZeroMatched(ogc_utils.check_response(str(ex))) from ex
+            raise ZeroMatchedError(ogc_utils.check_response(str(ex))) from ex
 
         with contextlib.suppress(StopIteration):
             not_found = next(filter(lambda x: x[0] != "#", resp), None)
             if not_found is not None:
                 msg = re.findall("<p>(.*?)</p>", not_found)[1].rsplit(">", 1)[1]
-                raise ZeroMatched(f"Server error message:\n{msg}")
+                raise ZeroMatchedError(f"Server error message:\n{msg}")
 
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
         if len(data) == 0:
-            raise ZeroMatched
+            raise ZeroMatchedError
 
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
         if "agency_cd" in rdb_df:
@@ -94,7 +94,7 @@ class NWIS:
             Validated queries with additional keys for format and site output (basic/expanded).
         """
         if not (isinstance(queries, (list, tuple)) and all(isinstance(q, dict) for q in queries)):
-            raise InvalidInputType("query", "list of dict")
+            raise InputTypeError("query", "list of dict")
 
         valid_query_keys = [
             "site",
@@ -167,7 +167,7 @@ class NWIS:
 
         not_valid = list(tlz.concat(set(q).difference(set(valid_query_keys)) for q in queries))
         if len(not_valid) > 0:
-            raise InvalidInputValue(f"query keys ({', '.join(not_valid)})", valid_query_keys)
+            raise InputValueError(f"query keys ({', '.join(not_valid)})", valid_query_keys)
 
         _queries = queries.copy()
         if expanded:
@@ -245,7 +245,7 @@ class NWIS:
         logging.getLogger("pynhd.core").setLevel(logging.ERROR)
         try:
             gages = gii.byid("staid", sites.site_no.to_list())
-        except ZeroMatchedOGC:
+        except ZeroMatchedErrorOGC:
             gages = gpd.GeoDataFrame()
         logging.getLogger("pynhd.core").setLevel(logging.INFO)
 
@@ -372,16 +372,16 @@ class NWIS:
     ) -> Tuple[List[str], pd.Timestamp, pd.Timestamp]:
         """Validate inputs."""
         if not isinstance(station_ids, (str, Sequence, Iterable)):
-            raise InvalidInputType("ids", "str or list of str")
+            raise InputTypeError("ids", "str or list of str")
 
         sids = [station_ids] if isinstance(station_ids, str) else list(set(station_ids))
         sids_df = pd.Series(sids, dtype=str)
         sids_df = sids_df.str.lower().str.replace("usgs-", "").str.zfill(8)
         if not sids_df.str.isnumeric().all():
-            raise InvalidInputType("station_ids", "only digits")
+            raise InputTypeError("station_ids", "only digits")
 
         if not isinstance(dates, tuple) or len(dates) != 2:
-            raise InvalidInputType("dates", "tuple", "(start, end)")
+            raise InputTypeError("dates", "tuple", "(start, end)")
 
         start = pd.to_datetime(dates[0], utc=utc)
         end = pd.to_datetime(dates[1], utc=utc)
@@ -415,7 +415,7 @@ class NWIS:
                 area.loc[a_idx, "drain_sqkm"] = info.loc[i_idx, "drain_area_va"] * 0.38610
 
         if area["drain_sqkm"].isna().all():
-            raise DataNotAvailable("drainage")
+            raise DataNotAvailableError("drainage")
         return area.set_index("site_no").drain_sqkm * 1e6
 
     def _get_streamflow(
@@ -450,7 +450,7 @@ class NWIS:
             for t in r["value"]["timeSeries"]
         }
         if len(r_ts) == 0:
-            raise DataNotAvailable("discharge")
+            raise DataNotAvailableError("discharge")
 
         def to_df(col: str, values: Dict[str, Any]) -> pd.DataFrame:
             try:
@@ -481,7 +481,7 @@ class NWIS:
 
         qobs = pd.concat([to_df(s, t) for s, t in r_ts.items()], axis=1)
         if len(qobs) == 0:
-            raise DataNotAvailable("discharge")
+            raise DataNotAvailableError("discharge")
         qobs[qobs.le(0)] = np.nan
         # Convert cfs to cms
         return qobs * np.float_power(0.3048, 3)
@@ -521,7 +521,7 @@ class NWIS:
         """
         valid_freqs = ["dv", "iv"]
         if freq not in valid_freqs:
-            raise InvalidInputValue("freq", valid_freqs)
+            raise InputValueError("freq", valid_freqs)
         utc = True if freq == "iv" else None
 
         sids, start, end = self._check_inputs(station_ids, dates, utc)
@@ -559,7 +559,7 @@ class NWIS:
             ]
         sids = list(siteinfo.site_no.unique())
         if len(sids) == 0:
-            raise DataNotAvailable("discharge")
+            raise DataNotAvailableError("discharge")
 
         time_fmt = T_FMT if utc is None else "%Y-%m-%dT%H:%M%z"
         start_dt = start.strftime(time_fmt)
@@ -582,7 +582,7 @@ class NWIS:
                     {c: q / area_sqm.loc[c.split("-")[-1]] * ms2mmd for c, q in qobs.iteritems()}
                 )
             except KeyError as ex:
-                raise DataNotAvailable("drainage") from ex
+                raise DataNotAvailableError("drainage") from ex
 
         qobs.attrs, long_names = self._get_attrs(siteinfo, mmd)
         if to_xarray:
@@ -742,7 +742,7 @@ class WaterQuality:
             "providers",
         ]
         if endpoint.lower() not in valid_endpoints:
-            raise InvalidInputValue("endpoint", valid_endpoints)
+            raise InputValueError("endpoint", valid_endpoints)
         resp = ar.retrieve_json([f"{self.wq_url}/Codes/{endpoint}?mimeType=json"])
         return [r["value"] for r in resp[0]["codes"]]
 
@@ -758,7 +758,7 @@ class WaterQuality:
             "BiologicalMetric",
         ]
         if endpoint.lower() not in map(str.lower, valid_endpoints):
-            raise InvalidInputValue("endpoint", valid_endpoints)
+            raise InputValueError("endpoint", valid_endpoints)
         return f"{self.wq_url}/data/{endpoint}/search"
 
     def get_json(
@@ -789,7 +789,7 @@ class WaterQuality:
         """Check the validity of the Water Quality Web Service keyword arguments."""
         invalids = [k for k in wq_kwds if k not in self.keywords.index]
         if len(invalids) > 0:
-            raise InvalidInputValue("wq_kwds", invalids)
+            raise InputValueError("wq_kwds", invalids)
 
     def station_bybbox(
         self, bbox: Tuple[float, float, float, float], wq_kwds: Optional[Dict[str, str]]
@@ -898,7 +898,7 @@ class WaterQuality:
         siteid = set(station_ids) if isinstance(station_ids, list) else {station_ids}
         if any("-" not in s for s in siteid):
             valid_type = "list of hyphenated IDs like so 'agency code-station ID'"
-            raise InvalidInputType("station_ids", valid_type)
+            raise InputTypeError("station_ids", valid_type)
         kwds = {
             "mimeType": "csv",
             "siteid": ";".join(siteid),

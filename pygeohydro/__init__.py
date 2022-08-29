@@ -1,5 +1,5 @@
 """Top-level package for PyGeoHydro."""
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
 
 from . import helpers, plot
 from .exceptions import (
