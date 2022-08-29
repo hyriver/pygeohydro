@@ -8,7 +8,7 @@ dependencies:
   # async_retriever
   - aiodns
   - aiohttp>=3.8.1
-  - aiohttp-client-cache>=0.6.1
+  - aiohttp-client-cache>=0.7.3
   - aiosqlite
   - brotli
   - cchardet
@@ -22,7 +22,7 @@ dependencies:
   - pyyaml
   - pyproj>=1.2
   - requests
-  - requests-cache>=0.8
+  - requests-cache>=0.9.6
   - shapely>=1.8
   - urllib3
 
