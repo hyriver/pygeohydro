@@ -1,7 +1,6 @@
 """Accessing data from the supported databases through their APIs."""
 import io
 import itertools
-import warnings
 import zipfile
 from collections import OrderedDict
 from numbers import Number
@@ -26,12 +25,12 @@ from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
 from .exceptions import (
-    InvalidInputType,
-    InvalidInputValue,
-    MissingColumns,
-    MissingCRS,
-    ServiceUnavailable,
-    ZeroMatched,
+    InputTypeError,
+    InputValueError,
+    MissingColumnError,
+    MissingCRSError,
+    ServiceUnavailableError,
+    ZeroMatchedError,
 )
 from .helpers import Stats, logger
 
@@ -43,7 +42,6 @@ GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
 __all__ = [
     "get_camels",
     "ssebopeta_bycoords",
-    "ssebopeta_byloc",
     "ssebopeta_bygeom",
     "nlcd_bygeom",
     "nlcd_bycoords",
@@ -107,11 +105,11 @@ def ssebopeta_bycoords(
         The ``location_id`` dimension is the same as the ``id`` column in the input dataframe.
     """
     if not isinstance(coords, pd.DataFrame):
-        raise InvalidInputType("coords", "pandas.DataFrame")
+        raise InputTypeError("coords", "pandas.DataFrame")
 
     req_cols = ["id", "x", "y"]
     if not set(req_cols).issubset(coords.columns):
-        raise MissingColumns(req_cols)
+        raise MissingColumnError(req_cols)
 
     _coords = gpd.GeoSeries(
         gpd.points_from_xy(coords["x"], coords["y"]), index=coords["id"], crs=crs
@@ -155,46 +153,6 @@ def ssebopeta_bycoords(
     ds.x.attrs = {"crs": pyproj.CRS(crs).to_string()}
     ds.y.attrs = {"crs": pyproj.CRS(crs).to_string()}
     return ds
-
-
-def ssebopeta_byloc(
-    coords: Tuple[float, float],
-    dates: Union[Tuple[str, str], int, List[int]],
-) -> pd.Series:
-    """Daily actual ET for a location from SSEBop database in mm/day.
-
-    .. deprecated:: 0.11.5
-        Use :func:`ssebopeta_bycoords` instead. For now, this function calls
-        :func:`ssebopeta_bycoords` but retains the same functionality, i.e.,
-        returns a dataframe and accepts only a single coordinate. Whereas the
-        new function returns a ``xarray.Dataset`` and accepts a dataframe
-        containing coordinates.
-
-    Parameters
-    ----------
-    coords : tuple
-        Longitude and latitude of a single location as a tuple (lon, lat)
-    dates : tuple or list, optional
-        Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
-
-    Returns
-    -------
-    pandas.Series
-        Daily actual ET for a location
-    """
-    msg = " ".join(
-        [
-            "This function is deprecated and will be remove in future versions.",
-            "Please use `ssebopeta_bycoords` instead.",
-            "For now, this function calls `ssebopeta_bycoords`.",
-        ]
-    )
-    warnings.warn(msg, DeprecationWarning)
-    if not isinstance(coords, tuple) or len(coords) != 2:
-        raise InvalidInputType("coords", "(lon, lat)")
-    _coords = pd.DataFrame({"id": [0], "x": [coords[0]], "y": [coords[1]]})
-    ds = ssebopeta_bycoords(_coords, dates)
-    return ds.to_dataframe().pivot_table(index="time", columns="location_id", values="eta")[0]
 
 
 def ssebopeta_bygeom(
@@ -292,13 +250,13 @@ class NLCD:
         }
         years = default_years if years is None else years
         if not isinstance(years, dict):
-            raise InvalidInputType("years", "dict", f"{default_years}")
+            raise InputTypeError("years", "dict", f"{default_years}")
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.region = region.upper()
         self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
         self.crs = pyproj.CRS(crs).to_string().lower()
         if self.crs not in self.valid_crs:
-            raise InvalidInputValue("crs", self.valid_crs)
+            raise InputValueError("crs", self.valid_crs)
         self.layers = self.get_layers()
         self.units = OrderedDict(
             (
@@ -333,7 +291,7 @@ class NLCD:
         """Get NLCD layers for the provided years dictionary."""
         valid_regions = ["L48", "HI", "PR", "AK"]
         if self.region not in valid_regions:
-            raise InvalidInputValue("region", valid_regions)
+            raise InputValueError("region", valid_regions)
 
         nlcd_meta = helpers.nlcd_helper()
 
@@ -346,7 +304,7 @@ class NLCD:
             for yr in yrs
         ):
             vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
-            raise InvalidInputValue("years", vals)
+            raise InputValueError("years", vals)
 
         def layer_name(lyr: str) -> str:
             if lyr == "canopy":
@@ -385,7 +343,7 @@ class NLCD:
         try:
             _ds = gtiff2xarray(r_dict=r_dict)
         except rio.RasterioIOError as ex:
-            raise ServiceUnavailable(self.wms.url) from ex
+            raise ServiceUnavailableError(self.wms.url) from ex
 
         ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
@@ -449,10 +407,10 @@ def nlcd_bygeom(
         logger.warning("NLCD's resolution is 30 m, so finer resolutions are not recommended.")
 
     if not isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
-        raise InvalidInputType("geometry", "GeoDataFrame or GeoSeries")
+        raise InputTypeError("geometry", "GeoDataFrame or GeoSeries")
 
     if geometry.crs is None:
-        raise MissingCRS
+        raise MissingCRSError
     _geometry = geometry.to_crs(crs).geometry.to_dict()
 
     nlcd_wms = NLCD(years=years, region=region, crs=crs, ssl=ssl)
@@ -495,7 +453,7 @@ def nlcd_bycoords(
         A GeoDataFrame with the NLCD data and the coordinates.
     """
     if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
-        raise InvalidInputType("coords", "list of (lon, lat)")
+        raise InputTypeError("coords", "list of (lon, lat)")
 
     nlcd_wms = NLCD(years=years, region=region, crs="epsg:3857", ssl=ssl)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
@@ -530,7 +488,7 @@ def overland_roughness(cover_da: xr.DataArray) -> xr.DataArray:
         Overland roughness
     """
     if not isinstance(cover_da, xr.DataArray):
-        raise InvalidInputType("cover_da", "xarray.DataArray")
+        raise InputTypeError("cover_da", "xarray.DataArray")
 
     roughness = cover_da.astype(np.float64)
     roughness = roughness.rio.write_nodata(np.nan)
@@ -540,8 +498,7 @@ def overland_roughness(cover_da: xr.DataArray) -> xr.DataArray:
 
     meta = helpers.nlcd_helper()
     get_roughness = np.vectorize(meta["roughness"].get, excluded=["default"])
-    roughness.data = get_roughness(cover_da.astype(str), np.nan)
-    return roughness
+    return roughness.copy(data=get_roughness(cover_da.astype("uint8").astype(str), np.nan))
 
 
 def cover_statistics(cover_da: xr.DataArray) -> Stats:
@@ -558,7 +515,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
         A named tuple with the percentages of the cover classes and categories.
     """
     if not isinstance(cover_da, xr.DataArray):
-        raise InvalidInputType("cover_da", "xarray.DataArray")
+        raise InputTypeError("cover_da", "xarray.DataArray")
 
     nlcd_meta = helpers.nlcd_helper()
     val, freq = np.unique(cover_da, return_counts=True)
@@ -569,7 +526,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
     total_count = freq.sum()
 
     if any(c not in nlcd_meta["classes"] for c in freq_dict):
-        raise InvalidInputValue("ds values", list(nlcd_meta["classes"]))  # noqa: TC003
+        raise InputValueError("ds values", list(nlcd_meta["classes"]))  # noqa: TC003
 
     class_percentage = {
         nlcd_meta["classes"][k].split(" -")[0].strip(): v / total_count * 100.0
@@ -762,7 +719,7 @@ class NID:
             List of JSON responses from the web service.
         """
         if not isinstance(urls, list):
-            raise InvalidInputType("urls", "list or str")
+            raise InputTypeError("urls", "list or str")
 
         if params is None:
             kwds = None
@@ -770,7 +727,7 @@ class NID:
             kwds = [{"params": {**p, "out": "json"}} for p in params]
         resp = ar.retrieve_json(urls, kwds)
         if len(resp) == 0:
-            raise ZeroMatched
+            raise ZeroMatchedError
 
         failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
         if failed:
@@ -778,7 +735,7 @@ class NID:
             errs = " service requests failed with the following messages:\n"
             errs += "\n".join(err_msgs)
             if len(failed) == len(urls):
-                raise ZeroMatched(f"All{errs}")
+                raise ZeroMatchedError(f"All{errs}")
             resp = [r for i, r in enumerate(resp) if i not in idx]
             logger.warning(f"Some{errs}")
         return resp
@@ -835,7 +792,7 @@ class NID:
         fields = self.valid_fields.to_list()
         invalid = [k for key in query_list for k in key if k not in fields]
         if invalid:
-            raise InvalidInputValue("query_dict", fields)
+            raise InputValueError("query_dict", fields)
         params = [
             {"sy": " ".join(f"@{s}:{fid}" for s, fids in key.items() for fid in fids)}
             for key in query_list
@@ -919,7 +876,7 @@ class NID:
             for i in itertools.takewhile(lambda x: str(x).isdigit(), dam_ids)
         ]
         if len(urls) != len(dam_ids):
-            raise InvalidInputType("dam_ids", "list of digits")
+            raise InputTypeError("dam_ids", "list of digits")
 
         if stage_nid:
             self.stage_nid_inventory()
@@ -963,7 +920,7 @@ class NID:
         """
         fields = self.valid_fields.to_list()
         if len(context_key) > 0 and context_key not in fields:
-            raise InvalidInputValue("context", fields)
+            raise InputValueError("context", fields)
 
         params = [{"text": text, "contextKey": context_key}]
         resp = self._get_json([f"{self.base_url}/suggestions"] * len(params), params)
@@ -992,8 +949,8 @@ class WBD(AGRBase):
 
     Notes
     -----
-    This file contains Hydrologic Unit (HU) polygon boundaries for the United States,
-    Puerto Rico, and the U.S. Virgin Islands.
+    This web service offers Hydrologic Unit (HU) polygon boundaries for
+    the United States, Puerto Rico, and the U.S. Virgin Islands.
     For more info visit: https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer
 
     Parameters
@@ -1031,5 +988,5 @@ class WBD(AGRBase):
         }
         _layer = self.valid_layers.get(layer)
         if _layer is None:
-            raise InvalidInputValue("layer", list(self.valid_layers))
+            raise InputValueError("layer", list(self.valid_layers))
         super().__init__(ServiceURL().restful.wbd, _layer, outfields, crs)
