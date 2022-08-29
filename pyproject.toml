@@ -51,4 +51,4 @@ no_gitignore = false
 
 [tool.black]
 line-length = 100
-target-version = ['py37']
+target-version = ['py38']
