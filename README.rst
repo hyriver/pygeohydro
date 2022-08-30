@@ -76,8 +76,8 @@ PyGeoHydro: Retrieve Geospatial Hydrology Data
     :target: https://pypi.python.org/pypi/pygeohydro
     :alt: Python Versions
 
-.. image:: https://pepy.tech/badge/hydrodata
-    :target: https://pepy.tech/project/hydrodata
+.. image:: https://pepy.tech/badge/pygeohydro
+    :target: https://pepy.tech/project/pygeohydro
     :alt: Downloads
 
 |
