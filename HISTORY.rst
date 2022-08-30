@@ -2,6 +2,13 @@
 History
 =======
 
+0.13.6 (2022-08-30)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add the missing PyPi classifiers for the supported Python versions.
+
 0.13.5 (2022-08-29)
 -------------------
 
