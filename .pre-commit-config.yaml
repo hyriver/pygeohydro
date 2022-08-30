@@ -19,7 +19,7 @@ repos:
     hooks:
     - id: setup-cfg-fmt
       name: Autoformat setup.cfg
-      args: [--min-py3-version, "3.7"]
+      args: [--min-py3-version, "3.8", "--include-version-classifiers"]
 
   - repo: https://github.com/hadialqattan/pycln
     rev: v2.1.1
