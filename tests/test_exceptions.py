@@ -3,6 +3,7 @@ import pytest
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
+import pandas as pd
 from pygeohydro import DataNotAvailableError, InputRangeError, InputTypeError, InputValueError
 
 try:
@@ -29,33 +30,23 @@ class TestETAExceptions:
     dates = ("2000-01-01", "2000-01-05")
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
-    def test_invalid_coords(self):
-        with pytest.raises(InputTypeError) as ex:
-            _ = gh.ssebopeta_byloc(GEOM.centroid.x, dates=self.dates)
-        assert "(lon, lat)" in str(ex.value)
-
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_dates(self):
         with pytest.raises(InputTypeError) as ex:
-            _ = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates="2000-01-01")
-        assert "tuple" in str(ex.value)
-
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
-    def test_invalid_dates_tuple(self):
-        with pytest.raises(InputTypeError) as ex:
-            _ = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=("2000-01-01"))
-        assert "(start, end)" in str(ex.value)
-
-    def test_unsupported_dates(self):
-        with pytest.raises(InputRangeError) as ex:
-            _ = gh.ssebopeta_byloc(
-                (GEOM.centroid.x, GEOM.centroid.y), dates=("1990-01-01", "1990-01-05")
-            )
-        assert "2000" in str(ex.value)
+            _ = gh.ssebopeta_bycoords((GEOM.centroid.x, GEOM.centroid.y), dates="2000-01-01")
+        assert "pandas.DataFrame" in str(ex.value)
 
     def test_unsupported_years(self):
+        coords = pd.DataFrame(
+            [
+                ["s1", -72.77, 40.07],
+                ["s2", -70.31, 46.07],
+                ["s3", -69.31, 45.45],
+                ["s4", -69.77, 45.45],
+            ],
+            columns=["id", "x", "y"],
+        )
         with pytest.raises(InputRangeError) as ex:
-            _ = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=[2010, 2014, 2021])
+            _ = gh.ssebopeta_bycoords(coords, dates=[2010, 2014, 2021])
         assert "2020" in str(ex.value)
 
 

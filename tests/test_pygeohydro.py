@@ -112,10 +112,6 @@ class TestETA:
         urls_years = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years)
         assert len(urls_dates) == 3653 and len(urls_years) == 1095
 
-    def test_loc(self):
-        eta = gh.ssebopeta_byloc((GEOM.centroid.x, GEOM.centroid.y), dates=self.dates)
-        assert abs(eta.mean() - 0.575) < SMALL
-
 
 class TestNLCD:
     years = {"cover": [2016]}
