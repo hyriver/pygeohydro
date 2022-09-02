@@ -1,9 +1,9 @@
 import geopandas as gpd
+import pandas as pd
 import pytest
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
-import pandas as pd
 from pygeohydro import DataNotAvailableError, InputRangeError, InputTypeError, InputValueError
 
 try:

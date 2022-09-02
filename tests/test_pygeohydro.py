@@ -125,8 +125,8 @@ class TestNLCD:
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
-        self.assertion(lulc[0].cover_2016, 82.296)
-        self.assertion(lulc[1].cover_2016, 82.296)
+        self.assertion(lulc[0].cover_2016, 83.048)
+        self.assertion(lulc[1].cover_2016, 83.048)
         assert lulc[0].cover_2016.rio.nodata == 127
 
     def test_coords(self):
@@ -144,7 +144,7 @@ class TestNLCD:
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
         roughness = gh.overland_roughness(lulc[0].cover_2016)
-        assert abs(roughness.mean().item() - 0.3163) < SMALL
+        assert abs(roughness.mean().item() - 0.3197) < SMALL
 
 
 class TestNID:
