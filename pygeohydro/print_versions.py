@@ -121,7 +121,6 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         ("pygeoogc", lambda mod: mod.__version__),
         ("defusedxml", lambda mod: mod.__version__),
         ("owslib", lambda mod: mod.__version__),
-        ("pydantic", lambda mod: mod.version.VERSION),
         ("yaml", lambda mod: mod.__version__),
         ("pyproj", lambda mod: mod.__version__),
         ("requests", lambda mod: mod.__version__),
