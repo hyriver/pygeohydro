@@ -248,7 +248,7 @@ We can select all the stations within this boundary box that have daily mean str
 
     nwis = NWIS()
     query = {
-        **nwis.query_bybox(bbox),
+        "bBox": ",".join(f"{b:.06f}" for b in bbox),
         "hasDataTypeCd": "dv",
         "outputDataTypeCd": "dv",
     }
