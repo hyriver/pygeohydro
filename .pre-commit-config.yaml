@@ -41,7 +41,7 @@ repos:
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 22.8.0
+    rev: 22.10.0
     hooks:
     - id: black
       name: Autoformat with black
@@ -82,7 +82,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.3
+    rev: v3.1.0
     hooks:
     - id: pyupgrade
       name: Upgrade synax to python 3.7+ with pyupgrade
@@ -110,7 +110,7 @@ repos:
       - pep8-naming
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.971
+    rev: v0.982
     hooks:
     - id: mypy
       name: Static type checking with mypy
