@@ -3,6 +3,8 @@
 The original script is from
 `xarray <https://github.com/pydata/xarray/blob/master/xarray/util/print_versions.py>`__
 """
+from __future__ import annotations
+
 import importlib
 import locale
 import os
@@ -10,13 +12,15 @@ import platform
 import struct
 import subprocess
 import sys
-from types import ModuleType
-from typing import List, Optional, TextIO, Tuple
+from typing import TYPE_CHECKING, TextIO
+
+if TYPE_CHECKING:
+    from types import ModuleType
 
 __all__ = ["show_versions"]
 
 
-def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
+def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
     libhdf5_version = None
     libnetcdf_version = None
     try:
@@ -34,7 +38,7 @@ def netcdf_and_hdf5_versions() -> List[Tuple[str, Optional[str]]]:
     return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
 
-def get_sys_info() -> List[Tuple[str, Optional[str]]]:
+def get_sys_info() -> list[tuple[str, str | None]]:
     """Return system information as a dict.
 
     From https://github.com/numpy/numpy/blob/master/setup.py#L64-L89
@@ -46,7 +50,7 @@ def get_sys_info() -> List[Tuple[str, Optional[str]]]:
     """
     blob = []
 
-    def _minimal_ext_cmd(cmd: List[str]) -> bytes:
+    def _minimal_ext_cmd(cmd: list[str]) -> bytes:
         # construct minimal environment
         env = {}
         for k in ["SYSTEMROOT", "PATH", "HOME"]:
@@ -153,7 +157,10 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         ("matplotlib", lambda mod: mod.__version__),
         #  pydaymet
         ("pydaymet", lambda mod: mod.__version__),
+        #  hydrosignatures
+        ("hydrosignatures", lambda mod: mod.__version__),
         #  misc
+        ("numba", lambda mod: mod.__version__),
         ("bottleneck", lambda mod: mod.__version__),
         ("pygeos", lambda mod: mod.__version__),
         ("tables", lambda mod: mod.__version__),
@@ -163,7 +170,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         ("xdist", lambda mod: mod.__version__),
     ]
 
-    deps_blob: List[Tuple[str, Optional[str]]] = []
+    deps_blob: list[tuple[str, str | None]] = []
     for (modname, ver_f) in deps:
         try:
             mod = _get_mod(modname)
@@ -171,7 +178,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
             deps_blob.append((modname, None))
         else:
             try:
-                ver = ver_f(mod)
+                ver = ver_f(mod)  # type: ignore
             except (NotImplementedError, AttributeError):
                 ver = "installed"
             deps_blob.append((modname, ver))
