@@ -85,7 +85,7 @@ repos:
     rev: v3.2.0
     hooks:
     - id: pyupgrade
-      name: Upgrade synax to python 3.7+ with pyupgrade
+      name: Upgrade sytnax to python 3.8+ with pyupgrade
       args: [--py38-plus]
 
   - repo: https://github.com/guilatrova/tryceratops
