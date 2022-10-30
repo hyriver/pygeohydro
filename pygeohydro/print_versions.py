@@ -178,7 +178,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
             deps_blob.append((modname, None))
         else:
             try:
-                ver = ver_f(mod)  # type: ignore
+                ver = ver_f(mod)
             except (NotImplementedError, AttributeError):
                 ver = "installed"
             deps_blob.append((modname, ver))
