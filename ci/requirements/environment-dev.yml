@@ -50,7 +50,7 @@ dependencies:
   - folium
   - h5netcdf
   - lxml
-  - proplot
+  - matplotlib-base
 
   # optional deps to speed up xarray and pydaymet
   - bottleneck
@@ -69,6 +69,7 @@ dependencies:
   - jupyterlab_widgets
   - ipywidgets
   - pygmo
+  - proplot
 
   # dev deps
   - codespell
