@@ -37,17 +37,22 @@
     :target: https://github.com/hyriver/async-retriever/actions/workflows/test.yml
     :alt: Github Actions
 
-=============== ==================================================================== ============
-Package         Description                                                          Status
-=============== ==================================================================== ============
-PyNHD_          Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
-Py3DEP_         Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_     Access NWIS, NID, WQP, HCDN 2009, NLCD, CAMELS, and SSEBop databases |pygeohydro|
-PyDaymet_       Access daily, monthly, and annual climate data via Daymet            |pydaymet|
-AsyncRetriever_ High-level API for asynchronous requests with persistent caching     |async|
-PyGeoOGC_       Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
-PyGeoUtils_     Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF data |pygeoutils|
-=============== ==================================================================== ============
+.. |signatures| image:: https://github.com/hyriver/hydrosignatures/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/hyriver/hydrosignatures/actions/workflows/test.yml
+    :alt: Github Actions
+
+================ ==================================================================== ============
+Package          Description                                                          Status
+================ ==================================================================== ============
+PyNHD_           Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
+Py3DEP_          Access topographic data through National Map's 3DEP web service      |py3dep|
+PyGeoHydro_      Access NWIS, NID, WQP, HCDN 2009, NLCD, CAMELS, and SSEBop databases |pygeohydro|
+PyDaymet_        Access daily, monthly, and annual climate data via Daymet            |pydaymet|
+HydroSignatures_ A collection of tools for computing hydrological signatures          |signatures|
+AsyncRetriever_  High-level API for asynchronous requests with persistent caching     |async|
+PyGeoOGC_        Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
+PyGeoUtils_      Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF data |pygeoutils|
+================ ==================================================================== ============
 
 .. _PyGeoHydro: https://github.com/hyriver/pygeohydro
 .. _AsyncRetriever: https://github.com/hyriver/async-retriever
@@ -56,6 +61,7 @@ PyGeoUtils_     Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF 
 .. _PyNHD: https://github.com/hyriver/pynhd
 .. _Py3DEP: https://github.com/hyriver/py3dep
 .. _PyDaymet: https://github.com/hyriver/pydaymet
+.. _HydroSignatures: https://github.com/hyriver/hydrosignatures
 
 PyGeoHydro: Retrieve Geospatial Hydrology Data
 ----------------------------------------------
@@ -111,6 +117,10 @@ main modules: ``pygeohydro``, ``plot``, and ``helpers``.
 
 PyGeoHydro supports the following datasets:
 
+* `gNATSGO <https://planetarycomputer.microsoft.com/dataset/gnatsgo-rasters>`__ for
+  US soil properties.
+* `Derived Soil Properties <https://www.sciencebase.gov/catalog/item/5fd7c19cd34e30b9123cb51f>`__
+  for soil porosity, available water capacity, and field capacity across the US.
 * `NWIS <https://nwis.waterdata.usgs.gov/nwis>`__ for daily mean streamflow observations
   (returned as a ``pandas.DataFrame`` or ``xarray.Dataset`` with station attributes),
 * `CAMELS <https://ral.ucar.edu/solutions/products/camels>`__ for accessing streamflow
