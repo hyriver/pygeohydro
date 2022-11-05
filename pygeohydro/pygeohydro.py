@@ -1099,7 +1099,6 @@ def soil_properties(
             return ds  # type: ignore[no-any-return]
 
     soil = xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
-    soil.attrs = {}
     return soil
 
 
@@ -1149,7 +1148,6 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 
     with dask.config.set(**{"array.slicing.split_large_chunks": True}):  # type: ignore[arg-type]
         ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
-        ds.attrs = {}
         poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
         ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
     return ds
