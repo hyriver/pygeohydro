@@ -1098,7 +1098,9 @@ def soil_properties(
             ds.attrs["long_name"] = valid_props[file.stem.split("_")[0]]["long_name"]
             return ds  # type: ignore[no-any-return]
 
-    return xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
+    soil = xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
+    soil.attrs = {}
+    return soil
 
 
 def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
@@ -1126,7 +1128,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         Requested soil properties.
     """
     if NO_STAC:
-        raise DependencyError("get_soildata", ["pystac-client", "planetary-computer"])
+        raise DependencyError("soil_gnatsgo", ["pystac-client", "planetary-computer"])
 
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1",
@@ -1147,6 +1149,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 
     with dask.config.set(**{"array.slicing.split_large_chunks": True}):  # type: ignore[arg-type]
         ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
+        ds.attrs = {}
         poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
         ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
     return ds
