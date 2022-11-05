@@ -109,7 +109,7 @@ def pre_commit(session) -> None:
 @nox.session(python=python_versions)
 def tests(session):
     """Run the test suite."""
-    install_deps(session, "test")
+    install_deps(session, "test,stac")
 
     session.run("pytest", "--doctest-modules", *session.posargs)
     session.run("coverage", "report")
