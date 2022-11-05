@@ -1,5 +1,7 @@
 """Customized PyGeoHydro exceptions."""
-from typing import Generator, List, Optional, Tuple, Union
+from __future__ import annotations
+
+from typing import Generator
 
 import pygeoogc as ogc
 
@@ -13,7 +15,7 @@ class MissingColumnError(Exception):
         List of missing columns.
     """
 
-    def __init__(self, missing: List[str]) -> None:
+    def __init__(self, missing: list[str]) -> None:
         self.message = "The following columns are missing:\n" + f"{', '.join(missing)}"
         super().__init__(self.message)
 
@@ -70,9 +72,7 @@ class InputValueError(Exception):
         List of valid inputs
     """
 
-    def __init__(
-        self, inp: str, valid_inputs: Union[List[str], Generator[str, None, None]]
-    ) -> None:
+    def __init__(self, inp: str, valid_inputs: list[str] | Generator[str, None, None]) -> None:
         self.message = f"Given {inp} is invalid. Valid {inp}s are:\n" + ", ".join(
             str(i) for i in valid_inputs
         )
@@ -93,7 +93,7 @@ class InputRangeError(Exception):
         Tuple of valid range.
     """
 
-    def __init__(self, database: str, rng: Tuple[str, str]) -> None:
+    def __init__(self, database: str, rng: tuple[str, str]) -> None:
         self.message = f"{database.capitalize()} is available from {rng[0]} to {rng[1]}."
         super().__init__(self.message)
 
@@ -114,7 +114,7 @@ class InputTypeError(Exception):
         An example of a valid form of the argument, defaults to None.
     """
 
-    def __init__(self, arg: str, valid_type: str, example: Optional[str] = None) -> None:
+    def __init__(self, arg: str, valid_type: str, example: str | None = None) -> None:
         self.message = f"The {arg} argument should be of type {valid_type}"
         if example is not None:
             self.message += f":\n{example}"
@@ -133,11 +133,31 @@ class ZeroMatchedError(ValueError):
         The exception error message
     """
 
-    def __init__(self, msg: Optional[str] = None) -> None:
+    def __init__(self, msg: str | None = None) -> None:
         if msg is None:
             self.message = "Service returned no features."
         else:
             self.message = f"Service returned no features with the following error message:\n{msg}"
+        super().__init__(self.message)
+
+    def __str__(self) -> str:
+        return self.message
+
+
+class DependencyError(Exception):
+    """Exception raised when a dependencies are not met.
+
+    Parameters
+    ----------
+    libraries : tuple
+        List of valid inputs
+    """
+
+    def __init__(self, func: str, libraries: str | list[str] | Generator[str, None, None]) -> None:
+        libraries = [libraries] if isinstance(libraries, str) else libraries
+        self.message = f"The following dependencies are missing for running {func}:\n" + ", ".join(
+            str(i) for i in libraries
+        )
         super().__init__(self.message)
 
     def __str__(self) -> str:
