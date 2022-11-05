@@ -3,6 +3,7 @@ import io
 import shutil
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pytest
 from pygeoogc import utils as ogc_utils
@@ -18,7 +19,6 @@ except ImportError:
 else:
     has_typeguard = True
 
-SMALL = 1e-3
 DEF_CRS = "epsg:4326"
 ALT_CRS = "epsg:3542"
 SID_NATURAL = "01031500"
@@ -36,6 +36,10 @@ GEOM = Polygon(
 )
 
 
+def assert_close(a: float, b: float) -> None:
+    assert np.isclose(a, b, rtol=1e-3).all()
+
+
 class TestNWIS:
     "Test NWIS"
     nwis: NWIS = NWIS()
@@ -44,14 +48,12 @@ class TestNWIS:
         df = self.nwis.get_streamflow(SID_NATURAL, DATES)
         ds = self.nwis.get_streamflow(SID_NATURAL, DATES, to_xarray=True)
         col = f"USGS-{SID_NATURAL}"
-        assert (
-            abs(df[col].sum().item() - ds.sel(station_id=col).discharge.sum().item()) < SMALL
-            and df.attrs[col]["huc_cd"] == ds.sel(station_id=col).huc_cd.item()
-        )
+        assert_close(df[col].sum().item(), ds.sel(station_id=col).discharge.sum().item())
+        assert df.attrs[col]["huc_cd"] == ds.sel(station_id=col).huc_cd.item()
 
     def test_qobs_mmd(self):
         df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-        assert abs(df[f"USGS-{SID_NATURAL}"].sum().item() - 27.814) < SMALL
+        assert_close(df[f"USGS-{SID_NATURAL}"].sum().item(), 27.814)
 
     def test_cst_tz(self):
         q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
@@ -60,12 +62,13 @@ class TestNWIS:
     def test_qobs_iv(self):
         iv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
         dv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="dv")
-        assert abs(iv.mean().item() - dv.mean().item()) < 0.054
+        assert_close(abs(iv.mean().item() - dv.mean().item()), 0.0539)
 
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
         info = self.nwis.get_info(query, expanded=True)
-        assert abs(info.drain_sqkm.item() - 769.048) < SMALL and info.hcdn_2009.item()
+        assert_close(info.drain_sqkm.item(), 769.048)
+        assert info.hcdn_2009.item()
 
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
@@ -100,11 +103,12 @@ class TestETA:
             columns=["id", "x", "y"],
         )
         ds = gh.ssebopeta_bycoords(coords, dates=self.dates)
-        assert abs(ds.eta.sum().item() - 8.625) < SMALL and ds.eta.isnull().sum().item() == 5
+        assert_close(ds.eta.sum().item(), 8.625)
+        assert ds.eta.isnull().sum().item() == 5
 
     def test_geom(self):
         eta_g = gh.ssebopeta_bygeom(GEOM, dates=self.dates)
-        assert abs(eta_g.mean().values.item() - 0.576) < SMALL
+        assert_close(eta_g.mean().values.item(), 0.577)
 
     def test_get_ssebopeta_urls(self):
         _ = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years[0])
@@ -120,7 +124,7 @@ class TestNLCD:
     @staticmethod
     def assertion(cover, expected):
         st = gh.cover_statistics(cover)
-        assert abs(st.categories["Forest"] - expected) < SMALL
+        assert_close(st.categories["Forest"], expected)
 
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
@@ -144,7 +148,7 @@ class TestNLCD:
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
         roughness = gh.overland_roughness(lulc[0].cover_2016)
-        assert abs(roughness.mean().item() - 0.3197) < SMALL
+        assert_close(roughness.mean().item(), 0.3197)
 
 
 class TestNID:
@@ -165,11 +169,11 @@ class TestNID:
 
     def test_id(self):
         dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
-        assert abs(dams.damHeight.max() - 120) < SMALL
+        assert_close(dams.damHeight.max(), 120)
 
     def test_stage_id(self):
         dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498], stage_nid=True)
-        assert abs(dams.damHeight.max() - 120) < SMALL
+        assert_close(dams.damHeight.max(), 120)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_geom(self):
@@ -216,6 +220,13 @@ def test_wbd():
     assert ",".join(hudson.states) == "CT,NJ,NY,RI,MA,NJ,NY,VT"
 
 
+def test_states_lookup():
+    codes = gh.helpers.states_lookup_table()
+    ca = codes["06"].counties
+    la_cd = ca[ca.str.contains("Los")].index[0]
+    assert la_cd == "037"
+
+
 @pytest.mark.xfail(reason="Hydroshare is unstable.")
 def test_camels():
     attrs, qobs = gh.get_camels()
@@ -249,18 +260,31 @@ def test_nwis_errors():
 
 
 @pytest.mark.parametrize(
-    "only,expected",
+    "key,expected",
     [
         (None, 56),
+        (["TX", "ca"], 2),
         ("contiguous", 48),
         ("continental", 49),
         ("commonwealths", 4),
         ("territories", 5),
     ],
 )
-def test_us_states(only, expected):
-    states = gh.helpers.get_us_states(only)
+def test_us_states(key, expected):
+    states = gh.helpers.get_us_states(key)
     assert states.shape[0] == expected
+
+
+def test_soil():
+    soil = gh.soil_properties("por")
+    assert soil.dims["x"] == 266301
+
+
+def test_gnatsgo():
+    layers = ["Tk0_100a", "Soc20_50"]
+    geometry = (-95.624515, 30.121598, -95.448253, 30.264074)
+    soil = gh.soil_gnatsgo(layers, geometry, 4326)
+    assert_close(soil.tk0_100a.mean().compute().item(), 89.848)
 
 
 def test_show_versions():
