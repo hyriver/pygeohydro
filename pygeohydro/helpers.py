@@ -1,32 +1,25 @@
 """Some helper function for PyGeoHydro."""
+from __future__ import annotations
+
 import io
-import logging
-import sys
-from typing import Any, Dict, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, NamedTuple
 
 import async_retriever as ar
+import cytoolz as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import ujson as json
 from defusedxml import ElementTree
 from pygeoogc import ServiceURL
 
 from . import us_abbrs
 from .exceptions import InputRangeError, InputTypeError, InputValueError
 
-__all__ = ["nlcd_helper", "nwis_errors"]
-
-DEF_CRS = "epsg:4326"
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-handler = logging.StreamHandler(sys.stdout)
-handler.setFormatter(logging.Formatter(""))
-logger.handlers = [handler]
-logger.propagate = False
+__all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table"]
 
 
-def nlcd_helper() -> Dict[str, Any]:
+def nlcd_helper() -> dict[str, Any]:
     """Get legends and properties of the NLCD cover dataset.
 
     Notes
@@ -47,7 +40,7 @@ def nlcd_helper() -> Dict[str, Any]:
 
     def _get_xml(
         layer: str,
-    ) -> Tuple[Any, Any, Any]:
+    ) -> tuple[Any, Any, Any]:
         root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
         return (
             root,
@@ -124,9 +117,7 @@ def nwis_errors() -> pd.DataFrame:
     return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
 
 
-def get_ssebopeta_urls(
-    dates: Union[Tuple[str, str], int, List[int]]
-) -> List[Tuple[pd.Timestamp, str]]:
+def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[pd.Timestamp, str]]:
     """Get list of URLs for SSEBop dataset within a period or years."""
     if not isinstance(dates, (tuple, list, int)):
         raise InputTypeError("dates", "tuple, list, or int", "(start, end), year, or [years, ...]")
@@ -163,18 +154,24 @@ def get_ssebopeta_urls(
 class Stats(NamedTuple):
     """Statistics for NLCD."""
 
-    classes: Dict[str, float]
-    categories: Dict[str, float]
+    classes: dict[str, float]
+    categories: dict[str, float]
 
 
-def get_us_states(only: Optional[str] = None) -> gpd.GeoDataFrame:
-    """Get US states as a GeoDataFrame from Census' Tiger 2021 database.
+def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame:
+    """Get US states as a GeoDataFrame from Census' Tiger 2022 database.
 
     Parameters
     ----------
-    only : bool, optional
-        Whether to return only the ``contiguous`` states, ``continental`` states,
-        ``commonwealths`` states, or US ``territories``. The default is ``None``
+    subset_key : str, optional
+        Key to subset the geometries instead of returning all states, by default
+        all states are returned. Valida keys are:
+
+        - ``contiguous``
+        - ``continental``
+        - ``commonwealths``
+        - ``territories``
+        - Two letter state codes, e.g., ``["TX", "CA", "FL", ...]``
         which returns all states.
 
     Returns
@@ -182,12 +179,76 @@ def get_us_states(only: Optional[str] = None) -> gpd.GeoDataFrame:
     geopandas.GeoDataFrame
         GeoDataFrame of US states.
     """
-    valid_only = ["contiguous", "continental", "territories", "commonwealths"]
-    if only is not None and only not in valid_only:
-        raise InputValueError("only", valid_only)
+    if subset_key is not None:
+        keys = [subset_key] if isinstance(subset_key, str) else subset_key
+        state_cd = []
 
-    url = "https://www2.census.gov/geo/tiger/TIGER2021/STATE/tl_2021_us_state.zip"
+        state_keys = [k.upper() for k in keys if len(k) == 2]
+        states = us_abbrs.STATES
+        if any(k not in states for k in state_keys):
+            raise InputValueError("subset_key", states)
+        if state_keys:
+            state_cd += state_keys
+
+        other_keys = [k for k in keys if len(k) > 2]
+        valid_keys = ["contiguous", "continental", "territories", "commonwealths"]
+        if any(k not in valid_keys for k in other_keys):
+            raise InputValueError("subset_key", valid_keys)
+        if other_keys:
+            state_cd += tlz.concat(getattr(us_abbrs, k.upper()) for k in other_keys)
+
+    url = "https://www2.census.gov/geo/tiger/TIGER2022/STATE/tl_2022_us_state.zip"
     us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))
-    if only:
-        return us_states[us_states.STUSPS.isin(getattr(us_abbrs, only.upper()))].copy()
+    if subset_key:
+        return us_states[us_states.STUSPS.isin(state_cd)].copy()
     return us_states
+
+
+class StateCounties(NamedTuple):
+    name: str
+    code: str | None
+    counties: pd.Series
+
+
+def states_lookup_table() -> dict[str, StateCounties]:
+    """Get codes and names of US states and their counties.
+
+    Notes
+    -----
+    This function is based on a file prepared by developers of
+    an R package called `dataRetrieval <https://github.com/USGS-R/dataRetrieval>`__.
+
+    Returns
+    -------
+    pandas.DataFrame
+        State codes and name as a dataframe.
+    """
+    urls = [
+        "https://www2.census.gov/geo/docs/reference/state.txt",
+        "/".join(
+            [
+                "https://raw.githubusercontent.com/USGS-R/dataRetrieval",
+                "main/inst/extdata/state_county.json",
+            ]
+        ),
+    ]
+    resp = ar.retrieve_text(urls)
+
+    codes = pd.read_csv(io.StringIO(resp[0]), sep="|")
+    codes["STATE"] = codes["STATE"].astype(str).str.zfill(2)
+    codes = codes.set_index("STATE")
+
+    def _county2series(cd: dict[str, dict[str, str]]) -> pd.Series:
+        return pd.DataFrame.from_dict(cd, orient="index")["name"]
+
+    def _state_cd(state: str) -> str | None:
+        try:
+            return codes.loc[state, "STUSAB"]  # type: ignore[no-any-return]
+        except KeyError:
+            return None
+
+    states = {
+        c: StateCounties(s["name"], _state_cd(c), _county2series(s["county_cd"]))
+        for c, s in json.loads(resp[1])["US"]["state_cd"].items()
+    }
+    return states
