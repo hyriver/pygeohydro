@@ -2,6 +2,28 @@
 History
 =======
 
+0.13.7 (2022-11-04)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add a two new function for retrieving soil properties across the US:
+
+  * ``soil_properties``: Porosity, available water capacity, and field capacity,
+  * ``soil_gnatsgo``: Soil properties from the gNATSGO database.
+
+- Add a new help function called ``state_lookup_table`` for getting
+  a lookup table of US states and their counties. This can be particularly
+  useful for mapping the digit ``state_cd`` and ``county_cd`` that NWIS
+  returns to state names/codes.
+- Add support for getting individual state geometries using ``get_us_states``
+  function by passing their two letter state code. Also, use TIGER 2022
+  data for the US states and counties instead of TIGER 2021.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Remove ``proplot`` as a dependency and use ``matplotlib`` instead.
+
 0.13.6 (2022-08-30)
 -------------------
 
