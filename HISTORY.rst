@@ -2,6 +2,15 @@
 History
 =======
 
+0.13.8 (unreleased)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- In both ``soil_properties`` and ``soil_gnatsgo`` function before returning
+  the dataset, drop its attrs since its ``_Fillvalue`` can cause some issue
+  when using the dataset with others.
+
 0.13.7 (2022-11-04)
 -------------------
 
