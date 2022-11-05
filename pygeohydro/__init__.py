@@ -4,6 +4,7 @@ from importlib.metadata import PackageNotFoundError, version
 from . import helpers, plot
 from .exceptions import (
     DataNotAvailableError,
+    DependencyError,
     InputRangeError,
     InputTypeError,
     InputValueError,
@@ -20,6 +21,8 @@ from .pygeohydro import (
     nlcd_bycoords,
     nlcd_bygeom,
     overland_roughness,
+    soil_gnatsgo,
+    soil_properties,
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
@@ -44,6 +47,8 @@ __all__ = [
     "ssebopeta_bygeom",
     "ssebopeta_byloc",
     "ssebopeta_bycoords",
+    "soil_properties",
+    "soil_gnatsgo",
     "helpers",
     "plot",
     "DataNotAvailableError",
@@ -51,6 +56,7 @@ __all__ = [
     "InputTypeError",
     "MissingCRSError",
     "MissingColumnError",
+    "DependencyError",
     "InputValueError",
     "ZeroMatchedError",
     "show_versions",

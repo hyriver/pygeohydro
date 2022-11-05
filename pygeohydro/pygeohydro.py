@@ -1,30 +1,38 @@
 """Accessing data from the supported databases through their APIs."""
+from __future__ import annotations
+
+import contextlib
 import io
 import itertools
+import os
+import sys
 import zipfile
 from collections import OrderedDict
-from numbers import Number
 from pathlib import Path
-from ssl import SSLContext
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union
 from unittest.mock import patch
 
 import async_retriever as ar
 import cytoolz as tlz
+import dask
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
+import rioxarray as rxr
 import xarray as xr
+from loguru import logger
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase
+from pynhd.core import ScienceBase
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
 from .exceptions import (
+    DependencyError,
     InputTypeError,
     InputValueError,
     MissingColumnError,
@@ -32,12 +40,44 @@ from .exceptions import (
     ServiceUnavailableError,
     ZeroMatchedError,
 )
-from .helpers import Stats, logger
+from .helpers import Stats
 
-DEF_CRS = "epsg:4326"
-EXPIRE = -1
+try:
+    import planetary_computer
+    import pystac_client
+
+    NO_STAC = False
+except ImportError:
+    pystac_client = None
+    planetary_computer = None
+    NO_STAC = True
+
+if TYPE_CHECKING:
+    from numbers import Number
+    from ssl import SSLContext
+
 GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+CRSTYPE = Union[int, str, pyproj.CRS]
 
+logger.configure(
+    handlers=[
+        {
+            "sink": sys.stdout,
+            "colorize": True,
+            "format": " | ".join(
+                [
+                    "{time:YYYY-MM-DD at HH:mm:ss}",  # noqa: FS003
+                    "{name: ^15}.{function: ^15}:{line: >3}",  # noqa: FS003
+                    "{message}",  # noqa: FS003
+                ]
+            ),
+        }
+    ]
+)
+if os.environ.get("HYRIVER_VERBOSE", "false").lower() == "true":
+    logger.enable("pygeohydro")
+else:
+    logger.disable("pygeohydro")
 
 __all__ = [
     "get_camels",
@@ -47,12 +87,14 @@ __all__ = [
     "nlcd_bycoords",
     "cover_statistics",
     "overland_roughness",
+    "soil_properties",
+    "soil_gnatsgo",
     "NID",
     "WBD",
 ]
 
 
-def get_camels() -> Tuple[gpd.GeoDataFrame, xr.Dataset]:
+def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
     """Get streaflow and basin attributes of all 671 stations in CAMELS dataset.
 
     Notes
@@ -78,14 +120,14 @@ def get_camels() -> Tuple[gpd.GeoDataFrame, xr.Dataset]:
     resp = ar.retrieve_binary(urls)
 
     attrs = gpd.read_feather(io.BytesIO(resp[0]))
-    qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")  # type: ignore
+    qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")
     return attrs, qobs
 
 
 def ssebopeta_bycoords(
     coords: pd.DataFrame,
-    dates: Union[Tuple[str, str], int, List[int]],
-    crs: str = DEF_CRS,
+    dates: tuple[str, str] | int | list[int],
+    crs: CRSTYPE = 4326,
 ) -> xr.Dataset:
     """Daily actual ET for a dataframe of coords from SSEBop database in mm/day.
 
@@ -95,8 +137,8 @@ def ssebopeta_bycoords(
         A dataframe with ``id``, ``x``, ``y`` columns.
     dates : tuple or list, optional
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
-    crs : str, optional
-        The CRS of the input coordinates, defaults to epsg:4326.
+    crs : str, int, or pyproj.CRS, optional
+        The CRS of the input coordinates, defaults to ``epsg:4326``.
 
     Returns
     -------
@@ -114,7 +156,7 @@ def ssebopeta_bycoords(
     _coords = gpd.GeoSeries(
         gpd.points_from_xy(coords["x"], coords["y"]), index=coords["id"], crs=crs
     )
-    _coords = _coords.to_crs(DEF_CRS)
+    _coords = _coords.to_crs(4326)
     co_list = list(zip(_coords.x, _coords.y))
 
     f_list = helpers.get_ssebopeta_urls(dates)
@@ -122,7 +164,7 @@ def ssebopeta_bycoords(
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(url: str) -> List[np.ndarray]:  # type: ignore
+        def _ssebop(url: str) -> list[np.ndarray]:  # type: ignore
             r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
 
@@ -157,8 +199,8 @@ def ssebopeta_bycoords(
 
 def ssebopeta_bygeom(
     geometry: GTYPE,
-    dates: Union[Tuple[str, str], int, List[int]],
-    geo_crs: str = DEF_CRS,
+    dates: tuple[str, str] | int | list[int],
+    geo_crs: CRSTYPE = 4326,
 ) -> xr.DataArray:
     """Get daily actual ET for a region from SSEBop database.
 
@@ -176,8 +218,8 @@ def ssebopeta_bygeom(
         the order should be (west, south, east, north).
     dates : tuple or list, optional
         Start and end dates as a tuple (start, end) or a list of years [2001, 2010, ...].
-    geo_crs : str, optional
-        The CRS of the input geometry, defaults to epsg:4326.
+    geo_crs : str, int, or pyproj.CRS, optional
+        The CRS of the input geometry, defaults to ``epsg:4326``.
 
     Returns
     -------
@@ -207,7 +249,7 @@ def ssebopeta_bygeom(
         {
             "units": "mm/day",
             "nodatavals": (np.nan,),
-            "crs": DEF_CRS,
+            "crs": 4326,
             "long_name": "Actual ET",
         }
     )
@@ -227,7 +269,7 @@ class NLCD:
     region : str, optional
         Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
         AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
-    crs : str, optional
+    crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
     ssl : bool or SSLContext, optional
@@ -237,10 +279,10 @@ class NLCD:
 
     def __init__(
         self,
-        years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+        years: Mapping[str, int | list[int]] | None = None,
         region: str = "L48",
-        crs: str = DEF_CRS,
-        ssl: Union[SSLContext, bool, None] = None,
+        crs: CRSTYPE = 4326,
+        ssl: SSLContext | bool | None = None,
     ) -> None:
         default_years = {
             "impervious": [2019],
@@ -287,7 +329,7 @@ class NLCD:
             ssl=ssl,
         )
 
-    def get_layers(self) -> List[str]:
+    def get_layers(self) -> list[str]:
         """Get NLCD layers for the provided years dictionary."""
         valid_regions = ["L48", "HI", "PR", "AK"]
         if self.region not in valid_regions:
@@ -322,15 +364,15 @@ class NLCD:
         ]
 
     def get_response(
-        self, bbox: Tuple[float, float, float, float], resolution: float
-    ) -> Dict[str, bytes]:
+        self, bbox: tuple[float, float, float, float], resolution: float
+    ) -> dict[str, bytes]:
         """Get response from a url."""
         return self.wms.getmap_bybox(bbox, resolution, self.crs)
 
     def to_xarray(
         self,
-        r_dict: Dict[str, bytes],
-        geometry: Union[Polygon, MultiPolygon, None] = None,
+        r_dict: dict[str, bytes],
+        geometry: Polygon | MultiPolygon | None = None,
     ) -> xr.Dataset:
         """Convert response to xarray.DataArray."""
         if isinstance(geometry, (Polygon, MultiPolygon)):
@@ -364,13 +406,13 @@ class NLCD:
 
 
 def nlcd_bygeom(
-    geometry: Union[gpd.GeoSeries, gpd.GeoDataFrame],
+    geometry: gpd.GeoSeries | gpd.GeoDataFrame,
     resolution: float,
-    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+    years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
-    crs: str = DEF_CRS,
-    ssl: Union[SSLContext, bool, None] = None,
-) -> Dict[int, xr.Dataset]:
+    crs: CRSTYPE = 4326,
+    ssl: SSLContext | bool | None = None,
+) -> dict[int, xr.Dataset]:
     """Get data from NLCD database (2019).
 
     Parameters
@@ -390,9 +432,9 @@ def nlcd_bygeom(
         Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
         ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
         Both lower and upper cases are acceptable.
-    crs : str, optional
+    crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
-        epsg:4326.
+        ``epsg:4326``.
     ssl : bool or SSLContext, optional
         SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
         SSL certification verification.
@@ -423,10 +465,10 @@ def nlcd_bygeom(
 
 
 def nlcd_bycoords(
-    coords: List[Tuple[float, float]],
-    years: Optional[Mapping[str, Union[int, List[int]]]] = None,
+    coords: list[tuple[float, float]],
+    years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
-    ssl: Union[SSLContext, bool, None] = None,
+    ssl: SSLContext | bool | None = None,
 ) -> gpd.GeoDataFrame:
     """Get data from NLCD database (2019).
 
@@ -456,7 +498,7 @@ def nlcd_bycoords(
         raise InputTypeError("coords", "list of (lon, lat)")
 
     nlcd_wms = NLCD(years=years, region=region, crs="epsg:3857", ssl=ssl)
-    points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=DEF_CRS)
+    points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=4326)
     points_proj = points.to_crs(nlcd_wms.crs)
     bounds = points_proj.buffer(50, cap_style=3)
     ds_list = [nlcd_wms.to_xarray(nlcd_wms.get_response(b.bounds, 30)) for b in bounds]
@@ -581,7 +623,7 @@ class NID:
         }
         self.nid_inventory_path = Path("cache", "nid_inventory.feather")
 
-    def stage_nid_inventory(self, fname: Union[str, Path, None] = None) -> None:
+    def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
         """Download the entire NID inventory data and save to a feather file.
 
         Parameters
@@ -702,8 +744,8 @@ class NID:
 
     @staticmethod
     def _get_json(
-        urls: Sequence[str], params: Optional[List[Dict[str, str]]] = None
-    ) -> List[Dict[str, Any]]:
+        urls: Sequence[str], params: list[dict[str, str]] | None = None
+    ) -> list[dict[str, Any]]:
         """Get JSON response from NID web service.
 
         Parameters
@@ -757,10 +799,10 @@ class NID:
         return gpd.GeoDataFrame(
             nid_df,
             geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude),
-            crs=DEF_CRS,
+            crs=4326,
         )
 
-    def get_byfilter(self, query_list: List[Dict[str, List[str]]]) -> List[gpd.GeoDataFrame]:
+    def get_byfilter(self, query_list: list[dict[str, list[str]]]) -> list[gpd.GeoDataFrame]:
         """Query dams by filters from the National Inventory of Dams web service.
 
         Parameters
@@ -802,7 +844,7 @@ class NID:
             for r in self._get_json([f"{self.base_url}/query"] * len(params), params)
         ]
 
-    def get_bygeom(self, geometry: GTYPE, geo_crs: str) -> gpd.GeoDataFrame:
+    def get_bygeom(self, geometry: GTYPE, geo_crs: CRSTYPE) -> gpd.GeoDataFrame:
         """Retrieve NID data within a geometry.
 
         Parameters
@@ -810,7 +852,7 @@ class NID:
         geometry : Polygon, MultiPolygon, or tuple of length 4
             Geometry or bounding box (west, south, east, north) for extracting the data.
         geo_crs : list of str
-            The CRS of the input geometry, defaults to epsg:4326.
+            The CRS of the input geometry, defaults to ``epsg:4326``.
 
         Returns
         -------
@@ -825,7 +867,7 @@ class NID:
         >>> print(dams.name.iloc[0])
         Little Moose
         """
-        _geometry = geoutils.geo2polygon(geometry, geo_crs, DEF_CRS)
+        _geometry = geoutils.geo2polygon(geometry, geo_crs, 4326)
         wbd = ArcGISRESTful(ServiceURL().restful.wbd, 4, outformat="json", outfields="huc8")
         resp = wbd.get_features(wbd.oids_bygeom(_geometry), return_geom=False)
         huc_ids = [
@@ -835,7 +877,7 @@ class NID:
         dams = self.get_byfilter([{"huc8": huc_ids}])[0]
         return dams[dams.within(_geometry)].copy()
 
-    def inventory_byid(self, dam_ids: List[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
+    def inventory_byid(self, dam_ids: list[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
 
         Notes
@@ -887,7 +929,7 @@ class NID:
 
     def get_suggestions(
         self, text: str, context_key: str = ""
-    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Get suggestions from the National Inventory of Dams web service.
 
         Notes
@@ -970,11 +1012,11 @@ class WBD(AGRBase):
 
     outfields : str or list, optional
         Target field name(s), default to "*" i.e., all the fields.
-    crs : str, optional
+    crs : str, int, or pyproj.CRS, optional
         Target spatial reference, default to ``EPSG:4326``.
     """
 
-    def __init__(self, layer: str, outfields: Union[str, List[str]] = "*", crs: str = DEF_CRS):
+    def __init__(self, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326):
         self.valid_layers = {
             "wbdline": "wbdline",
             "huc2": "2-digit hu (region)",
@@ -990,3 +1032,121 @@ class WBD(AGRBase):
         if _layer is None:
             raise InputValueError("layer", list(self.valid_layers))
         super().__init__(ServiceURL().restful.wbd, _layer, outfields, crs)
+
+
+def soil_properties(
+    properties: list[str] | str = "*", soil_dir: str | Path = "cache"
+) -> xr.Dataset:
+    """Get soil properties dataset in the United States from ScienceBase.
+
+    Notes
+    -----
+    This function downloads the source zip files from
+    `ScienceBase <https://www.sciencebase.gov/catalog/item/5fd7c19cd34e30b9123cb51f>`__
+    , extracts the included `.tif` files, and return them as an `xarray.Dataset`.
+
+    Parameters
+    ----------
+    properties : list of str or str, optional
+        Soil properties to extract, default to "*", i.e., all the properties.
+        Available properties are ``awc`` for available water capacity, ``fc`` for
+        field capacity, and ``por`` for porosity.
+    soil_dir : str or pathlib.Path
+        Directory to store zip files or if exists read from them, defaults to
+        ``./cache``.
+    """
+    valid_props = {
+        "awc": {"name": "awc", "units": "mm/m", "long_name": "Available Water Capacity"},
+        "fc": {"name": "fc", "units": "mm/m", "long_name": "Field Capacity"},
+        "por": {"name": "porosity", "units": "mm/m", "long_name": "Porosity"},
+    }
+    if properties == "*":
+        prop = list(valid_props)
+    else:
+        prop = [properties] if isinstance(properties, str) else properties
+        if not all(p in valid_props for p in prop):
+            raise InputValueError("properties", list(valid_props))
+    sb = ScienceBase()
+    soil = sb.get_file_urls("5fd7c19cd34e30b9123cb51f")
+    pat = "|".join(prop)
+    _files, urls = zip(*soil[soil.index.str.contains(f"{pat}.*zip")].url.to_dict().items())
+
+    root = Path(soil_dir)
+    root.mkdir(exist_ok=True, parents=True)
+    files = [root.joinpath(f) for f in _files]
+    try:
+        urls, to_get = zip(*((u, f) for u, f in zip(urls, files) if not f.exists()))
+        ar.stream_write(urls, to_get)
+    except ValueError:
+        pass
+    except Exception as e:  # noqa: B902
+        session = RetrySession()
+        fsize = {f: int(session.head(u).headers["Content-Length"]) for u, f in zip(urls, to_get)}
+        for f in to_get:
+            if f.exists() and fsize[f] != f.stat().st_size:
+                f.unlink(missing_ok=True)
+        raise ServiceUnavailableError("ScienceBase") from e
+
+    def get_tif(file: Path) -> xr.DataArray:
+        """Get the .tif file from a zip file."""
+        with zipfile.ZipFile(file) as z:
+            ds = rxr.open_rasterio(io.BytesIO(z.read(z.filelist[2].filename)))  # type: ignore[attr-defined]
+            with contextlib.suppress(AttributeError, ValueError):
+                ds = ds.squeeze("band", drop=True)
+            ds.name = valid_props[file.stem.split("_")[0]]["name"]
+            ds.attrs["units"] = valid_props[file.stem.split("_")[0]]["units"]
+            ds.attrs["long_name"] = valid_props[file.stem.split("_")[0]]["long_name"]
+            return ds  # type: ignore[no-any-return]
+
+    return xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
+
+
+def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
+    """Get US soil data from the gNATSGO dataset.
+
+    Notes
+    -----
+    This function uses Microsoft's Planetary Computer service to get the data.
+    The dataset's description and its suppoerted soil properties can be found at:
+    https://planetarycomputer.microsoft.com/dataset/gnatsgo-rasters
+
+    Parameters
+    ----------
+    layers : list of str or str
+        Target layer(s). Available layers can be found at the dataset's website
+        `here <https://planetarycomputer.microsoft.com/dataset/gnatsgo-rasters>`__.
+    geometry : Polygon, MultiPolygon, or tuple of length 4
+        Geometry or bounding box of the region of interest.
+    crs : int, str, or pyproj.CRS, optional
+        The input geometry CRS, defaults to ``epsg:4326``.
+
+    Returns
+    -------
+    xarray.Dataset
+        Requested soil properties.
+    """
+    if NO_STAC:
+        raise DependencyError("get_soildata", ["pystac-client", "planetary-computer"])
+
+    catalog = pystac_client.Client.open(
+        "https://planetarycomputer.microsoft.com/api/stac/v1",
+        modifier=planetary_computer.sign_inplace,
+    )
+    bounds = geoutils.geo2polygon(geometry, crs, 4326).bounds
+    search = catalog.search(collections=["gnatsgo-rasters"], bbox=bounds)
+    lyr_href = tlz.merge_with(
+        set, ({n: a.href for n, a in i.assets.items()} for i in search.get_items())
+    )
+    lyrs = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
+
+    def get_layer(lyr: str) -> xr.DataArray:
+        data = xr.open_mfdataset(lyr_href[lyr], engine="rasterio").band_data
+        data = data.squeeze("band", drop=True)
+        data.name = lyr
+        return data  # type: ignore[no-any-return]
+
+    with dask.config.set(**{"array.slicing.split_large_chunks": True}):  # type: ignore[arg-type]
+        ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
+        poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
+        ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
+    return ds
