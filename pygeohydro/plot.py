@@ -1,23 +1,24 @@
 """Plot hydrological signatures.
 
-Plots includes  daily, monthly and annual hydrograph as well as regime
+Plots include daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
-import calendar
+from __future__ import annotations
+
 import contextlib
 from pathlib import Path
-from typing import Dict, List, NamedTuple, Optional, Tuple, TypeVar, Union
+from typing import NamedTuple, TypeVar
 
+import hydrosignatures as hs
+import matplotlib.pyplot as plt
 import pandas as pd
-import proplot as pplt
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 from . import helpers
 from .exceptions import InputTypeError
 
-__all__ = ["signatures", "prepare_plot_data", "exceedance", "mean_monthly"]
+__all__ = ["signatures", "prepare_plot_data"]
 DF = TypeVar("DF", pd.DataFrame, pd.Series)
-pplt.rc["figure.facecolor"] = "w"
 
 
 class PlotDataType(NamedTuple):
@@ -26,59 +27,11 @@ class PlotDataType(NamedTuple):
     daily: pd.DataFrame
     mean_monthly: pd.DataFrame
     ranked: pd.DataFrame
-    titles: Dict[str, str]
-    units: Dict[str, str]
+    titles: dict[str, str]
+    units: dict[str, str]
 
 
-def exceedance(daily: DF, threshold: float = 1e-3) -> DF:
-    """Compute exceedance probability from daily data.
-
-    Parameters
-    ----------
-    daily : pandas.Series or pandas.DataFrame
-        The data to be processed
-    threshold : float, optional
-        The threshold to compute exceedance probability, defaults to 1e-3.
-
-    Returns
-    -------
-    pandas.Series or pandas.DataFrame
-        Exceedance probability.
-    """
-    _daily = daily[daily > threshold].copy()
-    ranks = _daily.rank(ascending=False, pct=True) * 100
-    fdc = [
-        pd.DataFrame({c: _daily[c], f"{c}_rank": ranks[c]})
-        .sort_values(by=f"{c}_rank")
-        .reset_index(drop=True)
-        for c in daily
-    ]
-    return pd.concat(fdc, axis=1)
-
-
-def mean_monthly(daily: DF, index_abbr: bool = False) -> DF:
-    """Compute mean monthly summary from daily data.
-
-    Parameters
-    ----------
-    daily : pandas.Series or pandas.DataFrame
-        The data to be processed
-
-    Returns
-    -------
-    pandas.Series or pandas.DataFrame
-        Mean monthly summary.
-    """
-    monthly = daily.groupby(pd.Grouper(freq="M")).sum()
-    mean_month = monthly.groupby(monthly.index.month).mean()
-    mean_month.index.name = "Month"
-    if index_abbr:
-        month_abbr = dict(enumerate(calendar.month_abbr))
-        mean_month.index = mean_month.index.map(month_abbr)
-    return mean_month
-
-
-def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
+def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
     """Generae a structured data for plotting hydrologic signatures.
 
     Parameters
@@ -94,8 +47,8 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
     """
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
-    mean_month = mean_monthly(daily, True)
-    ranked = exceedance(daily)
+    mean_month = hs.compute_mean_monthly(daily, True)
+    ranked = hs.compute_exceedance(daily)
 
     _titles = [
         "Total Hydrograph (daily)",
@@ -114,16 +67,19 @@ def prepare_plot_data(daily: Union[pd.DataFrame, pd.Series]) -> PlotDataType:
 
 
 def _prepare_plot_data(
-    daily: Union[pd.DataFrame, pd.Series],
-    precipitation: Optional[Union[pd.DataFrame, pd.Series]] = None,
-) -> Tuple[PlotDataType, Optional[PlotDataType]]:
+    daily: pd.DataFrame | pd.Series,
+    precipitation: pd.DataFrame | pd.Series | None = None,
+) -> tuple[PlotDataType, PlotDataType | None]:
     if not isinstance(daily, (pd.DataFrame, pd.Series)):
-        raise InputTypeError("daily", "pd.DataFrame or pd.Series")
+        raise InputTypeError("daily", "pandas.DataFrame or pandas.Series")
 
     discharge = prepare_plot_data(daily)
 
-    if not isinstance(precipitation, (pd.DataFrame, pd.Series)) and precipitation is not None:
-        raise InputTypeError("precipitation", "pd.DataFrame or pd.Series")
+    if isinstance(precipitation, pd.DataFrame) and precipitation.shape[1] == 1:
+        precipitation = precipitation.squeeze()
+
+    if not isinstance(precipitation, pd.Series) and precipitation is not None:
+        raise InputTypeError("precipitation", "pandas.Series or pandas.DataFrame with one column")
 
     prcp = None if precipitation is None else prepare_plot_data(precipitation)
 
@@ -131,11 +87,11 @@ def _prepare_plot_data(
 
 
 def signatures(
-    discharge: Union[pd.DataFrame, pd.Series],
-    precipitation: Optional[pd.Series] = None,
-    title: Optional[str] = None,
-    threshold: float = 1e-3,
-    output: Union[str, Path, None] = None,
+    discharge: pd.DataFrame | pd.Series,
+    precipitation: pd.Series | None = None,
+    title: str | None = None,
+    figsize: tuple[int, int] | None = None,
+    output: str | Path | None = None,
     close: bool = False,
 ) -> None:
     """Plot hydrological signatures with w/ or w/o precipitation.
@@ -154,9 +110,8 @@ def signatures(
         plotted on the second x-axis at the top.
     title : str, optional
         The plot supertitle.
-    threshold : float, optional
-        The threshold for cutting off the discharge for the flow duration
-        curve to deal with log 0 issue, defaults to :math:`1^{-3}` mm/day.
+    figsize : tuple, optional
+        The figure size in inches, defaults to (9, 5).
     output : str, optional
         Path to save the plot as png, defaults to ``None`` which means
         the plot is not saved to a file.
@@ -165,62 +120,85 @@ def signatures(
     """
     qdaily, prcp = _prepare_plot_data(discharge, precipitation)
 
-    cycle = "colorblind10"
-    fig, axs = pplt.subplots(
-        [[1, 1, 1, 1], [2, 2, 3, 3]],
-        refwidth=6.5,
-        refheight=2.2,
-        share=0,
-        facecolor="w",
-    )
-    axs.format(titleloc="uc", toplabels=(title,), lw=0.7)
-
     daily = qdaily.daily
-    fdc = qdaily.ranked
-    rc = qdaily.mean_monthly
+    figsize = (9, 5) if figsize is None else figsize
+    fig = plt.figure(constrained_layout=True, figsize=figsize, facecolor="w")
+    gs = fig.add_gridspec(2, 3)
 
-    hs = axs[0, 0].plot(daily, cycle=cycle)
-    axs[0, 0].format(xlabel="", ylabel=f"$Q$ ({qdaily.units['daily']})", xrotation=0)
-    axs[0, 0].margins(x=0)
-
-    if len(hs) > 1:
-        fig.legend(hs, ncols=1, frame=False, loc="r")
-
-    axs[1, 0].plot(rc, cycle=cycle)
-    axs[1, 0].format(xlabel="", ylabel=f"$Q$ ({qdaily.units['mean_monthly']})")
+    ax = fig.add_subplot(gs[0, :])
+    ax.grid(False)
+    for c, q in daily.items():
+        ax.plot(q, label=c)
+    lines, labels = ax.get_legend_handles_labels()
+    ax.set_ylabel("$Q$ (mm/day)")
+    ax.text(0.02, 0.9, "(a)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
 
     if prcp is not None:
-        ox = axs[0, 0].alty(reverse=True, label=f"$P$ ({prcp.units['daily']})")
-        ox.bar(prcp.daily, color="g", alpha=0.2, width=1)
-        ox.margins(x=0)
+        _prcp = prcp.daily.squeeze()
+        _prcp = _prcp.loc[daily.index[0] : daily.index[-1]]
+        label = "$P$ (mm/day)"
+        ax_p = ax.twinx()
+        ax_p.grid(False)
+        if _prcp.shape[0] > 1000:
+            ax_p.plot(_prcp, alpha=0.7, color="g", label=label)
+        else:
+            ax_p.bar(
+                _prcp.index,
+                _prcp.to_numpy().ravel(),
+                alpha=0.7,
+                width=1,
+                color="g",
+                align="edge",
+                label=label,
+            )
+        ax_p.set_ylim(_prcp.max() * 2.5, 0)
+        ax_p.set_ylabel(label)
+        ax_p.set_xmargin(0)
+        lines_p, labels_p = ax_p.get_legend_handles_labels()
+        lines.extend(lines_p)
+        labels.extend(labels_p)
 
-        ox = axs[1, 0].alty(
-            reverse=True,
-            lim=(0, prcp.mean_monthly.max()[0] * 2.5),
-            label=f"$P$ ({prcp.units['mean_monthly']})",
-        )
-        ox.bar(prcp.mean_monthly, color="g", alpha=0.2, width=1)
+    ax.set_xmargin(0)
+    ax.set_xlabel("")
 
-    for col in daily:
-        _fdc = fdc[[col, f"{col}_rank"]]
-        _fdc = _fdc[_fdc > threshold]
-        axs[1, 2].plot(_fdc[f"{col}_rank"], _fdc[col], cycle=cycle)
-    logq = "$\\log \\left( Q \\right)$"
-    axs[1, 2].format(
-        yscale="symlog",
-        xlabel="Exceedance Probability",
-        ylabel=f"{logq} ({qdaily.units['ranked']})",
+    ax.legend(
+        lines,
+        labels,
+        bbox_to_anchor=(0.5, -0.2),
+        loc="upper center",
+        ncol=len(lines),
     )
+
+    ax = fig.add_subplot(gs[1, :-1])
+    ax.plot(qdaily.mean_monthly)
+    ax.set_xmargin(0)
+    ax.grid(False)
+    ax.set_ylabel("$Q$ (mm/month)")
+    ax.text(0.02, 0.9, "(b)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
+
+    ax = fig.add_subplot(gs[1, 2])
+    for col in daily:
+        dc = qdaily.ranked[[col, f"{col}_rank"]]
+        ax.plot(dc[f"{col}_rank"], dc[col], label=col)
+
+    ax.set_yscale("log")
+    ax.set_xlim(0, 100)
+    ax.set_xlabel("% Exceedance")
+    ax.set_ylabel(rf"$\log(Q)$ ({qdaily.units['ranked']})")
+    ax.grid(False)
+    ax.text(0.02, 0.9, "(c)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
+
+    fig.suptitle(title)
 
     if output is not None:
         Path(output).parent.mkdir(exist_ok=True, parents=True)
         fig.savefig(output, dpi=300)
 
     if close:
-        pplt.close(fig)
+        plt.close(fig)
 
 
-def descriptor_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
+def descriptor_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = [int(v) for v in nlcd_meta["descriptors"]]
@@ -233,7 +211,7 @@ def descriptor_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
     return cmap, norm, levels
 
 
-def cover_legends() -> Tuple[ListedColormap, BoundaryNorm, List[int]]:
+def cover_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
     """Colormap (cmap) and their respective values (norm) for land cover data legends."""
     nlcd_meta = helpers.nlcd_helper()
     bounds = list(nlcd_meta["colors"])
