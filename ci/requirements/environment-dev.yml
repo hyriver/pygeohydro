@@ -1,91 +1,160 @@
 name: hyriver-dev
 channels:
+  - numba
   - conda-forge
   - nodefaults
 dependencies:
   - python>=3.10
 
-  # async_retriever
+  # async_retriever deps
   - aiodns
-  - aiohttp>=3.8.1
-  - aiohttp-client-cache>=0.7.3
   - aiosqlite
+  - aiohttp >=3.8.1
   - brotli
-  - loguru
   - cchardet
   - cytoolz
+  - nest-asyncio
+  - aiohttp-client-cache >=0.7.3
   - ujson
 
   # pygeoogc deps
+  # - async-retriever >=0.3.5
+  - cytoolz
   - defusedxml
-  - owslib>=0.27.2
+  - loguru
+  - owslib >=0.27.2
+  - pyproj >=2.2
   - pyyaml
-  - pyproj>=1.2
   - requests
-  - requests-cache>=0.9.6
-  - shapely>=1.8
+  - requests-cache >=0.9.6
+  - shapely >=1.8
   - urllib3
 
   # pygeoutils deps
+  - cytoolz
   - dask-core
-  - geopandas>=0.8
+  - geopandas >=0.7
+  - loguru
   - netcdf4
-  - numpy>=1.17
+  - numpy >=1.17
   - pygeos
-  - rasterio>=1.2
+  - pyproj >=2.2
+  - rasterio >=1.2
+  - rioxarray >=0.11
   - scipy
-  - xarray>=2022.03.0
-  - rioxarray>=0.11
+  - shapely >=1.8
+  - ujson
+  - xarray >=2022.03.0
 
+  # hydrosignatures deps
+  - numpy
+  - pandas
+  - scipy
+  # optional deps
+  - numba
+  
   # py3dep
-  - click>=0.7
+  # - async-retriever >=0.3.6
+  - click >=0.7
+  - cytoolz
+  - numpy >=1.17
+  # - pygeoogc >=0.13.7
+  # - pygeoutils >=0.13.7
+  - rasterio >=1.2
+  - rioxarray >=0.11
+  - scipy
+  - shapely >=1.8
+  - xarray >=2022.03.0
+  # optional dep
   - richdem>=0.3.4
 
   # pynhd deps
-  - networkx>=2.5
-  - pandas>=1.0
-  - pyarrow>=1.0.1
+  # - async-retriever >=0.3.6
+  - cytoolz
+  - geopandas >=0.9
+  - loguru
+  - networkx
+  - numpy >=1.17
+  - pandas >=1.0
+  - pyarrow >=1.0.1
+  # - pygeoogc >=0.13.7
+  # - pygeoutils >=0.13.7
+  - shapely >=1.8
 
-  # pygeohydro deps
-  - folium
-  - h5netcdf
+  # pydaymet deps
+  # - async-retriever >=0.3.6
+  - click >=0.7
+  - dask-core
   - lxml
-  - matplotlib-base
-
-  # optional deps to speed up xarray and pydaymet
-  - bottleneck
+  - numpy >=1.17
+  - pandas >=1.0
+  # - py3dep >=0.13.7
+  # - pygeoogc >=0.13.7
+  # - pygeoutils >=0.13.9
+  - rasterio >=1.2
+  - scipy
+  - shapely >=1.8
+  - xarray >=2022.03.0
+  # optional deps
   - numba
 
+  # pygeohydro deps
+  - cytoolz
+  - defusedxml
+  - folium
+  - geopandas >=0.7
+  - h5netcdf
+  # - hydrosignatures >=0.1.1
+  - loguru
+  - lxml
+  - matplotlib-base >=3.3
+  - numpy >=1.17
+  - pandas >=1.0
+  # - pygeoogc >=0.13.7
+  # - pygeoutils >=0.13.9
+  # - pynhd >=0.13.7
+  - rasterio >=1.2
+  - rioxarray >=0.11.0
+  - scipy
+  - shapely >=1.8
+  - xarray >=2022.03.0
+  # optional deps
+  - planetary-computer
+  - pystac-client
+
+  # optional deps for speeding up some operations
+  - bottleneck
+  - pyogrio
+
   # example notebooks' deps
-  - cartopy
-  - mapclassify
   - contextily
-  - geoviews
-  - hvplot
-  - osmnx
-  - tqdm
-  - pytables
+  - datashader
   - ffmpeg
-  - jupyterlab_widgets
+  - hvplot
   - ipywidgets
-  - pygmo
+  - jupyterlab_widgets
+  - mapclassify
+  - osmnx
   - proplot
+  - pytables
+  - tqdm
+  - xarray-spatial
 
   # dev deps
   - codespell
   - nox
   - pre-commit
   - psutil
-  - pytest
   - pytest-cov
   - pytest-xdist
 
   - pip
   - pip:
-    - git+https://github.com/cheginit/async_retriever.git
-    - git+https://github.com/cheginit/pygeoogc.git
-    - git+https://github.com/cheginit/pygeoutils.git
-    - git+https://github.com/cheginit/pynhd.git
-    - git+https://github.com/cheginit/py3dep.git
-    - git+https://github.com/cheginit/pydaymet.git
-    - git+https://github.com/cheginit/pygeohydro.git
+    - git+https://github.com/hyriver/async_retriever.git
+    - git+https://github.com/hyriver/hydrosignatures.git
+    - git+https://github.com/hyriver/pygeoogc.git
+    - git+https://github.com/hyriver/pygeoutils.git
+    - git+https://github.com/hyriver/pynhd.git
+    - git+https://github.com/hyriver/py3dep.git
+    - git+https://github.com/hyriver/pydaymet.git
+    - git+https://github.com/hyriver/pygeohydro.git
