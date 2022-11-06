@@ -1099,6 +1099,9 @@ def soil_properties(
             return ds  # type: ignore[no-any-return]
 
     soil = xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
+    _ = soil.attrs.pop("_FillValue", None)
+    _ = soil.attrs.pop("units", None)
+    _ = soil.attrs.pop("long_name", None)
     return soil
 
 
@@ -1150,4 +1153,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
         poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
         ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
+        _ = ds.attrs.pop("_FillValue", None)
+        _ = ds.attrs.pop("units", None)
+        _ = ds.attrs.pop("long_name", None)
     return ds
