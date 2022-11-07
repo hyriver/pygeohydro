@@ -2,6 +2,14 @@
 History
 =======
 
+0.13.8 (unreleased)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add ``get_us_states`` to PyGeoHydro's init file, so it can be loaded directly,
+  e.g., ``gh.get_us_states("TX")``.
+
 0.13.7 (2022-11-04)
 -------------------
 
