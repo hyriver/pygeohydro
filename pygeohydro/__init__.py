@@ -12,6 +12,7 @@ from .exceptions import (
     MissingCRSError,
     ZeroMatchedError,
 )
+from .helpers import get_us_states
 from .print_versions import show_versions
 from .pygeohydro import (
     NID,
@@ -50,6 +51,7 @@ __all__ = [
     "soil_properties",
     "soil_gnatsgo",
     "helpers",
+    "get_us_states",
     "plot",
     "DataNotAvailableError",
     "InputRangeError",

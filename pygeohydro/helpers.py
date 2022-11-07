@@ -16,7 +16,7 @@ from pygeoogc import ServiceURL
 from . import us_abbrs
 from .exceptions import InputRangeError, InputTypeError, InputValueError
 
-__all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table"]
+__all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table", "get_us_states"]
 
 
 def nlcd_helper() -> dict[str, Any]:

@@ -52,7 +52,7 @@ dependencies:
   - scipy
   # optional deps
   - numba
-  
+
   # py3dep
   # - async-retriever >=0.3.6
   - click >=0.7
