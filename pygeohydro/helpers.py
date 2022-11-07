@@ -159,25 +159,24 @@ class Stats(NamedTuple):
 
 
 def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame:
-    """Get US states as a GeoDataFrame from Census' Tiger 2022 database.
+    """Get US states as a GeoDataFrame from Census' TIGERLine 2022 database.
 
     Parameters
     ----------
     subset_key : str, optional
         Key to subset the geometries instead of returning all states, by default
-        all states are returned. Valida keys are:
+        all states are returned. Valid keys are:
 
         - ``contiguous``
         - ``continental``
         - ``commonwealths``
         - ``territories``
         - Two letter state codes, e.g., ``["TX", "CA", "FL", ...]``
-        which returns all states.
 
     Returns
     -------
     geopandas.GeoDataFrame
-        GeoDataFrame of US states.
+        GeoDataFrame of requested US states.
     """
     if subset_key is not None:
         keys = [subset_key] if isinstance(subset_key, str) else subset_key
