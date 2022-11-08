@@ -903,5 +903,5 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
             keys=keys,
         )
     )
-    huc = huc.reset_index().rename(columns={"level_0": "huc02"}).drop(columns="level_1")
+    huc = huc.reset_index().rename(columns={"level_0": "huc2"}).drop(columns="level_1")
     return huc
