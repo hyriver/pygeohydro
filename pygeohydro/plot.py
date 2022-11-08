@@ -7,18 +7,23 @@ from __future__ import annotations
 
 import contextlib
 from pathlib import Path
-from typing import NamedTuple, TypeVar
+from typing import Any, NamedTuple, TypeVar, Union
 
+import folium
 import hydrosignatures as hs
 import matplotlib.pyplot as plt
 import pandas as pd
+import pyproj
 from matplotlib.colors import BoundaryNorm, ListedColormap
+from pygeoogc import utils as ogc_utils
 
 from . import helpers
 from .exceptions import InputTypeError
+from .waterdata import NWIS
 
 __all__ = ["signatures", "prepare_plot_data"]
 DF = TypeVar("DF", pd.DataFrame, pd.Series)
+CRSTYPE = Union[int, str, pyproj.CRS]
 
 
 class PlotDataType(NamedTuple):
@@ -222,3 +227,116 @@ def cover_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
     norm = BoundaryNorm(bounds, cmap.N)
     levels = bounds + [100]
     return cmap, norm, levels
+
+
+def interactive_map(
+    bbox: tuple[float, float, float, float],
+    crs: CRSTYPE = 4326,
+    nwis_kwds: dict[str, Any] | None = None,
+) -> folium.Map:
+    """Generate an interactive map including all USGS stations within a bounding box.
+
+    Parameters
+    ----------
+    bbox : tuple
+        List of corners in this order (west, south, east, north)
+    crs : str, int, or pyproj.CRS, optional
+        CRS of the input bounding box, defaults to EPSG:4326.
+    nwis_kwds : dict, optional
+        Optional keywords to include in the NWIS request as a dictionary like so:
+        ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
+        Default to None.
+
+    Returns
+    -------
+    folium.Map
+        Interactive map within a bounding box.
+
+    Examples
+    --------
+    >>> import pygeohydro as gh
+    >>> nwis_kwds = {"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv"}
+    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
+    >>> n_stations = len(m.to_dict()["children"]) - 1
+    >>> n_stations
+    10
+    """
+    bbox = ogc_utils.match_crs(bbox, crs, 4326)
+    ogc_utils.check_bbox(bbox)
+
+    nwis = NWIS()
+    query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
+    if isinstance(nwis_kwds, dict):
+        query.update(nwis_kwds)
+
+    sites = nwis.get_info(query, expanded=True)
+
+    sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
+    sites["altitude"] = (
+        sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
+    )
+
+    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " sqmi"
+    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " sqmi"
+    sites["drain_sqkm"] = sites["drain_sqkm"].astype("str") + " sqkm"
+    for c in ["drain_area_va", "contrib_drain_area_va", "drain_sqkm"]:
+        sites.loc[sites[c].str.contains("nan"), c] = "N/A"
+
+    cols_old = [
+        "site_no",
+        "station_nm",
+        "coords",
+        "altitude",
+        "huc_cd",
+        "drain_area_va",
+        "contrib_drain_area_va",
+        "drain_sqkm",
+        "hcdn_2009",
+    ]
+
+    cols_new = [
+        "Site No.",
+        "Station Name",
+        "Coordinate",
+        "Altitude",
+        "HUC8",
+        "Drainage Area (NWIS)",
+        "Contributing Drainage Area (NWIS)",
+        "Drainage Area (GagesII)",
+        "HCDN 2009",
+    ]
+
+    sites = sites.groupby("site_no")[cols_old[1:]].agg(set).reset_index()
+    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))
+
+    msgs = []
+    base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
+    for row in sites.itertuples(index=False):
+        site_no = row[sites.columns.get_loc(cols_new[0])]
+        msg = f"<strong>{cols_new[0]}</strong>: {site_no}<br>"
+        for col in cols_new[1:]:
+            value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
+            msg += f"<strong>{col}</strong>: {value}<br>"
+        msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
+        msgs.append(msg[:-4])
+
+    sites["msg"] = msgs
+
+    west, south, east, north = bbox
+    lon = (west + east) * 0.5
+    lat = (south + north) * 0.5
+
+    imap = folium.Map(
+        location=(lat, lon),
+        tiles="Stamen Terrain",
+        zoom_start=10,
+    )
+
+    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
+        folium.Marker(
+            location=list(coords)[0][::-1],
+            popup=folium.Popup(msg, max_width=250),
+            icon=folium.Icon(),
+        ).add_to(imap)
+
+    return imap

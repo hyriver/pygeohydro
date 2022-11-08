@@ -163,7 +163,7 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
 
     Parameters
     ----------
-    subset_key : str, optional
+    subset_key : str or list of str, optional
         Key to subset the geometries instead of returning all states, by default
         all states are returned. Valid keys are:
 

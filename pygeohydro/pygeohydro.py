@@ -26,7 +26,6 @@ import xarray as xr
 from loguru import logger
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
-from pynhd import AGRBase
 from pynhd.core import ScienceBase
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -90,7 +89,6 @@ __all__ = [
     "soil_properties",
     "soil_gnatsgo",
     "NID",
-    "WBD",
 ]
 
 
@@ -986,54 +984,6 @@ class NID:
         )
 
 
-class WBD(AGRBase):
-    """Access Watershed Boundary Dataset (WBD).
-
-    Notes
-    -----
-    This web service offers Hydrologic Unit (HU) polygon boundaries for
-    the United States, Puerto Rico, and the U.S. Virgin Islands.
-    For more info visit: https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer
-
-    Parameters
-    ----------
-    layer : str, optional
-        A valid service layer. Valid layers are:
-
-        - ``wbdline``
-        - ``huc2``
-        - ``huc4``
-        - ``huc6``
-        - ``huc8``
-        - ``huc10``
-        - ``huc12``
-        - ``huc14``
-        - ``huc16``
-
-    outfields : str or list, optional
-        Target field name(s), default to "*" i.e., all the fields.
-    crs : str, int, or pyproj.CRS, optional
-        Target spatial reference, default to ``EPSG:4326``.
-    """
-
-    def __init__(self, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326):
-        self.valid_layers = {
-            "wbdline": "wbdline",
-            "huc2": "2-digit hu (region)",
-            "huc4": "4-digit hu (subregion)",
-            "huc6": "6-digit hu (basin)",
-            "huc8": "8-digit hu  (subbasin)",
-            "huc10": "10-digit hu (watershed)",
-            "huc12": "12-digit hu (subwatershed)",
-            "huc14": "14-digit hu",
-            "huc16": "16-digit hu",
-        }
-        _layer = self.valid_layers.get(layer)
-        if _layer is None:
-            raise InputValueError("layer", list(self.valid_layers))
-        super().__init__(ServiceURL().restful.wbd, _layer, outfields, crs)
-
-
 def soil_properties(
     properties: list[str] | str = "*", soil_dir: str | Path = "cache"
 ) -> xr.Dataset:
@@ -1102,7 +1052,7 @@ def soil_properties(
     _ = soil.attrs.pop("_FillValue", None)
     _ = soil.attrs.pop("units", None)
     _ = soil.attrs.pop("long_name", None)
-    return soil
+    return soil  # type: ignore[no-any-return]
 
 
 def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:

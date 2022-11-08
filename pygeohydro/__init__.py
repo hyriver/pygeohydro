@@ -13,10 +13,10 @@ from .exceptions import (
     ZeroMatchedError,
 )
 from .helpers import get_us_states
+from .plot import interactive_map
 from .print_versions import show_versions
 from .pygeohydro import (
     NID,
-    WBD,
     cover_statistics,
     get_camels,
     nlcd_bycoords,
@@ -27,7 +27,7 @@ from .pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from .waterdata import NWIS, WaterQuality, interactive_map
+from .waterdata import NWIS, WBD, WaterQuality, huc_wb_full
 
 try:
     __version__ = version("pygeohydro")
@@ -42,6 +42,7 @@ __all__ = [
     "cover_statistics",
     "get_camels",
     "overland_roughness",
+    "huc_wb_full",
     "interactive_map",
     "nlcd_bygeom",
     "nlcd_bycoords",
