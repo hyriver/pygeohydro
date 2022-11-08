@@ -5,6 +5,15 @@ History
 0.13.8 (unreleased)
 -------------------
 
+New Features
+~~~~~~~~~~~~
+- Add a function called ``huc_wb_full`` that returns the full watershed
+  boundary geo-dataframe of a given HUC level. If only a subset of HUCs
+  is needed the ``pygeohydro.WBD`` class should be used. The full dataset
+  is downloaded from the National Maps'
+  `WBD staged products <https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Hydrography/WBD/HU2/Shape/>`__.
+
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Add ``get_us_states`` to PyGeoHydro's init file, so it can be loaded directly,
