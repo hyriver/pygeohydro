@@ -896,11 +896,10 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
             ar.stream_write(urls, _paths)
 
     keys = (p.stem.split("_")[1] for p in paths)
-    lvl = str(huc_lvl).zfill(2)
     engine = "pyogrio" if sys.modules.get("pyogrios") else "fiona"
     huc = gpd.GeoDataFrame(
         pd.concat(
-            (gpd.read_file(f"{p}!Shape/WBDHU{lvl}.shp", engine=engine) for p in paths), keys=keys
+            (gpd.read_file(f"{p}!Shape/WBDHU{huc_lvl}.shp", engine=engine) for p in paths), keys=keys
         )
     )
     huc = huc.reset_index().rename(columns={"level_0": "huc02"}).drop(columns="level_1")
