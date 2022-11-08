@@ -4,28 +4,30 @@ from __future__ import annotations
 import contextlib
 import io
 import re
+import sys
+from pathlib import Path
 from typing import Any, Iterable, Sequence, Union
 
 import async_retriever as ar
 import cytoolz as tlz
-import folium
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pygeoogc as ogc
 import pygeoutils as geoutils
 import pyproj
 import xarray as xr
 from loguru import logger
-from pygeoogc import ServiceURL
+from pygeoogc import RetrySession, ServiceURL
 from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
-from pynhd import WaterData
+from pynhd import AGRBase, WaterData
 
 from .exceptions import DataNotAvailableError, InputTypeError, InputValueError, ZeroMatchedError
 
 T_FMT = "%Y-%m-%d"
 CRSTYPE = Union[int, str, pyproj.CRS]
+
+__all__ = ["NWIS", "WBD", "huc_wb_full"]
 
 
 class NWIS:
@@ -589,119 +591,6 @@ class NWIS:
         return qobs
 
 
-def interactive_map(
-    bbox: tuple[float, float, float, float],
-    crs: CRSTYPE = 4326,
-    nwis_kwds: dict[str, Any] | None = None,
-) -> folium.Map:
-    """Generate an interactive map including all USGS stations within a bounding box.
-
-    Parameters
-    ----------
-    bbox : tuple
-        List of corners in this order (west, south, east, north)
-    crs : str, int, or pyproj.CRS, optional
-        CRS of the input bounding box, defaults to EPSG:4326.
-    nwis_kwds : dict, optional
-        Optional keywords to include in the NWIS request as a dictionary like so:
-        ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
-        Default to None.
-
-    Returns
-    -------
-    folium.Map
-        Interactive map within a bounding box.
-
-    Examples
-    --------
-    >>> import pygeohydro as gh
-    >>> nwis_kwds = {"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv"}
-    >>> m = gh.interactive_map((-69.77, 45.07, -69.31, 45.45), nwis_kwds=nwis_kwds)
-    >>> n_stations = len(m.to_dict()["children"]) - 1
-    >>> n_stations
-    10
-    """
-    bbox = ogc.utils.match_crs(bbox, crs, 4326)
-    ogc.utils.check_bbox(bbox)
-
-    nwis = NWIS()
-    query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
-    if isinstance(nwis_kwds, dict):
-        query.update(nwis_kwds)
-
-    sites = nwis.get_info(query, expanded=True)
-
-    sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
-    sites["altitude"] = (
-        sites["alt_va"].astype("str") + " ft above " + sites["alt_datum_cd"].astype("str")
-    )
-
-    sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " sqmi"
-    sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " sqmi"
-    sites["drain_sqkm"] = sites["drain_sqkm"].astype("str") + " sqkm"
-    for c in ["drain_area_va", "contrib_drain_area_va", "drain_sqkm"]:
-        sites.loc[sites[c].str.contains("nan"), c] = "N/A"
-
-    cols_old = [
-        "site_no",
-        "station_nm",
-        "coords",
-        "altitude",
-        "huc_cd",
-        "drain_area_va",
-        "contrib_drain_area_va",
-        "drain_sqkm",
-        "hcdn_2009",
-    ]
-
-    cols_new = [
-        "Site No.",
-        "Station Name",
-        "Coordinate",
-        "Altitude",
-        "HUC8",
-        "Drainage Area (NWIS)",
-        "Contributing Drainage Area (NWIS)",
-        "Drainage Area (GagesII)",
-        "HCDN 2009",
-    ]
-
-    sites = sites.groupby("site_no")[cols_old[1:]].agg(set).reset_index()
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))
-
-    msgs = []
-    base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="
-    for row in sites.itertuples(index=False):
-        site_no = row[sites.columns.get_loc(cols_new[0])]
-        msg = f"<strong>{cols_new[0]}</strong>: {site_no}<br>"
-        for col in cols_new[1:]:
-            value = ", ".join(str(s) for s in row[sites.columns.get_loc(col)])
-            msg += f"<strong>{col}</strong>: {value}<br>"
-        msg += f'<a href="{base_url}{site_no}" target="_blank">More on USGS Website</a>'
-        msgs.append(msg[:-4])
-
-    sites["msg"] = msgs
-
-    west, south, east, north = bbox
-    lon = (west + east) * 0.5
-    lat = (south + north) * 0.5
-
-    imap = folium.Map(
-        location=(lat, lon),
-        tiles="Stamen Terrain",
-        zoom_start=10,
-    )
-
-    for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
-        folium.Marker(
-            location=list(coords)[0][::-1],
-            popup=folium.Popup(msg, max_width=250),
-            icon=folium.Icon(),
-        ).add_to(imap)
-
-    return imap
-
-
 class WaterQuality:
     """Water Quality Web Service https://www.waterqualitydata.us.
 
@@ -911,3 +800,108 @@ class WaterQuality:
         if len(siteid) > 10:
             return self.get_csv("result", kwds, request_method="POST")
         return self.get_csv("result", kwds)
+
+
+class WBD(AGRBase):
+    """Access Watershed Boundary Dataset (WBD).
+
+    Notes
+    -----
+    This web service offers Hydrologic Unit (HU) polygon boundaries for
+    the United States, Puerto Rico, and the U.S. Virgin Islands.
+    For more info visit: https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer
+
+    Parameters
+    ----------
+    layer : str, optional
+        A valid service layer. Valid layers are:
+
+        - ``wbdline``
+        - ``huc2``
+        - ``huc4``
+        - ``huc6``
+        - ``huc8``
+        - ``huc10``
+        - ``huc12``
+        - ``huc14``
+        - ``huc16``
+
+    outfields : str or list, optional
+        Target field name(s), default to "*" i.e., all the fields.
+    crs : str, int, or pyproj.CRS, optional
+        Target spatial reference, default to ``EPSG:4326``.
+    """
+
+    def __init__(self, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326):
+        self.valid_layers = {
+            "wbdline": "wbdline",
+            "huc2": "2-digit hu (region)",
+            "huc4": "4-digit hu (subregion)",
+            "huc6": "6-digit hu (basin)",
+            "huc8": "8-digit hu  (subbasin)",
+            "huc10": "10-digit hu (watershed)",
+            "huc12": "12-digit hu (subwatershed)",
+            "huc14": "14-digit hu",
+            "huc16": "16-digit hu",
+        }
+        _layer = self.valid_layers.get(layer)
+        if _layer is None:
+            raise InputValueError("layer", list(self.valid_layers))
+        super().__init__(ServiceURL().restful.wbd, _layer, outfields, crs)
+
+
+def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
+    """Get the full watershed boundary for a given HUC level.
+
+    Notes
+    -----
+    This function is designed for cases where the full watershed boundary is needed
+    for a given HUC level. If only a subset of the HUCs is needed, then use
+    the ``pygeohydro.WBD`` class. The full dataset is downloaded from the National Maps'
+    `WBD staged products <https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Hydrography/WBD/HU2/Shape/>`__.
+
+    Parameters
+    ----------
+    huc_lvl : int
+        HUC level, must be even numbers between 2 and 16.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame
+        The full watershed boundary for the given HUC level.
+    """
+    valid_hucs = [2, 4, 6, 8, 10, 12, 14, 16]
+    if huc_lvl not in valid_hucs:
+        raise InputValueError("huc_lvl", list(map(str, valid_hucs)))
+
+    base_url = "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/WBD/HU2/Shape"
+    session = RetrySession()
+
+    def get_url(h: int) -> tuple[str, Path, int]:
+        h2 = str(h).zfill(2)
+        url = f"{base_url}/WBD_{h2}_HU2_Shape.zip"
+        path = Path("cache", url.rsplit("/", 1)[-1])
+        return url, path, int(session.head(url).headers["Content-Length"])
+
+    urls, paths, fsizes = zip(*(get_url(h) for h in range(1, 23)))
+    with contextlib.suppress(ValueError):
+        urls, _paths = zip(
+            *(
+                (u, p)
+                for u, p, s in zip(urls, paths, fsizes)
+                if not p.exists() or p.stat().st_size != s
+            )
+        )
+        if urls:
+            ar.stream_write(urls, _paths)
+
+    keys = (p.stem.split("_")[1] for p in paths)
+    lvl = str(huc_lvl).zfill(2)
+    engine = "pyogrio" if sys.modules.get("pyogrios") else "fiona"
+    huc = gpd.GeoDataFrame(
+        pd.concat(
+            (gpd.read_file(f"{p}!Shape/WBDHU{lvl}.shp", engine=engine) for p in paths), keys=keys
+        )
+    )
+    huc = huc.reset_index().rename(columns={"level_0": "huc02"}).drop(columns="level_1")
+    return huc
