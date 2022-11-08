@@ -1,6 +1,7 @@
 """Tests for PyGeoHydro package."""
 import io
 import shutil
+import sys
 
 import geopandas as gpd
 import numpy as np
@@ -12,12 +13,7 @@ from shapely.geometry import Polygon
 import pygeohydro as gh
 from pygeohydro import NID, NWIS, WBD
 
-try:
-    import typeguard  # noqa: F401
-except ImportError:
-    has_typeguard = False
-else:
-    has_typeguard = True
+has_typeguard = True if sys.modules.get("typeguard") else False
 
 DEF_CRS = "epsg:4326"
 ALT_CRS = "epsg:3542"
@@ -273,6 +269,11 @@ def test_nwis_errors():
 def test_us_states(key, expected):
     states = gh.helpers.get_us_states(key)
     assert states.shape[0] == expected
+
+
+def test_full_huc():
+    hu16 = gh.huc_wb_full(16)
+    assert hu16.shape[0] == 7202
 
 
 def test_soil():

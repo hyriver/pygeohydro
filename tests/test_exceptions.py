@@ -1,3 +1,5 @@
+import sys
+
 import geopandas as gpd
 import pandas as pd
 import pytest
@@ -6,12 +8,7 @@ from shapely.geometry import Polygon
 import pygeohydro as gh
 from pygeohydro import DataNotAvailableError, InputRangeError, InputTypeError, InputValueError
 
-try:
-    import typeguard  # noqa: F401
-except ImportError:
-    has_typeguard = False
-else:
-    has_typeguard = True
+has_typeguard = True if sys.modules.get("typeguard") else False
 
 SID_NATURAL = "01031500"
 GEOM = Polygon(
