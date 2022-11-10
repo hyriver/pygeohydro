@@ -461,22 +461,19 @@ class NWIS:
             except KeyError:
                 return pd.DataFrame()
             discharge["value"] = pd.to_numeric(discharge["value"], errors="coerce")
-            discharge.index = pd.to_datetime(discharge.index, infer_datetime_format=True)
-            if discharge.index.tz is None:
-                tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
-                tz_dict = {
-                    "CST": "US/Central",
-                    "MST": "US/Mountain",
-                    "PST": "US/Pacific",
-                    "EST": "US/Eastern",
-                }
-                time_zone = tz_dict.get(
-                    tz["defaultTimeZone"]["zoneAbbreviation"],
-                    tz["defaultTimeZone"]["zoneAbbreviation"],
-                )
-
-                discharge.index = discharge.index.tz_localize(time_zone)
-            discharge.index = discharge.index.tz_convert("UTC")
+            tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
+            tz_dict = {
+                "CST": "US/Central",
+                "MST": "US/Mountain",
+                "PST": "US/Pacific",
+                "EST": "US/Eastern",
+            }
+            time_zone = tz_dict.get(
+                tz["defaultTimeZone"]["zoneAbbreviation"],
+                tz["defaultTimeZone"]["zoneAbbreviation"],
+            )
+            discharge.index = [pd.Timestamp(i, tz=time_zone) for i in discharge.index]
+            discharge.index = discharge.index.tz_convert("UTC")  # type: ignore[attr-defined]
             discharge.columns = [col]
             return discharge
 
