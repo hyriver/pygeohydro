@@ -118,7 +118,6 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         ("aiohttp-client-cache", lambda mod: mod.__version__),
         ("aiosqlite", lambda mod: mod.__version__),
         ("brotli", lambda mod: mod.__version__),
-        ("cchardet", lambda mod: mod.__version__),
         ("cytoolz", lambda mod: mod.__version__),
         ("ujson", lambda mod: mod.__version__),
         #  pygeoogc
