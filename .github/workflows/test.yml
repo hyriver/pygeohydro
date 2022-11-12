@@ -59,10 +59,10 @@ jobs:
       - name: Run pytest
         run: |-
           pytest
-      - name: Run typeguard
-        run: |-
-          micromamba install typeguard
-          pytest --typeguard-packages=${REPO_NAME}
+      # - name: Run typeguard
+      #   run: |-
+      #     micromamba install typeguard
+      #     pytest --typeguard-packages=${REPO_NAME}
       - name: Run codecov and upload the report
         uses: codecov/codecov-action@v3
         with:
