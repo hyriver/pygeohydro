@@ -22,7 +22,7 @@ repos:
       args: [--min-py3-version, "3.8", "--include-version-classifiers"]
 
   - repo: https://github.com/hadialqattan/pycln
-    rev: v2.1.1
+    rev: v2.1.2
     hooks:
     - id: pycln
       name: Find and remove unused import statements
@@ -82,7 +82,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.2.0
+    rev: v3.2.2
     hooks:
     - id: pyupgrade
       name: Upgrade sytnax to python 3.8+ with pyupgrade
@@ -111,7 +111,7 @@ repos:
       - pep8-naming
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.982
+    rev: v0.991
     hooks:
     - id: mypy
       name: Static type checking with mypy
