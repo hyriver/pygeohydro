@@ -32,10 +32,10 @@ __all__ = ["NWIS", "WBD", "huc_wb_full"]
 
 class NWIS:
     """Access NWIS web service.
-    
+
     Notes
     -----
-    More information about query paramaters and codes that NWIS accepts
+    More information about query parameters and codes that NWIS accepts
     can be found at its help
     `webpage <https://help.waterdata.usgs.gov/codes-and-parameters>`__.
     """
