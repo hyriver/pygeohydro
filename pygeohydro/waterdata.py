@@ -31,7 +31,14 @@ __all__ = ["NWIS", "WBD", "huc_wb_full"]
 
 
 class NWIS:
-    """Access NWIS web service."""
+    """Access NWIS web service.
+    
+    Notes
+    -----
+    More information about query paramaters and codes that NWIS accepts
+    can be found at its help
+    `webpage <https://help.waterdata.usgs.gov/codes-and-parameters>`__.
+    """
 
     def __init__(self) -> None:
         self.url = ServiceURL().restful.nwis
@@ -196,7 +203,7 @@ class NWIS:
         queries : dict or list of dict
             A single or a list of valid queries.
         expanded : bool, optional
-            Whether to get expanded sit information for example drainage area,
+            Whether to get expanded site information for example drainage area,
             default to False.
         fix_names : bool, optional
             If ``True``, reformat station names and some small annoyances,
