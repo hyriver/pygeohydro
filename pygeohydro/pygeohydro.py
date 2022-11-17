@@ -41,16 +41,6 @@ from .exceptions import (
 )
 from .helpers import Stats
 
-try:
-    import planetary_computer
-    import pystac_client
-
-    NO_STAC = False
-except ImportError:
-    pystac_client = None
-    planetary_computer = None
-    NO_STAC = True
-
 if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
@@ -590,35 +580,39 @@ class NID:
         self.fields_meta = pd.DataFrame(ar.retrieve_json([f"{self.base_url}/advanced-fields"])[0])
         self.valid_fields = self.fields_meta.name
         self.dam_type = {
-            -1: "N/A",
+            pd.NA: "N/A",
+            None: "N/A",
             1: "Arch",
-            2: "Buttress",
-            3: "Concrete",
-            4: "Earth",
-            5: "Gravity",
-            6: "Masonry",
-            7: "Multi-Arch",
-            8: "Rockfill",
-            9: "Roller-Compacted Concrete",
-            10: "Stone",
-            11: "Timber Crib",
+            2: "Multi-Arch",
+            3: "Stone",
+            4: "Roller-Compacted Concrete",
+            5: "Rockfill",
+            6: "Buttress",
+            7: "Masonry",
+            8: "Earth",
+            9: "Gravity",
+            10: "Timber Crib",
+            11: "Concrete",
             12: "Other",
         }
+        self.dam_type.update({str(v): k for k, v in self.dam_type.items()})
         self.dam_purpose = {
-            -1: "N/A",
-            1: "Debris Control",
-            2: "Fire Protection, Stock, Or Small Farm Pond",
-            3: "Fish and Wildlife Pond",
-            4: "Flood Risk Reduction",
-            5: "Grade Stabilization",
+            pd.NA: "N/A",
+            None: "N/A",
+            1: "Tailings",
+            2: "Irrigation",
+            3: "Navigation",
+            4: "Fish and Wildlife Pond",
+            5: "Recreation",
             6: "Hydroelectric",
-            7: "Irrigation",
-            8: "Navigation",
-            9: "Recreation",
-            10: "Tailings",
-            11: "Water Supply",
+            7: "Debris Control",
+            8: "Water Supply",
+            9: "Flood Risk Reduction",
+            10: "Fire Protection, Stock, Or Small Farm Pond",
+            11: "Grade Stabilization",
             12: "Other",
         }
+        self.dam_purpose.update({str(v): k for k, v in self.dam_purpose.items()})
         self.nid_inventory_path = Path("cache", "nid_inventory.feather")
 
     def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
@@ -1079,8 +1073,11 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     xarray.Dataset
         Requested soil properties.
     """
-    if NO_STAC:
-        raise DependencyError("soil_gnatsgo", ["pystac-client", "planetary-computer"])
+    try:
+        import planetary_computer
+        import pystac_client
+    except ImportError as ex:
+        raise DependencyError("soil_gnatsgo", ["pystac-client", "planetary-computer"]) from ex
 
     catalog = pystac_client.Client.open(
         "https://planetarycomputer.microsoft.com/api/stac/v1",
@@ -1089,7 +1086,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     bounds = geoutils.geo2polygon(geometry, crs, 4326).bounds
     search = catalog.search(collections=["gnatsgo-rasters"], bbox=bounds)
     lyr_href = tlz.merge_with(
-        set, ({n: a.href for n, a in i.assets.items()} for i in search.get_items())
+        set, ({n: a.href for n, a in i.assets.items()} for i in search.items())
     )
     lyrs = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
 
