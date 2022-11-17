@@ -390,18 +390,16 @@ bounding box and have a maximum storage larger than 200 acre-feet.
     dams = nid.inventory_byid(dams.id.to_list())
     dams = dams[dams.maxStorage > 200]
 
-We can get also all dams within CONUS in NID with maximum storage larger than 200 acre-feet:
+We can get also all dams within CONUS with maximum storage larger than 2500 acre-feet:
 
 .. code-block:: python
 
-    import geopandas as gpd
+    conus_geom = gh.get_us_states("contiguous")
 
-    world = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
-    conus = world[world.name == "United States of America"].geometry.iloc[0].geoms[0]
+    dam_list = nid.get_byfilter([{"maxStorage": ["[2500 +inf]"]}])
+    dams = nid.inventory_byid(dam_list[0].id.to_list(), stage_nid=True)
 
-    dam_list = nid.get_byfilter([{"maxStorage": ["[200 5000]"]}])
-    dams = dam_list[0][dam_list[0].is_valid]
-    dams = dams[dams.within(conus)]
+    conus_dams = dams[dams.stateKey.isin(conus_geom.STUSPS)].reset_index(drop=True)
 
 .. image:: https://raw.githubusercontent.com/hyriver/HyRiver-examples/main/notebooks/_static/dams.png
     :target: https://github.com/hyriver/HyRiver-examples/blob/main/notebooks/nid.ipynb
