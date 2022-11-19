@@ -1,7 +1,6 @@
 """Accessing data from the supported databases through their APIs."""
 from __future__ import annotations
 
-import contextlib
 import io
 import itertools
 import os
@@ -595,7 +594,7 @@ class NID:
             11: "Concrete",
             12: "Other",
         }
-        self.dam_type.update({str(v): k for k, v in self.dam_type.items()})
+        self.dam_type.update({str(k): v for k, v in self.dam_type.items()})
         self.dam_purpose = {
             pd.NA: "N/A",
             None: "N/A",
@@ -612,7 +611,7 @@ class NID:
             11: "Grade Stabilization",
             12: "Other",
         }
-        self.dam_purpose.update({str(v): k for k, v in self.dam_purpose.items()})
+        self.dam_purpose.update({str(k): v for k, v in self.dam_purpose.items()})
         self.nid_inventory_path = Path("cache", "nid_inventory.feather")
 
     def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
@@ -920,7 +919,7 @@ class NID:
         return self._to_geodf(pd.DataFrame(self._get_json(urls)))
 
     def get_suggestions(
-        self, text: str, context_key: str = ""
+        self, text: str, context_key: str | None = None
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         """Get suggestions from the National Inventory of Dams web service.
 
@@ -953,11 +952,12 @@ class NID:
         Texas City
         """
         fields = self.valid_fields.to_list()
-        if len(context_key) > 0 and context_key not in fields:
-            raise InputValueError("context", fields)
-
-        params = [{"text": text, "contextKey": context_key}]
-        resp = self._get_json([f"{self.base_url}/suggestions"] * len(params), params)
+        params = {"text": text}
+        if context_key:
+            if context_key not in fields:
+                raise InputValueError("context", fields)
+            params["contextKey"] = context_key
+        resp = self._get_json([f"{self.base_url}/suggestions"], [params])
         dams = pd.DataFrame(resp[0]["dams"])
         contexts = pd.DataFrame(resp[0]["contexts"])
         return (
@@ -1034,8 +1034,9 @@ def soil_properties(
     def get_tif(file: Path) -> xr.DataArray:
         """Get the .tif file from a zip file."""
         with zipfile.ZipFile(file) as z:
-            ds = rxr.open_rasterio(io.BytesIO(z.read(z.filelist[2].filename)))  # type: ignore[attr-defined]
-            with contextlib.suppress(AttributeError, ValueError):
+            fname = next(f.filename for f in z.filelist if f.filename.endswith(".tif"))
+            ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))  # type: ignore[attr-defined]
+            if "band" in ds.dims:
                 ds = ds.squeeze("band", drop=True)
             ds.name = valid_props[file.stem.split("_")[0]]["name"]
             ds.attrs["units"] = valid_props[file.stem.split("_")[0]]["units"]
@@ -1092,11 +1093,12 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 
     def get_layer(lyr: str) -> xr.DataArray:
         data = xr.open_mfdataset(lyr_href[lyr], engine="rasterio").band_data
-        data = data.squeeze("band", drop=True)
+        if "band" in data.dims:
+            data = data.squeeze("band", drop=True)
         data.name = lyr
         return data  # type: ignore[no-any-return]
 
-    with dask.config.set(**{"array.slicing.split_large_chunks": True}):  # type: ignore[arg-type]
+    with dask.config.set({"array.slicing.split_large_chunks": True}):
         ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
         poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
         ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)

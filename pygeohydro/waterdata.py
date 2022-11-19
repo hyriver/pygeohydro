@@ -77,7 +77,7 @@ class NWIS:
 
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
-        if len(data) == 0:
+        if not data:
             raise ZeroMatchedError
 
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
@@ -176,13 +176,13 @@ class NWIS:
         ]
 
         not_valid = list(tlz.concat(set(q).difference(set(valid_query_keys)) for q in queries))
-        if len(not_valid) > 0:
+        if not_valid:
             raise InputValueError(f"query keys ({', '.join(not_valid)})", valid_query_keys)
 
         _queries = queries.copy()
         if expanded:
             _ = [
-                q.pop(k) for k in ["outputDataTypeCd", "outputDataType"] for q in _queries if k in q
+                q.pop(k) for k in ("outputDataTypeCd", "outputDataType") for q in _queries if k in q
             ]
             output_type = {"siteOutput": "expanded"}
         else:
@@ -457,7 +457,7 @@ class NWIS:
             for r in resp
             for t in r["value"]["timeSeries"]
         }
-        if len(r_ts) == 0:
+        if not r_ts:
             raise DataNotAvailableError("discharge")
 
         def to_df(col: str, values: dict[str, Any]) -> pd.DataFrame:
@@ -563,7 +563,7 @@ class NWIS:
                 & (end.tz_localize(None) > siteinfo.begin_date)
             ]
         sids = list(siteinfo.site_no.unique())
-        if len(sids) == 0:
+        if not sids:
             raise DataNotAvailableError("discharge")
 
         time_fmt = T_FMT if utc is None else "%Y-%m-%dT%H:%M%z"
@@ -680,7 +680,7 @@ class WaterQuality:
     def _check_kwds(self, wq_kwds: dict[str, str]) -> None:
         """Check the validity of the Water Quality Web Service keyword arguments."""
         invalids = [k for k in wq_kwds if k not in self.keywords.index]
-        if len(invalids) > 0:
+        if invalids:
             raise InputValueError("wq_kwds", invalids)
 
     def station_bybbox(

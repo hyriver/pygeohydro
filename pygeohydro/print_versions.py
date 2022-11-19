@@ -5,6 +5,7 @@ The original script is from
 """
 from __future__ import annotations
 
+import contextlib
 import importlib
 import locale
 import os
@@ -29,12 +30,11 @@ def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
         libhdf5_version = netCDF4.__hdf5libversion__
         libnetcdf_version = netCDF4.__netcdf4libversion__
     except (ImportError, AttributeError):
-        try:
+        with contextlib.suppress(ImportError, AttributeError):
             import h5py
 
             libhdf5_version = h5py.version.hdf5_version
-        except (ImportError, AttributeError):
-            pass
+
     return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
 
@@ -53,7 +53,7 @@ def get_sys_info() -> list[tuple[str, str | None]]:
     def _minimal_ext_cmd(cmd: list[str]) -> bytes:
         # construct minimal environment
         env = {}
-        for k in ["SYSTEMROOT", "PATH", "HOME"]:
+        for k in ("SYSTEMROOT", "PATH", "HOME"):
             v = os.environ.get(k)
             if v is not None:
                 env[k] = v
