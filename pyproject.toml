@@ -19,6 +19,7 @@ testpaths = [
 ]
 filterwarnings =[
     "ignore:.*distutils.*",
+    "ignore:.*--rsyncdir command line argument.*",
 ]
 
 [tool.mypy]
@@ -51,4 +52,8 @@ no_gitignore = false
 
 [tool.black]
 line-length = 100
-target-version = ['py38']
+target-version = ["py310"]
+
+[tool.refurb]
+quiet = true
+python_version = "3.10"
