@@ -16,12 +16,14 @@ New Features
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Add ``get_us_states`` to PyGeoHydro's init file, so it can be loaded directly,
+- Add ``get_us_states`` to ``__init__`` file, so it can be loaded directly,
   e.g., ``gh.get_us_states("TX")``.
+- Modify the codebase based on `Refurb <https://github.com/dosisod/refurb>`__
+  suggestions.
 
 Bug Fixes
 ~~~~~~~~~
-- Fix the dam type and purpose mapping in ``NID`` class.
+- Fix the dam types and purposes mapping dictionaries in ``NID`` class.
 
 0.13.7 (2022-11-04)
 -------------------
