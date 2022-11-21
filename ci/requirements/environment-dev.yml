@@ -79,6 +79,9 @@ dependencies:
   # - pygeoogc >=0.13.7
   # - pygeoutils >=0.13.7
   - shapely >=1.8
+  # optional deps
+  - pyogrio
+  - py7zr
 
   # pydaymet deps
   # - async-retriever >=0.3.6
