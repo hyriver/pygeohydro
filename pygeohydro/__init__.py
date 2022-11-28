@@ -27,7 +27,7 @@ from .pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from .waterdata import NWIS, WBD, WaterQuality, huc_wb_full
+from .waterdata import NWIS, WBD, WaterQuality, huc_wb_full, irrigation_withdrawals
 
 try:
     __version__ = version("pygeohydro")
@@ -43,6 +43,7 @@ __all__ = [
     "get_camels",
     "overland_roughness",
     "huc_wb_full",
+    "irrigation_withdrawals",
     "interactive_map",
     "nlcd_bygeom",
     "nlcd_bycoords",

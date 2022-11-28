@@ -21,13 +21,14 @@ from pygeoogc import RetrySession, ServiceURL
 from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase, WaterData
+from pynhd.core import ScienceBase
 
 from .exceptions import DataNotAvailableError, InputTypeError, InputValueError, ZeroMatchedError
 
 T_FMT = "%Y-%m-%d"
 CRSTYPE = Union[int, str, pyproj.CRS]
 
-__all__ = ["NWIS", "WBD", "huc_wb_full"]
+__all__ = ["NWIS", "WBD", "huc_wb_full", "irrigation_withdrawals"]
 
 
 class NWIS:
@@ -909,3 +910,39 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
     )
     huc = huc.reset_index().rename(columns={"level_0": "huc2"}).drop(columns="level_1")
     return huc
+
+
+def irrigation_withdrawals() -> xr.Dataset:
+    """Get monthly water use for irrigation at HUC12-level for CONUS.
+
+    Notes
+    -----
+    Dataset is retrieved from https://doi.org/10.5066/P9FDLY8P.
+    """
+    sb = ScienceBase()
+    item = sb.get_file_urls("5ff7acf4d34ea5387df03d73")
+    urls = item.loc[item.index.str.contains(".csv"), "url"]
+    resp = ar.retrieve_text(urls.tolist())
+    irr = {}
+    for name, r in zip(urls.index, resp):
+        df = pd.read_csv(io.StringIO(r), usecols=lambda x: "m3" in x or "huc12t" in x)
+        df["huc12t"] = df["huc12t"].str.strip("'")
+        df = df.rename(columns={"huc12t": "huc12"}).set_index("huc12")
+        df = df.rename(columns={c: c[:3].capitalize() for c in df})
+        irr[name[-6:-4]] = df.copy()
+    ds = xr.Dataset(irr)
+    ds = ds.rename({"dim_1": "month"})
+    long_names = {
+        "GW": "groundwater_withdrawal",
+        "SW": "surface_water_withdrawal",
+        "TW": "total_withdrawal",
+        "CU": "consumptive_use",
+    }
+    for v, n in long_names.items():
+        ds[v].attrs["long_name"] = n
+        ds[v].attrs["units"] = "m3"
+    ds.attrs[
+        "description"
+    ] = "Estimated Monthly Water Use for Irrigation by 12-Digit Hydrologic Unit in the Conterminous United States for 2015"
+    ds.attrs["source"] = "https://doi.org/10.5066/P9FDLY8P"
+    return ds
