@@ -12,6 +12,9 @@ New Features
   is needed the ``pygeohydro.WBD`` class should be used. The full dataset
   is downloaded from the National Maps'
   `WBD staged products <https://prd-tnm.s3.amazonaws.com/index.html?prefix=StagedProducts/Hydrography/WBD/HU2/Shape/>`__.
+- Add a new function called ``irrigation_withdrawals`` for retrieving estimated
+  monthly water use for irrigation by 12-digit hydrologic unit in the
+  CONUS for 2015 from `ScienceBase <https://doi.org/10.5066/P9FDLY8P>`__.
 
 
 Internal Changes
@@ -20,6 +23,8 @@ Internal Changes
   e.g., ``gh.get_us_states("TX")``.
 - Modify the codebase based on `Refurb <https://github.com/dosisod/refurb>`__
   suggestions.
+- Significant performance improvements in ``NWIS.get_streamflow`` especially
+  for large requests by refactoring the timezone handling.
 
 Bug Fixes
 ~~~~~~~~~
