@@ -941,8 +941,11 @@ def irrigation_withdrawals() -> xr.Dataset:
     for v, n in long_names.items():
         ds[v].attrs["long_name"] = n
         ds[v].attrs["units"] = "m3"
-    ds.attrs[
-        "description"
-    ] = "Estimated Monthly Water Use for Irrigation by 12-Digit Hydrologic Unit in the Conterminous United States for 2015"
+    ds.attrs["description"] = " ".join(
+        (
+            "Estimated Monthly Water Use for Irrigation by",
+            "12-Digit Hydrologic Unit in the Conterminous United States for 2015",
+        )
+    )
     ds.attrs["source"] = "https://doi.org/10.5066/P9FDLY8P"
     return ds
