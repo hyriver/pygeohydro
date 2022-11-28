@@ -137,6 +137,8 @@ PyGeoHydro supports the following datasets:
   Hydrologic Unit (HU) polygon boundaries within the US (all HUC levels).
 * `SSEBop <https://earlywarning.usgs.gov/ssebop/modis/daily>`__ for daily actual
   evapotranspiration, for both single pixel and gridded data.
+* `Irrigation Withdrawals <https://doi.org/10.5066/P9FDLY8P>`__ for estimated
+  monthly water use for irrigation by 12-digit hydrologic unit in the CONUS for 2015
 
 Also, it has two other functions:
 
@@ -299,6 +301,12 @@ that the input dates are in UTC time zone and returns the data in UTC time zone 
 
     date = ("2005-01-01 12:00", "2005-01-12 15:00")
     qobs = nwis.get_streamflow("01646500", date, freq="iv")
+
+Irrigation withdrawals data can be obtained as follows:
+
+.. code-block:: python
+
+    irr = gh.irrigation_withdrawals()
 
 We can get the CAMELS dataset as a ``geopandas.GeoDataFrame`` that includes geometry and
 basin-level attributes of 671 natural watersheds within CONUS and their streamflow
