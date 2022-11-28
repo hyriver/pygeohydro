@@ -276,6 +276,11 @@ def test_full_huc():
     assert hu16.shape[0] == 7202
 
 
+def test_irrigation():
+    irr = gh.irrigation_withdrawals()
+    assert_close(irr.TW.mean(), 419996.4992)
+
+
 def test_soil():
     soil = gh.soil_properties("por")
     assert soil.dims["x"] == 266301
