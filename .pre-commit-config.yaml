@@ -82,7 +82,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.2.2
+    rev: v3.2.3
     hooks:
     - id: pyupgrade
       name: Upgrade sytnax to python 3.8+ with pyupgrade
@@ -111,7 +111,7 @@ repos:
       - pep8-naming
 
   - repo: https://github.com/dosisod/refurb
-    rev: v1.7.0
+    rev: v1.8.0
     hooks:
     - id: refurb
       name: Modernizing Python codebases using Refurb
