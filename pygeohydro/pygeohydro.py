@@ -594,7 +594,7 @@ class NID:
             11: "Concrete",
             12: "Other",
         }
-        self.dam_type.update({str(k): v for k, v in self.dam_type.items()})
+        self.dam_type.update({str(k): v for k, v in self.dam_type.items() if str(k).isdigit()})
         self.dam_purpose = {
             pd.NA: "N/A",
             None: "N/A",
@@ -611,7 +611,23 @@ class NID:
             11: "Grade Stabilization",
             12: "Other",
         }
-        self.dam_purpose.update({str(k): v for k, v in self.dam_purpose.items()})
+        self.dam_purpose.update({str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()})
+        self.data_units = {
+            "distance": "mile",
+            "damHeight": "ft",
+            "hydraulicHeight": "ft",
+            "structuralHeight": "ft",
+            "nidHeight": "ft",
+            "damLength": "ft",
+            "volume": "cubic yards",
+            "nidStorage": "acre-ft",
+            "maxStorage": "acre-ft",
+            "normalStorage": "acre-ft",
+            "surfaceArea": "acre",
+            "drainageArea": "square miles",
+            "maxDischarge": "cfs",
+            "spillwayWidth": "ft",
+        }
         self.nid_inventory_path = Path("cache", "nid_inventory.feather")
 
     def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
