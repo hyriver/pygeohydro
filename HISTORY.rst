@@ -15,6 +15,8 @@ New Features
 - Add a new function called ``irrigation_withdrawals`` for retrieving estimated
   monthly water use for irrigation by 12-digit hydrologic unit in the
   CONUS for 2015 from `ScienceBase <https://doi.org/10.5066/P9FDLY8P>`__.
+- Add a new property to ``NID``, called ``data_units`` for indicating the
+  units of NID dataset variables.
 
 
 Internal Changes
