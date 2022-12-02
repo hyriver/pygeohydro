@@ -6,7 +6,7 @@ channels:
 dependencies:
   - python>=3.10
 
-  # async_retriever deps
+  # async-retriever deps
   - aiodns
   - aiosqlite
   - aiohttp >=3.8.1
@@ -126,23 +126,9 @@ dependencies:
 
   # optional deps for speeding up some operations
   - bottleneck
-  - pyogrio
-
-  # example notebooks' deps
-  - contextily
-  - datashader
-  - ffmpeg
-  - hvplot
-  - ipywidgets
-  - jupyterlab_widgets
-  - mapclassify
-  - osmnx
-  - proplot
-  - pytables
-  - tqdm
-  - xarray-spatial
 
   # dev deps
+  - ipywidgets
   - codespell
   - nox
   - pre-commit
@@ -152,7 +138,7 @@ dependencies:
 
   - pip
   - pip:
-    - git+https://github.com/hyriver/async_retriever.git
+    - git+https://github.com/hyriver/async-retriever.git
     - git+https://github.com/hyriver/hydrosignatures.git
     - git+https://github.com/hyriver/pygeoogc.git
     - git+https://github.com/hyriver/pygeoutils.git
