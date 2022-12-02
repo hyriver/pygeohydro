@@ -611,7 +611,9 @@ class NID:
             11: "Grade Stabilization",
             12: "Other",
         }
-        self.dam_purpose.update({str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()})
+        self.dam_purpose.update(
+            {str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()}
+        )
         self.data_units = {
             "distance": "mile",
             "damHeight": "ft",
