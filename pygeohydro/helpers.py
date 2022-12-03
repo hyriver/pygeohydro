@@ -167,7 +167,7 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
         Key to subset the geometries instead of returning all states, by default
         all states are returned. Valid keys are:
 
-        - ``contiguous``
+        - ``contiguous`` or ``conus``
         - ``continental``
         - ``commonwealths``
         - ``territories``
@@ -190,9 +190,12 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
             state_cd += state_keys
 
         other_keys = [k for k in keys if len(k) > 2]
+        if "conus" in other_keys:
+            other_keys.remove("conus")
+            other_keys.append("contiguous")
         valid_keys = ["contiguous", "continental", "territories", "commonwealths"]
         if any(k not in valid_keys for k in other_keys):
-            raise InputValueError("subset_key", valid_keys)
+            raise InputValueError("subset_key", valid_keys + ["conus"])
         if other_keys:
             state_cd += tlz.concat(getattr(us_abbrs, k.upper()) for k in other_keys)
 
