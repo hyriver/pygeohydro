@@ -17,7 +17,8 @@ New Features
   CONUS for 2015 from `ScienceBase <https://doi.org/10.5066/P9FDLY8P>`__.
 - Add a new property to ``NID``, called ``data_units`` for indicating the
   units of NID dataset variables.
-
+- The ``get_us_states`` now accepts ``conus`` as a ``subset_key`` which is
+  equivalent to ``contiguous``.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
