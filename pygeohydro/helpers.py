@@ -158,6 +158,30 @@ class Stats(NamedTuple):
     categories: dict[str, float]
 
 
+def _get_state_codes(subset_key: str | list[str]) -> list[str]:
+    """Get state codes for a subset of the US."""
+    keys = [subset_key] if isinstance(subset_key, str) else subset_key
+    state_cd = []
+
+    state_keys = [k.upper() for k in keys if len(k) == 2]
+    states = us_abbrs.STATES
+    if any(k not in states for k in state_keys):
+        raise InputValueError("subset_key", states)
+    if state_keys:
+        state_cd += state_keys
+
+    other_keys = [k for k in keys if len(k) > 2]
+    if "conus" in other_keys:
+        other_keys.remove("conus")
+        other_keys.append("contiguous")
+    valid_keys = ["contiguous", "continental", "territories", "commonwealths"]
+    if any(k not in valid_keys for k in other_keys):
+        raise InputValueError("subset_key", valid_keys + ["conus"])
+    if other_keys:
+        state_cd += tlz.concat(getattr(us_abbrs, k.upper()) for k in other_keys)
+    return state_cd
+
+
 def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame:
     """Get US states as a GeoDataFrame from Census' TIGERLine 2022 database.
 
@@ -178,30 +202,10 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
     geopandas.GeoDataFrame
         GeoDataFrame of requested US states.
     """
-    if subset_key is not None:
-        keys = [subset_key] if isinstance(subset_key, str) else subset_key
-        state_cd = []
-
-        state_keys = [k.upper() for k in keys if len(k) == 2]
-        states = us_abbrs.STATES
-        if any(k not in states for k in state_keys):
-            raise InputValueError("subset_key", states)
-        if state_keys:
-            state_cd += state_keys
-
-        other_keys = [k for k in keys if len(k) > 2]
-        if "conus" in other_keys:
-            other_keys.remove("conus")
-            other_keys.append("contiguous")
-        valid_keys = ["contiguous", "continental", "territories", "commonwealths"]
-        if any(k not in valid_keys for k in other_keys):
-            raise InputValueError("subset_key", valid_keys + ["conus"])
-        if other_keys:
-            state_cd += tlz.concat(getattr(us_abbrs, k.upper()) for k in other_keys)
-
     url = "https://www2.census.gov/geo/tiger/TIGER2022/STATE/tl_2022_us_state.zip"
     us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))
-    if subset_key:
+    if subset_key is not None:
+        state_cd = _get_state_codes(subset_key)
         return us_states[us_states.STUSPS.isin(state_cd)].copy()
     return us_states
 
