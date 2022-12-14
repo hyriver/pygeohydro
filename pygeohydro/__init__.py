@@ -1,9 +1,7 @@
 """Top-level package for PyGeoHydro."""
 from importlib.metadata import PackageNotFoundError, version
 
-from packaging.version import Version
-
-if Version(version("shapely")) > Version("1.9"):
+if int(version("shapely").split(".")[0]) > 1:
     import os
 
     os.environ["USE_PYGEOS"] = "0"
