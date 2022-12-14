@@ -35,13 +35,13 @@ repos:
       name: Sorting top level statements with ssort
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.10.1
+    rev: 5.11.2
     hooks:
     - id: isort
       name: Sort imports with isort
 
   - repo: https://github.com/psf/black
-    rev: 22.10.0
+    rev: 22.12.0
     hooks:
     - id: black
       name: Autoformat with black
@@ -82,7 +82,7 @@ repos:
       name: Checks for common misspellings in text files.
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.2.3
+    rev: v3.3.1
     hooks:
     - id: pyupgrade
       name: Upgrade sytnax to python 3.8+ with pyupgrade
