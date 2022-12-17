@@ -123,6 +123,16 @@ dependencies:
   - planetary-computer
   - pystac-client
 
+  # pynldas2
+  # - async-retriever>=0.3.6
+  - h5netcdf
+  - numpy>=1.17
+  - pandas>=1.0
+  # - pygeoutils>=0.13.10
+  - pyproj>=2.2
+  - rioxarray>=0.11
+  - xarray>=2022.03.0
+
   # optional deps for speeding up some operations
   - bottleneck
 
@@ -144,4 +154,5 @@ dependencies:
     - git+https://github.com/hyriver/pynhd.git
     - git+https://github.com/hyriver/py3dep.git
     - git+https://github.com/hyriver/pydaymet.git
+    - git+https://github.com/hyriver/pynldas2.git
     - git+https://github.com/hyriver/pygeohydro.git
