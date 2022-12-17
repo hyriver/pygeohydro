@@ -33,6 +33,10 @@
     :target: https://github.com/hyriver/pydaymet/actions/workflows/test.yml
     :alt: Github Actions
 
+.. |pynldas2| image:: https://github.com/hyriver/pynldas2/actions/workflows/test.yml/badge.svg
+    :target: https://github.com/hyriver/pynldas2/actions/workflows/test.yml
+    :alt: Github Actions
+
 .. |async| image:: https://github.com/hyriver/async-retriever/actions/workflows/test.yml/badge.svg
     :target: https://github.com/hyriver/async-retriever/actions/workflows/test.yml
     :alt: Github Actions
@@ -48,6 +52,7 @@ PyNHD_           Navigate and subset NHDPlus (MR and HR) using web services     
 Py3DEP_          Access topographic data through National Map's 3DEP web service      |py3dep|
 PyGeoHydro_      Access NWIS, NID, WQP, HCDN 2009, NLCD, CAMELS, and SSEBop databases |pygeohydro|
 PyDaymet_        Access daily, monthly, and annual climate data via Daymet            |pydaymet|
+PyNLDAS2_        Access hourly NLDAS-2 data via web services                          |pynldas2|
 HydroSignatures_ A collection of tools for computing hydrological signatures          |signatures|
 AsyncRetriever_  High-level API for asynchronous requests with persistent caching     |async|
 PyGeoOGC_        Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
@@ -61,6 +66,7 @@ PyGeoUtils_      Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF
 .. _PyNHD: https://github.com/hyriver/pynhd
 .. _Py3DEP: https://github.com/hyriver/py3dep
 .. _PyDaymet: https://github.com/hyriver/pydaymet
+.. _PyNLDAS2: https://github.com/hyriver/pynldas2
 .. _HydroSignatures: https://github.com/hyriver/hydrosignatures
 
 PyGeoHydro: Retrieve Geospatial Hydrology Data
