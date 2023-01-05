@@ -9,11 +9,11 @@ dependencies:
   # async-retriever deps
   - aiodns
   - aiosqlite
-  - aiohttp >=3.8.1
+  - aiohttp >=3.8.3
   - brotli
   - cytoolz
   - nest-asyncio
-  - aiohttp-client-cache >=0.7.3
+  - aiohttp-client-cache >=0.8.1
   - ujson
 
   # pygeoogc deps
