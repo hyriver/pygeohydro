@@ -5,18 +5,17 @@ The original script is from
 """
 from __future__ import annotations
 
-import contextlib
 import importlib
+import importlib.util
 import locale
 import os
 import platform
 import struct
 import subprocess
 import sys
-from typing import TYPE_CHECKING, TextIO
-
-if TYPE_CHECKING:
-    from types import ModuleType
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as get_version
+from typing import TextIO
 
 __all__ = ["show_versions"]
 
@@ -24,16 +23,16 @@ __all__ = ["show_versions"]
 def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
     libhdf5_version = None
     libnetcdf_version = None
-    try:
-        import netCDF4
+
+    if importlib.util.find_spec("netCDF4"):
+        import netCDF4  # type: ignore
 
         libhdf5_version = netCDF4.__hdf5libversion__
         libnetcdf_version = netCDF4.__netcdf4libversion__
-    except (ImportError, AttributeError):
-        with contextlib.suppress(ImportError, AttributeError):
-            import h5py
+    elif importlib.util.find_spec("h5py"):
+        import h5py  # type: ignore
 
-            libhdf5_version = h5py.version.hdf5_version
+        libhdf5_version = h5py.version.hdf5_version
 
     return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
 
@@ -93,15 +92,6 @@ def get_sys_info() -> list[tuple[str, str | None]]:
     return blob
 
 
-def _get_mod(modname: str) -> ModuleType:
-    if modname in sys.modules:
-        return sys.modules[modname]
-    try:
-        return importlib.import_module(modname)
-    except ModuleNotFoundError:
-        return importlib.import_module(modname.replace("-", "_"))
-
-
 def show_versions(file: TextIO = sys.stdout) -> None:
     """Print versions of all the dependencies.
 
@@ -112,82 +102,85 @@ def show_versions(file: TextIO = sys.stdout) -> None:
     """
     deps = [
         #  async_retriever
-        ("async-retriever", lambda mod: mod.__version__),
-        ("aiodns", lambda mod: mod.__version__),
-        ("aiohttp", lambda mod: mod.__version__),
-        ("aiohttp-client-cache", lambda mod: mod.__version__),
-        ("aiosqlite", lambda mod: mod.__version__),
-        ("brotli", lambda mod: mod.__version__),
-        ("cytoolz", lambda mod: mod.__version__),
-        ("ujson", lambda mod: mod.__version__),
+        "async-retriever",
+        "aiodns",
+        "aiohttp",
+        "aiohttp-client-cache",
+        "aiosqlite",
+        "brotli",
+        "cytoolz",
+        "ujson",
         #  pygeoogc
-        ("pygeoogc", lambda mod: mod.__version__),
-        ("defusedxml", lambda mod: mod.__version__),
-        ("owslib", lambda mod: mod.__version__),
-        ("yaml", lambda mod: mod.__version__),
-        ("pyproj", lambda mod: mod.__version__),
-        ("requests", lambda mod: mod.__version__),
-        ("requests-cache", lambda mod: mod.__version__),
-        ("shapely", lambda mod: mod.__version__),
-        ("urllib3", lambda mod: mod.__version__),
+        "pygeoogc",
+        "defusedxml",
+        "owslib",
+        "yaml",
+        "pyproj",
+        "requests",
+        "requests-cache",
+        "shapely",
+        "urllib3",
         #  pygeoutils
-        ("pygeoutils", lambda mod: mod.__version__),
-        ("dask", lambda mod: mod.__version__),
-        ("geopandas", lambda mod: mod.__version__),
-        ("netCDF4", lambda mod: mod.__version__),
-        ("numpy", lambda mod: mod.__version__),
-        ("rasterio", lambda mod: mod.__version__),
-        ("xarray", lambda mod: mod.__version__),
-        ("rioxarray", lambda mod: mod.__version__),
+        "pygeoutils",
+        "dask",
+        "geopandas",
+        "netCDF4",
+        "numpy",
+        "rasterio",
+        "xarray",
+        "rioxarray",
         #  py3dep
-        ("py3dep", lambda mod: mod.__version__),
-        ("click", lambda mod: mod.__version__),
-        ("scipy", lambda mod: mod.__version__),
-        ("richdem", lambda mod: mod.pkg_resources.require("richdem")[0].version),
+        "py3dep",
+        "click",
+        "scipy",
+        "richdem",
         #  pynhd
-        ("pynhd", lambda mod: mod.__version__),
-        ("networkx", lambda mod: mod.__version__),
-        ("pandas", lambda mod: mod.__version__),
-        ("pyarrow", lambda mod: mod.__version__),
+        "pynhd",
+        "networkx",
+        "pandas",
+        "pyarrow",
         #  pygeohydro
-        ("pygeohydro", lambda mod: mod.__version__),
-        ("folium", lambda mod: mod.__version__),
-        ("lxml", lambda mod: mod.__version__),
-        ("matplotlib", lambda mod: mod.__version__),
+        "pygeohydro",
+        "folium",
+        "lxml",
+        "matplotlib",
         #  pydaymet
-        ("pydaymet", lambda mod: mod.__version__),
+        "pydaymet",
         #  hydrosignatures
-        ("hydrosignatures", lambda mod: mod.__version__),
+        "hydrosignatures",
+        #  pynldas2
+        "pynldas2",
+        "h5netcdf",
         #  misc
-        ("numba", lambda mod: mod.__version__),
-        ("bottleneck", lambda mod: mod.__version__),
-        ("pygeos", lambda mod: mod.__version__),
-        ("tables", lambda mod: mod.__version__),
+        "numba",
+        "bottleneck",
+        "pygeos",
+        "tables",
         #  test
-        ("pytest", lambda mod: mod.__version__),
-        ("pytest-cov", lambda mod: mod.__version__),
-        ("xdist", lambda mod: mod.__version__),
+        "pytest",
+        "pytest-cov",
+        "xdist",
     ]
+    pad = len(max(deps, key=len)) + 1
 
-    deps_blob: list[tuple[str, str | None]] = []
-    for (modname, ver_f) in deps:
+    deps_blob = {}
+    for modname in sorted(deps):
         try:
-            mod = _get_mod(modname)
-        except ModuleNotFoundError:
-            deps_blob.append((modname, None))
-        else:
-            try:
-                ver = ver_f(mod)
-            except (NotImplementedError, AttributeError):
-                ver = "installed"
-            deps_blob.append((modname, ver))
+            deps_blob[modname] = get_version(modname)
+        except PackageNotFoundError:
+            deps_blob[modname] = "N/A"
+        except (NotImplementedError, AttributeError):
+            deps_blob[modname] = "installed"
 
-    print("\nINSTALLED VERSIONS", file=file)
-    print("------------------", file=file)
+    print("\nSYS INFO", file=file)
+    print("--------", file=file)
 
     for k, stat in get_sys_info():
         print(f"{k}: {stat}", file=file)
 
-    print("", file=file)
-    for k, stat in sorted(deps_blob):
-        print(f"{k}: {stat}", file=file)
+    header = f"\n{'PACKAGE':<{pad}}  VERSION"
+    print(header, file=file)
+    print("-" * len(header), file=file)
+    for k, stat in deps_blob.items():
+        print(f"{k:<{pad}}  {stat}", file=file)
+    print("-" * len(header), file=file)
