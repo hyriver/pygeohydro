@@ -296,4 +296,4 @@ def test_gnatsgo():
 def test_show_versions():
     f = io.StringIO()
     gh.show_versions(file=f)
-    assert "INSTALLED VERSIONS" in f.getvalue()
+    assert "SYS INFO" in f.getvalue()
