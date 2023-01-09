@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import contextlib
 from pathlib import Path
-from typing import Any, NamedTuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, Union
 
 import folium
 import hydrosignatures as hs
@@ -21,9 +21,11 @@ from . import helpers
 from .exceptions import InputTypeError
 from .waterdata import NWIS
 
+if TYPE_CHECKING:
+    DF = TypeVar("DF", pd.DataFrame, pd.Series)
+    CRSTYPE = Union[int, str, pyproj.CRS]
+
 __all__ = ["signatures", "prepare_plot_data"]
-DF = TypeVar("DF", pd.DataFrame, pd.Series)
-CRSTYPE = Union[int, str, pyproj.CRS]
 
 
 class PlotDataType(NamedTuple):
