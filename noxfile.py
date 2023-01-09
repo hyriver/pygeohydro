@@ -28,7 +28,7 @@ gh_deps = {
 }
 nox.options.sessions = (
     "pre-commit",
-    # "type-check",
+    "type-check",
     "tests",
     # "typeguard",
 )
@@ -113,7 +113,7 @@ def pre_commit(session: nox.Session) -> None:
 @nox.session(name="type-check", python="3.10")
 def type_check(session: nox.Session) -> None:
     "Run Pyright."
-    install_deps(session)
+    install_deps(session, "stac")
     session.install("pyright")
     session.run("pyright")
 
