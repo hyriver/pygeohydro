@@ -6,34 +6,38 @@ from pathlib import Path
 import nox
 
 
-def get_package_name():
+def get_package_name() -> str:
     """Get the name of the package."""
     config = configparser.RawConfigParser()
     config.read("setup.cfg")
     return config.get("metadata", "name")
 
 
-python_versions = ["3.10"]
+python_versions = ["3.8"]
 package = get_package_name()
 gh_deps = {
-    "async-retriever": [],
+    "async_retriever": [],
+    "hydrosignatures": [],
     "pygeoogc": ["async-retriever"],
     "pygeoutils": ["async-retriever", "pygeoogc"],
     "pynhd": ["async-retriever", "pygeoogc", "pygeoutils"],
     "py3dep": ["async-retriever", "pygeoogc", "pygeoutils"],
     "pygeohydro": ["async-retriever", "pygeoogc", "pygeoutils", "pynhd", "hydrosignatures"],
     "pydaymet": ["async-retriever", "pygeoogc", "pygeoutils", "py3dep"],
+    "pynldas2": ["async-retriever", "pygeoutils"],
 }
 nox.options.sessions = (
     "pre-commit",
+    # "type-check",
     "tests",
     # "typeguard",
 )
 
 
-def install_deps(session, extra):
+def install_deps(session: nox.Session, extra=None) -> None:
     """Install package dependencies."""
-    deps = [f".[{extra}]"] + [f"git+https://github.com/hyriver/{p}.git" for p in gh_deps[package]]
+    deps = [f".[{extra}]"] if extra else ["."]
+    deps += [f"git+https://github.com/hyriver/{p}.git" for p in gh_deps[package]]
     session.install(*deps)
     dirs = [".pytest_cache", "build", "dist", ".eggs"]
     for d in dirs:
@@ -45,7 +49,7 @@ def install_deps(session, extra):
             shutil.rmtree(f, ignore_errors=True)
 
 
-def activate_virtualenv_in_precommit_hooks(session):
+def activate_virtualenv_in_precommit_hooks(session: nox.Session) -> None:
     """Activate virtualenv in hooks installed by pre-commit.
 
     This function patches git hooks installed by pre-commit to activate the
@@ -97,7 +101,7 @@ def activate_virtualenv_in_precommit_hooks(session):
 
 
 @nox.session(name="pre-commit", python="3.10")
-def pre_commit(session) -> None:
+def pre_commit(session: nox.Session) -> None:
     """Lint using pre-commit."""
     args = session.posargs or ["run", "--all-files"]
     session.install("pre-commit")
@@ -106,8 +110,16 @@ def pre_commit(session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
+@nox.session(name="type-check", python="3.10")
+def type_check(session: nox.Session) -> None:
+    "Run Pyright."
+    install_deps(session)
+    session.install("pyright")
+    session.run("pyright")
+
+
 @nox.session(python=python_versions)
-def tests(session):
+def tests(session: nox.Session) -> None:
     """Run the test suite."""
     install_deps(session, "test,stac")
 
@@ -117,7 +129,7 @@ def tests(session):
 
 
 @nox.session(python=python_versions)
-def typeguard(session):
+def typeguard(session: nox.Session) -> None:
     """Runtime type checking using Typeguard."""
     install_deps(session, "typeguard")
 
