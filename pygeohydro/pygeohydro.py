@@ -44,8 +44,8 @@ if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
 
-GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
-CRSTYPE = Union[int, str, pyproj.CRS]
+    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    CRSTYPE = Union[int, str, pyproj.CRS]
 
 logger.configure(
     handlers=[
@@ -230,7 +230,7 @@ def ssebopeta_bygeom(
             ds: xr.DataArray = gtiff2xarray(r_dict={"eta": content})
             return ds.expand_dims({"time": [t]})
 
-        data = xr.merge(_ssebop(t, url) for t, url in f_list)
+        data = xr.merge(itertools.starmap(_ssebop, f_list))
     eta: xr.DataArray = data.where(data.eta < data.eta.nodatavals[0]).eta.copy() * 1e-3
     eta.attrs.update(
         {
