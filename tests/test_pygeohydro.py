@@ -69,7 +69,7 @@ class TestNWIS:
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query)
-        assert info_box.shape[0] == 36
+        assert info_box.shape[0] == 35
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
@@ -79,8 +79,8 @@ class TestNWIS:
         )
 
     def test_ice_negative(self):
-        ice = self.nwis.get_streamflow("01139000", ("2021-12-23", "2021-12-29"))
-        assert ice.isna().sum().item() == 5
+        ice = self.nwis.get_streamflow("06040000", ("2023-01-01", "2023-1-08"))
+        assert ice.isna().sum().item() == 4
 
 
 class TestETA:
@@ -186,11 +186,11 @@ class TestWaterQuality:
         stations = self.wq.station_bybbox(
             (-92.8, 44.2, -88.9, 46.0), {"characteristicName": "Caffeine"}
         )
-        assert stations.shape[0] == 75
+        assert stations.shape[0] == 82
 
     def test_distance(self):
         stations = self.wq.station_bydistance(-92.8, 44.2, 30, {"characteristicName": "Caffeine"})
-        assert stations.shape[0] == 38
+        assert stations.shape[0] == 40
 
     def test_data(self):
         stations = [
