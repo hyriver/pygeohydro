@@ -2,8 +2,14 @@
 History
 =======
 
-0.13.10 (unreleased)
+0.13.10 (2023-01-09)
 --------------------
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- The NID service has changed some of its endpoints to use Federal ID
+  instead of Dam ID. This change affect the ``NID.inventory_byid``
+  function. This function now accepts Federal IDs instead of dam IDs.
 
 New Features
 ~~~~~~~~~~~~
