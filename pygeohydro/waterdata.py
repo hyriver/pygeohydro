@@ -3,10 +3,11 @@ from __future__ import annotations
 
 import contextlib
 import io
+import itertools
 import re
 import sys
 from pathlib import Path
-from typing import Any, Iterable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union
 
 import async_retriever as ar
 import cytoolz as tlz
@@ -25,9 +26,10 @@ from pynhd.core import ScienceBase
 
 from .exceptions import DataNotAvailableError, InputTypeError, InputValueError, ZeroMatchedError
 
-T_FMT = "%Y-%m-%d"
-CRSTYPE = Union[int, str, pyproj.CRS]
+if TYPE_CHECKING:
+    CRSTYPE = Union[int, str, pyproj.CRS]
 
+T_FMT = "%Y-%m-%d"
 __all__ = ["NWIS", "WBD", "huc_wb_full", "irrigation_withdrawals"]
 
 
@@ -485,7 +487,7 @@ class NWIS:
             discharge.columns = [col]
             return discharge
 
-        qobs = pd.concat([to_df(s, t) for s, t in r_ts.items()], axis=1)
+        qobs = pd.concat(itertools.starmap(to_df, r_ts.items()), axis=1)
         if len(qobs) == 0:
             raise DataNotAvailableError("discharge")
         qobs[qobs.le(0)] = np.nan
@@ -538,11 +540,16 @@ class NWIS:
                 "siteStatus": "all",
                 "outputDataTypeCd": freq,
                 "sites": ",".join(s),
+                "startDt": start.strftime("%Y-%m-%d"),
+                "endDt": end.strftime("%Y-%m-%d"),
             }
             for s in tlz.partition_all(1500, sids)
         ]
 
-        siteinfo = self.get_info(queries)
+        try:
+            siteinfo = self.get_info(queries)
+        except ZeroMatchedError as ex:
+            raise DataNotAvailableError("discharge") from ex
 
         params = {
             "format": "json",
