@@ -53,7 +53,6 @@ __all__ = [
     "nlcd_bygeom",
     "nlcd_bycoords",
     "ssebopeta_bygeom",
-    "ssebopeta_byloc",
     "ssebopeta_bycoords",
     "soil_properties",
     "soil_gnatsgo",
