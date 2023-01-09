@@ -12,8 +12,12 @@ New Features
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Use the new ``pygeoogc.streaming_download`` function in ``huc_wb_full``
+  to improve performance and reduce code complexity.
 - Skip 0.13.9 version so the minor version of all HyRiver packages become
   the same.
+- Modify the codebase based on the latest changes in ``geopandas`` related
+  to empty dataframes.
 
 0.13.8 (2022-12-09)
 -------------------
