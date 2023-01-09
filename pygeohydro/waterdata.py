@@ -5,7 +5,7 @@ import contextlib
 import io
 import itertools
 import re
-import sys
+import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union
 
@@ -14,6 +14,7 @@ import cytoolz as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pygeoogc as ogc
 import pygeoutils as geoutils
 import pyproj
 import xarray as xr
@@ -887,31 +888,15 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
         raise InputValueError("huc_lvl", list(map(str, valid_hucs)))
 
     base_url = "https://prd-tnm.s3.amazonaws.com/StagedProducts/Hydrography/WBD/HU2/Shape"
-    session = RetrySession()
 
-    def get_url(h: int) -> tuple[str, Path, int]:
-        h2 = str(h).zfill(2)
-        url = f"{base_url}/WBD_{h2}_HU2_Shape.zip"
-        path = Path("cache", url.rsplit("/", 1)[-1])
-        return url, path, int(session.head(url).headers["Content-Length"])
-
-    urls, paths, fsizes = zip(*(get_url(h) for h in range(1, 23)))
-    with contextlib.suppress(ValueError):
-        urls, _paths = zip(
-            *(
-                (u, p)
-                for u, p, s in zip(urls, paths, fsizes)
-                if not p.exists() or p.stat().st_size != s
-            )
-        )
-        if urls:
-            ar.stream_write(urls, _paths)
-
-    keys = (p.stem.split("_")[1] for p in paths)
-    engine = "pyogrio" if sys.modules.get("pyogrios") else "fiona"
+    urls = [f"{base_url}/WBD_{h2:02}_HU2_Shape.zip" for h2 in range(1, 23)]
+    fnames = [Path("cache", Path(url).name) for url in urls]
+    _ = ogc.streaming_download(urls, fnames=fnames)
+    keys = (p.stem.split("_")[1] for p in fnames)
+    engine = "pyogrio" if importlib.util.find_spec("pyogrios") else "fiona"
     huc = gpd.GeoDataFrame(
         pd.concat(
-            (gpd.read_file(f"{p}!Shape/WBDHU{huc_lvl}.shp", engine=engine) for p in paths),
+            (gpd.read_file(f"{p}!Shape/WBDHU{huc_lvl}.shp", engine=engine) for p in fnames),
             keys=keys,
         )
     )
