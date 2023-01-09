@@ -25,12 +25,12 @@ def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
     libnetcdf_version = None
 
     if importlib.util.find_spec("netCDF4"):
-        import netCDF4  # type: ignore
+        import netCDF4
 
         libhdf5_version = netCDF4.__hdf5libversion__
         libnetcdf_version = netCDF4.__netcdf4libversion__
     elif importlib.util.find_spec("h5py"):
-        import h5py  # type: ignore
+        import h5py
 
         libhdf5_version = h5py.version.hdf5_version
 
