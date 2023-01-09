@@ -149,6 +149,7 @@ class TestNLCD:
 
 class TestNID:
     nid = NID()
+    ids = ("KY01232", "GA02400", "NE04081", "IL55070", "TN05345")
 
     def test_suggestion(self):
         dams, contexts = self.nid.get_suggestions("texas", "city")
@@ -164,12 +165,12 @@ class TestNID:
         assert dam_dfs[0].loc[dam_dfs[0].name == "Prairie Portage"].id.item() == "496613"
 
     def test_id(self):
-        dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
-        assert_close(dams.damHeight.max(), 120)
+        dams = self.nid.inventory_byid(self.ids)
+        assert_close(dams.damHeight.max(), 39)
 
     def test_stage_id(self):
-        dams = self.nid.inventory_byid([514871, 459170, 514868, 463501, 463498], stage_nid=True)
-        assert_close(dams.damHeight.max(), 120)
+        dams = self.nid.inventory_byid(self.ids, stage_nid=True)
+        assert_close(dams.damHeight.max(), 39)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_geom(self):
