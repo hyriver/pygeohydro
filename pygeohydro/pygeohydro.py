@@ -872,7 +872,7 @@ class NID:
         dams = self.get_byfilter([{"huc8": huc_ids}])[0]
         return dams[dams.within(_geometry)].copy()
 
-    def inventory_byid(self, dam_ids: list[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
+    def inventory_byid(self, federal_ids: list[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
 
         Notes
@@ -885,9 +885,8 @@ class NID:
 
         Parameters
         ----------
-        dam_ids : list of int or str
-            List of the target dam IDs (digists only). Note that the dam IDs are not the
-            same as the NID IDs.
+        federal_ids : list of str
+            List of the target dam Federal IDs.
         stage_nid : bool, optional
             Whether to get the entire NID and then query locally or query from the
             NID web service which tends to be very slow for large number of requests.
@@ -904,23 +903,22 @@ class NID:
         --------
         >>> from pygeohydro import NID
         >>> nid = NID()
-        >>> dams = nid.inventory_byid([514871, 459170, 514868, 463501, 463498])
+        >>> dams = nid.inventory_byid(['KY01232', 'GA02400', 'NE04081', 'IL55070', 'TN05345'])
         >>> print(dams.damHeight.max())
-        120.0
+        39.0
         """
-        urls = [
-            f"{self.base_url}/dams/{i}/inventory"
-            for i in itertools.takewhile(lambda x: str(x).isdigit(), dam_ids)
-        ]
-        if len(urls) != len(dam_ids):
-            raise InputTypeError("dam_ids", "list of digits")
+        ids = set(federal_ids) if isinstance(federal_ids, (list, tuple)) else {federal_ids}
+        ids = {str(i).upper() for i in ids}
+        urls = [f"{self.base_url}/dams/{i}/inventory" for i in ids]
+        if len(urls) != len(ids):
+            raise InputTypeError("dam_ids", "list of Federal IDs")
 
         if stage_nid:
             self.stage_nid_inventory()
             dams = gpd.read_feather(self.nid_inventory_path)
-            return dams[dams.id.isin(tlz.map(int, dam_ids))].copy()
+            return dams[dams.federalId.isin(list(ids))].copy()
 
-        return self._to_geodf(pd.DataFrame(self._get_json(urls)))
+        return self._to_geodf(pd.DataFrame(self._get_json(urls)).set_index("id"))
 
     def get_suggestions(
         self, text: str, context_key: str | None = None
