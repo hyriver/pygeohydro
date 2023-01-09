@@ -2,10 +2,10 @@
 from __future__ import annotations
 
 import contextlib
+import importlib.util
 import io
 import itertools
 import re
-import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union
 
@@ -19,7 +19,7 @@ import pygeoutils as geoutils
 import pyproj
 import xarray as xr
 from loguru import logger
-from pygeoogc import RetrySession, ServiceURL
+from pygeoogc import ServiceURL
 from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase, WaterData
@@ -891,7 +891,7 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
 
     urls = [f"{base_url}/WBD_{h2:02}_HU2_Shape.zip" for h2 in range(1, 23)]
     fnames = [Path("cache", Path(url).name) for url in urls]
-    _ = ogc.streaming_download(urls, fnames=fnames)
+    _ = ogc.streaming_download(urls, fnames=fnames)  # type: ignore
     keys = (p.stem.split("_")[1] for p in fnames)
     engine = "pyogrio" if importlib.util.find_spec("pyogrios") else "fiona"
     huc = gpd.GeoDataFrame(

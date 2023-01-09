@@ -6,26 +6,26 @@ import itertools
 import os
 import sys
 import zipfile
-from collections import OrderedDict
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
 import async_retriever as ar
 import cytoolz as tlz
-import dask
+import dask.config
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pygeoogc as ogc
 import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
-import rioxarray as rxr
 import xarray as xr
 from loguru import logger
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd.core import ScienceBase
+from rioxarray import _io as rxr
 from shapely.geometry import MultiPolygon, Polygon
 
 from . import helpers
@@ -287,25 +287,9 @@ class NLCD:
         if self.crs not in self.valid_crs:
             raise InputValueError("crs", self.valid_crs)
         self.layers = self.get_layers()
-        self.units = OrderedDict(
-            (
-                ("impervious", "%"),
-                ("cover", "classes"),
-                ("canopy", "%"),
-                ("descriptor", "classes"),
-            )
-        )
-        self.types = OrderedDict(
-            (
-                ("impervious", "f4"),
-                ("cover", "u1"),
-                ("canopy", "f4"),
-                ("descriptor", "u1"),
-            )
-        )
-        self.nodata = OrderedDict(
-            (("impervious", np.nan), ("cover", 127), ("canopy", np.nan), ("descriptor", 127))
-        )
+        self.units = {"impervious": "%", "cover": "classes", "canopy": "%", "descriptor": "classes"}
+        self.types = {"impervious": "f4", "cover": "u1", "canopy": "f4", "descriptor": "u1"}
+        self.nodata = {"impervious": np.nan, "cover": 127, "canopy": np.nan, "descriptor": 127}
 
         self.wms = WMS(
             ServiceURL().wms.mrlc,
@@ -374,7 +358,7 @@ class NLCD:
         except rio.RasterioIOError as ex:
             raise ServiceUnavailableError(self.wms.url) from ex
 
-        ds: xr.Dataset = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
+        ds = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
         for lyr in self.layers:
             name = [n for n in self.units if n in lyr.lower()][-1]
@@ -653,7 +637,7 @@ class NID:
                     "national-export/dams/nation/7783878c-6db4-46aa-99ef-8c283109ea78/nation.gpkg",
                 ]
             )
-            ar.stream_write([url], [fname.with_suffix(".gpkg")])
+            _ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
             dams = gpd.read_file(fname.with_suffix(".gpkg"))
             dams = dams.astype(
                 {
@@ -783,6 +767,8 @@ class NID:
         failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
         if failed:
             idx, err_msgs = zip(*failed)
+            idx = cast("Tuple[int]", idx)
+            err_msgs = cast("Tuple[str]", err_msgs)
             errs = " service requests failed with the following messages:\n"
             errs += "\n".join(err_msgs)
             if len(failed) == len(urls):
@@ -1032,40 +1018,31 @@ def soil_properties(
     soil = sb.get_file_urls("5fd7c19cd34e30b9123cb51f")
     pat = "|".join(prop)
     _files, urls = zip(*soil[soil.index.str.contains(f"{pat}.*zip")].url.to_dict().items())
+    urls = list(urls)
 
     root = Path(soil_dir)
     root.mkdir(exist_ok=True, parents=True)
     files = [root.joinpath(f) for f in _files]
-    try:
-        urls, to_get = zip(*((u, f) for u, f in zip(urls, files) if not f.exists()))
-        ar.stream_write(urls, to_get)
-    except ValueError:
-        pass
-    except Exception as e:  # noqa: B902
-        session = RetrySession()
-        fsize = {f: int(session.head(u).headers["Content-Length"]) for u, f in zip(urls, to_get)}
-        for f in to_get:
-            if f.exists() and fsize[f] != f.stat().st_size:
-                f.unlink(missing_ok=True)
-        raise ServiceUnavailableError("ScienceBase") from e
+    _ = ogc.streaming_download(urls, fnames=files)
 
     def get_tif(file: Path) -> xr.DataArray:
         """Get the .tif file from a zip file."""
         with zipfile.ZipFile(file) as z:
             fname = next(f.filename for f in z.filelist if f.filename.endswith(".tif"))
-            ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))  # type: ignore[attr-defined]
+            ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))
+            ds = cast("xr.DataArray", ds)
             if "band" in ds.dims:
                 ds = ds.squeeze("band", drop=True)
             ds.name = valid_props[file.stem.split("_")[0]]["name"]
             ds.attrs["units"] = valid_props[file.stem.split("_")[0]]["units"]
             ds.attrs["long_name"] = valid_props[file.stem.split("_")[0]]["long_name"]
-            return ds  # type: ignore[no-any-return]
+            return ds
 
     soil = xr.merge((get_tif(f) for f in files), combine_attrs="drop_conflicts")
     _ = soil.attrs.pop("_FillValue", None)
     _ = soil.attrs.pop("units", None)
     _ = soil.attrs.pop("long_name", None)
-    return soil  # type: ignore[no-any-return]
+    return soil
 
 
 def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
