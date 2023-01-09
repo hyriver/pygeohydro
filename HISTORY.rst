@@ -18,6 +18,8 @@ Internal Changes
   the same.
 - Modify the codebase based on the latest changes in ``geopandas`` related
   to empty dataframes.
+- Use ``pyright`` for static type checking instead of ``mypy`` and address
+  all typing issues that it raised.
 
 0.13.8 (2022-12-09)
 -------------------
