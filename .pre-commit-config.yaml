@@ -79,7 +79,7 @@ repos:
     rev: v2.2.2
     hooks:
     - id: codespell
-      name: Checks for common misspellings in text files.
+      name: Check common misspellings in text files with codespell.
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1
