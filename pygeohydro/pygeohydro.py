@@ -989,7 +989,7 @@ def soil_properties(
     -----
     This function downloads the source zip files from
     `ScienceBase <https://www.sciencebase.gov/catalog/item/5fd7c19cd34e30b9123cb51f>`__
-    , extracts the included `.tif` files, and return them as an `xarray.Dataset`.
+    , extracts the included ``.tif`` files, and return them as an ``xarray.Dataset``.
 
     Parameters
     ----------
