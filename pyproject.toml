@@ -8,6 +8,99 @@ requires = [
 [tool.setuptools_scm]
 fallback_version = "999"
 
+[project]
+name = "pygeohydro"
+description = "Access geospatial web services that offer hydrological data"
+authors = [{name = "Taher Chegini", email = "cheginit@gmail.com"}]
+license = {text = "MIT"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: GIS",
+    "Topic :: Scientific/Engineering :: Hydrology",
+    "Typing :: Typed",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "async-retriever>=0.3.10",
+    "cytoolz",
+    "dask",
+    "defusedxml",
+    "folium",
+    "geopandas>=0.10",
+    "h5netcdf",
+    "hydrosignatures>=0.1.2",
+    "loguru",
+    "lxml",
+    "matplotlib>=3.3",
+    "numpy>=1.21",
+    "pandas>=1.0",
+    "pygeoogc>=0.13.10",
+    "pygeoutils>=0.13.11",
+    "pynhd>=0.13.10",
+    "pyproj>=2.2",
+    "rasterio>=1.2",
+    "rioxarray>=0.11.0",
+    "scipy",
+    "shapely>=1.8",
+    "ujson",
+    "xarray>=2022.03.0",
+]
+dynamic = ["version"]
+
+[project.readme]
+file = "README.rst"
+content-type = "text/x-rst"
+
+[project.urls]
+Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
+Issues = "https://github.com/hyriver/pygeohydro/issues"
+CI = "https://github.com/hyriver/pygeohydro/actions"
+Changelog = "https://docs.hyriver.io/changelogs/pygeohydro.html"
+
+[project.optional-dependencies]
+stac = [
+    "planetary-computer",
+    "pystac-client",
+]
+test = [
+    "coverage[toml]",
+    "pytest-cov",
+    "pytest-xdist[psutil]",
+]
+typeguard = [
+    "coverage[toml]",
+    "pygments",
+    "pytest-cov",
+    "pytest-xdist[psutil]",
+    "typeguard",
+]
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+platforms = ["any"]
+license-files = ["LICENSE"]
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[tool.setuptools.package-data]
+pygeohydro = ["py.typed"]
+
+[tool.codespell]
+skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
+
 [tool.pytest.ini_options]
 addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
 doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
@@ -18,19 +111,19 @@ testpaths = [
 filterwarnings =[
     "ignore:.*distutils.*",
     "ignore:.*--rsyncdir command line argument.*",
+    "ignore:.*numpy.ndarray size changed.*",
 ]
 
-[tool.mypy]
-strict = true
-allow_untyped_calls = true
-check_untyped_defs = true
-warn_unreachable = true
-warn_unused_configs = true
-warn_unused_ignores = true
-pretty = true
-show_column_numbers = true
-show_error_codes = true
-show_error_context = true
+[tool.coverage.run]
+branch = true
+parallel = true
+source = ['pygeohydro']
+
+[tool.coverage.report]
+exclude_lines = [
+    'raise ServiceUnavailableError',
+]
+ignore_errors = true
 
 [tool.isort]
 profile = "black"
@@ -50,11 +143,11 @@ no_gitignore = false
 
 [tool.black]
 line-length = 100
-target-version = ["py310"]
+target-version = ["py38"]
 
 [tool.refurb]
 quiet = true
-python_version = "3.10"
+python_version = "3.8"
 
 [tool.pyright]
 include = ["pygeohydro"]

@@ -14,13 +14,6 @@ repos:
     - id: mixed-line-ending
       args: ['--fix=lf']
 
-  - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v2.2.0
-    hooks:
-    - id: setup-cfg-fmt
-      name: Autoformat setup.cfg
-      args: [--min-py3-version, "3.8", "--include-version-classifiers"]
-
   - repo: https://github.com/hadialqattan/pycln
     rev: v2.1.2
     hooks:
@@ -69,17 +62,13 @@ repos:
       name: Check documentation formats with doc8
       args: [--max-line-length, "100"]
 
-  # - repo: https://github.com/terrencepreilly/darglint
-  #   rev: v1.8.1
-  #   hooks:
-  #   - id: darglint
-  #     name: Lint docstrings with Darglint
-
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.2
     hooks:
     - id: codespell
       name: Check common misspellings in text files with codespell.
+      additional_dependencies:
+        - tomli
 
   - repo: https://github.com/asottile/pyupgrade
     rev: v3.3.1

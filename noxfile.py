@@ -1,16 +1,15 @@
-import configparser
 import shutil
 import textwrap
 from pathlib import Path
 
 import nox
+import tomli
 
 
 def get_package_name() -> str:
     """Get the name of the package."""
-    config = configparser.RawConfigParser()
-    config.read("setup.cfg")
-    return config.get("metadata", "name")
+    with open("pyproject.toml", "rb") as f:
+        return tomli.load(f)["project"]["name"]
 
 
 python_versions = ["3.8"]

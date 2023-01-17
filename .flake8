@@ -1,0 +1,16 @@
+[flake8]
+max-line-length = 100
+ignore =
+    E203,
+    E402,
+    E501,
+    E731,
+    F401,
+    W503,
+    D107,
+    D105
+exclude =
+    __init__.py,
+    .ipynb_checkpoints,
+    tests/*.py,
+    noxfile.py
