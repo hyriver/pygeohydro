@@ -227,11 +227,13 @@ def ssebopeta_bygeom(
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds: xr.DataArray = gtiff2xarray(r_dict={"eta": content})
+            ds = gtiff2xarray(r_dict={"eta": content})
+            ds = cast("xr.DataArray", ds)
             return ds.expand_dims({"time": [t]})
 
         data = xr.merge(itertools.starmap(_ssebop, f_list))
-    eta: xr.DataArray = data.where(data.eta < data.eta.nodatavals[0]).eta.copy() * 1e-3
+    eta: xr.DataArray = data.eta
+    eta = eta.where(eta < eta.rio.nodata) * 1e-3
     eta.attrs.update(
         {
             "units": "mm/day",
