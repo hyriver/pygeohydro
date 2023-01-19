@@ -8,6 +8,7 @@ History
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Fully migrate ``setup.cfg`` and ``setup.py`` to ``pyproject.toml``.
+- Convert relative imports to absolute with ``absolufy-imports``.
 
 0.13.10 (2023-01-09)
 --------------------
