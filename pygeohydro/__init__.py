@@ -6,8 +6,8 @@ if int(version("shapely").split(".")[0]) > 1:
 
     os.environ["USE_PYGEOS"] = "0"
 
-from . import helpers, plot
-from .exceptions import (
+from pygeohydro import helpers, plot
+from pygeohydro.exceptions import (
     DataNotAvailableError,
     DependencyError,
     InputRangeError,
@@ -17,10 +17,10 @@ from .exceptions import (
     MissingCRSError,
     ZeroMatchedError,
 )
-from .helpers import get_us_states
-from .plot import interactive_map
-from .print_versions import show_versions
-from .pygeohydro import (
+from pygeohydro.helpers import get_us_states
+from pygeohydro.plot import interactive_map
+from pygeohydro.print_versions import show_versions
+from pygeohydro.pygeohydro import (
     NID,
     cover_statistics,
     get_camels,
@@ -32,7 +32,7 @@ from .pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from .waterdata import NWIS, WBD, WaterQuality, huc_wb_full, irrigation_withdrawals
+from pygeohydro.waterdata import NWIS, WBD, WaterQuality, huc_wb_full, irrigation_withdrawals
 
 try:
     __version__ = version("pygeohydro")

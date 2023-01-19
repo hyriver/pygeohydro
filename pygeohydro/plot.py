@@ -17,9 +17,9 @@ import pyproj
 from matplotlib.colors import BoundaryNorm, ListedColormap
 from pygeoogc import utils as ogc_utils
 
-from . import helpers
-from .exceptions import InputTypeError
-from .waterdata import NWIS
+from pygeohydro import helpers
+from pygeohydro.exceptions import InputTypeError
+from pygeohydro.waterdata import NWIS
 
 if TYPE_CHECKING:
     DF = TypeVar("DF", pd.DataFrame, pd.Series)

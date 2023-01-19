@@ -28,8 +28,8 @@ from pynhd.core import ScienceBase
 from rioxarray import _io as rxr
 from shapely.geometry import MultiPolygon, Polygon
 
-from . import helpers
-from .exceptions import (
+from pygeohydro import helpers
+from pygeohydro.exceptions import (
     DependencyError,
     InputTypeError,
     InputValueError,
@@ -38,7 +38,7 @@ from .exceptions import (
     ServiceUnavailableError,
     ZeroMatchedError,
 )
-from .helpers import Stats
+from pygeohydro.helpers import Stats
 
 if TYPE_CHECKING:
     from numbers import Number

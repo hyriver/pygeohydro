@@ -25,7 +25,12 @@ from pygeoogc import utils as ogc_utils
 from pynhd import AGRBase, WaterData
 from pynhd.core import ScienceBase
 
-from .exceptions import DataNotAvailableError, InputTypeError, InputValueError, ZeroMatchedError
+from pygeohydro.exceptions import (
+    DataNotAvailableError,
+    InputTypeError,
+    InputValueError,
+    ZeroMatchedError,
+)
 
 if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]
