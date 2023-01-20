@@ -1,123 +1,130 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-    - id: trailing-whitespace
-    - id: requirements-txt-fixer
-    - id: check-added-large-files
-      args: ['--maxkb=50000']
-    - id: end-of-file-fixer
-    - id: check-merge-conflict
-    - id: check-toml
-    - id: check-toml
-    - id: check-yaml
-    - id: debug-statements
-    - id: mixed-line-ending
-      args: ['--fix=lf']
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.4.0
+  hooks:
+  - id: trailing-whitespace
+  - id: requirements-txt-fixer
+  - id: check-added-large-files
+    args: [--maxkb=50000]
+  - id: end-of-file-fixer
+  - id: check-merge-conflict
+  - id: check-toml
+  - id: check-yaml
+  - id: debug-statements
+  - id: mixed-line-ending
+    args: [--fix=lf]
 
-  - repo: https://github.com/hadialqattan/pycln
-    rev: v2.1.3
-    hooks:
-    - id: pycln
-      name: Find and remove unused import statements with pycln
-      args: [--config=pyproject.toml]
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: 4a72877d96875c49769109cf7881b44b8ad4e423
+  hooks:
+  - id: pretty-format-toml
+    args: [--autofix]
+  - id: pretty-format-yaml
+    args: [--autofix, --indent, '2']
 
-  - repo: https://github.com/bwhmather/ssort
-    rev: v0.11.6
-    hooks:
-    - id: ssort
-      name: Sorting top level statements with ssort
+- repo: https://github.com/hadialqattan/pycln
+  rev: v2.1.3
+  hooks:
+  - id: pycln
+    name: Find and remove unused import statements with pycln
+    args: [--config=pyproject.toml]
 
-  - repo: https://github.com/MarcoGorelli/absolufy-imports
-    rev: v0.3.1
-    hooks:
-    - id: absolufy-imports
-      name: Convert relative imports to absolute with absolufy-imports
+- repo: https://github.com/bwhmather/ssort
+  rev: v0.11.6
+  hooks:
+  - id: ssort
+    name: Sort top level statements with ssort
 
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.11.4
-    hooks:
-    - id: isort
-      name: Sort imports with isort
+- repo: https://github.com/MarcoGorelli/absolufy-imports
+  rev: v0.3.1
+  hooks:
+  - id: absolufy-imports
+    name: Convert relative imports to absolute with absolufy-imports
 
-  - repo: https://github.com/psf/black
-    rev: 22.12.0
-    hooks:
-    - id: black
-      name: Autoformat with black
+- repo: https://github.com/PyCQA/isort
+  rev: 5.11.4
+  hooks:
+  - id: isort
+    name: Sort imports with isort
 
-  - repo: https://github.com/asottile/blacken-docs
-    rev: 1.13.0
-    hooks:
-    - id: blacken-docs
-      name: Autoformat codes in docstrings with blacken-docs
-      additional_dependencies: [black]
-      args: [-t, py38, -l, "100"]
+- repo: https://github.com/psf/black
+  rev: 22.12.0
+  hooks:
+  - id: black
+    name: Autoformat with black
 
-  - repo: https://github.com/pre-commit/pygrep-hooks
-    rev: v1.10.0
-    hooks:
-    - id: rst-backticks
-      name: Check backsticks in rst files
-    - id: rst-directive-colons
-      name: Check directives in rst files
+- repo: https://github.com/asottile/blacken-docs
+  rev: 1.13.0
+  hooks:
+  - id: blacken-docs
+    name: Autoformat codes in docstrings with blacken-docs
+    additional_dependencies: [black]
+    args: [-t, py38, -l, '100']
 
-  - repo: https://github.com/PyCQA/doc8
-    rev: v1.1.1
-    hooks:
-    - id: doc8
-      name: Check documentation formats with doc8
-      args: [--max-line-length, "100"]
+- repo: https://github.com/guilatrova/tryceratops
+  rev: v1.1.0
+  hooks:
+  - id: tryceratops
+    name: Check try-exceptions blocks with tryceratops
 
-  - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
-    hooks:
-    - id: codespell
-      name: Check common misspellings in text files with codespell.
-      additional_dependencies:
-        - tomli
+- repo: https://github.com/pre-commit/pygrep-hooks
+  rev: v1.10.0
+  hooks:
+  - id: rst-backticks
+    name: Check backsticks in rst files
+  - id: rst-directive-colons
+    name: Check directives in rst files
 
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-    - id: pyupgrade
-      name: Upgrade sytnax to python 3.8+ with pyupgrade
-      args: [--py38-plus]
+- repo: https://github.com/PyCQA/doc8
+  rev: v1.1.1
+  hooks:
+  - id: doc8
+    name: Check documentation formats with doc8
+    args: [--max-line-length, '100']
 
-  - repo: https://github.com/guilatrova/tryceratops
-    rev: v1.1.0
-    hooks:
-    - id: tryceratops
-      name: Check try-exceptions blocks with tryceratops
+- repo: https://github.com/codespell-project/codespell
+  rev: v2.2.2
+  hooks:
+  - id: codespell
+    name: Check common misspellings in text files with codespell.
+    additional_dependencies:
+    - tomli
 
-  - repo: https://github.com/PyCQA/flake8
-    rev: 6.0.0
-    hooks:
-    - id: flake8
-      name: Linting with flake8
-      additional_dependencies:
-      - flake8-comprehensions
-      - flake8-builtins
-      - flake8-blind-except
-      - flake8-bugbear
-      - flake8-use-fstring
-      - flake8-docstrings
-      - flake8-type-checking
-      - flake8-simplify
-      - pep8-naming
+- repo: https://github.com/asottile/pyupgrade
+  rev: v3.3.1
+  hooks:
+  - id: pyupgrade
+    name: Upgrade sytnax to python 3.8+ with pyupgrade
+    args: [--py38-plus]
 
-  - repo: https://github.com/dosisod/refurb
-    rev: v1.10.0
-    hooks:
-    - id: refurb
-      name: Modernizing Python codebases using Refurb
-      additional_dependencies:
-      - numpy
+- repo: https://github.com/PyCQA/flake8
+  rev: 6.0.0
+  hooks:
+  - id: flake8
+    name: Linting with flake8
+    additional_dependencies:
+    - flake8-comprehensions
+    - flake8-builtins
+    - flake8-blind-except
+    - flake8-bugbear
+    - flake8-use-fstring
+    - flake8-docstrings
+    - flake8-type-checking
+    - flake8-simplify
+    - pep8-naming
 
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.4
-    hooks:
-    - id: bandit
-      name: Check for security issues with bandit
-      args: [-lll, --recursive, pygeohydro]
-      files: .py$
+- repo: https://github.com/dosisod/refurb
+  rev: v1.10.0
+  hooks:
+  - id: refurb
+    name: Modernizing Python codebases using Refurb
+    additional_dependencies:
+    - numpy
+
+- repo: https://github.com/PyCQA/bandit
+  rev: 1.7.4
+  hooks:
+  - id: bandit
+    name: Check for security issues with bandit
+    args: [-lll]
+    files: .py$
