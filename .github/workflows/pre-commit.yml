@@ -12,6 +12,6 @@ jobs:
   pre-commit:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: excitedleigh/setup-nox@v2.1.0
-      - run: nox -s pre-commit
+    - uses: actions/checkout@v3
+    - uses: excitedleigh/setup-nox@v2.1.0
+    - run: nox -s pre-commit

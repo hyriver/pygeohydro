@@ -3,7 +3,7 @@ name: Publish
 on:
   push:
     tags:
-      - 'v*'
+    - v*
   workflow_dispatch: # allows you to trigger manually
 
 concurrency:
@@ -15,33 +15,33 @@ jobs:
     name: Create Release Notes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Generate Changelog
-        run: |-
-          echo "Release Notes" > ${{ github.workflow }}-CHANGELOG.rst
-          echo "-------------" >> ${{ github.workflow }}-CHANGELOG.rst
-          PAT="^---"
-          L1=$(grep -n $PAT HISTORY.rst | sed -n 1p | cut -d ":" -f 1)
-          L2=$(grep -n $PAT HISTORY.rst | sed -n 2p | cut -d ":" -f 1)
-          awk "NR > $L1 && NR < $L2 - 1" HISTORY.rst >> ${{ github.workflow }}-CHANGELOG.rst
-      - name: Convert rst to md
-        uses: docker://pandoc/core
-        with:
-          args: >-
-              ${{ github.workflow }}-CHANGELOG.rst
-              --wrap=none
-              -t markdown
-              -o ${{ github.workflow }}-CHANGELOG.md
-      - name: Remove extra spaces
-        run: |-
-            sed -i 's/-   /- /g' ${{ github.workflow }}-CHANGELOG.md
-      - name: Github Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          body_path: ${{ github.workflow }}-CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - uses: actions/checkout@v3
+    - name: Generate Changelog
+      run: |-
+        echo "Release Notes" > ${{ github.workflow }}-CHANGELOG.rst
+        echo "-------------" >> ${{ github.workflow }}-CHANGELOG.rst
+        PAT="^---"
+        L1=$(grep -n $PAT HISTORY.rst | sed -n 1p | cut -d ":" -f 1)
+        L2=$(grep -n $PAT HISTORY.rst | sed -n 2p | cut -d ":" -f 1)
+        awk "NR > $L1 && NR < $L2 - 1" HISTORY.rst >> ${{ github.workflow }}-CHANGELOG.rst
+    - name: Convert rst to md
+      uses: docker://pandoc/core
+      with:
+        args: >-
+          ${{ github.workflow }}-CHANGELOG.rst
+          --wrap=none
+          -t markdown
+          -o ${{ github.workflow }}-CHANGELOG.md
+    - name: Remove extra spaces
+      run: |-
+        sed -i 's/-   /- /g' ${{ github.workflow }}-CHANGELOG.md
+    - name: Github Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+        body_path: ${{ github.workflow }}-CHANGELOG.md
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build:
     name: Create Release
@@ -49,39 +49,39 @@ jobs:
     env:
       REPO_NAME: ${{ github.event.repository.name }}
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Set up Python
-        uses: actions/setup-python@master
-        with:
-            python-version: 3.8
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+    - name: Set up Python
+      uses: actions/setup-python@master
+      with:
+        python-version: 3.8
 
-      - name: Install dependencies
-        run: |
-            python -m pip install --upgrade pip
-            pip install setuptools setuptools-scm wheel twine check-manifest
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install setuptools setuptools-scm wheel twine check-manifest
 
-      - name: Build dist and wheel
-        run: |
-            git clean -xdf
-            git restore -SW .
-            python -m build --sdist --wheel .
+    - name: Build dist and wheel
+      run: |
+        git clean -xdf
+        git restore -SW .
+        python -m build --sdist --wheel .
 
-      - name: Check built artifacts
-        run: |
-          python -m twine check dist/*
-          pwd
-          if [ -f dist/${REPO_NAME}-0.0.0.tar.gz ]; then
-            echo "❌ INVALID VERSION NUMBER"
-            exit 1
-          else
-            echo "✅ Looks good"
-          fi
+    - name: Check built artifacts
+      run: |
+        python -m twine check dist/*
+        pwd
+        if [ -f dist/${REPO_NAME}-0.0.0.tar.gz ]; then
+          echo "❌ INVALID VERSION NUMBER"
+          exit 1
+        else
+          echo "✅ Looks good"
+        fi
 
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-            user: __token__
-            password: ${{ secrets.PYPI_PASSWORD }}
-            verbose: true
+    - name: Publish to PyPI
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_PASSWORD }}
+        verbose: true

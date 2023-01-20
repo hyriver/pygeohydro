@@ -1,14 +1,13 @@
+exclude_patterns = [
+  "tests/**",
+  "*/print_versions.py",
+  "*/__init__.py"
+]
 version = 1
 
-exclude_patterns = [
-    "tests/**",
-    "*/print_versions.py",
-    "*/__init__.py",
-]
-
 [[analyzers]]
-name = "python"
 enabled = true
+name = "python"
 
-  [analyzers.meta]
-  runtime_version = "3.x.x"
+[analyzers.meta]
+runtime_version = "3.x.x"
