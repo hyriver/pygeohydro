@@ -1,6 +1,0 @@
-[report]
-omit =
-    setup.py
-    tests/*
-    pygeohydro/__init__.py
-    pygeohydro/print_versions.py
