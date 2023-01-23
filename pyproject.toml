@@ -98,18 +98,18 @@ skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
 [tool.coverage.report]
 exclude_lines = [
   'raise ServiceUnavailableError',
-  "if TYPE_CHECKING:",
+  "if TYPE_CHECKING:"
 ]
 ignore_errors = true
 
 [tool.coverage.run]
 branch = true
+omit = [
+  "**/__init__.py",
+  "**/print_versions.py"
+]
 parallel = true
 source = ['pygeohydro']
-omit =[
-    "**/__init__.py",
-    "**/print_versions.py",
-]
 
 [tool.isort]
 default_section = "THIRDPARTY"
