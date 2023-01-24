@@ -15,7 +15,7 @@ repos:
     args: [--fix=lf]
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: 4a72877d96875c49769109cf7881b44b8ad4e423
+  rev: v2.6.0
   hooks:
   - id: pretty-format-toml
     args: [--autofix]
