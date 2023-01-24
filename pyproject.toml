@@ -2,11 +2,47 @@
 build-backend = "setuptools.build_meta"
 requires = [
   "setuptools>=42",
-  "setuptools-scm>=7"
+  "setuptools-scm>=7",
 ]
 
 [project]
+name = "pygeohydro"
+description = "Access geospatial web services that offer hydrological data"
+[project.readme]
+content-type = "text/x-rst"
+file = "README.rst"
+
+license = {text = "MIT"}
 authors = [{name = "Taher Chegini", email = "cheginit@gmail.com"}]
+requires-python = ">=3.8"
+dependencies = [
+  "async-retriever>=0.3.10",
+  "cytoolz",
+  "dask",
+  "defusedxml",
+  "folium",
+  "geopandas>=0.10",
+  "h5netcdf",
+  "hydrosignatures>=0.1.2",
+  "loguru",
+  "lxml",
+  "matplotlib>=3.3",
+  "numpy>=1.21",
+  "pandas>=1",
+  "pygeoogc>=0.13.10",
+  "pygeoutils>=0.13.11",
+  "pynhd>=0.13.10",
+  "pyproj>=2.2",
+  "rasterio>=1.2",
+  "rioxarray>=0.11",
+  "scipy",
+  "shapely>=1.8",
+  "ujson",
+  "xarray>=2022.03",
+]
+dynamic = [
+  "version",
+]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Intended Audience :: Science/Research",
@@ -24,64 +60,30 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Hydrology",
   "Typing :: Typed"
 ]
-dependencies = [
-  "async-retriever>=0.3.10",
-  "cytoolz",
-  "dask",
-  "defusedxml",
-  "folium",
-  "geopandas>=0.10",
-  "h5netcdf",
-  "hydrosignatures>=0.1.2",
-  "loguru",
-  "lxml",
-  "matplotlib>=3.3",
-  "numpy>=1.21",
-  "pandas>=1.0",
-  "pygeoogc>=0.13.10",
-  "pygeoutils>=0.13.11",
-  "pynhd>=0.13.10",
-  "pyproj>=2.2",
-  "rasterio>=1.2",
-  "rioxarray>=0.11.0",
-  "scipy",
-  "shapely>=1.8",
-  "ujson",
-  "xarray>=2022.03.0"
-]
-description = "Access geospatial web services that offer hydrological data"
-dynamic = ["version"]
-license = {text = "MIT"}
-name = "pygeohydro"
-requires-python = ">=3.8"
-
 [project.optional-dependencies]
 stac = [
   "planetary-computer",
-  "pystac-client"
+  "pystac-client",
 ]
 test = [
   "coverage[toml]",
   "pytest-cov",
-  "pytest-xdist[psutil]"
+  "pytest-xdist[psutil]",
 ]
 typeguard = [
   "coverage[toml]",
   "pygments",
   "pytest-cov",
   "pytest-xdist[psutil]",
-  "typeguard"
+  "typeguard",
 ]
-
-[project.readme]
-content-type = "text/x-rst"
-file = "README.rst"
 
 [project.urls]
 CI = "https://github.com/hyriver/pygeohydro/actions"
 Changelog = "https://docs.hyriver.io/changelogs/pygeohydro.html"
 Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
 Issues = "https://github.com/hyriver/pygeohydro/issues"
+
 
 [tool.bandit]
 targets = [
