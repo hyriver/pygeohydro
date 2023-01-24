@@ -8,10 +8,7 @@ requires = [
 [project]
 name = "pygeohydro"
 description = "Access geospatial web services that offer hydrological data"
-[project.readme]
-content-type = "text/x-rst"
-file = "README.rst"
-
+readme = "README.rst"
 license = {text = "MIT"}
 authors = [{name = "Taher Chegini", email = "cheginit@gmail.com"}]
 requires-python = ">=3.8"
