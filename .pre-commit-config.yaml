@@ -18,6 +18,7 @@ repos:
   rev: 0.5.0
   hooks:
   - id: pyproject-fmt
+    name: Apply a consistent format to pyproject.toml
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
   rev: v2.6.0
