@@ -214,13 +214,14 @@ def ssebopeta_bygeom(
         Daily actual ET within a geometry in mm/day at 1 km resolution
     """
     f_list = helpers.get_ssebopeta_urls(dates)
-    if isinstance(geometry, (Polygon, MultiPolygon)):
-        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
-    else:
-        gtiff2xarray = tlz.partial(geoutils.gtiff2xarray)
 
+    try:
+        _ = geoutils.geo2polygon(geometry)
+    except geoutils.InputTypeError as ex:
+        raise InputTypeError("geometry", "(Multi)Polygon or tuple of length 4") from ex
+
+    gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
     session = RetrySession()
-
     with patch("socket.has_ipv6", False):
 
         def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray:
