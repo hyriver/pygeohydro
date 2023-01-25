@@ -12,7 +12,7 @@ def get_package_name() -> str:
         return tomli.load(f)["project"]["name"]
 
 
-python_versions = ["3.10"]
+python_versions = ["3.11"]
 package = get_package_name()
 gh_deps = {
     "async_retriever": [],
@@ -109,7 +109,7 @@ def pre_commit(session: nox.Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@nox.session(name="type-check", python="3.10")
+@nox.session(name="type-check", python="3.11")
 def type_check(session: nox.Session) -> None:
     "Run Pyright."
     install_deps(session, "stac")
