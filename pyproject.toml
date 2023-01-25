@@ -150,7 +150,8 @@ doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
 filterwarnings = [
   "ignore:.*distutils.*",
   "ignore:.*--rsyncdir command line argument.*",
-  "ignore:.*numpy.ndarray size changed.*"
+  "ignore:.*numpy.ndarray size changed.*",
+  "ignore:.*invalid value encountered in cast.*",
 ]
 testpaths = [
   "tests",
