@@ -12,6 +12,26 @@ readme = "README.rst"
 license = {text = "MIT"}
 authors = [{name = "Taher Chegini", email = "cheginit@gmail.com"}]
 requires-python = ">=3.8"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Topic :: Scientific/Engineering",
+  "Topic :: Scientific/Engineering :: GIS",
+  "Topic :: Scientific/Engineering :: Hydrology",
+  "Typing :: Typed"
+]
+dynamic = [
+  "version",
+]
 dependencies = [
   "async-retriever>=0.3.10",
   "cytoolz",
@@ -36,26 +56,6 @@ dependencies = [
   "shapely>=1.8",
   "ujson",
   "xarray>=2022.03",
-]
-dynamic = [
-  "version",
-]
-classifiers = [
-  "Development Status :: 4 - Beta",
-  "Intended Audience :: Science/Research",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-  "Programming Language :: Python",
-  "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3 :: Only",
-  "Programming Language :: Python :: 3.8",
-  "Programming Language :: Python :: 3.9",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Topic :: Scientific/Engineering",
-  "Topic :: Scientific/Engineering :: GIS",
-  "Topic :: Scientific/Engineering :: Hydrology",
-  "Typing :: Typed"
 ]
 [project.optional-dependencies]
 stac = [
