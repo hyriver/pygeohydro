@@ -15,7 +15,7 @@ repos:
     args: [--fix=lf]
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 0.5.0
+  rev: 0.6.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
@@ -46,7 +46,7 @@ repos:
     name: Convert relative imports to absolute with absolufy-imports
 
 - repo: https://github.com/PyCQA/isort
-  rev: 5.11.4
+  rev: 5.12.0
   hooks:
   - id: isort
     name: Sort imports with isort
