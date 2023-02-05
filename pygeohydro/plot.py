@@ -19,7 +19,7 @@ from pygeoogc import utils as ogc_utils
 
 from pygeohydro import helpers
 from pygeohydro.exceptions import InputTypeError
-from pygeohydro.waterdata import NWIS
+from pygeohydro.nwis import NWIS
 
 if TYPE_CHECKING:
     DF = TypeVar("DF", pd.DataFrame, pd.Series)
@@ -267,10 +267,8 @@ def interactive_map(
     >>> n_stations
     10
     """
-    bbox = ogc_utils.match_crs(bbox, crs, 4326)
-    ogc_utils.check_bbox(bbox)
-
     nwis = NWIS()
+    bbox = ogc_utils.match_crs(bbox, crs, 4326)
     query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
     if isinstance(nwis_kwds, dict):
         query.update(nwis_kwds)

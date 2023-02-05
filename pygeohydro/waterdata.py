@@ -1,32 +1,16 @@
 """Accessing WaterData related APIs."""
 from __future__ import annotations
 
-import contextlib
 import io
-import itertools
-import re
-from typing import Any, Iterable, Sequence, cast
+from typing import Any, cast
 
 import async_retriever as ar
 import cytoolz as tlz
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import pygeoutils as geoutils
-import xarray as xr
-from loguru import logger
-from pygeoogc import ServiceURL
-from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
-from pygeoogc import utils as ogc_utils
-from pynhd import WaterData
 
-from pygeohydro.exceptions import (
-    DataNotAvailableError,
-    InputTypeError,
-    InputValueError,
-    ServiceError,
-    ZeroMatchedError,
-)
+from pygeohydro.exceptions import InputTypeError, InputValueError, ServiceError
 
 __all__ = ["WaterQuality", "SensorThings"]
 

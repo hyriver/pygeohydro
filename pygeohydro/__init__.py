@@ -20,6 +20,7 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeohydro.helpers import get_us_states
+from pygeohydro.nwis import NWIS
 from pygeohydro.plot import interactive_map
 from pygeohydro.print_versions import show_versions
 from pygeohydro.pygeohydro import (
@@ -34,7 +35,7 @@ from pygeohydro.pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from pygeohydro.waterdata import NWIS, SensorThings, WaterQuality
+from pygeohydro.waterdata import SensorThings, WaterQuality
 from pygeohydro.watershed import WBD, huc_wb_full, irrigation_withdrawals
 
 try:
