@@ -7,7 +7,7 @@ import io
 import itertools
 import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union, cast
 
 import async_retriever as ar
 import cytoolz as tlz
@@ -1015,16 +1015,6 @@ class SensorThings:
             odata.update(extra_params)
         return odata
 
-    @staticmethod
-    def _to_geodf(response: dict[str, Any]) -> gpd.GeoDataFrame:
-        """Convert the response to a GeoDataFrame."""
-        return geoutils.json2geodf(response)
-
-    @staticmethod
-    def _to_df(response: dict[str, Any]) -> pd.DataFrame:
-        """Convert the response to a DataFrame."""
-        return pd.json_normalize(response)
-
     def query_byodata(
         self, odata: dict[str, Any], outformat: str = "json"
     ) -> gpd.GeoDataFrame | pd.DataFrame:
@@ -1062,15 +1052,47 @@ class SensorThings:
             while "@iot.nextLink" in resp:
                 resp = ar.retrieve_json([resp["@iot.nextLink"]])[0]
                 data.extend(resp["value"])
-            return self._to_df(data)
-        return self._to_geodf(resp)
+            return pd.json_normalize(data)
+        return geoutils.json2geodf(resp)
 
-    @staticmethod
-    def _extract_links(
-        resp: list[dict[str, Any]]
-    ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
-        """Get navigation links from SensorThings API response."""
-        _ = [r.pop("@iot.selfLink", None) for r in resp]
+    def sensor_info(self, sensor_ids: str | list[str]) -> pd.DataFrame:
+        """Query the SensorThings API by a sensor ID.
+
+        Parameters
+        ----------
+        sensor_ids : str or list of str
+            A single or list of sensor IDs, e.g., ``USGS-09380000``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            Requested sensor data.
+        """
+        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
+        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
+        data = pd.json_normalize(ar.retrieve_json(urls))
+        return data.drop(columns=data.columns[data.columns.str.endswith("Link")])
+
+    def sensor_property(self, sensor_property: str, sensor_ids: str | list[str]) -> pd.DataFrame:
+        """Query a sensor property.
+
+        Parameters
+        ----------
+        sensor_property : str or list of str
+            A sensor property, Valid properties are ``Datastreams``,
+            ``MultiDatastreams``, ``Locations``, ``HistoricalLocations``,
+            ``TaskingCapabilities``.
+        sensor_ids : str or list of str
+            A single or list of sensor IDs, e.g., ``USGS-09380000``.
+
+        Returns
+        -------
+        pandas.DataFrame
+            A dataframe containing the requested property.
+        """
+        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
+        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
+        resp = ar.retrieve_json(urls)
         links = tlz.merge_with(
             list,
             (
@@ -1078,59 +1100,9 @@ class SensorThings:
                 for r in resp
             ),
         )
-        return resp, links
+        links = cast("dict[str, list[str]]", links)
 
-    def query_sensors(self, sensor_ids: str | list[str]) -> list[dict[str, Any]]:
-        """Query the SensorThings API by a sensor ID.
-
-        Parameters
-        ----------
-        sensor_ids : str or list of str
-            A single or list of sensor IDs, e.g., ``USGS-09380000``.
-
-        Returns
-        -------
-        list of dict
-            A list of dictionaries containing the sensor information.
-        """
-        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
-        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
-        resp = ar.retrieve_json(urls)
-        resp, _ = self._extract_links(resp)
-        return resp
-
-    def query_properties(
-        self, properties: str | list[str], sensor_ids: str | list[str]
-    ) -> dict[str, dict[str, list[dict[str, Any]]]]:
-        """Query the SensorThings API by a sensor ID.
-
-        Parameters
-        ----------
-        properties : str or list of str
-            Properties to be selected from the database.
-            Valid properties are ``Datastreams``, ``MultiDatastreams``,
-            ``Locations``, ``HistoricalLocations``, ``TaskingCapabilities``.
-        sensor_ids : str or list of str
-            A single or list of sensor IDs, e.g., ``USGS-09380000``.
-
-        Returns
-        -------
-        dict
-            A dictionary of the requested properties where keys are the property names
-            and values are a dictionary of the property values for each sensor. For example,
-            for ``sensor1`` and ``sensor2``, the ``Datastreams`` property may return
-            ``{"Datastreams": {"sensor1": {...}, "sensor2": {...}}}``.
-        """
-        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
-        properties = [properties] if isinstance(properties, str) else properties
-        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
-        resp = ar.retrieve_json(urls)
-        _, links = self._extract_links(resp)
-
-        if any(p not in links for p in properties):
+        if sensor_property not in links:
             raise InputValueError("properties", list(links))
-
-        urls = list(tlz.concat(links[p] for p in properties))
-        resp = ar.retrieve_json(urls)
-        data = dict(zip(properties, tlz.partition(len(sensor_ids), resp)))
-        return {k: {s: v["value"] for s, v in zip(sensor_ids, d)} for k, d in data.items()}
+        resp = ar.retrieve_json(links[sensor_property])
+        return pd.concat(pd.json_normalize(r["value"]) for r in resp).reset_index(drop=True)
