@@ -5,6 +5,15 @@ History
 0.13.12 (unreleased)
 --------------------
 
+New Features
+~~~~~~~~~~~~
+- Add initial support for `SensorThings API <https://labs.waterdata.usgs.gov/api-docs/about-sensorthings-api/index.html/>`__
+  Currently, the ``SensorThings`` class only supports ``Things`` endpoint.
+  Users need to provide a valid Odata filter. The class has a ``odata_helper``
+  function that can be used to generate and validate Odata filters.
+  Additionally, using ``query_sensors`` and ``query_properties`` functions
+  users can request for information about sensors themselves or their properties.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Simplify geometry validation using ``pygeoutils.geo2polygon``
@@ -18,7 +27,7 @@ Internal Changes
 Breaking Changes
 ~~~~~~~~~~~~~~~~
 - The NID service has changed some of its endpoints to use Federal ID
-  instead of Dam ID. This change affect the ``NID.inventory_byid``
+  instead of Dam ID. This change affects the ``NID.inventory_byid``
   function. This function now accepts Federal IDs instead of dam IDs.
 
 New Features
