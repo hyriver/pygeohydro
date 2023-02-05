@@ -1065,8 +1065,9 @@ class SensorThings:
             return self._to_df(data)
         return self._to_geodf(resp)
 
+    @staticmethod
     def _extract_links(
-        self, resp: list[dict[str, Any]]
+        resp: list[dict[str, Any]]
     ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
         """Get navigation links from SensorThings API response."""
         _ = [r.pop("@iot.selfLink", None) for r in resp]
