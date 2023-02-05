@@ -294,6 +294,22 @@ def test_gnatsgo():
     assert_close(soil.tk0_100a.mean().compute().item(), 89.848)
 
 
+def test_sensorthings():
+    sensor = gh.SensorThings()
+    cond = " and ".join(
+        ("properties/monitoringLocationType eq 'Stream'", "properties/stateFIPS eq 'US:04'")
+    )
+    odata = sensor.odata_helper(conditionals=cond)
+    df = sensor.query_byodata(odata)
+    assert df.shape[0] == 192
+
+    resp = sensor.query_sensors("USGS-09380000")
+    assert resp[0]["description"] == "Stream"
+
+    resp = sensor.query_properties("Datastreams", "USGS-09380000")
+    assert resp["Datastreams"]["USGS-09380000"][0]["@iot.id"] == "9d24cf50257a4f60b76b92e38f286cde"
+
+
 def test_show_versions():
     f = io.StringIO()
     gh.show_versions(file=f)
