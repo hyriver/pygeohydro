@@ -1026,7 +1026,7 @@ def soil_properties(
     def get_tif(file: Path) -> xr.DataArray:
         """Get the .tif file from a zip file."""
         with zipfile.ZipFile(file) as z:
-            fname = next(f.filename for f in z.filelist if f.filename.endswith(".tif"))
+            fname = next((f.filename for f in z.filelist if f.filename.endswith(".tif")), None)
             ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))
             ds = cast("xr.DataArray", ds)
             if "band" in ds.dims:
