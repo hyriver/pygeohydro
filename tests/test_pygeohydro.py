@@ -303,11 +303,11 @@ def test_sensorthings():
     df = sensor.query_byodata(odata)
     assert df.shape[0] == 192
 
-    resp = sensor.query_sensors("USGS-09380000")
-    assert resp[0]["description"] == "Stream"
+    df = sensor.sensor_info("USGS-09380000")
+    assert df["description"].iloc[0] == "Stream"
 
-    resp = sensor.query_properties("Datastreams", "USGS-09380000")
-    assert resp["Datastreams"]["USGS-09380000"][0]["@iot.id"] == "9d24cf50257a4f60b76b92e38f286cde"
+    df = sensor.sensor_property("Datastreams", "USGS-09380000")
+    assert df["@iot.id"].iloc[0] == "9d24cf50257a4f60b76b92e38f286cde"
 
 
 def test_show_versions():
