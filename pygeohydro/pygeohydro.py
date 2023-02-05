@@ -26,7 +26,6 @@ from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd.core import ScienceBase
 from rioxarray import _io as rxr
-from shapely.geometry import MultiPolygon, Polygon
 
 from pygeohydro import helpers
 from pygeohydro.exceptions import (
@@ -43,6 +42,8 @@ from pygeohydro.helpers import Stats
 if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
+
+    from shapely.geometry import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
