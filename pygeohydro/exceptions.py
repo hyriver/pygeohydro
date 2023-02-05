@@ -3,7 +3,18 @@ from __future__ import annotations
 
 from typing import Generator, Sequence
 
+import async_retriever as ar
 import pygeoogc as ogc
+
+
+class ServiceError(ar.ServiceError):
+    """Exception raised when the requested data is not available on the server.
+
+    Parameters
+    ----------
+    err : str
+        Service error message.
+    """
 
 
 class MissingColumnError(Exception):

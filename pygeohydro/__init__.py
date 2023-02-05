@@ -15,6 +15,8 @@ from pygeohydro.exceptions import (
     InputValueError,
     MissingColumnError,
     MissingCRSError,
+    ServiceError,
+    ServiceUnavailableError,
     ZeroMatchedError,
 )
 from pygeohydro.helpers import get_us_states
@@ -32,7 +34,14 @@ from pygeohydro.pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from pygeohydro.waterdata import NWIS, WBD, WaterQuality, huc_wb_full, irrigation_withdrawals
+from pygeohydro.waterdata import (
+    NWIS,
+    WBD,
+    SensorThings,
+    WaterQuality,
+    huc_wb_full,
+    irrigation_withdrawals,
+)
 
 try:
     __version__ = version("pygeohydro")
@@ -49,6 +58,7 @@ __all__ = [
     "overland_roughness",
     "huc_wb_full",
     "irrigation_withdrawals",
+    "SensorThings",
     "interactive_map",
     "nlcd_bygeom",
     "nlcd_bycoords",
@@ -67,6 +77,8 @@ __all__ = [
     "DependencyError",
     "InputValueError",
     "ZeroMatchedError",
+    "ServiceError",
+    "ServiceUnavailableError",
     "show_versions",
     "__version__",
 ]

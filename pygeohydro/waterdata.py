@@ -29,6 +29,7 @@ from pygeohydro.exceptions import (
     DataNotAvailableError,
     InputTypeError,
     InputValueError,
+    ServiceError,
     ZeroMatchedError,
 )
 
@@ -36,7 +37,7 @@ if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 T_FMT = "%Y-%m-%d"
-__all__ = ["NWIS", "WBD", "huc_wb_full", "irrigation_withdrawals"]
+__all__ = ["NWIS", "WBD", "huc_wb_full", "irrigation_withdrawals", "SensorThings"]
 
 
 class NWIS:
@@ -946,3 +947,189 @@ def irrigation_withdrawals() -> xr.Dataset:
     )
     ds.attrs["source"] = "https://doi.org/10.5066/P9FDLY8P"
     return ds
+
+
+class SensorThings:
+    """Class for interacting with SensorThings API."""
+
+    def __init__(self) -> None:
+        self.base_url = "https://labs.waterdata.usgs.gov/sta/v1.1/Things"
+
+    @staticmethod
+    def odata_helper(
+        columns: list[str] | None = None,
+        conditionals: str | None = None,
+        expand: dict[str, dict[str, str]] | None = None,
+        max_count: int | None = None,
+        extra_params: dict[str, Any] | None = None,
+    ) -> dict[str, str]:
+        """Generate Odata filters for SensorThings API.
+
+        Parameters
+        ----------
+        columns : list of str, optional
+            Columns to be selected from the database, defaults to ``None``.
+        conditionals : str, optional
+            Conditionals to be applied to the database, defaults to ``None``.
+            Note that the conditionals should have the form of
+            ``cond1 operator 'value' and/or cond2 operator 'value``.
+            For example:
+            ``properties/monitoringLocationType eq 'Stream' and ...``
+        expand : dict of dict, optional
+            Expand the properties of the selected columns, defaults to ``None``.
+            Note that the expand should have the form of
+            ``{Property: {func: value, ...}}``. For example:
+            ``{"Locations":
+                    {
+                        "select": "location",
+                        "filter": "ObservedProperty/@iot.id eq '00060'",
+                    },
+            }``
+        max_count : int, optional
+            Maximum number of items to be returned, defaults to ``None``.
+        extra_params : dict, optional
+            Extra parameters to be added to the Odata filter, defaults to ``None``.
+
+        Returns
+        -------
+        odata : dict
+            Odata filter for the SensorThings API.
+        """
+        odata = {}
+        if columns is not None:
+            odata["select"] = ",".join(columns)
+
+        if conditionals is not None:
+            odata["filter"] = conditionals
+
+        def _odata(kwds: dict[str, str]) -> str:
+            return ";".join(f"${k}={v}" for k, v in kwds.items())
+
+        if expand is not None:
+            odata["expand"] = ",".join(f"{func}({_odata(od)})" for func, od in expand.items())
+
+        if max_count is not None:
+            odata["top"] = max_count
+
+        if extra_params is not None:
+            odata.update(extra_params)
+        return odata
+
+    @staticmethod
+    def _to_geodf(response: dict[str, Any]) -> gpd.GeoDataFrame:
+        """Convert the response to a GeoDataFrame."""
+        return geoutils.json2geodf(response)
+
+    @staticmethod
+    def _to_df(response: dict[str, Any]) -> pd.DataFrame:
+        """Convert the response to a DataFrame."""
+        return pd.json_normalize(response)
+
+    def query_byodata(
+        self, odata: dict[str, Any], outformat: str = "json"
+    ) -> gpd.GeoDataFrame | pd.DataFrame:
+        """Query the SensorThings API by Odata filter.
+
+        Parameters
+        ----------
+        odata : str
+            Odata filter for the SensorThings API.
+        outformat : str, optional
+            Format of the response, defaults to ``json``.
+            Valid values are ``json`` and ``geojson``.
+
+        Returns
+        -------
+        pandas.DataFrame or geopandas.GeoDataFrame
+            Requested data.
+        """
+        valid_formats = ["json", "geojson"]
+        if outformat not in valid_formats:
+            raise InputValueError("format", valid_formats)
+
+        kwds = odata.copy()
+        if outformat == "geojson":
+            kwds.update({"resultFormat": "GeoJSON"})
+
+        kwds = {"params": {f"${k}": v for k, v in kwds.items()}}
+        resp = ar.retrieve_json([self.base_url], [kwds])[0]
+
+        if "message" in resp:
+            raise ServiceError(resp["message"])
+
+        if outformat == "json":
+            data = resp["value"]
+            while "@iot.nextLink" in resp:
+                resp = ar.retrieve_json([resp["@iot.nextLink"]])[0]
+                data.extend(resp["value"])
+            return self._to_df(data)
+        return self._to_geodf(resp)
+
+    def _extract_links(
+        self, resp: list[dict[str, Any]]
+    ) -> tuple[list[dict[str, Any]], dict[str, list[str]]]:
+        """Get navigation links from SensorThings API response."""
+        _ = [r.pop("@iot.selfLink", None) for r in resp]
+        links = tlz.merge_with(
+            list,
+            (
+                {p.split("@")[0]: r.pop(p, None) for p in list(r) if p.endswith("navigationLink")}
+                for r in resp
+            ),
+        )
+        return resp, links
+
+    def query_sensors(self, sensor_ids: str | list[str]) -> list[dict[str, Any]]:
+        """Query the SensorThings API by a sensor ID.
+
+        Parameters
+        ----------
+        sensor_ids : str or list of str
+            A single or list of sensor IDs, e.g., ``USGS-09380000``.
+
+        Returns
+        -------
+        list of dict
+            A list of dictionaries containing the sensor information.
+        """
+        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
+        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
+        resp = ar.retrieve_json(urls)
+        resp, _ = self._extract_links(resp)
+        return resp
+
+    def query_properties(
+        self, properties: str | list[str], sensor_ids: str | list[str]
+    ) -> dict[str, dict[str, list[dict[str, Any]]]]:
+        """Query the SensorThings API by a sensor ID.
+
+        Parameters
+        ----------
+        properties : str or list of str
+            Properties to be selected from the database.
+            Valid properties are ``Datastreams``, ``MultiDatastreams``,
+            ``Locations``, ``HistoricalLocations``, ``TaskingCapabilities``.
+        sensor_ids : str or list of str
+            A single or list of sensor IDs, e.g., ``USGS-09380000``.
+
+        Returns
+        -------
+        dict
+            A dictionary of the requested properties where keys are the property names
+            and values are a dictionary of the property values for each sensor. For example,
+            for ``sensor1`` and ``sensor2``, the ``Datastreams`` property may return
+            ``{"Datastreams": {"sensor1": {...}, "sensor2": {...}}}``.
+        """
+        sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
+        properties = [properties] if isinstance(properties, str) else properties
+        urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
+        resp = ar.retrieve_json(urls)
+        _, links = self._extract_links(resp)
+
+        if any(p not in links for p in properties):
+            raise InputValueError("properties", list(links))
+
+        urls = list(tlz.concat(links[p] for p in properties))
+        resp = ar.retrieve_json(urls)
+        data = dict(zip(properties, tlz.partition(len(sensor_ids), resp)))
+        return {k: {s: v["value"] for s, v in zip(sensor_ids, d)} for k, d in data.items()}
