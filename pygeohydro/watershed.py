@@ -1,42 +1,31 @@
 """Accessing watershed boundary-level data through web services."""
 from __future__ import annotations
 
-import contextlib
 import importlib.util
 import io
-import itertools
-import re
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, Union, cast
+from typing import TYPE_CHECKING, Union
 
 import async_retriever as ar
-import cytoolz as tlz
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import pygeoogc as ogc
-import pygeoutils as geoutils
 import pyproj
 import xarray as xr
-from loguru import logger
 from pygeoogc import ServiceURL
-from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
-from pygeoogc import utils as ogc_utils
-from pynhd import AGRBase, WaterData
+from pynhd import AGRBase
 from pynhd.core import ScienceBase
 
-from pygeohydro.exceptions import (
-    DataNotAvailableError,
-    InputTypeError,
-    InputValueError,
-    ServiceError,
-    ZeroMatchedError,
-)
+from pygeohydro.exceptions import InputValueError
 
 if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]
 
-__all__ = ["WBD", "huc_wb_full", "irrigation_withdrawals",]
+__all__ = [
+    "WBD",
+    "huc_wb_full",
+    "irrigation_withdrawals",
+]
 
 
 class WBD(AGRBase):

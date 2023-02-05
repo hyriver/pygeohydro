@@ -34,16 +34,8 @@ from pygeohydro.pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
-from pygeohydro.waterdata import (
-    NWIS,
-    WaterQuality,
-    SensorThings,
-)
-from pygeohydro.watershed import (
-    WBD,
-    huc_wb_full,
-    irrigation_withdrawals,
-)
+from pygeohydro.waterdata import NWIS, SensorThings, WaterQuality
+from pygeohydro.watershed import WBD, huc_wb_full, irrigation_withdrawals
 
 try:
     __version__ = version("pygeohydro")
