@@ -11,7 +11,7 @@ New Features
   Currently, the ``SensorThings`` class only supports ``Things`` endpoint.
   Users need to provide a valid Odata filter. The class has a ``odata_helper``
   function that can be used to generate and validate Odata filters.
-  Additionally, using ``query_sensors`` and ``query_properties`` functions
+  Additionally, using ``sensor_info`` and ``sensor_property`` functions
   users can request for information about sensors themselves or their properties.
 
 Internal Changes
