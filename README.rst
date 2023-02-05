@@ -314,6 +314,7 @@ We can query USGS stations of type "stream" in Arizona using SensorThings API
 as follows:
 
 .. code-block:: python
+
     odata = {
         "filter": "properties/monitoringLocationType eq 'Stream' and properties/stateFIPS eq 'US:04'",
     }
