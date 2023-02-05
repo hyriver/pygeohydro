@@ -36,9 +36,11 @@ from pygeohydro.pygeohydro import (
 )
 from pygeohydro.waterdata import (
     NWIS,
-    WBD,
-    SensorThings,
     WaterQuality,
+    SensorThings,
+)
+from pygeohydro.watershed import (
+    WBD,
     huc_wb_full,
     irrigation_withdrawals,
 )
