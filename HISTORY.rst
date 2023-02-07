@@ -16,7 +16,7 @@ New Features
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
-- Simplify geometry validation using ``pygeoutils.geo2polygon``
+- Simplify geometry validation by using ``pygeoutils.geo2polygon``
   function in ``ssebopeta_bygeom``.
 - Fully migrate ``setup.cfg`` and ``setup.py`` to ``pyproject.toml``.
 - Convert relative imports to absolute with ``absolufy-imports``.
