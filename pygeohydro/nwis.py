@@ -7,7 +7,7 @@ import re
 from typing import Any, Iterable, Sequence
 
 import async_retriever as ar
-import cytoolz as tlz
+import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd

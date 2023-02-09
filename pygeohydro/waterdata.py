@@ -5,7 +5,7 @@ import io
 from typing import Any, cast
 
 import async_retriever as ar
-import cytoolz as tlz
+import cytoolz.curried as tlz
 import geopandas as gpd
 import pandas as pd
 import pygeoutils as geoutils

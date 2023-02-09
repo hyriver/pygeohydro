@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
 import async_retriever as ar
-import cytoolz as tlz
+import cytoolz.curried as tlz
 import dask.config
 import geopandas as gpd
 import numpy as np
