@@ -55,7 +55,8 @@ jobs:
         python -m pip install --no-deps .
     - name: Version info
       run: |-
-        python -c "import ${REPO_NAME}; ${REPO_NAME}.show_versions()"
+        NAME="$(echo ${REPO_NAME} | tr - _)"
+        python -c "import ${NAME}; ${NAME}.show_versions()"
     - name: Run pytest
       run: |-
         pytest
