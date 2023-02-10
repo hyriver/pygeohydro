@@ -41,7 +41,6 @@ dependencies = [
   "geopandas>=0.10",
   "h5netcdf",
   "hydrosignatures>=0.1.2",
-  "loguru",
   "lxml",
   "matplotlib>=3.3",
   "numpy>=1.21",
