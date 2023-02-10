@@ -4,7 +4,8 @@ from __future__ import annotations
 import contextlib
 import itertools
 import re
-from typing import Any, Iterable, Sequence
+import warnings
+from typing import Any, Iterable, Sequence, cast
 
 import async_retriever as ar
 import cytoolz.curried as tlz
@@ -12,7 +13,6 @@ import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
-from loguru import logger
 from pygeoogc import ServiceURL
 from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
@@ -446,6 +446,7 @@ class NWIS:
         resp = ar.retrieve_json(
             [f"{self.url}/{freq}"] * len(payloads), [{"params": p} for p in payloads]
         )
+        resp = cast("list[dict[str, Any]]", resp)
 
         def get_site_id(site_cd: dict[str, str]) -> str:
             """Get site id."""
@@ -578,9 +579,10 @@ class NWIS:
         n_orig = len(sids)
         sids = [s.split("-")[1] for s in qobs]
         if len(sids) != n_orig:
-            logger.warning(
+            warnings.warn(
                 f"Dropped {n_orig - len(sids)} stations since they don't have discharge data"
-                + f" from {start_dt} to {end_dt}."
+                + f" from {start_dt} to {end_dt}.",
+                UserWarning,
             )
         siteinfo = siteinfo[siteinfo.site_no.isin(sids)]
         if mmd:

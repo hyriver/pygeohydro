@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import io
-from typing import Any, cast
+from typing import Any, cast, overload
 
 import async_retriever as ar
 import cytoolz.curried as tlz
@@ -56,6 +56,7 @@ class WaterQuality:
         if endpoint.lower() not in valid_endpoints:
             raise InputValueError("endpoint", valid_endpoints)
         resp = ar.retrieve_json([f"{self.wq_url}/Codes/{endpoint}?mimeType=json"])
+        resp = cast("list[dict[str, Any]]", resp)
         return [r["value"] for r in resp[0]["codes"]]
 
     def _base_url(self, endpoint: str) -> str:
@@ -93,9 +94,9 @@ class WaterQuality:
             The web service response as a GeoDataFrame.
         """
         req_kwds = [{"params": kwds}] if request_method == "GET" else [{"data": kwds}]
-        return geoutils.json2geodf(
-            ar.retrieve_json([self._base_url(endpoint)], req_kwds, request_method=request_method)
-        )
+        resp = ar.retrieve_json([self._base_url(endpoint)], req_kwds, request_method=request_method)
+        resp = cast("list[dict[str, Any]]", resp)
+        return geoutils.json2geodf(resp)
 
     def _check_kwds(self, wq_kwds: dict[str, str]) -> None:
         """Check the validity of the Water Quality Web Service keyword arguments."""
@@ -232,6 +233,33 @@ class SensorThings:
     def __init__(self) -> None:
         self.base_url = "https://labs.waterdata.usgs.gov/sta/v1.1/Things"
 
+    @overload
+    @staticmethod
+    def _get_urls(url: str, kwd: dict[str, Any] | None = ...) -> dict[str, Any]:
+        ...
+
+    @overload
+    @staticmethod
+    def _get_urls(url: list[str], kwd: list[dict[str, Any]] | None = ...) -> list[dict[str, Any]]:
+        ...
+
+    @staticmethod
+    def _get_urls(
+        url: str | list[str], kwd: dict[str, Any] | list[dict[str, Any]] | None = None
+    ) -> dict[str, Any] | list[dict[str, Any]]:
+        urls = url if isinstance(url, list) else [url]
+        if kwd:
+            kwds = kwd if isinstance(kwd, list) else [kwd]
+            if len(urls) == 1 and len(urls) != len(kwds):
+                urls = urls * len(kwds)
+        else:
+            kwds = None
+        resp = ar.retrieve_json(urls, kwds)
+        resp = cast("list[dict[str, Any]]", resp)
+        if isinstance(url, str):
+            return resp[0]
+        return resp
+
     @staticmethod
     def odata_helper(
         columns: list[str] | None = None,
@@ -314,15 +342,16 @@ class SensorThings:
             kwds.update({"resultFormat": "GeoJSON"})
 
         kwds = {"params": {f"${k}": v for k, v in kwds.items()}}
-        resp = ar.retrieve_json([self.base_url], [kwds])[0]
+        resp = self._get_urls(self.base_url, kwds)
 
         if "message" in resp:
             raise ServiceError(resp["message"])
 
         if outformat == "json":
             data = resp["value"]
+            data = cast("list[dict[str, Any]]", data)
             while "@iot.nextLink" in resp:
-                resp = ar.retrieve_json([resp["@iot.nextLink"]])[0]
+                resp = self._get_urls(resp["@iot.nextLink"])
                 data.extend(resp["value"])
             return pd.json_normalize(data)
         return geoutils.json2geodf(resp)
@@ -342,7 +371,7 @@ class SensorThings:
         """
         sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
         urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
-        data = pd.json_normalize(ar.retrieve_json(urls))
+        data = pd.json_normalize(self._get_urls(urls))
         return data.drop(columns=data.columns[data.columns.str.endswith("Link")])
 
     def sensor_property(self, sensor_property: str, sensor_ids: str | list[str]) -> pd.DataFrame:
@@ -364,7 +393,7 @@ class SensorThings:
         """
         sensor_ids = [sensor_ids] if isinstance(sensor_ids, str) else sensor_ids
         urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
-        resp = ar.retrieve_json(urls)
+        resp = self._get_urls(urls)
         links = tlz.merge_with(
             list,
             (
@@ -376,5 +405,5 @@ class SensorThings:
 
         if sensor_property not in links:
             raise InputValueError("properties", list(links))
-        resp = ar.retrieve_json(links[sensor_property])
+        resp = self._get_urls(links[sensor_property])
         return pd.concat(pd.json_normalize(r["value"]) for r in resp).reset_index(drop=True)

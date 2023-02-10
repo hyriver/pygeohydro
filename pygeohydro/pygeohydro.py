@@ -3,8 +3,7 @@ from __future__ import annotations
 
 import io
 import itertools
-import os
-import sys
+import warnings
 import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union, cast
@@ -21,7 +20,6 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from loguru import logger
 from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd.core import ScienceBase
@@ -47,26 +45,6 @@ if TYPE_CHECKING:
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
-
-logger.configure(
-    handlers=[
-        {
-            "sink": sys.stdout,
-            "colorize": True,
-            "format": " | ".join(
-                [
-                    "{time:YYYY-MM-DD at HH:mm:ss}",  # noqa: FS003
-                    "{name: ^15}.{function: ^15}:{line: >3}",  # noqa: FS003
-                    "{message}",  # noqa: FS003
-                ]
-            ),
-        }
-    ]
-)
-if os.environ.get("HYRIVER_VERBOSE", "false").lower() == "true":
-    logger.enable("pygeohydro")
-else:
-    logger.disable("pygeohydro")
 
 __all__ = [
     "get_camels",
@@ -417,7 +395,9 @@ def nlcd_bygeom(
         of the input ``GeoDataFrame``.
     """
     if resolution < 30:
-        logger.warning("NLCD's resolution is 30 m, so finer resolutions are not recommended.")
+        warnings.warn(
+            "NLCD's resolution is 30 m, so finer resolutions are not recommended.", UserWarning
+        )
 
     if not isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
         raise InputTypeError("geometry", "GeoDataFrame or GeoSeries")
@@ -560,7 +540,9 @@ class NID:
     def __init__(self) -> None:
         self.base_url = ServiceURL().restful.nid
         self.suggest_url = f"{self.base_url}/suggestions"
-        self.fields_meta = pd.DataFrame(ar.retrieve_json([f"{self.base_url}/advanced-fields"])[0])
+        resp = ar.retrieve_json([f"{self.base_url}/advanced-fields"])
+        resp = cast("list[dict[str, Any]]", resp)
+        self.fields_meta = pd.DataFrame(resp[0])
         self.valid_fields = self.fields_meta.name
         self.dam_type = {
             pd.NA: "N/A",
@@ -761,7 +743,8 @@ class NID:
         else:
             kwds = [{"params": {**p, "out": "json"}} for p in params]
         resp = ar.retrieve_json(urls, kwds)
-        if len(resp) == 0:
+        resp = cast("list[dict[str, Any]]", resp)
+        if not resp:
             raise ZeroMatchedError
 
         failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
@@ -774,7 +757,8 @@ class NID:
             if len(failed) == len(urls):
                 raise ZeroMatchedError(f"All{errs}")
             resp = [r for i, r in enumerate(resp) if i not in idx]
-            logger.warning(f"Some{errs}")
+            fail_count = f"{len(failed)} of {len(urls)}"
+            warnings.warn(f"{fail_count}{errs}", UserWarning)
         return resp
 
     @staticmethod
