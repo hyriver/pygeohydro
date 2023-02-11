@@ -19,7 +19,7 @@ def get_package_name() -> str:
 python_versions = ["3.11"]
 package = get_package_name()
 gh_deps = {
-    "async_retriever": [],
+    "async-retriever": [],
     "hydrosignatures": [],
     "pygeoogc": ["async-retriever"],
     "pygeoutils": ["async-retriever", "pygeoogc"],
