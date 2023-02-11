@@ -135,7 +135,7 @@ dependencies:
 - bottleneck
 
 # dev deps
-- ipywidgets<8
+- ipywidgets
 - codespell
 - nox
 - pre-commit
