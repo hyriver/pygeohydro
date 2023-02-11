@@ -15,7 +15,7 @@ repos:
     args: [--fix=lf]
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 0.7.0
+  rev: 0.8.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
@@ -118,7 +118,7 @@ repos:
     - pep8-naming
 
 - repo: https://github.com/dosisod/refurb
-  rev: v1.11.1
+  rev: v1.12.0
   hooks:
   - id: refurb
     name: Modernizing Python codebases using Refurb
