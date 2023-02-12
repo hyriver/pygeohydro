@@ -16,7 +16,15 @@ def get_package_name() -> str:
         return tomli.load(f)["project"]["name"]
 
 
-python_versions = ["3.11"]
+def get_extras() -> list[str]:
+    """Get the name of the package."""
+    with open("pyproject.toml", "rb") as f:
+        extras = tomli.load(f)["project"]["optional-dependencies"]
+    return [e for e in extras if e not in ("test", "typeguard")]
+
+
+python_versions = ["3.8"]
+lint_versions = ["3.11"]
 package = get_package_name()
 gh_deps = {
     "async-retriever": [],
@@ -33,7 +41,6 @@ nox.options.sessions = (
     "pre-commit",
     "type-check",
     "tests",
-    # "typeguard",
 )
 
 
@@ -103,7 +110,7 @@ def activate_virtualenv_in_precommit_hooks(session: nox.Session) -> None:
         hook.write_text("\n".join(lines))
 
 
-@nox.session(name="pre-commit", python="3.11")
+@nox.session(name="pre-commit", python=lint_versions)
 def pre_commit(session: nox.Session) -> None:
     """Lint using pre-commit."""
     args = session.posargs or ["run", "--all-files"]
@@ -113,10 +120,11 @@ def pre_commit(session: nox.Session) -> None:
         activate_virtualenv_in_precommit_hooks(session)
 
 
-@nox.session(name="type-check", python="3.11")
+@nox.session(name="type-check", python=python_versions)
 def type_check(session: nox.Session) -> None:
     """Run Pyright."""
-    install_deps(session, "stac")
+    extras = get_extras()
+    install_deps(session, ",".join(extras))
     session.install("pyright")
     session.run("pyright")
 
@@ -124,16 +132,18 @@ def type_check(session: nox.Session) -> None:
 @nox.session(python=python_versions)
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
-    install_deps(session, "test,stac")
+    extras = get_extras()
+    if "speedup" in extras:
+        extras.remove("speedup")
+        install_deps(session, ",".join(["test"] + extras))
+        session.run("pytest", "--doctest-modules", *session.posargs)
+        session.run("coverage", "report")
+        session.run("coverage", "html")
 
-    session.run("pytest", "--doctest-modules", *session.posargs)
-    session.run("coverage", "report")
-    session.run("coverage", "html")
-
-
-@nox.session(python=python_versions)
-def typeguard(session: nox.Session) -> None:
-    """Runtime type checking using Typeguard."""
-    install_deps(session, "typeguard")
-
-    session.run("pytest", f"--typeguard-packages={package}", *session.posargs)
+        install_deps(session, "speedup")
+        session.run("pytest", "--doctest-modules", *session.posargs)
+    else:
+        install_deps(session, ",".join(["test"] + extras))
+        session.run("pytest", "--doctest-modules", *session.posargs)
+        session.run("coverage", "report")
+        session.run("coverage", "html")
