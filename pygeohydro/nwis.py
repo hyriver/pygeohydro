@@ -5,7 +5,7 @@ import contextlib
 import itertools
 import re
 import warnings
-from typing import Any, Iterable, Sequence, cast
+from typing import Any, Iterable, Sequence, cast, overload, Literal, TYPE_CHECKING, TypeVar
 
 import async_retriever as ar
 import cytoolz.curried as tlz
@@ -26,7 +26,89 @@ from pygeohydro.exceptions import (
 )
 
 T_FMT = "%Y-%m-%d"
-__all__ = ["NWIS"]
+__all__ = ["NWIS", "streamflow_fillna"]
+
+if TYPE_CHECKING:
+    ArrayLike = TypeVar("ArrayLike", pd.DataFrame, pd.Series, xr.DataArray)
+
+@overload
+def streamflow_fillna(streamflow: xr.DataArray, missing_max: int =...) -> xr.Dataset:
+    ...
+
+@overload
+def streamflow_fillna(streamflow: pd.DataFrame, missing_max: int =...) -> pd.DataFrame:
+    ...
+
+@overload
+def streamflow_fillna(streamflow: pd.Series, missing_max: int =...) -> pd.Series:
+    ...
+
+def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
+    """Fill missing data (NAN) in daily streamflow observations.
+
+    It drops stations with more than ``max_missing`` days missing data
+    per year. Missing data in the remaining stations, are filled with
+    day-of-year average over the entire dataset.
+
+    Parameters
+    ----------
+    discharge : xarray.DataArray or pandas.DataFrame or pandas.Series
+        Streamflow observations with at least 10 years of daily data.
+    max_missing : int, optional
+        Maximum allowed number of days per year for filling, defaults to is 5.
+
+    Returns
+    -------
+    xarray.DataArray or pandas.DataFrame or pandas.Series
+        Streamflow observations with missing data filled for stations with
+        less than ``max_missing`` days of missing data.
+    """
+    if isinstance(streamflow, xr.DataArray):
+        df = streamflow.to_pandas()
+    elif isinstance(streamflow, (pd.DataFrame, pd.Series)):
+        df = streamflow.copy()
+    else:
+        raise InputTypeError("streamflow", "xarray.DataArray, pandas.DataFrame, or pandas.Series")
+
+    if isinstance(df, pd.Series):
+        df = df.to_frame(df.name if df.name else "0" * 8)
+
+    df = cast("pd.DataFrame", df)
+    df.columns = df.columns.astype(str)
+    df.index = pd.DatetimeIndex(pd.to_datetime(df.index).date)
+    if pd.infer_freq(df.index) != "D" and df.index.year.unique().size >= 10:
+        raise InputTypeError("streamflow", "array with least 10 years of data")
+
+    df[df < 0] = np.nan
+    s_nan = pd.DataFrame.from_dict({yr: q.isna().sum() for yr, q in df.resample("Y")}, orient="index")
+    if np.all(s_nan == 0):
+        return streamflow
+
+    s_fill = s_nan[s_nan <= missing_max].dropna(axis=1).columns.tolist()
+    if not s_fill:
+        msg = f"Found no column with less than {missing_max} days of missing data."
+        raise ValueError(msg)
+
+    df = df[s_fill].copy()
+    df["dayofyear"] = pd.to_datetime(df.index).dayofyear
+    daymean = df.groupby("dayofyear").mean().to_dict()
+
+    fillval = pd.DataFrame({s: df["dayofyear"].map(daymean[s]) for s in s_fill})
+    df = df[s_fill].fillna(fillval)
+
+    if isinstance(streamflow, pd.Series):
+        return df.squeeze()
+
+    if isinstance(streamflow, pd.DataFrame):
+        return df
+
+    return xr.DataArray(
+        df,
+        coords={
+            "time": df.index.to_numpy("datetime64[ns]"),
+            "station_id": [str(s).rsplit("-", 1)[-1] for s in s_fill],
+        },
+    )
 
 
 class NWIS:
@@ -479,8 +561,8 @@ class NWIS:
                 tz["defaultTimeZone"]["zoneAbbreviation"],
                 tz["defaultTimeZone"]["zoneAbbreviation"],
             )
-            discharge.index = [pd.Timestamp(i, tz=time_zone) for i in discharge.index]
-            discharge.index = discharge.index.tz_convert("UTC")  # type: ignore[attr-defined]
+            discharge.index = pd.DatetimeIndex(pd.Timestamp(i, tz=time_zone) for i in discharge.index)
+            discharge.index = discharge.index.tz_convert("UTC")
             discharge.columns = [col]
             return discharge
 
@@ -490,6 +572,28 @@ class NWIS:
         qobs[qobs.le(0)] = np.nan
         # Convert cfs to cms
         return qobs * np.float_power(0.3048, 3)
+
+    @overload
+    def get_streamflow(
+        self,
+        station_ids: Sequence[str] | str,
+        dates: tuple[str, str],
+        freq: str = "dv",
+        mmd: bool = False,
+        to_xarray: Literal[False] = ...,
+    ) -> pd.DataFrame:
+        ...
+
+    @overload
+    def get_streamflow(
+        self,
+        station_ids: Sequence[str] | str,
+        dates: tuple[str, str],
+        freq: str = "dv",
+        mmd: bool = False,
+        to_xarray: Literal[True] = ...,
+    ) -> xr.Dataset:
+        ...
 
     def get_streamflow(
         self,

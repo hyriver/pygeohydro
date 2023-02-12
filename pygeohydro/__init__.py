@@ -20,7 +20,7 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeohydro.helpers import get_us_states
-from pygeohydro.nwis import NWIS
+from pygeohydro.nwis import NWIS, streamflow_fillna
 from pygeohydro.plot import interactive_map
 from pygeohydro.print_versions import show_versions
 from pygeohydro.pygeohydro import (
@@ -48,6 +48,7 @@ __all__ = [
     "WBD",
     "NWIS",
     "WaterQuality",
+    "streamflow_fillna",
     "cover_statistics",
     "get_camels",
     "overland_roughness",
