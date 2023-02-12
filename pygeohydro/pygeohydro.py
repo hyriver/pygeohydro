@@ -87,6 +87,7 @@ def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
 
     attrs = gpd.read_feather(io.BytesIO(resp[0]))
     qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")
+    qobs["discharge"] = xr.where(qobs["discharge"] < 0, np.nan, qobs["discharge"])
     return attrs, qobs
 
 
