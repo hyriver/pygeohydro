@@ -6,8 +6,8 @@ import sys
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import xarray as xr
 import pytest
+import xarray as xr
 from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
 
@@ -81,7 +81,7 @@ class TestNWIS:
 
     def test_fillna(self):
         index = pd.date_range("2000-01-01", "2020-12-31", freq="D")
-        q = pd.Series(np.ones(index.size) , index=index)
+        q = pd.Series(np.ones(index.size), index=index)
         qf = gh.streamflow_fillna(q)
         assert not qf.name
         q.loc[slice("2000-01-01", "2000-01-05")] = np.nan
