@@ -6,6 +6,7 @@ import sys
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import xarray as xr
 import pytest
 from pygeoogc import utils as ogc_utils
 from shapely.geometry import Polygon
@@ -78,9 +79,18 @@ class TestNWIS:
             == "Discharge, cubic feet per second"
         )
 
-    def test_ice_negative(self):
-        ice = self.nwis.get_streamflow("06040000", ("2023-01-01", "2023-1-08"))
-        assert ice.isna().sum().item() == 2
+    def test_fillna(self):
+        index = pd.date_range("2000-01-01", "2020-12-31", freq="D")
+        q = pd.Series(np.ones(index.size) , index=index)
+        qf = gh.streamflow_fillna(q)
+        assert not qf.name
+        q.loc[slice("2000-01-01", "2000-01-05")] = np.nan
+        qf = gh.streamflow_fillna(q)
+        assert np.all(qf == 1)
+        qf = gh.streamflow_fillna(q.to_frame("12345678"))
+        assert np.all(qf == 1)
+        qf = gh.streamflow_fillna(xr.DataArray(q))
+        assert np.all(qf == 1)
 
 
 class TestETA:
