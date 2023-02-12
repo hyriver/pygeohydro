@@ -2,6 +2,13 @@
 History
 =======
 
+0.13.13 (unreleased)
+--------------------
+
+New Features
+~~~~~~~~~~~~
+- In ``get_camels``, return ``qobs`` with negatives values set to ``NaN``.
+
 0.13.12 (2023-02-10)
 --------------------
 
