@@ -74,10 +74,10 @@ def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
         is streamflow data and basin attributes as an ``xarray.Dataset``.
     """
     base_url = "/".join(
-        [
+        (
             "https://thredds.hydroshare.org/thredds/fileServer/hydroshare",
             "resources/658c359b8c83494aac0f58145b1b04e6/data/contents",
-        ]
+        )
     )
     urls = [
         f"{base_url}/camels_attributes_v2.0.feather",
@@ -88,6 +88,23 @@ def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
     attrs = gpd.read_feather(io.BytesIO(resp[0]))
     qobs = xr.open_dataset(io.BytesIO(resp[1]), engine="h5netcdf")
     qobs["discharge"] = xr.where(qobs["discharge"] < 0, np.nan, qobs["discharge"])
+
+    url = "/".join(
+        (
+            "https://gist.githubusercontent.com/cheginit",
+            "229c83c89eee3801a586bcb3ebb4e825/raw/newman_ids.txt",
+        )
+    )
+    ids = ar.retrieve_text([url])[0].split(",")
+    attrs["Newman_2017"] = attrs.index.isin(ids)
+    qobs["Newman_2017"] = qobs.station_id.isin(ids)
+    desc = ". ".join(
+        (
+            "Whether station is in Newman et al. (2017) dataset",
+            "https://doi.org/10.1175/JHM-D-16-0284.1",
+        )
+    )
+    qobs["Newman_2017"].attrs["description"] = desc
     return attrs, qobs
 
 
