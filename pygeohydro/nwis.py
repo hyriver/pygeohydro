@@ -94,7 +94,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
     if isinstance(streamflow, pd.DataFrame):
         return df
 
-    return xr.DataArray(
+    return xr.DataArray(  # type: ignore
         df,
         coords={
             "time": df.index.to_numpy("datetime64[ns]"),
