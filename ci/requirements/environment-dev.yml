@@ -20,7 +20,6 @@ dependencies:
 # - async-retriever >=0.3.5
 - cytoolz
 - defusedxml
-- joblib
 - owslib >=0.27.2
 - pyproj >=2.2
 - pyyaml
@@ -34,7 +33,7 @@ dependencies:
 - dask-core
 - geopandas >=0.7
 - netcdf4
-- numpy >=1.17
+- numpy >=1.21
 - pyproj >=2.2
 - rasterio >=1.2
 - rioxarray >=0.11
@@ -55,7 +54,7 @@ dependencies:
 # - async-retriever >=0.3.6
 - click >=0.7
 - cytoolz
-- numpy >=1.17
+- numpy >=1.21
 # - pygeoogc >=0.13.7
 # - pygeoutils >=0.13.7
 - rasterio >=1.2
@@ -71,7 +70,7 @@ dependencies:
 - cytoolz
 - geopandas >=0.9
 - networkx
-- numpy >=1.17
+- numpy >=1.21
 - pandas >=1.0
 - pyarrow >=1.0.1
 # - pygeoogc >=0.13.7
@@ -86,7 +85,7 @@ dependencies:
 - click >=0.7
 - dask-core
 - lxml
-- numpy >=1.17
+- numpy >=1.21
 - pandas >=1.0
 # - py3dep >=0.13.7
 # - pygeoogc >=0.13.7
@@ -106,8 +105,8 @@ dependencies:
 - h5netcdf
 # - hydrosignatures >=0.1.1
 - lxml
-- matplotlib-base >=3.3
-- numpy >=1.17
+- matplotlib-base >=3.5
+- numpy >=1.21
 - pandas >=1.0
 # - pygeoogc >=0.13.7
 # - pygeoutils >=0.13.9
@@ -124,7 +123,7 @@ dependencies:
 # pynldas2
 # - async-retriever >=0.3.6
 - h5netcdf
-- numpy >=1.17
+- numpy >=1.21
 - pandas >=1.0
 # - pygeoutils >=0.13.10
 - pyproj >=2.2
@@ -137,6 +136,7 @@ dependencies:
 # dev deps
 - ipywidgets
 - codespell
+- tomli
 - nox
 - pre-commit
 - psutil
