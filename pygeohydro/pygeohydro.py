@@ -414,7 +414,7 @@ def nlcd_bygeom(
     """
     if resolution < 30:
         warnings.warn(
-            "NLCD's resolution is 30 m, so finer resolutions are not recommended.", UserWarning
+            "NLCD's resolution is 30 m, so finer resolutions are not recommended.", UserWarning, stacklevel=2
         )
 
     if not isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
@@ -776,7 +776,7 @@ class NID:
                 raise ZeroMatchedError(f"All{errs}")
             resp = [r for i, r in enumerate(resp) if i not in idx]
             fail_count = f"{len(failed)} of {len(urls)}"
-            warnings.warn(f"{fail_count}{errs}", UserWarning)
+            warnings.warn(f"{fail_count}{errs}", UserWarning, stacklevel=2)
         return resp
 
     @staticmethod

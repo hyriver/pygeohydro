@@ -681,6 +681,7 @@ class NWIS:
                 f"Dropped {n_orig - len(sids)} stations since they don't have discharge data"
                 + f" from {start_dt} to {end_dt}.",
                 UserWarning,
+                stacklevel=2,
             )
         siteinfo = siteinfo[siteinfo.site_no.isin(sids)]
         if mmd:
