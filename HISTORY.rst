@@ -8,11 +8,11 @@ History
 New Features
 ~~~~~~~~~~~~
 - In ``get_camels``, return ``qobs`` with negatives values set to ``NaN``.
-  Also, Add a new variable to both datasets for identifying the 531 stations
-  that were used in
+  Also, Add a new variable called ``Newman_2017`` to both datasets for
+  identifying the 531 stations that were used in
   `Newman et al. (2017) <https://doi.org/10.1175/JHM-D-16-0284.1>`__.
-- Add a new function, called ``streamflow_fillna``, for filling missing streamflow
-  arrays data (``NAN``) with day-of-year average values.
+- Add a new function, called ``streamflow_fillna``, for filling missing
+  streamflow values (``NAN``) with day-of-year average values.
 
 0.13.12 (2023-02-10)
 --------------------
