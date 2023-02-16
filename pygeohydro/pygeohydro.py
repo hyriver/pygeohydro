@@ -414,7 +414,9 @@ def nlcd_bygeom(
     """
     if resolution < 30:
         warnings.warn(
-            "NLCD's resolution is 30 m, so finer resolutions are not recommended.", UserWarning, stacklevel=2
+            "NLCD's resolution is 30 m, so finer resolutions are not recommended.",
+            UserWarning,
+            stacklevel=2,
         )
 
     if not isinstance(geometry, (gpd.GeoDataFrame, gpd.GeoSeries)):
