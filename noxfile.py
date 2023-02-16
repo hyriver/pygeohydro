@@ -141,7 +141,7 @@ def tests(session: nox.Session) -> None:
         session.run("coverage", "html")
 
         install_deps(session, "speedup")
-        session.run("pytest", "--doctest-modules", *session.posargs)
+        session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
     else:
         install_deps(session, ",".join(["test"] + extras))
         session.run("pytest", "--doctest-modules", *session.posargs)
