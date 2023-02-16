@@ -73,24 +73,54 @@ typeguard = [
   "pytest-xdist[psutil]",
   "typeguard",
 ]
-
 [project.urls]
 CI = "https://github.com/hyriver/pygeohydro/actions"
 Changelog = "https://docs.hyriver.io/changelogs/pygeohydro.html"
 Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
 Issues = "https://github.com/hyriver/pygeohydro/issues"
 
+[tool.setuptools]
+include-package-data = true
+license-files = ["LICENSE"]
+platforms = ["any"]
+zip-safe = false
 
-[tool.bandit]
-targets = [
-  "pygeohydro"
-]
+[tool.setuptools.package-data]
+pygeohydro = ["py.typed"]
+
+[tool.setuptools.packages]
+find = {namespaces = false}
+
+[tool.setuptools_scm]
+fallback_version = "999"
 
 [tool.black]
 line-length = 100
 
-[tool.codespell]
-skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
+[tool.isort]
+default_section = "THIRDPARTY"
+force_grid_wrap = 0
+include_trailing_comma = true
+known_first_party = "pygeohydro"
+line_length = 100
+multi_line_output = 3
+profile = "black"
+use_parentheses = true
+
+[tool.pytest.ini_options]
+addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
+doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
+filterwarnings = [
+  "ignore:.*distutils.*",
+  "ignore:.*--rsyncdir command line argument.*",
+  "ignore:.*numpy.ndarray size changed.*",
+  "ignore:.*invalid value encountered in cast.*",
+  "ignore:.*'cgi' is deprecated.*",
+]
+testpaths = [
+  "tests",
+  "pygeohydro"
+]
 
 [tool.coverage.report]
 exclude_lines = [
@@ -108,15 +138,13 @@ omit = [
 parallel = true
 source = ['pygeohydro']
 
-[tool.isort]
-default_section = "THIRDPARTY"
-force_grid_wrap = 0
-include_trailing_comma = true
-known_first_party = "pygeohydro"
-line_length = 100
-multi_line_output = 3
-profile = "black"
-use_parentheses = true
+[tool.bandit]
+targets = [
+  "pygeohydro"
+]
+
+[tool.codespell]
+skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
 
 [tool.pycln]
 all = true
@@ -142,36 +170,6 @@ reportUnnecessaryIsInstance = false
 reportUntypedFunctionDecorator = false
 typeCheckingMode = "strict"
 
-[tool.pytest.ini_options]
-addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
-doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
-filterwarnings = [
-  "ignore:.*distutils.*",
-  "ignore:.*--rsyncdir command line argument.*",
-  "ignore:.*numpy.ndarray size changed.*",
-  "ignore:.*invalid value encountered in cast.*",
-  "ignore:.*'cgi' is deprecated.*",
-]
-testpaths = [
-  "tests",
-  "pygeohydro"
-]
-
 [tool.refurb]
 python_version = "3.8"
 quiet = true
-
-[tool.setuptools]
-include-package-data = true
-license-files = ["LICENSE"]
-platforms = ["any"]
-zip-safe = false
-
-[tool.setuptools.package-data]
-pygeohydro = ["py.typed"]
-
-[tool.setuptools.packages]
-find = {namespaces = false}
-
-[tool.setuptools_scm]
-fallback_version = "999"
