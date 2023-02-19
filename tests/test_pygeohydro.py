@@ -92,6 +92,10 @@ class TestNWIS:
         qf = gh.streamflow_fillna(xr.DataArray(q))
         assert np.all(qf == 1)
 
+    def test_ice_negative(self):
+        ice = self.nwis.get_streamflow("04010500", ("2023-01-01", "2023-1-08"))
+        assert ice.isna().sum().item() == 8
+
 
 class TestETA:
     "Test ssebopeta"
