@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import itertools
 import re
 import warnings
@@ -14,9 +15,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 from pygeoogc import ServiceURL
-from pygeoogc import ZeroMatchedError as ZeroMatchedErrorOGC
 from pygeoogc import utils as ogc_utils
-from pynhd import WaterData
 
 from pygeohydro.exceptions import (
     DataNotAvailableError,
@@ -324,35 +323,42 @@ class NWIS:
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
 
-        gii = WaterData("gagesii", 4326, False)
-        try:
-            gages = gii.byid("staid", sites.site_no.to_list())
-        except ZeroMatchedErrorOGC:
-            gages = gpd.GeoDataFrame()
+        urls = [
+            "/".join(
+                (
+                    "https://gist.githubusercontent.com/cheginit",
+                    "2dbc4b9c096f19089dbadb522821e8f3/raw/hcdn_2009_station_ids.txt",
+                )
+            ),
+            "/".join(
+                (
+                    "https://gist.githubusercontent.com/cheginit",
+                    "03129c5a0fb57272792aa4165b06fc19/raw/conus_station_ids.csv",
+                )
+            ),
+        ]
+        resp = ar.retrieve_text(urls)
+        nhd = pd.read_csv(
+            io.StringIO(resp[1]), dtype={"site_no": str, "nhd_id": int, "nhd_areasqkm": float}
+        )
 
-        if len(gages) > 0:
-            sites = pd.merge(
-                sites,
-                gages[["staid", "drain_sqkm", "hcdn_2009"]],
-                left_on="site_no",
-                right_on="staid",
-                how="left",
-            )
-            sites = sites.drop(columns=["staid"])
-            sites["hcdn_2009"] = sites.hcdn_2009 == "yes"
-        else:
-            sites["hcdn_2009"] = False
-            sites["drain_sqkm"] = np.nan
+        sites = pd.merge(
+            sites,
+            nhd,
+            left_on="site_no",
+            right_on="site_no",
+            how="left",
+        )
+        sites["hcdn_2009"] = sites["site_no"].isin(resp[0].split(","))
 
-        numeric_cols += ["drain_sqkm"]
         if "count_nu" in sites:
             numeric_cols.append("count_nu")
         sites[numeric_cols] = sites[numeric_cols].apply(pd.to_numeric, errors="coerce")
 
         return gpd.GeoDataFrame(
             sites,
-            geometry=gpd.points_from_xy(sites.dec_long_va, sites.dec_lat_va),
-            crs="epsg:4326",
+            geometry=gpd.points_from_xy(sites["dec_long_va"], sites["dec_lat_va"]),
+            crs=4326,
         )
 
     def get_parameter_codes(self, keyword: str) -> pd.DataFrame:
@@ -383,7 +389,7 @@ class NWIS:
         >>> from pygeohydro import NWIS
         >>> nwis = NWIS()
         >>> codes = nwis.get_parameter_codes("%discharge%")
-        >>> codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
+        >>> codes.loc[codes.parameter_cd == "00060", "parm_nm"].iloc[0]
         'Discharge, cubic feet per second'
         """
         url = "https://help.waterdata.usgs.gov/code/parameter_cd_nm_query"
@@ -470,9 +476,9 @@ class NWIS:
 
     def _drainage_area_sqm(self, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
         """Get drainage area of the stations."""
-        area = siteinfo[["site_no", "drain_sqkm"]].copy()
-        if area["drain_sqkm"].isna().any():
-            sids = area[area["drain_sqkm"].isna()].site_no
+        area = siteinfo[["site_no", "nhd_areasqkm"]].copy()
+        if area["nhd_areasqkm"].isna().any():
+            sids = area[area["nhd_areasqkm"].isna()].site_no
             queries = [
                 {
                     "parameterCd": "00060",
@@ -489,15 +495,15 @@ class NWIS:
 
             i_idx, a_idx = get_idx(sids)
             # Drainage areas in info are in sq mi and should be converted to sq km
-            area.loc[a_idx, "drain_sqkm"] = info.loc[i_idx, "contrib_drain_area_va"] * 0.38610
-            if area["drain_sqkm"].isna().any():
-                sids = area[area["drain_sqkm"].isna()].site_no
+            area.loc[a_idx, "nhd_areasqkm"] = info.loc[i_idx, "contrib_drain_area_va"] * 0.38610
+            if area["nhd_areasqkm"].isna().any():
+                sids = area[area["nhd_areasqkm"].isna()].site_no
                 i_idx, a_idx = get_idx(sids)
-                area.loc[a_idx, "drain_sqkm"] = info.loc[i_idx, "drain_area_va"] * 0.38610
+                area.loc[a_idx, "nhd_areasqkm"] = info.loc[i_idx, "drain_area_va"] * 0.38610
 
-        if area["drain_sqkm"].isna().all():
+        if area["nhd_areasqkm"].isna().all():
             raise DataNotAvailableError("drainage")
-        return area.set_index("site_no").drain_sqkm * 1e6
+        return area.set_index("site_no").nhd_areasqkm * 1e6
 
     def _get_streamflow(
         self,
