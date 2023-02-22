@@ -133,6 +133,17 @@ dependencies:
 # optional deps for speeding up some operations
 - bottleneck
 
+# Other deps required by example notebooks
+- mapclassify
+- contextily
+- hvplot
+- osmnx
+- tqdm
+- pytables
+- ffmpeg
+- xarray-spatial
+- datashader
+
 # dev deps
 - ipywidgets
 - codespell
