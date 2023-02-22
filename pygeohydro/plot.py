@@ -282,8 +282,8 @@ def interactive_map(
 
     sites["drain_area_va"] = sites["drain_area_va"].astype("str") + " sqmi"
     sites["contrib_drain_area_va"] = sites["contrib_drain_area_va"].astype("str") + " sqmi"
-    sites["drain_sqkm"] = sites["drain_sqkm"].astype("str") + " sqkm"
-    for c in ("drain_area_va", "contrib_drain_area_va", "drain_sqkm"):
+    sites["nhd_areasqkm"] = sites["nhd_areasqkm"].astype("str") + " sqkm"
+    for c in ("drain_area_va", "contrib_drain_area_va", "nhd_areasqkm"):
         sites.loc[sites[c].str.contains("nan"), c] = "N/A"
 
     cols_old = [
@@ -294,7 +294,7 @@ def interactive_map(
         "huc_cd",
         "drain_area_va",
         "contrib_drain_area_va",
-        "drain_sqkm",
+        "nhd_areasqkm",
         "hcdn_2009",
     ]
 

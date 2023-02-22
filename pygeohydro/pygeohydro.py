@@ -862,7 +862,7 @@ class NID:
         --------
         >>> from pygeohydro import NID
         >>> nid = NID()
-        >>> dams = nid.get_bygeom((-69.77, 45.07, -69.31, 45.45), "epsg:4326")
+        >>> dams = nid.get_bygeom((-69.77, 45.07, -69.31, 45.45), 4326)
         >>> print(dams.name.iloc[0])
         Little Moose
         """
