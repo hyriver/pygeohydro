@@ -7,6 +7,11 @@ History
 
 New Features
 ~~~~~~~~~~~~
+- Add a new column to the dataframe returned by ``NWIS.get_info``, called
+  ``nhd_comid``, and rename ``drain_sqkm`` to ``nhd_areasqkm``. The new
+  drainage area is the best available estimates of stations' drainage area
+  that have been extracted from the NHDPlus. The new ``nhd_comid`` column
+  makes it easier to link stations to NHDPlus.
 - In ``get_camels``, return ``qobs`` with negatives values set to ``NaN``.
   Also, Add a new variable called ``Newman_2017`` to both datasets for
   identifying the 531 stations that were used in
