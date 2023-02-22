@@ -16,7 +16,7 @@ from pygeohydro import NID, NWIS, WBD
 
 has_typeguard = True if sys.modules.get("typeguard") else False
 
-DEF_CRS = "epsg:4326"
+DEF_CRS = 4326
 ALT_CRS = "epsg:3542"
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
@@ -50,7 +50,7 @@ class TestNWIS:
 
     def test_qobs_mmd(self):
         df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-        assert_close(df[f"USGS-{SID_NATURAL}"].sum().item(), 27.814)
+        assert_close(df[f"USGS-{SID_NATURAL}"].sum().item(), 27.7142)
 
     def test_cst_tz(self):
         q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
@@ -64,7 +64,7 @@ class TestNWIS:
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
         info = self.nwis.get_info(query, expanded=True)
-        assert_close(info.drain_sqkm.item(), 769.048)
+        assert_close(info.nhd_areasqkm.item(), 771.82)
         assert info.hcdn_2009.item()
 
     def test_info_box(self):
@@ -75,7 +75,7 @@ class TestNWIS:
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
         assert (
-            codes.loc[codes.parameter_cd == "00060", "parm_nm"][0]
+            codes.loc[codes.parameter_cd == "00060", "parm_nm"].iloc[0]
             == "Discharge, cubic feet per second"
         )
 
@@ -321,7 +321,7 @@ def test_sensorthings():
     assert df["description"].iloc[0] == "Stream"
 
     df = sensor.sensor_property("Datastreams", "USGS-09380000")
-    assert df["@iot.id"].iloc[0] == "9d24cf50257a4f60b76b92e38f286cde"
+    assert df["@iot.id"].iloc[0] == "a62122d8ff094125b63bb2f73410b2b4"
 
 
 def test_show_versions():

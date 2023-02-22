@@ -51,7 +51,7 @@ class TestNLCDExceptions:
     "Test NLCD Exceptions"
     years = {"cover": [2016, 2019]}
     res = 1e3
-    geom = gpd.GeoSeries([GEOM], crs="EPSG:4326")
+    geom = gpd.GeoSeries([GEOM], crs=4326)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_years_type(self):
