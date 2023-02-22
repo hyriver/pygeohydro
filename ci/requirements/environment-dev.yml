@@ -153,6 +153,7 @@ dependencies:
 - psutil
 - pytest-cov
 - pytest-xdist
+- pytest-sugar
 
 - pip
 - pip:
