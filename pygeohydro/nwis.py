@@ -24,6 +24,12 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 
+
+try:
+    from pandas.errors import IntCastingNaNError
+except ImportError:
+    IntCastingNaNError = TypeError
+
 T_FMT = "%Y-%m-%d"
 __all__ = ["NWIS", "streamflow_fillna"]
 
@@ -99,6 +105,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
             "time": df.index.to_numpy("datetime64[ns]"),
             "station_id": s_fill,
         },
+        name=streamflow.name or "discharge",
     )
 
 
@@ -350,6 +357,10 @@ class NWIS:
             how="left",
         )
         sites["hcdn_2009"] = sites["site_no"].isin(resp[0].split(","))
+        try:
+            sites["nhd_id"] = sites["nhd_id"].astype("int32")
+        except (ValueError, TypeError, IntCastingNaNError):
+            sites["nhd_id"] = sites["nhd_id"].astype("Int32")
 
         if "count_nu" in sites:
             numeric_cols.append("count_nu")
