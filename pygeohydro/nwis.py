@@ -24,7 +24,6 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 
-
 try:
     from pandas.errors import IntCastingNaNError
 except ImportError:
