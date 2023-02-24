@@ -336,18 +336,13 @@ class NLCD:
             for yr in yrs
         ]
 
-    def get_response(
-        self, bbox: tuple[float, float, float, float], resolution: float
-    ) -> dict[str, bytes]:
-        """Get response from a url."""
-        return self.wms.getmap_bybox(bbox, resolution, self.crs)
-
-    def to_xarray(
+    def get_map(
         self,
-        r_dict: dict[str, bytes],
-        geometry: Polygon | MultiPolygon | None = None,
+        geometry: Polygon | MultiPolygon,
+        resolution: int,
     ) -> xr.Dataset:
-        """Convert response to xarray.DataArray."""
+        """Get NLCD response and convert it to ``xarray.DataArray``."""
+        r_dict = self.wms.getmap_bybox(geometry.bounds, resolution, self.crs)
         gtiff2xarray = tlz.partial(
             geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255
         )
@@ -376,7 +371,7 @@ class NLCD:
 
 def nlcd_bygeom(
     geometry: gpd.GeoSeries | gpd.GeoDataFrame,
-    resolution: float,
+    resolution: int,
     years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
     crs: CRSTYPE = 4326,
@@ -430,11 +425,7 @@ def nlcd_bygeom(
 
     nlcd_wms = NLCD(years=years, region=region, crs=crs, ssl=ssl)
 
-    ds = {
-        i: nlcd_wms.to_xarray(nlcd_wms.get_response(g.bounds, resolution), g)
-        for i, g in _geometry.items()
-    }
-    return ds
+    return {i: nlcd_wms.get_map(g, resolution) for i, g in _geometry.items()}
 
 
 def nlcd_bycoords(
@@ -473,8 +464,8 @@ def nlcd_bycoords(
     nlcd_wms = NLCD(years=years, region=region, crs="epsg:3857", ssl=ssl)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=4326)
     points_proj = points.to_crs(nlcd_wms.crs)
-    bounds = points_proj.buffer(50, cap_style=3)
-    ds_list = [nlcd_wms.to_xarray(nlcd_wms.get_response(b.bounds, 30)) for b in bounds]
+    geoms = points_proj.buffer(50, cap_style=3)
+    ds_list = [nlcd_wms.get_map(g, 30) for g in geoms]
 
     def get_value(da: xr.DataArray, x: float, y: float) -> Number:
         nodata = da.attrs["nodatavals"][0]
@@ -626,12 +617,18 @@ def nlcd_area_percent(
     if year not in valid_year:
         raise InputValueError("year", valid_year)
 
-    if isinstance(geo_df, gpd.GeoSeries):
-        geo_df = geo_df.to_frame("geometry")
+    if not isinstance(geo_df, (gpd.GeoDataFrame, gpd.GeoSeries)):
+        raise InputTypeError("geometry", "GeoDataFrame or GeoSeries")
 
-    nlcd = nlcd_bygeom(geo_df, 30, {"impervious": year, "cover": year}, region)
+    if geo_df.crs is None:
+        raise MissingCRSError
+
+    geoms = geo_df.to_crs(4326).geometry
+
+    wms = NLCD(years={"impervious": year, "cover": year}, region=region)
+
     return pd.DataFrame.from_dict(
-        {hid: _area_percent(ds, year) for hid, ds in nlcd.items()},
+        {i: _area_percent(wms.get_map(g, 30), year) for i, g in geoms.items()},
         orient="index",
     )
 
