@@ -160,6 +160,12 @@ class TestNLCD:
         roughness = gh.overland_roughness(lulc[0].cover_2016)
         assert_close(roughness.mean().item(), 0.3197)
 
+    def test_area(self):
+        geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
+        area = gh.nlcd_area_percent(geom)
+        assert_close(area[["urban", "natural"]].sum(axis=1), 100)
+        assert_close(area[["natural", "developed", "impervious"]].sum(axis=1), 100)
+
 
 class TestNID:
     nid = NID()
