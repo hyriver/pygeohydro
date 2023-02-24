@@ -1,11 +1,6 @@
 """Top-level package for PyGeoHydro."""
 from importlib.metadata import PackageNotFoundError, version
 
-if int(version("shapely").split(".")[0]) > 1:
-    import os
-
-    os.environ["USE_PYGEOS"] = "0"
-
 from pygeohydro import helpers, plot
 from pygeohydro.exceptions import (
     DataNotAvailableError,
@@ -30,6 +25,7 @@ from pygeohydro.pygeohydro import (
     nlcd_bycoords,
     nlcd_bygeom,
     overland_roughness,
+    nlcd_area_percent,
     soil_gnatsgo,
     soil_properties,
     ssebopeta_bycoords,
@@ -58,6 +54,7 @@ __all__ = [
     "interactive_map",
     "nlcd_bygeom",
     "nlcd_bycoords",
+    "nlcd_area_percent",
     "ssebopeta_bygeom",
     "ssebopeta_bycoords",
     "soil_properties",
