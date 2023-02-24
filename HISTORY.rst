@@ -7,6 +7,12 @@ History
 
 New Features
 ~~~~~~~~~~~~
+- Add a new function, called ``nlcd_area_percent``, for computing the
+  percentages or natural, developed, and impervious areas within geometries
+  of a given ``GeoDataFrame``. This function uses imperviousness and land
+  use/land cover data from NLCD to compute the area percentages of the natural,
+  developed, and impervious areas. For more information please refer to the
+  function's documentation.
 - Add a new column to the dataframe returned by ``NWIS.get_info``, called
   ``nhd_comid``, and rename ``drain_sqkm`` to ``nhd_areasqkm``. The new
   drainage area is the best available estimates of stations' drainage area
