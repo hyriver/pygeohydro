@@ -25,6 +25,11 @@ New Features
 - Add a new function, called ``streamflow_fillna``, for filling missing
   streamflow values (``NAN``) with day-of-year average values.
 
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Improve performance of all NLCD functions by merging two methods of
+  the ``NLCD`` and also reducing the memory footprint of the functions.
+
 0.13.12 (2023-02-10)
 --------------------
 
