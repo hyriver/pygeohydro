@@ -54,6 +54,7 @@ __all__ = [
     "nlcd_bycoords",
     "cover_statistics",
     "overland_roughness",
+    "nlcd_area_percent",
     "soil_properties",
     "soil_gnatsgo",
     "NID",
@@ -254,8 +255,9 @@ class NLCD:
         Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
         land cover data for 2016 and 2019.
     region : str, optional
-        Region in the US, defaults to ``L48``. Valid values are L48 (for CONUS), HI (for Hawaii),
-        AK (for Alaska), and PR (for Puerto Rico). Both lower and upper cases are acceptable.
+        Region in the US that the input geometries are located, defaults to ``L48``.
+        Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
+        and ``PR`` (for Puerto Rico). Both lower and upper cases are acceptable.
     crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
@@ -379,7 +381,7 @@ def nlcd_bygeom(
     region: str = "L48",
     crs: CRSTYPE = 4326,
     ssl: SSLContext | bool | None = None,
-) -> dict[int, xr.Dataset]:
+) -> dict[int, xr.Dataset] | dict[str, xr.Dataset]:
     """Get data from NLCD database (2019).
 
     Parameters
@@ -396,9 +398,9 @@ def nlcd_bygeom(
         Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
         land cover data for 2016 and 2019.
     region : str, optional
-        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
-        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
-        Both lower and upper cases are acceptable.
+        Region in the US that the input geometries are located, defaults to ``L48``.
+        Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
+        and ``PR`` (for Puerto Rico). Both lower and upper cases are acceptable.
     crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
@@ -453,9 +455,9 @@ def nlcd_bycoords(
         Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
         land cover data for 2016 and 2019.
     region : str, optional
-        Region in the US, defaults to ``L48``. Valid values are ``L48`` (for CONUS),
-        ``HI`` (for Hawaii), ``AK`` (for Alaska), and ``PR`` (for Puerto Rico).
-        Both lower and upper cases are acceptable.
+        Region in the US that the input geometries are located, defaults to ``L48``.
+        Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
+        and ``PR`` (for Puerto Rico). Both lower and upper cases are acceptable.
     ssl : bool or SSLContext, optional
         SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
         SSL certification verification.
@@ -552,6 +554,86 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
     }
 
     return Stats(class_percentage, category_percentage)
+
+
+def _area_percent(nlcd: xr.Dataset, year: int) -> dict[str, float]:
+    """Calculate the percentage of the area for each land cover class."""
+    cover_nodata = nlcd[f"cover_{year}"].rio.nodata
+    if np.isnan(cover_nodata):
+        msk = ~nlcd[f"cover_{year}"].isnull()
+    elif cover_nodata > 0:
+        msk = nlcd[f"cover_{year}"] < cover_nodata
+    else:
+        msk = nlcd[f"cover_{year}"] > cover_nodata
+    cell_total = msk.sum()
+
+    msk = nlcd[f"cover_{year}"].isin(range(21, 25))
+    urban = msk.sum() / cell_total
+    natural = 1 - urban
+
+    impervious = nlcd.where(msk)[f"impervious_{year}"].mean() * urban / 100
+    developed = urban - impervious
+    natural = natural.compute().item() * 100
+    developed = developed.compute().item() * 100
+    impervious = impervious.compute().item() * 100
+    return {
+        "natural": natural,
+        "developed": developed,
+        "impervious": impervious,
+        "urban": developed + impervious,
+    }
+
+
+def nlcd_area_percent(
+    geo_df: gpd.GeoSeries | gpd.GeoDataFrame,
+    year: int = 2019,
+    region: str = "L48",
+) -> pd.DataFrame:
+    """Compute the area percentages of the natural, developed, and impervious areas.
+
+    Notes
+    -----
+    This function uses imperviousness and land use/land cover data from NLCD
+    to compute the area percentages of the natural, developed, and impervious areas.
+    It considers land cover classes of 21 to 24 as urban and the rest as natural.
+    Then, uses imperviousness percentage to partition the urban area into developed
+    and impervious areas. So, ``urban = developed + impervious`` and always
+    ``natural + urban = natural + developed + impervious = 100``.
+
+    Parameters
+    ----------
+    geometry : geopandas.GeoDataFrame or geopandas.GeoSeries
+        A GeoDataFrame or GeoSeries with the geometry to query. The indices are used
+        as keys in the output dictionary.
+    year : int, optional
+        Year of the NLCD data, defaults to 2019. Available years are 2019, 2016, 2013,
+        2011, 2008, 2006, 2004, and 2001.
+    region : str, optional
+        Region in the US that the input geometries are located, defaults to ``L48``.
+        Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
+        and ``PR`` (for Puerto Rico). Both lower and upper cases are acceptable.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A dataframe with the same index as input ``geo_df`` and columns are the area
+        percentages of the natural, developed, impervious, and urban
+        (sum of developed and impervious) areas. Sum of urban and natural percentages
+        is always 100, as well as the sume of natural, developed, and impervious
+        percentages.
+    """
+    valid_year = (2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001)
+    if year not in valid_year:
+        raise InputValueError("year", valid_year)
+
+    if isinstance(geo_df, gpd.GeoSeries):
+        geo_df = geo_df.to_frame("geometry")
+
+    nlcd = nlcd_bygeom(geo_df, 30, {"impervious": year, "cover": year}, region)
+    return pd.DataFrame.from_dict(
+        {hid: _area_percent(ds, year) for hid, ds in nlcd.items()},
+        orient="index",
+    )
 
 
 class NID:
