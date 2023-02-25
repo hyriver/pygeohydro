@@ -376,7 +376,7 @@ def nlcd_bygeom(
     region: str = "L48",
     crs: CRSTYPE = 4326,
     ssl: SSLContext | bool | None = None,
-) -> dict[int, xr.Dataset] | dict[str, xr.Dataset]:
+) -> dict[int | str, xr.Dataset]:
     """Get data from NLCD database (2019).
 
     Parameters
