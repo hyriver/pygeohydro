@@ -52,7 +52,7 @@ dependencies = [
   "rasterio>=1.2",
   "rioxarray>=0.11",
   "scipy",
-  "shapely>=1.8",
+  "shapely>=2",
   "ujson",
   "xarray>=2022.03",
 ]
