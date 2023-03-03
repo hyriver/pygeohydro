@@ -1034,7 +1034,7 @@ class NID:
         >>> nid = NID()
         >>> dams, contexts = nid.get_suggestions("houston", "city")
         >>> print(contexts["suggestion"].to_list())
-        ["Houston", "Houston Lake"]
+        ['Houston', 'Houston Lake']
         """
         fields = self.valid_fields.to_list()
         params = {"text": text}
