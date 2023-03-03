@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import io
-from typing import Any, cast, overload
+from typing import Any, cast, overload, Literal
 
 import async_retriever as ar
 import cytoolz.curried as tlz
@@ -75,7 +75,7 @@ class WaterQuality:
         return f"{self.wq_url}/data/{endpoint}/search"
 
     def get_json(
-        self, endpoint: str, kwds: dict[str, str], request_method: str = "GET"
+        self, endpoint: str, kwds: dict[str, str], request_method: Literal['get', 'GET', 'post', 'POST'] = "GET"
     ) -> gpd.GeoDataFrame:
         """Get the JSON response from the Water Quality Web Service.
 
@@ -169,7 +169,7 @@ class WaterQuality:
         return self.get_json("station", kwds)
 
     def get_csv(
-        self, endpoint: str, kwds: dict[str, str], request_method: str = "GET"
+        self, endpoint: str, kwds: dict[str, str], request_method: Literal['get', 'GET', 'post', 'POST'] = "GET"
     ) -> pd.DataFrame:
         """Get the CSV response from the Water Quality Web Service.
 
