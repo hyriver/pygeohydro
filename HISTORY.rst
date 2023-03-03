@@ -2,8 +2,8 @@
 History
 =======
 
-0.13.13 (unreleased)
---------------------
+0.14.0 (unreleased)
+-------------------
 
 New Features
 ~~~~~~~~~~~~
@@ -25,8 +25,14 @@ New Features
 - Add a new function, called ``streamflow_fillna``, for filling missing
   streamflow values (``NAN``) with day-of-year average values.
 
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Bump the minimum required version of ``shapely`` to 2.0,
+  and use its new API.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- Sync all minor versions of HyRiver packages to 0.14.0.
 - Improve performance of all NLCD functions by merging two methods of
   the ``NLCD`` and also reducing the memory footprint of the functions.
 
