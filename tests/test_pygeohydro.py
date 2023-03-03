@@ -9,7 +9,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 from pygeoogc import utils as ogc_utils
-from shapely.geometry import Polygon
+from shapely import Polygon
 
 import pygeohydro as gh
 from pygeohydro import NID, NWIS, WBD
@@ -172,8 +172,8 @@ class TestNID:
     ids = ("KY01232", "GA02400", "NE04081", "IL55070", "TN05345")
 
     def test_suggestion(self):
-        dams, contexts = self.nid.get_suggestions("texas", "city")
-        assert dams.empty and contexts.loc["CITY", "value"] == "Texas City"
+        dams, contexts = self.nid.get_suggestions("houston", "city")
+        assert dams.empty and contexts["suggestion"].to_list() == ["Houston", "Houston Lake"]
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_filter(self):

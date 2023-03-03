@@ -3,7 +3,7 @@ import sys
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Polygon
+from shapely import Polygon
 
 import pygeohydro as gh
 from pygeohydro import DataNotAvailableError, InputRangeError, InputTypeError, InputValueError
