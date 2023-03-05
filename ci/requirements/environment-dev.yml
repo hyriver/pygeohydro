@@ -22,7 +22,6 @@ dependencies:
 - defusedxml
 - owslib >=0.27.2
 - pyproj >=2.2
-- pyyaml
 - requests
 - requests-cache >=0.9.6
 - shapely >=2.0
