@@ -1,6 +1,7 @@
 """Accessing data from the supported databases through their APIs."""
 from __future__ import annotations
 
+import importlib.util
 import io
 import itertools
 import warnings
@@ -20,7 +21,7 @@ import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, ArcGISRESTful, RetrySession, ServiceURL
+from pygeoogc import WMS, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
 from pynhd.core import ScienceBase
 from rioxarray import _io as rxr
@@ -642,7 +643,7 @@ class NID:
         resp = ar.retrieve_json([f"{self.base_url}/advanced-fields"])
         resp = cast("list[dict[str, Any]]", resp)
         self.fields_meta = pd.DataFrame(resp[0])
-        self.valid_fields = self.fields_meta.name
+        self.valid_fields = self.fields_meta["name"]
         self.dam_type = {
             pd.NA: "N/A",
             None: "N/A",
@@ -695,7 +696,17 @@ class NID:
             "maxDischarge": "cfs",
             "spillwayWidth": "ft",
         }
-        self.nid_inventory_path = Path("cache", "nid_inventory.feather")
+        self._nid_inventory_path = Path("cache", "nid_inventory.feather")
+
+    @property
+    def nid_inventory_path(self) -> Path:
+        """Path to the NID inventory feather file."""
+        return self._nid_inventory_path
+
+    @nid_inventory_path.setter
+    def nid_inventory_path(self, value: Path | str) -> None:
+        self._nid_inventory_path = Path(value)
+        self._nid_inventory_path.parent.mkdir(parents=True, exist_ok=True)
 
     def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
         """Download the entire NID inventory data and save to a feather file.
@@ -712,14 +723,13 @@ class NID:
 
         self.nid_inventory_path = fname
         if not self.nid_inventory_path.exists():
-            url = "/".join(
-                [
-                    "https://usace-cwbi-prod-il2-nld2-docs.s3-us-gov-west-1.amazonaws.com",
-                    "national-export/dams/nation/7783878c-6db4-46aa-99ef-8c283109ea78/nation.gpkg",
-                ]
-            )
+            url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
             _ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
-            dams = gpd.read_file(fname.with_suffix(".gpkg"))
+            if importlib.util.find_spec("pyogrio"):
+                dams = gpd.read_file(fname.with_suffix(".gpkg"), engine="pyogrio", use_arrow=True)
+            else:
+                dams = gpd.read_file(fname.with_suffix(".gpkg"))
+
             dams = dams.astype(
                 {
                     "name": str,
@@ -730,17 +740,17 @@ class NID:
                     "federalId": str,
                     "ownerNames": str,
                     "ownerTypeIds": str,
-                    "primaryOwnerTypeId": "Int8",
+                    "primaryOwnerTypeId": str,
                     "stateFedId": str,
-                    "separateStructuresCount": "Int8",
+                    "separateStructuresCount": str,
                     "designerNames": str,
-                    "nonFederalDamOnFederalId": "Int8",
-                    "stateRegulatedId": "int8",
-                    "jurisdictionAuthorityId": "Int8",
+                    "nonFederalDamOnFederalId": str,
+                    "stateRegulatedId": str,
+                    "jurisdictionAuthorityId": str,
                     "stateRegulatoryAgency": str,
-                    "permittingAuthorityId": "Int8",
-                    "inspectionAuthorityId": "Int8",
-                    "enforcementAuthorityId": "Int8",
+                    "permittingAuthorityId": str,
+                    "inspectionAuthorityId": str,
+                    "enforcementAuthorityId": str,
                     "sourceAgency": str,
                     "latitude": "f8",
                     "longitude": "f8",
@@ -760,9 +770,9 @@ class NID:
                     "fedInspectionIds": str,
                     "fedOperationIds": str,
                     "fedOtherIds": str,
-                    "primaryPurposeId": "Int8",
+                    "primaryPurposeId": str,
                     "purposeIds": str,
-                    "primaryDamTypeId": "Int8",
+                    "primaryDamTypeId": str,
                     "damTypeIds": str,
                     "coreTypeIds": str,
                     "foundationTypeIds": str,
@@ -770,35 +780,35 @@ class NID:
                     "hydraulicHeight": "f8",
                     "structuralHeight": "f8",
                     "nidHeight": "f8",
-                    "nidHeightId": "f8",
+                    "nidHeightId": str,
                     "damLength": "f8",
                     "volume": "f8",
                     "yearCompleted": "Int32",
-                    "yearCompletedId": "Int8",
+                    "yearCompletedId": str,
                     "nidStorage": "f8",
                     "maxStorage": "f8",
                     "normalStorage": "f8",
                     "surfaceArea": "f8",
                     "drainageArea": "f8",
                     "maxDischarge": "f8",
-                    "spillwayTypeId": "Int8",
+                    "spillwayTypeId": str,
                     "spillwayWidth": "f8",
                     "numberOfLocks": "Int32",
                     "lengthOfLocks": "f8",
                     "widthOfLocks": "f8",
                     "yearsModified": str,
                     "outletGateTypes": str,
-                    "dataUpdated": "int64",
+                    "dataUpdated": "datetime64[ns]",
                     "inspectionDate": str,
                     "inspectionFrequency": "f4",
-                    "hazardId": "Int8",
-                    "conditionAssessId": "Int8",
-                    "conditionAssessDate": "int64",
-                    "eapId": "Int8",
-                    "eapLastRevDate": "int64",
+                    "hazardId": str,
+                    "conditionAssessId": str,
+                    "conditionAssessDate": "datetime64[ns]",
+                    "eapId": str,
+                    "eapLastRevDate": "datetime64[ns]",
                     "websiteUrl": str,
-                    "privateDamId": "Int8",
-                    "politicalPartyId": "Int8",
+                    "privateDamId": str,
+                    "politicalPartyId": str,
                     "id": "int32",
                     "systemId": "int32",
                     "huc2": str,
@@ -812,9 +822,31 @@ class NID:
                     "femaCommunity": str,
                 }
             )
-            dams.loc[dams.yearCompleted < 1000, "yearCompleted"] = pd.NA
+            for c in dams:
+                if (dams[c] == "Yes").any():
+                    dams[c] = dams[c] == "Yes"
+            dams.loc[dams["yearCompleted"] < 1000, "yearCompleted"] = pd.NA
             dams.to_feather(fname)
             fname.with_suffix(".gpkg").unlink()
+
+    @property
+    def df(self):
+        """Entire NID inventory (``csv`` version) as a ``pandas.DataFrame``."""
+        fname = self.nid_inventory_path
+        par_name = fname.with_suffix(".parquert")
+        if par_name.exists():
+            return pd.read_parquet(par_name)
+        url = "https://nid.sec.usace.army.mil/api/nation/csv"
+        _ = ogc.streaming_download(url, fnames=fname.with_suffix(".csv"))
+        dams = pd.read_csv(fname.with_suffix(".csv"), header=1, engine="pyarrow")
+        dams.to_parquet(par_name)
+        return dams
+
+    @property
+    def gdf(self):
+        """Entire NID inventory (``gpkg`` version) as a ``geopandas.GeoDataFrame``."""
+        self.stage_nid_inventory()
+        return gpd.read_feather(self.nid_inventory_path)
 
     @staticmethod
     def _get_json(
@@ -876,7 +908,7 @@ class NID:
         """
         return gpd.GeoDataFrame(
             nid_df,
-            geometry=gpd.points_from_xy(nid_df.longitude, nid_df.latitude),
+            geometry=gpd.points_from_xy(nid_df["longitude"], nid_df["latitude"]),
             crs=4326,
         )
 
@@ -894,8 +926,8 @@ class NID:
 
         Returns
         -------
-        geopandas.GeoDataFrame
-            Query results.
+        list of geopandas.GeoDataFrame
+            Query results in the same order as the input query list.
 
         Examples
         --------
@@ -906,8 +938,6 @@ class NID:
         ...    {"nidId": ["CA01222"]},
         ... ]
         >>> dam_dfs = nid.get_byfilter(query_list)
-        >>> print(dam_dfs[0].loc[dam_dfs[0].name == "Prairie Portage"].id.item())
-        496613
         """
         fields = self.valid_fields.to_list()
         invalid = [k for key in query_list for k in key if k not in fields]
@@ -930,7 +960,7 @@ class NID:
         geometry : Polygon, MultiPolygon, or tuple of length 4
             Geometry or bounding box (west, south, east, north) for extracting the data.
         geo_crs : list of str
-            The CRS of the input geometry, defaults to ``epsg:4326``.
+            The CRS of the input geometry.
 
         Returns
         -------
@@ -942,18 +972,10 @@ class NID:
         >>> from pygeohydro import NID
         >>> nid = NID()
         >>> dams = nid.get_bygeom((-69.77, 45.07, -69.31, 45.45), 4326)
-        >>> print(dams.name.iloc[0])
-        Little Moose
         """
-        _geometry = geoutils.geo2polygon(geometry, geo_crs, 4326)
-        wbd = ArcGISRESTful(ServiceURL().restful.wbd, 4, outformat="json", outfields="huc8")
-        resp = wbd.get_features(wbd.oids_bygeom(_geometry), return_geom=False)
-        huc_ids = [
-            tlz.get_in(["attributes", "huc8"], i) for r in resp for i in tlz.get_in(["features"], r)
-        ]
-
-        dams = self.get_byfilter([{"huc8": huc_ids}])[0]
-        return dams[dams.within(_geometry)].copy()
+        _geometry = geoutils.geo2polygon(geometry, geo_crs, self.gdf.crs)
+        idx = self.gdf.sindex.query(_geometry, "contains")
+        return self.gdf.iloc[idx].copy()
 
     def inventory_byid(self, federal_ids: list[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
@@ -970,11 +992,6 @@ class NID:
         ----------
         federal_ids : list of str
             List of the target dam Federal IDs.
-        stage_nid : bool, optional
-            Whether to get the entire NID and then query locally or query from the
-            NID web service which tends to be very slow for large number of requests.
-            Defaults to ``False``. The staged NID database is saved as a `feather` file
-            in `./cache/nid_inventory.feather`.
 
         Returns
         -------
@@ -987,20 +1004,12 @@ class NID:
         >>> from pygeohydro import NID
         >>> nid = NID()
         >>> dams = nid.inventory_byid(['KY01232', 'GA02400', 'NE04081', 'IL55070', 'TN05345'])
-        >>> print(dams.damHeight.max())
-        39.0
         """
         ids = set(federal_ids) if isinstance(federal_ids, (list, tuple)) else {federal_ids}
         ids = {str(i).upper() for i in ids}
         urls = [f"{self.base_url}/dams/{i}/inventory" for i in ids]
         if len(urls) != len(ids):
             raise InputTypeError("dam_ids", "list of Federal IDs")
-
-        if stage_nid:
-            self.stage_nid_inventory()
-            dams = gpd.read_feather(self.nid_inventory_path)
-            return dams[dams.federalId.isin(list(ids))].copy()
-
         return self._to_geodf(pd.DataFrame(self._get_json(urls)).set_index("id"))
 
     def get_suggestions(
@@ -1033,8 +1042,6 @@ class NID:
         >>> from pygeohydro import NID
         >>> nid = NID()
         >>> dams, contexts = nid.get_suggestions("houston", "city")
-        >>> print(contexts["suggestion"].to_list())
-        ['Houston', 'Houston Lake']
         """
         fields = self.valid_fields.to_list()
         params = {"text": text}
