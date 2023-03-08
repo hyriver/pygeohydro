@@ -1,7 +1,6 @@
 """Tests for PyGeoHydro package."""
 import io
 import shutil
-import sys
 
 import geopandas as gpd
 import numpy as np
@@ -14,10 +13,8 @@ from shapely import Polygon
 import pygeohydro as gh
 from pygeohydro import NID, NWIS, WBD
 
-has_typeguard = True if sys.modules.get("typeguard") else False
-
 DEF_CRS = 4326
-ALT_CRS = "epsg:3542"
+ALT_CRS = 3542
 SID_NATURAL = "01031500"
 SID_URBAN = "11092450"
 DATES = ("2005-01-01", "2005-01-31")
@@ -175,7 +172,6 @@ class TestNID:
         dams, contexts = self.nid.get_suggestions("houston", "city")
         assert dams.empty and contexts["suggestion"].to_list() == ["Houston", "Houston Lake"]
 
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_filter(self):
         query_list = [
             {"drainageArea": ["[200 500]"]},
@@ -192,12 +188,16 @@ class TestNID:
         dams = self.nid.inventory_byid(self.ids, stage_nid=True)
         assert_close(dams.damHeight.max(), 39)
 
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_geom(self):
         dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
         bbox = ogc_utils.match_crs(GEOM.bounds, DEF_CRS, ALT_CRS)
         dams_box = self.nid.get_bygeom(bbox, ALT_CRS)
-        assert dams_geo.name.iloc[0] == dams_box.name.iloc[0] == "Little Moose"
+        name = "Pingree Pond"
+        assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
+
+    def test_nation(self):
+        assert self.nid.df.shape == (91752, 77)
+        assert self.nid.gdf.shape == (91604, 92)
 
 
 class TestWaterQuality:
