@@ -2,6 +2,22 @@
 History
 =======
 
+0.14.1 (unreleased)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Update links in ``NID`` to the latest CSV and GPKG versions of
+  the NID dataset.
+- Add two new properties to ``NID`` to access the entire NID dataset.
+  You can use ``NID.df`` to access the CSV version as a
+  ``pandas.DataFrame`` and ``NID.gdf`` to access the GPKG version
+  as a ``geopandas.GeoDataFrame``. Installing ``pyogrio`` is highly
+  recommended for much faster reading of the GPKG version.
+- Refactor ``NID.bygeom`` to use the new ``NID.gdf`` property for
+  spatial querying of the dataset. This change should make the query
+  much faster.
+
 0.14.0 (2023-03-05)
 -------------------
 
