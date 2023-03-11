@@ -87,7 +87,7 @@ repos:
     args: [--max-line-length, '100']
 
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.2.2
+  rev: v2.2.4
   hooks:
   - id: codespell
     name: Check common misspellings in text files with codespell.
@@ -126,7 +126,7 @@ repos:
     - numpy
 
 - repo: https://github.com/PyCQA/bandit
-  rev: 1.7.4
+  rev: 1.7.5
   hooks:
   - id: bandit
     name: Check for security issues with bandit
