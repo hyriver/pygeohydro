@@ -115,6 +115,7 @@ repos:
     - flake8-docstrings
     - flake8-type-checking
     - flake8-simplify
+    - flake8-print
     - pep8-naming
 
 - repo: https://github.com/dosisod/refurb
