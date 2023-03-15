@@ -138,6 +138,7 @@ targets = [
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
+ignore-words-list = "gage"
 
 [tool.pycln]
 all = true
