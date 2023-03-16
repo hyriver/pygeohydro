@@ -41,7 +41,6 @@ dependencies = [
   "geopandas>=0.10",
   "h5netcdf",
   "hydrosignatures>=0.14",
-  "lxml",
   "matplotlib>=3.5",
   "numpy>=1.21",
   "pandas>=1",
@@ -49,10 +48,8 @@ dependencies = [
   "pygeoutils>=0.14",
   "pynhd>=0.14",
   "pyproj>=2.2",
-  "rasterio>=1.2",
   "rioxarray>=0.11",
   "scipy",
-  "shapely>=2",
   "ujson",
   "xarray>=2022.03",
 ]
