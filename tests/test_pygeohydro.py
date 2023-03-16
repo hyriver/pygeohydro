@@ -327,7 +327,7 @@ def test_sensorthings():
     assert df["description"].iloc[0] == "Stream"
 
     df = sensor.sensor_property("Datastreams", "USGS-09380000")
-    assert df["@iot.id"].iloc[0] == "a62122d8ff094125b63bb2f73410b2b4"
+    assert df["observationType"].unique()[0] == "Instantaneous"
 
 
 def test_show_versions():
