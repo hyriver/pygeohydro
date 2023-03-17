@@ -273,7 +273,7 @@ def interactive_map(
     if isinstance(nwis_kwds, dict):
         query.update(nwis_kwds)
 
-    sites = nwis.get_info(query, expanded=True)
+    sites = nwis.get_info(query, expanded=True, nhd_info=True)
 
     sites["coords"] = list(sites[["dec_long_va", "dec_lat_va"]].itertuples(name=None, index=False))
     sites["altitude"] = (

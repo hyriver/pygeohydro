@@ -2,20 +2,30 @@
 from __future__ import annotations
 
 import contextlib
-import io
 import itertools
 import re
 import warnings
-from typing import TYPE_CHECKING, Any, Iterable, Literal, Sequence, TypeVar, cast, overload
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Iterable,
+    Literal,
+    Sequence,
+    TypeVar,
+    cast,
+    overload,
+)
 
 import async_retriever as ar
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pynhd
 import xarray as xr
 from pygeoogc import ServiceURL
 from pygeoogc import utils as ogc_utils
+from pynhd import NLDI
 
 from pygeohydro.exceptions import (
     DataNotAvailableError,
@@ -98,7 +108,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
     if isinstance(streamflow, pd.DataFrame):
         return df
 
-    return xr.DataArray(  # type: ignore
+    return xr.DataArray(  # pyright: reportGeneralTypeIssues=false
         df,
         coords={
             "time": df.index.to_numpy("datetime64[ns]"),
@@ -160,7 +170,7 @@ class NWIS:
 
         rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
         if "agency_cd" in rdb_df:
-            rdb_df = rdb_df[~rdb_df.agency_cd.str.contains("agency_cd|5s")].copy()
+            rdb_df = rdb_df[~rdb_df["agency_cd"].str.contains("agency_cd|5s")].copy()
         return rdb_df
 
     @staticmethod
@@ -268,11 +278,36 @@ class NWIS:
 
         return [{**query, **output_type, "format": "rdb"} for query in _queries]
 
+    @staticmethod
+    def _nhd_info(site_ids: list[str]) -> pd.DataFrame:
+        """Get drainage area of the stations from NHDPlus."""
+        site_list = [f"USGS-{s}" for s in site_ids]
+        area = NLDI().getfeature_byid("nwissite", site_list)
+        try:
+            area["comid"] = area["comid"].astype("int32")
+        except (ValueError, TypeError, IntCastingNaNError):
+            area["comid"] = area["comid"].astype("Int32")
+        nhd_area = pynhd.streamcat("fert", comids=area["comid"].to_list())
+        area = area.merge(nhd_area[["COMID", "WSAREASQKM"]], left_on="comid", right_on="COMID")
+        area["identifier"] = area["identifier"].str.replace("USGS-", "")
+        area = area[["identifier", "comid", "reachcode", "measure", "WSAREASQKM"]].copy()
+        area = area.rename(
+            columns={
+                "identifier": "site_no",
+                "comid": "nhd_id",
+                "reachcode": "nhd_reachcode",
+                "measure": "nhd_measure",
+                "WSAREASQKM": "nhd_areasqkm",
+            }
+        )
+        return area
+
     def get_info(
         self,
         queries: dict[str, str] | list[dict[str, str]],
         expanded: bool = False,
         fix_names: bool = True,
+        nhd_info: bool = False,
     ) -> gpd.GeoDataFrame:
         """Send multiple queries to USGS Site Web Service.
 
@@ -286,6 +321,13 @@ class NWIS:
         fix_names : bool, optional
             If ``True``, reformat station names and some small annoyances,
             defaults to ``True``.
+        nhd_info : bool, optional
+            If ``True``, get NHD information for each site, defaults to ``False``.
+            This will add four new columns: ``nhd_comid``, ``nhd_areasqkm``,
+            ``nhd_reachcode``, and ``nhd_measure``. Where ``nhd_id`` is the NHD
+            COMID of the flowline that the site is located in, ``nhd_reachcode``
+            is the NHD Reach Code that the site is located in, and ``nhd_measure``
+            is the measure along the flowline that the site is located at.
 
         Returns
         -------
@@ -329,37 +371,20 @@ class NWIS:
             sites["begin_date"] = pd.to_datetime(sites["begin_date"])
             sites["end_date"] = pd.to_datetime(sites["end_date"])
 
+        if nhd_info:
+            nhd = self._nhd_info(sites["site_no"].to_list())
+            sites = pd.merge(sites, nhd, left_on="site_no", right_on="site_no", how="left")
+
         urls = [
             "/".join(
                 (
                     "https://gist.githubusercontent.com/cheginit",
                     "2dbc4b9c096f19089dbadb522821e8f3/raw/hcdn_2009_station_ids.txt",
                 )
-            ),
-            "/".join(
-                (
-                    "https://gist.githubusercontent.com/cheginit",
-                    "03129c5a0fb57272792aa4165b06fc19/raw/conus_station_ids.csv",
-                )
-            ),
+            )
         ]
         resp = ar.retrieve_text(urls)
-        nhd = pd.read_csv(
-            io.StringIO(resp[1]), dtype={"site_no": str, "nhd_id": int, "nhd_areasqkm": float}
-        )
-
-        sites = pd.merge(
-            sites,
-            nhd,
-            left_on="site_no",
-            right_on="site_no",
-            how="left",
-        )
         sites["hcdn_2009"] = sites["site_no"].isin(resp[0].split(","))
-        try:
-            sites["nhd_id"] = sites["nhd_id"].astype("int32")
-        except (ValueError, TypeError, IntCastingNaNError):
-            sites["nhd_id"] = sites["nhd_id"].astype("Int32")
 
         if "count_nu" in sites:
             numeric_cols.append("count_nu")
@@ -453,8 +478,8 @@ class NWIS:
             )
         attr_df = siteinfo[cols.keys()].groupby("site_no").first()
         if "begin_date" in attr_df and "end_date" in attr_df:
-            attr_df["begin_date"] = attr_df.begin_date.dt.strftime(T_FMT)
-            attr_df["end_date"] = attr_df.end_date.dt.strftime(T_FMT)
+            attr_df["begin_date"] = attr_df["begin_date"].dt.strftime(T_FMT)
+            attr_df["end_date"] = attr_df["end_date"].dt.strftime(T_FMT)
         attr_df.index = "USGS-" + attr_df.index
         attr_df["units"] = "mm/day" if mmd else "cms"
         attr_df["tz"] = "UTC"
@@ -486,7 +511,11 @@ class NWIS:
 
     def _drainage_area_sqm(self, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
         """Get drainage area of the stations."""
-        area = siteinfo[["site_no", "nhd_areasqkm"]].copy()
+        if "nhd_areasqkm" not in siteinfo:
+            area = self._nhd_info(siteinfo["site_no"].to_list())
+            area = area[["site_no", "nhd_areasqkm"]].copy()
+        else:
+            area = siteinfo[["site_no", "nhd_areasqkm"]].copy()
         if area["nhd_areasqkm"].isna().any():
             sids = area[area["nhd_areasqkm"].isna()].site_no
             queries = [
@@ -694,8 +723,10 @@ class NWIS:
         sids = [s.split("-")[1] for s in qobs]
         if len(sids) != n_orig:
             warnings.warn(
-                f"Dropped {n_orig - len(sids)} stations since they don't have discharge data"
-                + f" from {start_dt} to {end_dt}.",
+                (
+                    f"Dropped {n_orig - len(sids)} stations since they don't have discharge data"
+                    f" from {start_dt} to {end_dt}."
+                ),
                 UserWarning,
                 stacklevel=2,
             )
