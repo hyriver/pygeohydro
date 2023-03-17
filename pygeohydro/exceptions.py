@@ -27,7 +27,7 @@ class MissingColumnError(Exception):
     """
 
     def __init__(self, missing: list[str]) -> None:
-        self.message = "The following columns are missing:\n" + f"{', '.join(missing)}"
+        self.message = f"The following columns are missing:\n{', '.join(missing)}"
         super().__init__(self.message)
 
     def __str__(self) -> str:

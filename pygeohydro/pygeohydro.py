@@ -15,6 +15,7 @@ import cytoolz.curried as tlz
 import dask.config
 import geopandas as gpd
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 import pygeoogc as ogc
 import pygeoutils as geoutils
@@ -150,7 +151,7 @@ def ssebopeta_bycoords(
 
     with patch("socket.has_ipv6", False):
 
-        def _ssebop(url: str) -> list[np.ndarray]:  # type: ignore
+        def _ssebop(url: str) -> list[npt.NDArray[np.float64]]:
             r = session.get(url)
             z = zipfile.ZipFile(io.BytesIO(r.content))
 
@@ -471,7 +472,7 @@ def nlcd_bycoords(
     def get_value(da: xr.DataArray, x: float, y: float) -> Number:
         nodata = da.attrs["nodatavals"][0]
         value = da.fillna(nodata).interp(x=[x], y=[y], method="nearest")
-        return da.dtype.type(value)[0, 0]  # type: ignore
+        return da.dtype.type(value)[0, 0]
 
     values = {
         v: [get_value(ds[v], p.x, p.y) for ds, p in zip(ds_list, points_proj)] for v in ds_list[0]
@@ -1118,8 +1119,8 @@ def soil_properties(
         with zipfile.ZipFile(file) as z:
             try:
                 fname = next(f.filename for f in z.filelist if f.filename.endswith(".tif"))
-            except StopIteration:
-                raise ZeroMatchedError
+            except StopIteration as ex:
+                raise ZeroMatchedError from ex
             ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))
             ds = cast("xr.DataArray", ds)
             if "band" in ds.dims:
