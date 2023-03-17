@@ -7,6 +7,10 @@ History
 
 New Features
 ~~~~~~~~~~~~
+- Add a new option to ``NWIS.get_info``, called ``nhd_info``, for
+  retrieving NHDPlus related info on the sites. This will two new
+  service calls that might slow down the function, so it's disabled
+  by default.
 - Update links in ``NID`` to the latest CSV and GPKG versions of
   the NID dataset.
 - Add two new properties to ``NID`` to access the entire NID dataset.
