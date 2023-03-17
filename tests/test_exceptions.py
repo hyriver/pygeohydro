@@ -6,9 +6,14 @@ import pytest
 from shapely import Polygon
 
 import pygeohydro as gh
-from pygeohydro import DataNotAvailableError, InputRangeError, InputTypeError, InputValueError
+from pygeohydro import (
+    DataNotAvailableError,
+    InputRangeError,
+    InputTypeError,
+    InputValueError,
+)
 
-has_typeguard = True if sys.modules.get("typeguard") else False
+has_typeguard = bool(sys.modules.get("typeguard"))
 
 SID_NATURAL = "01031500"
 GEOM = Polygon(
@@ -23,7 +28,6 @@ GEOM = Polygon(
 
 
 class TestETAExceptions:
-    "Test ssebopeta Exceptions"
     dates = ("2000-01-01", "2000-01-05")
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
@@ -48,7 +52,8 @@ class TestETAExceptions:
 
 
 class TestNLCDExceptions:
-    "Test NLCD Exceptions"
+    """Test NLCD Exceptions."""
+
     years = {"cover": [2016, 2019]}
     res = 1e3
     geom = gpd.GeoSeries([GEOM], crs=4326)
@@ -98,7 +103,6 @@ class TestNLCDExceptions:
 
 
 class TestNWISExceptions:
-    "Test NWIS"
     nwis = gh.NWIS()
 
     def test_invaild_station(self):

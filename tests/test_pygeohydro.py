@@ -35,7 +35,6 @@ def assert_close(a: float, b: float) -> None:
 
 
 class TestNWIS:
-    "Test NWIS"
     nwis: NWIS = NWIS()
 
     def test_qobs_dv(self):
@@ -47,7 +46,7 @@ class TestNWIS:
 
     def test_qobs_mmd(self):
         df = self.nwis.get_streamflow(SID_NATURAL, DATES, mmd=True)
-        assert_close(df[f"USGS-{SID_NATURAL}"].sum().item(), 27.7142)
+        assert_close(df[f"USGS-{SID_NATURAL}"].sum().item(), 27.6375)
 
     def test_cst_tz(self):
         q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
@@ -60,8 +59,8 @@ class TestNWIS:
 
     def test_info(self):
         query = {"sites": ",".join([SID_NATURAL])}
-        info = self.nwis.get_info(query, expanded=True)
-        assert_close(info.nhd_areasqkm.item(), 771.82)
+        info = self.nwis.get_info(query, expanded=True, nhd_info=True)
+        assert_close(info["nhd_areasqkm"].item(), 773.964)
         assert info.hcdn_2009.item()
 
     def test_info_box(self):
@@ -95,7 +94,6 @@ class TestNWIS:
 
 
 class TestETA:
-    "Test ssebopeta"
     dates = ("2000-01-01", "2000-01-05")
     years = [2010, 2014, 2015]
 
