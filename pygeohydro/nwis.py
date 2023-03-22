@@ -37,7 +37,7 @@ from pygeohydro.exceptions import (
 try:
     from pandas.errors import IntCastingNaNError
 except ImportError:
-    IntCastingNaNError = TypeError
+    IntCastingNaNError = ValueError
 
 T_FMT = "%Y-%m-%d"
 __all__ = ["NWIS", "streamflow_fillna"]
@@ -285,7 +285,7 @@ class NWIS:
         area = NLDI().getfeature_byid("nwissite", site_list)
         try:
             area["comid"] = area["comid"].astype("int32")
-        except (ValueError, TypeError, IntCastingNaNError):
+        except (TypeError, IntCastingNaNError):
             area["comid"] = area["comid"].astype("Int32")
         nhd_area = pynhd.streamcat("fert", comids=area["comid"].to_list())
         area = area.merge(nhd_area[["COMID", "WSAREASQKM"]], left_on="comid", right_on="COMID")

@@ -182,10 +182,6 @@ class TestNID:
         dams = self.nid.inventory_byid(self.ids)
         assert_close(dams.damHeight.max(), 39)
 
-    def test_stage_id(self):
-        dams = self.nid.inventory_byid(self.ids, stage_nid=True)
-        assert_close(dams.damHeight.max(), 39)
-
     def test_geom(self):
         dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
         bbox = ogc_utils.match_crs(GEOM.bounds, DEF_CRS, ALT_CRS)

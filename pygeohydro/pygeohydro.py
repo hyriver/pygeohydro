@@ -978,7 +978,7 @@ class NID:
         idx = self.gdf.sindex.query(_geometry, "contains")
         return self.gdf.iloc[idx].copy()
 
-    def inventory_byid(self, federal_ids: list[int], stage_nid: bool = False) -> gpd.GeoDataFrame:
+    def inventory_byid(self, federal_ids: list[int]) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
 
         Notes
