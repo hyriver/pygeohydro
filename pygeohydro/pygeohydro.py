@@ -726,10 +726,11 @@ class NID:
         if not self.nid_inventory_path.exists():
             url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
             _ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
-            if importlib.util.find_spec("pyogrio"):
-                dams = gpd.read_file(fname.with_suffix(".gpkg"), engine="pyogrio", use_arrow=True)
-            else:
-                dams = gpd.read_file(fname.with_suffix(".gpkg"))
+            dams = (
+                gpd.read_file(fname.with_suffix(".gpkg"), engine="pyogrio", use_arrow=True)
+                if importlib.util.find_spec("pyogrio")
+                else gpd.read_file(fname.with_suffix(".gpkg"))
+            )
 
             dams = dams.astype(
                 {
@@ -870,10 +871,7 @@ class NID:
         if not isinstance(urls, list):
             raise InputTypeError("urls", "list or str")
 
-        if params is None:
-            kwds = None
-        else:
-            kwds = [{"params": {**p, "out": "json"}} for p in params]
+        kwds = None if params is None else [{"params": {**p, "out": "json"}} for p in params]
         resp = ar.retrieve_json(urls, kwds)
         resp = cast("list[dict[str, Any]]", resp)
         if not resp:
