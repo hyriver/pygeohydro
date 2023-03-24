@@ -56,7 +56,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
     Parameters
     ----------
     discharge : xarray.DataArray or pandas.DataFrame or pandas.Series
-        Streamflow observations with at least 10 years of daily data.
+        Daily streamflow observations with at least 10 years of daily data.
     missing_max : int
         Maximum allowed number of missing daily data per year for filling,
         defaults to 5.
@@ -80,8 +80,8 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
     df = cast("pd.DataFrame", df)
     df.columns = df.columns.astype(str)
     df.index = pd.DatetimeIndex(pd.to_datetime(df.index).date)
-    if pd.infer_freq(df.index) != "D" and df.index.year.unique().size >= 10:
-        raise InputTypeError("streamflow", "array with at least 10 years of data")
+    if df.index.year.unique().size < 10:
+        raise InputTypeError("streamflow", "array with at least 10 years of daily data")
 
     df[df < 0] = np.nan
     s_nan = pd.DataFrame.from_dict(
