@@ -16,23 +16,23 @@ from typing import (
     overload,
 )
 
-import async_retriever as ar
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pynhd
 import xarray as xr
-from pygeoogc import ServiceURL
-from pygeoogc import utils as ogc_utils
-from pynhd import NLDI
 
+import async_retriever as ar
+import pynhd
 from pygeohydro.exceptions import (
     DataNotAvailableError,
     InputTypeError,
     InputValueError,
     ZeroMatchedError,
 )
+from pygeoogc import ServiceURL
+from pygeoogc import utils as ogc_utils
+from pynhd import NLDI
 
 try:
     from pandas.errors import IntCastingNaNError
@@ -161,7 +161,8 @@ class NWIS:
             not_found = next(filter(lambda x: x[0] != "#", resp), None)
             if not_found is not None:
                 msg = re.findall("<p>(.*?)</p>", not_found)[1].rsplit(">", 1)[1]
-                raise ZeroMatchedError(f"Server error message:\n{msg}")
+                msg = f"Server error message:\n{msg}"
+                raise ZeroMatchedError(msg)
 
         data = [r.strip().split("\n") for r in resp if r[0] == "#"]
         data = [t.split("\t") for d in data for t in d if "#" not in t]
@@ -265,7 +266,8 @@ class NWIS:
 
         not_valid = list(tlz.concat(set(q).difference(set(valid_query_keys)) for q in queries))
         if not_valid:
-            raise InputValueError(f"query keys ({', '.join(not_valid)})", valid_query_keys)
+            invalid_keys = f"query keys ({', '.join(not_valid)})"
+            raise InputValueError(invalid_keys, valid_query_keys)
 
         _queries = queries.copy()
         if expanded:

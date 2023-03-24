@@ -4,17 +4,17 @@ from __future__ import annotations
 import io
 from typing import Any, NamedTuple
 
-import async_retriever as ar
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
 import ujson as json
 from defusedxml import ElementTree
-from pygeoogc import ServiceURL
 
+import async_retriever as ar
 from pygeohydro import us_abbrs
 from pygeohydro.exceptions import InputRangeError, InputTypeError, InputValueError
+from pygeoogc import ServiceURL
 
 __all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table", "get_us_states"]
 
@@ -211,6 +211,8 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
 
 
 class StateCounties(NamedTuple):
+    """State and county codes and names."""
+
     name: str
     code: str | None
     counties: pd.Series

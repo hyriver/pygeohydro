@@ -4,12 +4,12 @@ from __future__ import annotations
 import io
 from typing import Any, Literal, cast, overload
 
-import async_retriever as ar
 import cytoolz.curried as tlz
 import geopandas as gpd
 import pandas as pd
-import pygeoutils as geoutils
 
+import async_retriever as ar
+import pygeoutils as geoutils
 from pygeohydro.exceptions import InputTypeError, InputValueError, ServiceError
 
 __all__ = ["WaterQuality", "SensorThings"]

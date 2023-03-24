@@ -6,17 +6,17 @@ import io
 from pathlib import Path
 from typing import TYPE_CHECKING, Union
 
-import async_retriever as ar
 import geopandas as gpd
 import pandas as pd
-import pygeoogc as ogc
 import pyproj
 import xarray as xr
+
+import async_retriever as ar
+import pygeoogc as ogc
+from pygeohydro.exceptions import InputValueError
 from pygeoogc import ServiceURL
 from pynhd import AGRBase
 from pynhd.core import ScienceBase
-
-from pygeohydro.exceptions import InputValueError
 
 if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]

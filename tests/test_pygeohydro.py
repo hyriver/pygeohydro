@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from pygeoogc import utils as ogc_utils
 from shapely import Polygon
 
 import pygeohydro as gh
 from pygeohydro import NID, NWIS, WBD
+from pygeoogc import utils as ogc_utils
 
 DEF_CRS = 4326
 ALT_CRS = 3542

@@ -10,23 +10,20 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
-import async_retriever as ar
 import cytoolz.curried as tlz
 import dask.config
 import geopandas as gpd
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
-import pygeoogc as ogc
-import pygeoutils as geoutils
 import pyproj
 import rasterio as rio
 import xarray as xr
-from pygeoogc import WMS, RetrySession, ServiceURL
-from pygeoogc import utils as ogc_utils
-from pynhd.core import ScienceBase
 from rioxarray import _io as rxr
 
+import async_retriever as ar
+import pygeoogc as ogc
+import pygeoutils as geoutils
 from pygeohydro import helpers
 from pygeohydro.exceptions import (
     DependencyError,
@@ -38,6 +35,9 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeohydro.helpers import Stats
+from pygeoogc import WMS, RetrySession, ServiceURL
+from pygeoogc import utils as ogc_utils
+from pynhd.core import ScienceBase
 
 if TYPE_CHECKING:
     from numbers import Number
@@ -534,7 +534,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
     total_count = freq.sum()
 
     if any(c not in nlcd_meta["classes"] for c in freq_dict):
-        raise InputValueError("ds values", list(nlcd_meta["classes"]))  # noqa: TC003
+        raise InputValueError("ds", list(nlcd_meta["classes"]))
 
     class_percentage = {
         nlcd_meta["classes"][k].split(" -")[0].strip(): v / total_count * 100.0

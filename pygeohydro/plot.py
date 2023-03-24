@@ -10,16 +10,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, Union
 
 import folium
-import hydrosignatures as hs
 import matplotlib.pyplot as plt
 import pandas as pd
 import pyproj
 from matplotlib.colors import BoundaryNorm, ListedColormap
-from pygeoogc import utils as ogc_utils
 
+import hydrosignatures as hs
 from pygeohydro import helpers
 from pygeohydro.exceptions import InputTypeError
 from pygeohydro.nwis import NWIS
+from pygeoogc import utils as ogc_utils
 
 if TYPE_CHECKING:
     DF = TypeVar("DF", pd.DataFrame, pd.Series)

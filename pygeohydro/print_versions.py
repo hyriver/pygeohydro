@@ -21,6 +21,7 @@ __all__ = ["show_versions"]
 
 
 def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
+    """Get netcdf and hdf5 info."""
     libhdf5_version = None
     libnetcdf_version = None
 
