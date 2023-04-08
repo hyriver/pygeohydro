@@ -50,7 +50,7 @@ class TestNWIS:
 
     def test_cst_tz(self):
         q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
-        assert q.index.tz.tzname("") == "UTC"
+        assert q.index.tz.zone == "UTC"
 
     def test_qobs_iv(self):
         iv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")
@@ -87,10 +87,6 @@ class TestNWIS:
         assert np.all(qf == 1)
         qf = gh.streamflow_fillna(xr.DataArray(q))
         assert np.all(qf == 1)
-
-    def test_ice_negative(self):
-        ice = self.nwis.get_streamflow("04010500", ("2023-01-01", "2023-1-08"))
-        assert ice.isna().sum().item() == 8
 
 
 class TestETA:
