@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from shapely import Polygon
+from shapely.geometry import Polygon
 
 import pygeohydro as gh
 from pygeohydro import NID, NWIS, WBD
@@ -50,7 +50,7 @@ class TestNWIS:
 
     def test_cst_tz(self):
         q = self.nwis.get_streamflow(["08075000", "11092450"], DATES)
-        assert q.index.tz.zone == "UTC"
+        assert q.index.tz.tzname(None) == "UTC"
 
     def test_qobs_iv(self):
         iv = self.nwis.get_streamflow(SID_NATURAL, ("2020-01-01", "2020-01-31"), freq="iv")

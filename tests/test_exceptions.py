@@ -3,7 +3,7 @@ import sys
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely import Polygon
+from shapely.geometry import Polygon
 
 import pygeohydro as gh
 from pygeohydro import (

@@ -43,7 +43,7 @@ if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
 
-    from shapely import MultiPolygon, Polygon
+    from shapely.geometry import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
