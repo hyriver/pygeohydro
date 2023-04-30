@@ -168,7 +168,7 @@ def test_shapely(session: nox.Session) -> None:
     extras = get_extras()
     deps = get_deps()
     if any("shapely" in d for d in deps):
-        install_deps(session, ",".join(["test"] + extras), ["shapely<2"])
+        install_deps(session, ",".join(["test"] + extras), ["pygeos", "shapely<2"])
         session.run("pytest", "--doctest-modules", *session.posargs)
     else:
         session.skip("No shapely dependency found.")
