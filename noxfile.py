@@ -53,7 +53,9 @@ nox.options.sessions = (
 )
 
 
-def install_deps(session: nox.Session, extra: str | None = None, version_limit: list[str] | None = None) -> None:
+def install_deps(
+    session: nox.Session, extra: str | None = None, version_limit: list[str] | None = None
+) -> None:
     """Install package dependencies."""
     deps = [f".[{extra}]"] if extra else ["."]
     deps += [f"git+https://github.com/hyriver/{p}.git" for p in gh_deps[package]]
