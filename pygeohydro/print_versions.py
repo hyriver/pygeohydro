@@ -21,7 +21,6 @@ __all__ = ["show_versions"]
 
 
 def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
-    """Get netcdf and hdf5 info."""
     libhdf5_version = None
     libnetcdf_version = None
 
@@ -31,7 +30,7 @@ def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
         libhdf5_version = netCDF4.__hdf5libversion__
         libnetcdf_version = netCDF4.__netcdf4libversion__
     elif importlib.util.find_spec("h5py"):
-        import h5py
+        import h5py  # type: ignore
 
         libhdf5_version = h5py.version.hdf5_version
 
@@ -61,7 +60,7 @@ def get_sys_info() -> list[tuple[str, str | None]]:
         env["LANGUAGE"] = "C"
         env["LANG"] = "C"
         env["LC_ALL"] = "C"
-        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env)
+        out = subprocess.check_output(cmd, stderr=subprocess.STDOUT, env=env)  # noqa: S603
         return out
 
     commit = None
