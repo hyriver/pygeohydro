@@ -47,10 +47,10 @@ dependencies = [
   "pygeoogc>=0.14",
   "pygeoutils>=0.14",
   "pynhd>=0.14",
-  "pyproj>=2.2",
+  "pyproj>=3.0.1",
   "rioxarray>=0.11",
   "scipy",
-  "shapely>=2",
+  "shapely>=1.8.5",
   "ujson",
   "xarray>=2022.03",
 ]
