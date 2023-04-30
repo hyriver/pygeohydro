@@ -1,4 +1,3 @@
-"""Nox sessions."""
 from __future__ import annotations
 
 import shutil
@@ -15,15 +14,21 @@ except ImportError:
 
 def get_package_name() -> str:
     """Get the name of the package."""
-    with Path("pyproject.toml").open("rb") as f:
+    with open("pyproject.toml", "rb") as f:
         return tomli.load(f)["project"]["name"]
 
 
 def get_extras() -> list[str]:
     """Get the name of the package."""
-    with Path("pyproject.toml").open("rb") as f:
+    with open("pyproject.toml", "rb") as f:
         extras = tomli.load(f)["project"]["optional-dependencies"]
     return [e for e in extras if e not in ("test", "typeguard")]
+
+
+def get_deps() -> list[str]:
+    """Get the name of the package."""
+    with open("pyproject.toml", "rb") as f:
+        return tomli.load(f)["project"]["dependencies"]
 
 
 python_versions = ["3.8"]
@@ -44,13 +49,16 @@ nox.options.sessions = (
     "pre-commit",
     "type-check",
     "tests",
+    "test-shapely",
 )
 
 
-def install_deps(session: nox.Session, extra=None) -> None:
+def install_deps(session: nox.Session, extra: str | None = None, version_limit: list[str] | None = None) -> None:
     """Install package dependencies."""
     deps = [f".[{extra}]"] if extra else ["."]
     deps += [f"git+https://github.com/hyriver/{p}.git" for p in gh_deps[package]]
+    if version_limit:
+        deps += [p for p in version_limit]
     session.install(*deps)
     dirs = [".pytest_cache", "build", "dist", ".eggs"]
     for d in dirs:
@@ -150,3 +158,15 @@ def tests(session: nox.Session) -> None:
         session.run("pytest", "--doctest-modules", *session.posargs)
         session.run("coverage", "report")
         session.run("coverage", "html")
+
+
+@nox.session(name="test-shapely", python=python_versions)
+def test_shapely(session: nox.Session) -> None:
+    """Run the test suite with shapely<2."""
+    extras = get_extras()
+    deps = get_deps()
+    if any("shapely" in d for d in deps):
+        install_deps(session, ",".join(["test"] + extras), ["shapely<2"])
+        session.run("pytest", "--doctest-modules", *session.posargs)
+    else:
+        session.skip("No shapely dependency found.")
