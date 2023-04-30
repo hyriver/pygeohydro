@@ -19,7 +19,7 @@ repos:
     name: Convert relative imports to absolute with absolufy-imports
 
 - repo: https://github.com/psf/black
-  rev: 23.1.0
+  rev: 23.3.0
   hooks:
   - id: black
     name: Autoformat with black
@@ -33,7 +33,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.258
+  rev: v0.0.263
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -55,7 +55,7 @@ repos:
     - tomli
 
 - repo: https://github.com/dosisod/refurb
-  rev: v1.14.0
+  rev: v1.16.0
   hooks:
   - id: refurb
     name: Modernizing Python codebases using Refurb
@@ -63,7 +63,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 0.9.2
+  rev: 0.11.1
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
