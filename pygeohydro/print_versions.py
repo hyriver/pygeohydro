@@ -3,6 +3,7 @@
 The original script is from
 `xarray <https://github.com/pydata/xarray/blob/master/xarray/util/print_versions.py>`__
 """
+# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import importlib
@@ -30,7 +31,7 @@ def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
         libhdf5_version = netCDF4.__hdf5libversion__
         libnetcdf_version = netCDF4.__netcdf4libversion__
     elif importlib.util.find_spec("h5py"):
-        import h5py  # type: ignore
+        import h5py
 
         libhdf5_version = h5py.version.hdf5_version
 
