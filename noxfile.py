@@ -60,7 +60,7 @@ def install_deps(
     deps = [f".[{extra}]"] if extra else ["."]
     deps += [f"git+https://github.com/hyriver/{p}.git" for p in gh_deps[package]]
     if version_limit:
-        deps += [p for p in version_limit]
+        deps += list(version_limit)
     session.install(*deps)
     dirs = [".pytest_cache", "build", "dist", ".eggs"]
     for d in dirs:
