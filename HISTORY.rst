@@ -2,7 +2,7 @@
 History
 =======
 
-0.15.0 (unreleased)
+0.15.0 (0.15.0)
 -------------------
 From release 0.15 onward, all minor versions of HyRiver packages
 will be pinned. This ensures that previous minor versions of HyRiver
