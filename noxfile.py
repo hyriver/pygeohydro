@@ -14,20 +14,20 @@ except ImportError:
 
 def get_package_name() -> str:
     """Get the name of the package."""
-    with open("pyproject.toml", "rb") as f:
+    with Path("pyproject.toml").open("rb") as f:
         return tomli.load(f)["project"]["name"]
 
 
 def get_extras() -> list[str]:
     """Get the name of the package."""
-    with open("pyproject.toml", "rb") as f:
+    with Path("pyproject.toml").open("rb") as f:
         extras = tomli.load(f)["project"]["optional-dependencies"]
     return [e for e in extras if e not in ("test", "typeguard")]
 
 
 def get_deps() -> list[str]:
     """Get the name of the package."""
-    with open("pyproject.toml", "rb") as f:
+    with Path("pyproject.toml").open("rb") as f:
         return tomli.load(f)["project"]["dependencies"]
 
 
