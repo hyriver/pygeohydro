@@ -65,8 +65,8 @@ class TestNWIS:
 
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
-        info_box = self.nwis.get_info(query)
-        assert info_box.shape[0] == 35
+        info_box = self.nwis.get_info(query, nhd_info=True)
+        assert info_box.shape[0] == 35 and info_box["nhd_areasqkm"].isna().sum() == 29
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
