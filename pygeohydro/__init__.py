@@ -31,6 +31,7 @@ from pygeohydro.pygeohydro import (
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
+from pygeohydro.stnfloodevents import STNFloodEvents
 from pygeohydro.waterdata import SensorThings, WaterQuality
 from pygeohydro.watershed import WBD, huc_wb_full, irrigation_withdrawals
 
@@ -51,6 +52,7 @@ __all__ = [
     "huc_wb_full",
     "irrigation_withdrawals",
     "SensorThings",
+    "STNFloodEvents",
     "interactive_map",
     "nlcd_bygeom",
     "nlcd_bycoords",

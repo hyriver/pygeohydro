@@ -324,3 +324,100 @@ def test_show_versions():
     f = io.StringIO()
     gh.show_versions(file=f)
     assert "SYS INFO" in f.getvalue()
+
+
+# write test class for STNFloodEventData
+class TestSTNFloodEventData:
+    stn: gh.STNFloodEventData = gh.STNFloodEventData()
+
+    @pytest.mark.parametrize(
+        "data_type, returns, expected",
+        [
+            ("instruments", "DataFrame", (26, 2)),
+            ("peaks", "DataFrame", (41, 2)),
+            ("hwms", "DataFrame", (51, 2)),
+            ("sites", "DataFrame", (16, 2)),
+            ("instrument_types", "Dict", 26),
+            ("peak_types", "Dict", 41),
+            ("hwm_types", "Dict", 51),
+            ("site_types", "Dict", 16),
+        ],
+    )
+    def test_data_dictionaries(self, data_type, returns, expected):
+        result = getattr(self.stn, "data_dictionary", returns)
+        if returns == "DataFrame":
+            assert isinstance(result, pd.DataFrame)
+            assert result.shape == expected
+            assert list(result.columns) == ["Field", "Definition"]
+            assert result.dtypes.to_list() == [np.dtype("O"), np.dtype("O")]
+        else:
+            assert isinstance(result, dict)
+            assert len(result) == expected
+            assert list(result.keys()) == ["Field", "Definition"]
+
+    @pytest.mark.parametrize(
+        "returns, expected",
+        [
+            ("DataFrame", (4624, 18)),
+            ("List", 4624),
+        ],
+    )
+    def test_get_sensor_data(self, returns, expected):
+        result = getattr(self.stn, "get_sensor_data", returns)
+        if returns == "DataFrame":
+            assert isinstance(result, pd.DataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        else:
+            assert isinstance(result, list)
+            assert len(result) >= expected
+
+    @pytest.mark.parametrize(
+        "returns, expected",
+        [("DataFrame", (34474, 32)), ("GeoDataFrame", (34474, 32)), ("List", 34474)],
+    )
+    def test_get_hwm_data(self, returns, expected):
+        result = getattr(self.stn, "get_hwm_data", returns)
+        if returns == "DataFrame":
+            assert isinstance(result, pd.DataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        elif returns == "GeoDataFrame":
+            assert isinstance(result, gpd.GeoDataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        else:
+            assert isinstance(result, list)
+            assert len(result) >= expected
+
+    @pytest.mark.parametrize(
+        "returns, expected",
+        [("DataFrame", (13150, 22)), ("List", 13150)],
+    )
+    def test_get_peak_data(self, returns, expected):
+        result = getattr(self.stn, "get_peak_data", returns)
+        if returns == "DataFrame":
+            assert isinstance(result, pd.DataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        else:
+            assert isinstance(result, list)
+            assert len(result) >= expected
+
+    @pytest.mark.parametrize(
+        "returns, expected",
+        [("DataFrame", (23521, 36)), ("GeoDataFrame", (23521, 36)), ("List", 23521)],
+    )
+    def test_get_site_data(self, returns, expected):
+        result = getattr(self.stn, "get_site_data", returns)
+        if returns == "DataFrame":
+            assert isinstance(result, pd.DataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        elif returns == "GeoDataFrame":
+            assert isinstance(result, gpd.GeoDataFrame)
+            assert result.shape[1] == expected[1]
+            assert result.shape[0] >= expected[0]
+        else:
+            assert isinstance(result, list)
+            assert len(result) >= expected
