@@ -135,7 +135,7 @@ class STNFloodEventData:
     Python client to retrieve data from the STN Flood Event Data RESTFUL Service API.
 
     Advantages of using this client are:
-        - The user does not need to know the details of the RESTFUL API.
+        - The user does not need to know the details of RESTFUL in general and of this API specifically.
         - Parses the data and returns Python objects (e.g., pandas.DataFrame, geopandas.GeoDataFrame) instead of JSON.
         - Convenience functions are offered for data dictionaries.
         - Geo-references the data where applicable.
