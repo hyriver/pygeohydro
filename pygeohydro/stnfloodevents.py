@@ -13,9 +13,8 @@ from typing import Dict, List, Optional, Union
 import geopandas as gpd
 import pandas as pd
 import requests
+from exceptions import InputValueError
 from shapely.geometry import Point
-
-from pygeohydro.exceptions import InputValueError
 
 timeout = 200
 
