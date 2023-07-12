@@ -1,133 +1,33 @@
 """
 Access USGS Short-Term Network (STN) via Restful API.
 
+TODO:
+    - Add RESTfulURLs to pygeoogc's
+    - Documentation
+    - Testing
+
 References
 ----------
  .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
 """
 
-import inspect
 from io import StringIO
 from typing import Dict, List, Optional, Union
+from urllib.parse import urljoin
 
 import geopandas as gpd
 import pandas as pd
-import requests
 from exceptions import InputValueError
-from shapely.geometry import Point
+from numpy import nan
+from pyproj import CRS
 
-timeout = 200
+import async_retriever as ar
 
+CRSTYPE = Union[int, str, CRS]
 
-def _check_response(response):
-    """
-    Check the response from the API and raise an error if the response is not 200.
-
-    Parameters
-    ----------
-    response : requests.models.Response
-        The response from the API.
-
-    Raises
-    ------
-    requests.exceptions.HTTPError
-        If the response status code is not 200.
-    """
-    try:
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as http_err:
-        print(f"HTTP error occurred: {http_err}")
-    except Exception as err:
-        print(f"Other error occurred: {err}")
-
-
-# private decorator that handles requests
-def _return_typing(func):
-    """
-    Handle requests and return data in the specified format.
-
-    Parameters
-    ----------
-    func : callable
-        The function to be decorated.
-
-    Returns
-    -------
-    callable
-        The decorated function.
-    """
-
-    def wrapper(cls, *args, **kwargs):
-        response = func(cls, *args, **kwargs)
-
-        # Access the 'returns' argument
-        returns = kwargs.get("returns", "GeoDataFrame")
-
-        _check_response(response)
-
-        data = response.json()
-
-        if returns == "List":
-            return data
-
-        elif returns == "DataFrame":
-            return pd.DataFrame(data)
-
-        elif returns == "GeoDataFrame":
-            df = pd.DataFrame(data)
-
-            x_column = "longitude_dd"
-            y_column = "latitude_dd"
-
-            if (y_column not in df.columns) | (x_column not in df.columns):
-                return df
-            else:
-                geometry = [Point(xy) for xy in zip(df[x_column], df[y_column])]
-                df = df.drop([x_column, y_column], axis=1)
-
-                # needs to use horizontal and/or vertical datums found in the dfs.
-                # each point might be different so would need to iterate through each point
-                # create 3d points for HWMs
-
-                gdf = gpd.GeoDataFrame(df, crs="EPSG:4329", geometry=geometry)
-                return gdf
-
-        else:
-            raise InputValueError(returns, ["List", "DataFrame", "GeoDataFrame"])
-            # raise ValueError(f"Invalid return type: {returns}")
-
-    return wrapper
-
-
-def _handle_filter_params(func):
-    """
-    Handle filter parameters using the inspect module.
-
-    Parameters
-    ----------
-    func : callable
-        The function to be decorated.
-
-    Returns
-    -------
-    callable
-        The decorated function.
-    """
-
-    def wrapper(cls, *args, **kwargs):
-        frame = inspect.currentframe()
-        args, _, _, values = inspect.getargvalues(frame)
-        filter_params = {
-            k: values[k]
-            for k in args
-            if (values[k] is not None) and (k != "cls") and (k != "returns")
-        }
-
-        returns = kwargs.pop("returns", None)
-
-        return func(cls, returns, **filter_params)
-
-    return wrapper
+# Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
+# this is the CRS used for visualization on STN front-end.
+DEFAULT_CRS = "EPSG:3857"
 
 
 class STNFloodEventData:
@@ -140,37 +40,254 @@ class STNFloodEventData:
         - Convenience functions are offered for data dictionaries.
         - Geo-references the data where applicable.
 
+    Attributes
+    ----------
+    base_url : str
+        The base url of the STN Flood Event Data RESTFUL Service API.
+    service_url : str
+        The service url of the STN Flood Event Data RESTFUL Service API.
+    data_dictionary_url : str
+        The data dictionary url of the STN Flood Event Data RESTFUL Service API.
+    instruments_query_params : Set[str]
+        The accepted query parameters for the instruments data type.
+    peaks_query_params : Set[str]
+        The accepted query parameters for the peaks data type.
+    hwms_query_params : Set[str]
+        The accepted query parameters for the hwms data type.
+    sites_query_params : Set[str]
+        The accepted query parameters for the sites data type.
+
+    Methods
+    -------
+    get_data_dictionary
+        Retrieves the data dictionary for a given data type.
+    get_all_data
+        Retrieves all data for a given data type.
+    get_filtered_data
+        Retrieves filtered data for a given data type.
+
     References
     ----------
     .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
     """
 
-    base_url = "https://stn.wim.usgs.gov/STNServices/"
+    # TODO: Add to pygeoogc's RESTfulURLs
+    base_url = "https://stn.wim.usgs.gov"
+    service_url = urljoin(base_url, "STNServices/")
+    data_dictionary_url = urljoin(base_url, "STNWeb/datadictionary/")
+
+    # accepted query parameters for instruments data type
+    instruments_query_params = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "CurrentStatus",
+        "CollectionCondition",
+        "SensorType",
+        "DeploymentType",
+    }
+
+    # accepted query parameters for peaks data type
+    peaks_query_params = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "StartDate",
+        "EndDate",
+    }
+
+    # accepted query parameters for hwms data type
+    hwms_query_params = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "StartDate",
+        "EndDate",
+    }
+
+    # accepted query parameters for sites data type
+    sites_query_params = {
+        "Event",
+        "State",
+        "SensorType",
+        "NetworkName",
+        "OPDefined",
+        "HWMOnly",
+        "HWMSurveyed",
+        "SensorOnly",
+        "RDGOnly",
+        "HousingTypeOne",
+        "HousingTypeSeven",
+    }
+
+    '''
+    @classmethod
+    def _geopandify_various_crs(
+        cls,
+        input_list: List[Dict],
+        crs: Optional[CRSTYPE] = DEFAULT_CRS,
+        x_column: str = "longitude_dd",
+        y_column: str = "latitude_dd",
+        crs_col: str = "hdatum_id",
+    ) -> gpd.GeoDataFrame:
+        """
+        Georeferences a list of dictionaries.
+
+        NOT IMPLEMENTED:
+        This function is not implemented yet as STN USGS reps Athena Clark, Lauren Privette, and Hans Vargas informed us that 'EPSG:3857' web mercator is assumed for visualization purposes on STN front-end. We chose to to use the same assumption as USGS and avoid assigning independent CRSs to each data point. We will revisit this in the future if needed.
+
+        The rest of the functionality uses the alternate function _geopandify().
+
+        Parameters
+        ----------
+        input_list : List[Dict]
+            The list of dictionaries to be converted to a geodataframe.
+        crs : Optional[CRSTYPE], default = DEFAULT_CRS
+            Desired the coordinate reference system.
+        x_column : str, default = 'longitude'
+            The column name of the x-coordinate.
+        y_column : str, default = 'latitude'
+            The column name of the y-coordinate.
+        crs_col : str, default = 'hdatum_id'
+            The column name of the horizontal datum.
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            The geo-referenced dataframe.
+        """
+        """
+        NOTE: Horizontal Datum Codes
+        ----------------------------
+        From HWM data dictionary:
+            1 local control point  2 NAD83  3 NAD27  4 WGS84 (from Digital Map)  5 NAD 83( CORS96) epoch 2002  6 NAD 83 (NSRS2007) epoch 2007  7 NAD 83 (2011) epoch 2010'
+
+        From Site data dictionary:
+            1 local control point 2 NAD83 3 NAD27 4 WGS84 (from Digital Map) 5 NAD 83( CORS96) epoch 2002 6 NAD 83 (NSRS2007) epoch 2007 7 NAD 83 (2011) epoch 2010'
+
+        NOTE: Vertical Datum Codes
+        --------------------------
+        From HWM data dictionary:
+            1 local control point  2 NAVD88  3 Above Ground Level  4 NGVD29  6 PRVD02  7 VIVD09  8 International Great Lakes Datum of 1985
+
+        From peaks data dictionary:
+            1 local control point  2 NAVD88  3 Above Ground Level  4 NGVD29  6 PRVD02  7 VIVD09  8 International Great Lakes Datum of 1985'
+        """
+
+        # TODO: These are not correct. Need to find the correct EPSG codes.
+        hdatum_dict = {
+            1: "EPSG:4329",  # local control point
+            2: "EPSG:4269",  # NAD83
+            3: "EPSG:4267",  # NAD27
+            4: "EPSG:4326",  # WGS84 (from Digital Map)
+            5: "EPSG:4269",  # NAD 83( CORS96) epoch 2002
+            6: "EPSG:4269",  # NAD 83 (NSRS2007) epoch 2007
+            7: "EPSG:4249",  # NAD 83 (2011) epoch 2010
+            "local control point": "EPSG:4329",
+            "NAD83": "EPSG:4269",
+            "NAD27": "EPSG:4267",
+            "WGS84 (from Digital Map)": "EPSG:4326",
+            "NAD 83 (2011) epoch 2010": "EPSG:4269",
+            9: "EPSG:4329",  # this is not defined in data dictionaries but does appear in data.
+        }
+
+        def apply_hdatum(row, crs=crs):
+            """Compute geometry for each row."""
+            try:
+                hdatum_value = row[crs_col]
+            except KeyError:
+                # TODO: Handle this better
+                hdatum_value = row["siteHDatum"]
+                warnings.warn(
+                    f"Key {crs_col} not found in data dictionary. Using 'siteHDatum' instead."
+                )
+
+            try:
+                from_crs = hdatum_dict[hdatum_value]
+            except KeyError:
+                from_crs = DEFAULT_CRS  # default CRS is
+                warnings.warn(
+                    f"Key {row[crs_col]} not found in data dictionary. Using default CRS, {DEFAULT_CRS}."
+                )
+
+            geom = gpd.points_from_xy([row[x_column]], [row[y_column]], crs=from_crs).to_crs(crs)
+
+            return geom[0]
+
+        df = pd.DataFrame(input_list)
+        df["geometry"] = df.apply(apply_hdatum, axis=1, crs=crs)
+
+        return gpd.GeoDataFrame(df, crs=crs)
+    '''
 
     @classmethod
-    def data_dictionaries(
-        cls, data_type: str = "instruments", returns: Union[pd.DataFrame, Dict] = "DataFrame"
-    ) -> Union[pd.DataFrame, Dict]:
+    def _geopandify(
+        cls,
+        input_list: List[Dict],
+        crs: Optional[CRSTYPE] = DEFAULT_CRS,
+        x_column: str = "longitude_dd",
+        y_column: str = "latitude_dd",
+    ) -> gpd.GeoDataFrame:
+        """
+        Georeference a list of dictionaries.
+
+        Parameters
+        ----------
+        input_list : List[Dict]
+            The list of dictionaries to be converted to a geodataframe.
+        crs : Optional[CRSTYPE], default = DEFAULT_CRS
+            Desired the coordinate reference system.
+        x_column : str, default = 'longitude'
+            The column name of the x-coordinate.
+        y_column : str, default = 'latitude'
+            The column name of the y-coordinate.
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            The geo-referenced dataframe.
+        """
+        df = pd.DataFrame(input_list)
+
+        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=DEFAULT_CRS).to_crs(crs)
+
+        return gpd.GeoDataFrame(df, crs=crs)
+
+    @classmethod
+    def _delist_dict(cls, d):
+        """De-lists all unit length lists in a dictionary."""
+
+        def delist(x):
+            if isinstance(x, list) and len(x) == 1:
+                return x[0]
+            elif isinstance(x, list) and len(x) == 0:
+                return nan
+            return x
+
+        return {k: delist(v) for k, v in d.items()}
+
+    @classmethod
+    def data_dictionaries(cls, data_type: str, as_dict: bool = False) -> Union[pd.DataFrame, Dict]:
         """
         Retrieve data dictionaries from the STN Flood Event Data API.
 
         Parameters
         ----------
-        data_type : str, optional
-            Type of the data to retrieve. It can be 'instruments', 'peaks', 'hwms', or 'sites'. Default is 'instruments'.
-        returns : Union[pd.DataFrame, Dict], default = pd.DataFrame
+        data_type : str
+            Type of the data to retrieve. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
+        as_dict : bool, default = False
+            If True, return the data dictionary as a dictionary. Otherwise, it returns as pd.DataFrame.
 
         Returns
         -------
         Union[pd.DataFrame, Dict]
             The retrieved data dictionary as pd.DataFrame or Dict.
-
-        Raises
-        ------
-        requests.exceptions.HTTPError
-            If the response status code is not 200.
-        ValueError
-            If the return type is not 'DataFrame' or 'Dict'.
 
         References
         ----------
@@ -183,12 +300,16 @@ class STNFloodEventData:
             "sites": "sites.csv",
         }
 
-        data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary"
-        response = requests.get(data_dictionary_url + "/" + dtype_dict[data_type], timeout=timeout)
+        try:
+            file_name = dtype_dict[data_type]
+        except KeyError as ke:
+            raise InputValueError(data_type, list(dtype_dict.keys())) from ke
 
-        _check_response(response)
+        # retrieve
+        response = ar.retrieve_text([urljoin(cls.data_dictionary_url, file_name)])[0]
 
-        data = pd.read_csv(StringIO(response.text))
+        # convert to DataFrame
+        data = pd.read_csv(StringIO(response))
 
         if "Field" not in data.columns:
             data.iloc[0] = data.columns.tolist()
@@ -197,203 +318,228 @@ class STNFloodEventData:
         data["Definition"] = data["Definition"].apply(lambda x: x.replace("\r\n", "  "))
 
         # concatenate definitions corresponding to NaN fields until a non-NaN field is encountered
-        new_data = {"Field": [], "Definition": []}
+        data_dict = {"Field": [], "Definition": []}
 
         for _, row in data.iterrows():
             if pd.isna(row["Field"]):
-                new_data["Definition"][-1] += " " + row["Definition"]
+                data_dict["Definition"][-1] += " " + row["Definition"]
             else:
-                new_data["Field"].append(row["Field"])
-                new_data["Definition"].append(row["Definition"])
+                data_dict["Field"].append(row["Field"])
+                data_dict["Definition"].append(row["Definition"])
 
-        if returns == "DataFrame":
-            return pd.DataFrame(new_data)
-        elif returns == "Dict":
-            return new_data
+        if as_dict:
+            return data_dict
+        return pd.DataFrame(data_dict)
+
+    @classmethod
+    def get_all_data(
+        cls,
+        data_type: str,
+        as_list: Optional[bool] = False,
+        crs: Optional[str] = DEFAULT_CRS,
+    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]:
+        """
+        Retrieve all data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
+
+        Parameters
+        ----------
+        data_type : str
+            The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
+        as_list : Optional[bool], default = False
+            If True, return the data as a list.
+        crs : Optional[str], default = DEFAULT_CRS
+            Desired Coordinate reference system (CRS) of output.
+
+        Returns
+        -------
+        Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]
+            The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
+
+        Raises
+        ------
+        InputValueError
+            If the input data_type is not one of 'instruments', 'peaks', 'hwms', or 'sites'.
+
+        References
+        ----------
+        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+        .. [2] [All Sensors API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/AllSensors)
+        .. [3] [All Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries)
+        .. [4] [All HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs)
+        .. [5] [All Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites)
+        """
+        # non-filtered endpoints
+        endpoint_dict = {
+            "instruments": "Instruments.json",
+            "peaks": "PeakSummaries.json",
+            "hwms": "HWMs.json",
+            "sites": "Sites.json",
+        }
+
+        try:
+            endpoint = endpoint_dict[data_type]
+        except KeyError as ke:
+            raise InputValueError(data_type, list(endpoint_dict.keys())) from ke
+
+        # retrieve data
+        data = ar.retrieve_json([urljoin(cls.service_url, endpoint)], raise_status=True)[0]
+
+        # delists all unit length lists in a dictionary
+        data = [cls._delist_dict(d) for d in data]
+
+        # denotes the fields that are considered as x and y coordinates by data type
+        x_and_y_columns = {
+            "instruments": None,
+            "peaks": None,
+            "hwms": ("longitude_dd", "latitude_dd"),
+            "sites": ("longitude_dd", "latitude_dd"),
+        }
+
+        if as_list:
+            return data
+        elif x_and_y_columns[data_type] is None:
+            return pd.DataFrame(data)
         else:
-            raise InputValueError(returns, ["DataFrame", "Dict"])
-            # raise ValueError(f"Invalid return type: {returns}. Pass 'DataFrame' or 'Dict'.")
+            x_column, y_column = x_and_y_columns[data_type]
+
+            return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
 
     @classmethod
-    @_return_typing
-    @_handle_filter_params
-    def get_sensor_data(
+    def get_filtered_data(
         cls,
-        returns: Optional[str] = "GeoDataFrame",
-        filter_param1: Optional[str] = None,
-        filter_param2: Optional[str] = None,
-    ) -> Union[pd.DataFrame, List]:
+        data_type: str,
+        query_params: Optional[Dict] = None,
+        as_list: Optional[bool] = False,
+        crs: Optional[str] = DEFAULT_CRS,
+    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]:
         """
-        Retrieve data from the STN Flood Event Data API.
+        Retrieve filtered data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
 
         Parameters
         ----------
-        returns : Optional[str], default = "DataFrame"
-            Return object type. Supports "DataFrame" or "List".
-        filter_param1 : str, default = None
-            RESTFUL API filter parameter 1. Not yet implemented.
-        filter_param2 : Optional[str], default = None
-            RESTFUL API filter parameter 2. Not yet implemented.
+        data_type : str
+            The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
+        query_params : Optional[Dict], default = None
+            RESTFUL API query parameters. For accepted values, see the STNFloodEventData class attributes instruments_accepted_params, peaks_accepted_params, hwms_accepted_params, and sites_accepted_params for available values.
 
-        Raises
-        ------
-        requests.exceptions.HTTPError
-            If the response status code is not 200.
+            Also, see the API documentation for each data type for more information:
+                - [instruments](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors)
+                - [peaks](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
+                - [hwms](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
+                - [sites](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
+        as_list : Optional[bool], default = False
+            If True, return the data as a list.
+        crs : Optional[str], default = DEFAULT_CRS
+            Desired Coordinate reference system (CRS) of output.
 
         Returns
         -------
-        Union[pd.DataFrame, List]
-            The retrieved data as pd.DataFrame or List.
+        Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]
+            The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
+
+        Raises
+        ------
+        InputValueError
+            If the input data_type is not one of 'instruments', 'peaks', 'hwms', or 'sites'.
 
         References
         ----------
         .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+        .. [2] [Filtered Sensors API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors)
+        .. [3] [Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
+        .. [4] [Filtered HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
+        .. [5] [Filtered Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
         """
-        return requests.get(
-            cls.base_url + "/" + "Instruments.json", timeout=timeout
-        )  # , params=params)
+        # filtered endpoints
+        endpoint_dict = {
+            "instruments": "Instruments/FilteredInstruments.json",
+            "peaks": "PeakSummaries/FilteredPeaks.json",
+            "hwms": "HWMs/FilteredHWMs.json",
+            "sites": "Sites/FilteredSites.json",
+        }
 
-    @classmethod
-    @_return_typing
-    @_handle_filter_params
-    def get_hwm_data(
-        cls,
-        returns: Optional[str] = "GeoDataFrame",
-        filter_param1: Optional[str] = None,
-        filter_param2: Optional[str] = None,
-    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List]:
-        """
-        Retrieve data from the STN Flood Event Data API.
+        try:
+            endpoint = endpoint_dict[data_type]
+        except KeyError as ke:
+            raise InputValueError(data_type, list(endpoint_dict.keys())) from ke
 
-        Parameters
-        ----------
-        returns : str, default = "GeoDataFrame"
-            Return object type. Supports "GeoDataFrame", "DataFrame", and "List".
-        filter_param1 : Optional[str], default = None
-            RESTFUL API filter parameter 1. Not yet implemented.
-        filter_param2 : Optional[str], default = None
-            RESTFUL API filter parameter 2. Not yet implemented.
+        allowed_query_param_dict = {
+            "instruments": cls.instruments_query_params,
+            "peaks": cls.peaks_query_params,
+            "hwms": cls.hwms_query_params,
+            "sites": cls.sites_query_params,
+        }
 
-        Returns
-        -------
-        Union[gpd.GeoDataFrame, pd.DataFrame, List]
-            The retrieved data as gpd.GeoDataFrame, pd.DataFrame, or List.
+        allowed_query_params = allowed_query_param_dict[data_type]
 
-        Raises
-        ------
-        requests.exceptions.HTTPError
-            If the response status code is not 200.
+        if query_params is None:
+            query_params = {}
 
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        """
-        return requests.get(cls.base_url + "/" + "HWMs.json", timeout=timeout)
+        # check if query_params are valid
+        if not set(query_params.keys()).issubset(allowed_query_params):
+            raise InputValueError("query_params", allowed_query_params)
 
-    @classmethod
-    @_return_typing
-    @_handle_filter_params
-    def get_peak_data(
-        cls,
-        returns: Optional[str] = "GeoDataFrame",
-        filter_param1: Optional[str] = None,
-        filter_param2: Optional[str] = None,
-    ) -> Union[pd.DataFrame, List]:
-        """
-        Retrieve data from the STN Flood Event Data API.
+        # retrieve data
+        data = ar.retrieve_json(
+            [urljoin(cls.service_url, endpoint)],
+            request_kwds=[{"params": query_params}],
+            raise_status=True,
+        )[0]
 
-        Parameters
-        ----------
-        returns : str, default = "DataFrame"
-            Return object type. Supports "DataFrame" or "List".
-        filter_param1 : Optional[str], default = None
-            RESTFUL API filter parameter 1. Not yet implemented.
-        filter_param2 : Optional[str], default = None
-            RESTFUL API filter parameter 2. Not yet implemented.
+        # delists all unit length lists in a dictionary
+        data = [cls._delist_dict(d) for d in data]
 
+        # denotes the fields that are considered as x and y coordinates by data type
+        x_and_y_columns = {
+            "instruments": ("longitude", "latitude"),
+            "peaks": ("longitude_dd", "latitude_dd"),
+            "hwms": ("longitude", "latitude"),
+            "sites": ("longitude_dd", "latitude_dd"),
+        }
 
-        Returns
-        -------
-        Union[pd.DataFrame, List]
-            The retrieved data as pd.DataFrame or List.
+        if as_list:
+            return data
+        elif x_and_y_columns[data_type] is None:
+            return pd.DataFrame(data)
+        else:
+            x_column, y_column = x_and_y_columns[data_type]
 
-        Raises
-        ------
-        requests.exceptions.HTTPError
-            If the response status code is not 200.
-
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        """
-        return requests.get(cls.base_url + "/" + "PeakSummaries.json", timeout=timeout)
-
-    @classmethod
-    @_return_typing
-    @_handle_filter_params
-    def get_site_data(
-        cls,
-        returns: Optional[str] = "GeoDataFrame",
-        filter_param1: Optional[str] = None,
-        filter_param2: Optional[str] = None,
-    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List]:
-        """
-        Retrieve data from the STN Flood Event Data API.
-
-        Parameters
-        ----------
-        returns : str, default = "GeoDataFrame"
-            Return object type. Supports "GeoDataFrame", "DataFrame", and "List".
-        filter_param1 : Optional[str], default = None
-            RESTFUL API filter parameter 1. Not yet implemented.
-        filter_param2 : Optional[str], default = None
-            RESTFUL API filter parameter 2. Not yet implemented.
-
-        Returns
-        -------
-        Union[gpd.GeoDataFrame, pd.DataFrame, List]
-            The retrieved data as gpd.GeoDataFrame, pd.DataFrame, or List.
-
-        Raises
-        ------
-        requests.exceptions.HTTPError
-            If the response status code is not 200.
-
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        """
-        return requests.get(cls.base_url + "/" + "Sites.json", timeout=timeout)
+            return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
 
 
 if __name__ == "__main__":
-    return_type = "Dict"
+    data_types = ["instruments", "peaks", "hwms", "sites"]
 
-    instruments_dd, peaks_dd, hwms_dd, sites_dd = (
-        STNFloodEventData.data_dictionaries(data_type="instruments", returns=return_type),
-        STNFloodEventData.data_dictionaries(data_type="peaks", returns=return_type),
-        STNFloodEventData.data_dictionaries(data_type="hwms", returns=return_type),
-        STNFloodEventData.data_dictionaries(data_type="sites", returns=return_type),
-    )
+    query_params = [
+        {},
+        {"States": "SC, CA"},
+        {"States": "SC, CA"},
+        {"State": "SC,CA"},
+    ]
 
-    try:
-        # print(instruments_dd.head(), peaks_dd.head(), hwms_dd.head(), sites_dd.head())
-        print(instruments_dd.shape, peaks_dd.shape, hwms_dd.shape, sites_dd.shape)
-    except AttributeError:
-        print(instruments_dd, peaks_dd, hwms_dd, sites_dd)
-        print(len(instruments_dd), len(peaks_dd), len(hwms_dd), len(sites_dd))
+    for data_type, query_param in zip(data_types, query_params):
+        try:
+            print(f"Getting filtered {data_type} data ...")
+            data = STNFloodEventData.data_dictionaries(data_type=data_type, as_dict=False)
+        except ar.exceptions.ServiceError:
+            print(f"{data_type} data dictionary not available.")
+        else:
+            print(data.columns, type(data))
 
-    return_type = "GeoDataFrame"
-    sensor_data, hwm_data, peak_data, site_data = (
-        STNFloodEventData.get_sensor_data(returns=return_type),
-        STNFloodEventData.get_hwm_data(returns=return_type),
-        STNFloodEventData.get_peak_data(returns=return_type),
-        STNFloodEventData.get_site_data(returns=return_type),
-    )
+        try:
+            print(f"Getting filtered {data_type} data ...")
+            data = STNFloodEventData.get_filtered_data(
+                data_type=data_type, query_params=query_param, as_list=False
+            )
+        except ar.exceptions.ServiceError:
+            print(f"{data_type} filtered data not available.")
+        else:
+            print(data.columns, type(data))
 
-    print(type(sensor_data), type(hwm_data), type(peak_data), type(site_data))
-
-    try:
-        print(sensor_data.shape, hwm_data.shape, peak_data.shape, site_data.shape)
-    except AttributeError:
-        print(len(sensor_data), len(hwm_data), len(peak_data), len(site_data))
+        try:
+            print(f"Getting all {data_type} data ...")
+            data = STNFloodEventData.get_all_data(data_type=data_type, as_list=False)
+        except ar.exceptions.ServiceError:
+            print(f"{data_type} all data not available.")
+        else:
+            print(data.columns, type(data))
