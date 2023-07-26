@@ -781,6 +781,7 @@ class TestSTNFloodEventData:
             ),
             ("hwms", {"States": "KY,WV,NC,GA,TN,PA"}, True, "EPSG:26915", None, 6220),
             ("sites", {"State": "NY"}, True, None, None, 712),
+            ("instruments", None, True, None, None, 4624),
         ],
     )
     def test_get_filtered_data_success(

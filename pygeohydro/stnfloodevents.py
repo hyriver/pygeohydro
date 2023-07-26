@@ -2,9 +2,8 @@
 Access USGS Short-Term Network (STN) via Restful API.
 
 TODO:
-    - Add RESTfulURLs to pygeoogc's
-    - Documentation
-    - Testing
+    - [ ] Add RESTfulURLs to pygeoogc's
+    - [ ] Documentation
 
 References
 ----------
@@ -23,11 +22,9 @@ from pyproj import CRS
 import async_retriever as ar
 
 try:
-    # from tests directory
-    from pygeohydro.exceptions import InputValueError
+    from pygeohydro.exceptions import InputValueError  # from tests directory
 except ImportError:
-    # from pygeohydro directory
-    from exceptions import InputValueError
+    from exceptions import InputValueError  # from pygeohydro directory
 
 CRSTYPE = Union[int, str, CRS]
 
@@ -410,6 +407,10 @@ class STNFloodEventData:
         `STNFloodEventData.get_filtered_data` : Retrieves filtered data for a given data type.
         `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
 
+        Notes
+        -----
+        - Notice schema differences between the data dictionaries, filtered data queries, and all data queries. This is a known issue and is being addressed by USGS.
+
         Examples
         --------
         >>> from stnfloodevents import STNFloodEventData
@@ -521,6 +522,10 @@ class STNFloodEventData:
         `STNFloodEventData.get_all_data` : Retrieves all data for a given data type.
         `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
 
+        Notes
+        -----
+        - Notice schema differences between the data dictionaries, filtered data queries, and all data queries. This is a known issue and is being addressed by USGS.
+
         Examples
         --------
         >>> from stnfloodevents import STNFloodEventData
@@ -594,47 +599,10 @@ class STNFloodEventData:
 
         if as_list:
             return data
-        elif x_and_y_columns[data_type] is None:
-            return pd.DataFrame(data)
+        # all of the data types can be returned as GeoDataFrames, commenting out unless needed
+        # elif x_and_y_columns[data_type] is None:
+        # return pd.DataFrame(data)
         else:
             x_column, y_column = x_and_y_columns[data_type]
 
             return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
-
-
-if __name__ == "__main__":
-    data_types = ["instruments", "peaks", "hwms", "sites"]
-
-    query_params = [
-        {},
-        {"States": "SC, CA"},
-        {"States": "SC, CA"},
-        {"State": "SC,CA"},
-    ]
-
-    for data_type, query_param in zip(data_types, query_params):
-        try:
-            print(f"Getting filtered {data_type} data ...")
-            data = STNFloodEventData.data_dictionary(data_type=data_type, as_dict=False)
-        except ar.exceptions.ServiceError:
-            print(f"{data_type} data dictionary not available.")
-        else:
-            print(data.columns, type(data))
-
-        try:
-            print(f"Getting filtered {data_type} data ...")
-            data = STNFloodEventData.get_filtered_data(
-                data_type=data_type, query_params=query_param, as_list=False
-            )
-        except ar.exceptions.ServiceError:
-            print(f"{data_type} filtered data not available.")
-        else:
-            print(data.columns, type(data))
-
-        try:
-            print(f"Getting all {data_type} data ...")
-            data = STNFloodEventData.get_all_data(data_type=data_type, as_list=False)
-        except ar.exceptions.ServiceError:
-            print(f"{data_type} all data not available.")
-        else:
-            print(data.columns, type(data))
