@@ -51,6 +51,7 @@ repos:
   hooks:
   - id: codespell
     name: Check common misspellings in text files with codespell.
+    args: [-L, ND]
     additional_dependencies:
     - tomli
 
