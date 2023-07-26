@@ -17,11 +17,17 @@ from urllib.parse import urljoin
 
 import geopandas as gpd
 import pandas as pd
-from exceptions import InputValueError
 from numpy import nan
 from pyproj import CRS
 
 import async_retriever as ar
+
+try:
+    # from tests directory
+    from pygeohydro.exceptions import InputValueError
+except ImportError:
+    # from pygeohydro directory
+    from exceptions import InputValueError
 
 CRSTYPE = Union[int, str, CRS]
 
@@ -255,6 +261,9 @@ class STNFloodEventData:
         """
         df = pd.DataFrame(input_list)
 
+        if crs is None:
+            crs = DEFAULT_CRS
+
         df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=DEFAULT_CRS).to_crs(crs)
 
         return gpd.GeoDataFrame(df, crs=crs)
@@ -273,7 +282,7 @@ class STNFloodEventData:
         return {k: delist(v) for k, v in d.items()}
 
     @classmethod
-    def data_dictionaries(
+    def data_dictionary(
         cls, data_type: str, as_dict: bool = False, async_retriever_kwargs: Optional[Dict] = None
     ) -> Union[pd.DataFrame, Dict]:
         """
@@ -299,13 +308,13 @@ class STNFloodEventData:
 
         See Also
         --------
-        get_all_data : Retrieves all data for a given data type.
-        get_filtered_data : Retrieves filtered data for a given data type.
+        `STNFloodEventData.get_all_data` : Retrieves all data for a given data type.
+        `STNFloodEventData.get_filtered_data` : Retrieves filtered data for a given data type.
 
         Examples
         --------
         >>> from stnfloodevents import STNFloodEventData
-        >>> data = STNFloodEventData.data_dictionaries(data_type="instruments", as_dict=False)
+        >>> data = STNFloodEventData.data_dictionary(data_type="instruments", as_dict=False)
         >>> data.shape
         (26, 2)
         >>> data.columns
@@ -374,7 +383,7 @@ class STNFloodEventData:
         as_list : Optional[bool], default = False
             If True, return the data as a list.
         crs : Optional[str], default = DEFAULT_CRS
-            Desired Coordinate reference system (CRS) of output.
+            Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames with hwms and sites data types.
         async_retriever_kwargs : Optional[Dict], default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL is already set.
 
@@ -398,8 +407,8 @@ class STNFloodEventData:
 
         See Also
         --------
-        get_filtered_data : Retrieves filtered data for a given data type.
-        get_data_dictionary : Retrieves the data dictionary for a given data type.
+        `STNFloodEventData.get_filtered_data` : Retrieves filtered data for a given data type.
+        `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
 
         Examples
         --------
@@ -483,7 +492,7 @@ class STNFloodEventData:
         as_list : Optional[bool], default = False
             If True, return the data as a list.
         crs : Optional[str], default = DEFAULT_CRS
-            Desired Coordinate reference system (CRS) of output.
+            Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames outputs.
         async_retriever_kwargs : Optional[Dict], default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL and request_kwds are already set.
 
@@ -496,6 +505,8 @@ class STNFloodEventData:
         ------
         InputValueError
             If the input data_type is not one of 'instruments', 'peaks', 'hwms', or 'sites'.
+        InputValueError
+            If any of the input query_params are not in accepted parameters (See `STNFloodEventData.instruments_accepted_params`, `STNFloodEventData.peaks_accepted_params`, `STNFloodEventData.hwms_accepted_params`, or `STNFloodEventData.sites_accepted_params`).
 
         References
         ----------
@@ -507,8 +518,8 @@ class STNFloodEventData:
 
         See Also
         --------
-        get_all_data : Retrieves all data for a given data type.
-        get_data_dictionary : Retrieves the data dictionary for a given data type.
+        `STNFloodEventData.get_all_data` : Retrieves all data for a given data type.
+        `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
 
         Examples
         --------
@@ -555,7 +566,7 @@ class STNFloodEventData:
 
         # check if query_params are valid
         if not set(query_params.keys()).issubset(allowed_query_params):
-            raise InputValueError("query_params", allowed_query_params)
+            raise InputValueError("query_param", allowed_query_params)
 
         if async_retriever_kwargs is None:
             async_retriever_kwargs = {}
@@ -604,7 +615,7 @@ if __name__ == "__main__":
     for data_type, query_param in zip(data_types, query_params):
         try:
             print(f"Getting filtered {data_type} data ...")
-            data = STNFloodEventData.data_dictionaries(data_type=data_type, as_dict=False)
+            data = STNFloodEventData.data_dictionary(data_type=data_type, as_dict=False)
         except ar.exceptions.ServiceError:
             print(f"{data_type} data dictionary not available.")
         else:
