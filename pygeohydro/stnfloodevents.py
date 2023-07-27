@@ -20,11 +20,7 @@ from numpy import nan
 from pyproj import CRS
 
 import async_retriever as ar
-
-try:
-    from pygeohydro.exceptions import InputValueError  # from tests directory
-except ImportError:
-    from exceptions import InputValueError  # from pygeohydro directory
+from pygeohydro.exceptions import InputValueError
 
 CRSTYPE = Union[int, str, CRS]
 
