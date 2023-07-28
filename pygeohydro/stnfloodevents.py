@@ -56,7 +56,7 @@ class STNFloodEventData:
 
     Methods
     -------
-    get_data_dictionary
+    data_dictionary
         Retrieves the data dictionary for a given data type.
     get_all_data
         Retrieves all data for a given data type.
