@@ -4,6 +4,8 @@ History
 
 0.15.0 (2023-05-07)
 -------------------
+Contributor: [Fernando Aristizabal](https://github.com/fernando-aristizabal)
+
 From release 0.15 onward, all minor versions of HyRiver packages
 will be pinned. This ensures that previous minor versions of HyRiver
 packages cannot be installed with later minor releases. For example,
