@@ -68,7 +68,7 @@ class STNFloodEventData:
     """
 
     service_url = "https://stn.wim.usgs.gov/STNServices/"
-    stnflood_dd = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
+    data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
 
     # will uncomment when v0.15.1 pygeoogc is released
     # service_url = ServiceURL().restful.stnflood
