@@ -20,6 +20,7 @@ from pyproj import CRS
 
 import async_retriever as ar
 from pygeohydro.exceptions import InputValueError
+from pygeoogc.pygeoogc import ServiceURL
 
 CRSTYPE = int | str | CRS
 
@@ -67,12 +68,8 @@ class STNFloodEventData:
     .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
     """
 
-    service_url = "https://stn.wim.usgs.gov/STNServices/"
-    data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
-
-    # TODO: from pygeoogc. Will uncomment and remove above when v0.15.1 of pygeoogc is released
-    # service_url = ServiceURL().restful.stnflood
-    # data_dictionary_url = ServiceURL().restful.stnflood_dd
+    service_url = ServiceURL().restful.stnflood
+    data_dictionary_url = ServiceURL().restful.stnflood_dd
 
     # accepted query parameters for instruments data type
     instruments_query_params = {
