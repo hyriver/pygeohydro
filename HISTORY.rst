@@ -13,6 +13,20 @@ consistent across all minor versions.
 
 New Features
 ~~~~~~~~~~~~
+- Added new `stnfloodevents` module with `STNFloodEventData` class for
+  retrieving flood event data from the [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/) RESTful Service. This Python API abstracts away RESTful principles and produces analysis ready data in geo-referenced GeoDataFrames, DataFrames, lists, or dictionaries as desired. The core class methods available are `data_dictionary`, `get_all_data`, and `get_filtered_data`. These class methods retrieve the data dictionaries by type, get all the available data by type, and make filtered requests for data by type as well, respectively. The four types of data include "instruments", "peaks", "hwms", and "sites".
+
+0.15.0 (2023-05-07)
+-------------------
+From release 0.15 onward, all minor versions of HyRiver packages
+will be pinned. This ensures that previous minor versions of HyRiver
+packages cannot be installed with later minor releases. For example,
+if you have ``py3dep==0.14.x`` installed, you cannot install
+``pydaymet==0.15.x``. This is to ensure that the API is
+consistent across all minor versions.
+
+New Features
+~~~~~~~~~~~~
 - Add a new option to ``NWIS.get_info``, called ``nhd_info``, for
   retrieving NHDPlus related info on the sites. This will two new
   service calls that might slow down the function, so it's disabled

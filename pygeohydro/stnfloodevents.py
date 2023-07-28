@@ -3,16 +3,15 @@ Access USGS Short-Term Network (STN) via Restful API.
 
 TODO:
     - [ ] Add RESTfulURLs to pygeoogc's
-    - [ ] Documentation
 
 References
 ----------
  .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
 """
 
+from __future__ import annotations
+
 from io import StringIO
-from typing import Dict, List, Optional, Union
-from urllib.parse import urljoin
 
 import geopandas as gpd
 import pandas as pd
@@ -22,7 +21,7 @@ from pyproj import CRS
 import async_retriever as ar
 from pygeohydro.exceptions import InputValueError
 
-CRSTYPE = Union[int, str, CRS]
+CRSTYPE = int | str | CRS
 
 # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
 # this is the CRS used for visualization on STN front-end.
@@ -41,8 +40,6 @@ class STNFloodEventData:
 
     Attributes
     ----------
-    base_url : str
-        The base url of the STN Flood Event Data RESTFUL Service API.
     service_url : str
         The service url of the STN Flood Event Data RESTFUL Service API.
     data_dictionary_url : str
@@ -70,10 +67,12 @@ class STNFloodEventData:
     .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
     """
 
-    # TODO: Add to pygeoogc's RESTfulURLs
-    base_url = "https://stn.wim.usgs.gov"
-    service_url = urljoin(base_url, "STNServices/")
-    data_dictionary_url = urljoin(base_url, "STNWeb/datadictionary/")
+    service_url = "https://stn.wim.usgs.gov/STNServices/"
+    data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
+
+    # TODO: from pygeoogc. Will uncomment and remove above when v0.15.1 of pygeoogc is released
+    # service_url = ServiceURL().restful.stnflood
+    # data_dictionary_url = ServiceURL().restful.stnflood_dd
 
     # accepted query parameters for instruments data type
     instruments_query_params = {
@@ -128,19 +127,19 @@ class STNFloodEventData:
     @classmethod
     def _geopandify(
         cls,
-        input_list: List[Dict],
-        crs: Optional[CRSTYPE] = DEFAULT_CRS,
+        input_list: list[dict],
+        crs: CRSTYPE | None = DEFAULT_CRS,
         x_column: str = "longitude_dd",
         y_column: str = "latitude_dd",
     ) -> gpd.GeoDataFrame:
         """
-        Georeference a list of dictionaries.
+        Georeference a list of dictionaries to a GeoDataFrame.
 
         Parameters
         ----------
-        input_list : List[Dict]
+        input_list : list of dict
             The list of dictionaries to be converted to a geodataframe.
-        crs : Optional[CRSTYPE], default = DEFAULT_CRS
+        crs : CRSTYPE | None, default = DEFAULT_CRS
             Desired the coordinate reference system.
         x_column : str, default = 'longitude'
             The column name of the x-coordinate.
@@ -149,8 +148,8 @@ class STNFloodEventData:
 
         Returns
         -------
-        gpd.GeoDataFrame
-            The geo-referenced dataframe.
+        geopandas.GeoDataFrame
+            The geo-referenced GeoDataFrame.
         """
         df = pd.DataFrame(input_list)
 
@@ -176,8 +175,8 @@ class STNFloodEventData:
 
     @classmethod
     def data_dictionary(
-        cls, data_type: str, as_dict: bool = False, async_retriever_kwargs: Optional[Dict] = None
-    ) -> Union[pd.DataFrame, Dict]:
+        cls, data_type: str, as_dict: bool = False, async_retriever_kwargs: dict | None = None
+    ) -> pd.DataFrame | dict:
         """
         Retrieve data dictionaries from the STN Flood Event Data API.
 
@@ -187,13 +186,13 @@ class STNFloodEventData:
             Type of the data to retrieve. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
         as_dict : bool, default = False
             If True, return the data dictionary as a dictionary. Otherwise, it returns as pd.DataFrame.
-        async_retriever_kwargs : Optional[Dict], default = None
+        async_retriever_kwargs : dict | None, default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_text()`. URL is already set.
 
         Returns
         -------
-        Union[pd.DataFrame, Dict]
-            The retrieved data dictionary as pd.DataFrame or Dict.
+        pandas.DataFrame | dict
+            The retrieved data dictionary as pd.DataFrame or dict.
 
         References
         ----------
@@ -221,7 +220,7 @@ class STNFloodEventData:
         }
 
         try:
-            file_name = dtype_dict[data_type]
+            endpoint = dtype_dict[data_type]
         except KeyError as ke:
             raise InputValueError(data_type, list(dtype_dict.keys())) from ke
 
@@ -232,7 +231,7 @@ class STNFloodEventData:
 
         # retrieve
         response = ar.retrieve_text(
-            [urljoin(cls.data_dictionary_url, file_name)], **async_retriever_kwargs
+            [f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs
         )[0]
 
         # convert to DataFrame
@@ -262,10 +261,10 @@ class STNFloodEventData:
     def get_all_data(
         cls,
         data_type: str,
-        as_list: Optional[bool] = False,
-        crs: Optional[str] = DEFAULT_CRS,
-        async_retriever_kwargs: Optional[Dict] = None,
-    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]:
+        as_list: bool | None = False,
+        crs: str | None = DEFAULT_CRS,
+        async_retriever_kwargs: dict | None = None,
+    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
         """
         Retrieve all data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
 
@@ -273,16 +272,16 @@ class STNFloodEventData:
         ----------
         data_type : str
             The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
-        as_list : Optional[bool], default = False
+        as_list : bool | None, default = False
             If True, return the data as a list.
-        crs : Optional[str], default = DEFAULT_CRS
+        crs : str | None, default = DEFAULT_CRS
             Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames with hwms and sites data types.
-        async_retriever_kwargs : Optional[Dict], default = None
+        async_retriever_kwargs : dict | None, default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL is already set.
 
         Returns
         -------
-        Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]
+        geopandas.GeoDataFrame | pandas.DataFrame | list of dict
             The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
 
         Raises
@@ -340,12 +339,12 @@ class STNFloodEventData:
             async_retriever_kwargs.pop("url", None)
 
         # retrieve data
-        data = ar.retrieve_json([urljoin(cls.service_url, endpoint)], **async_retriever_kwargs)[0]
+        data = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)[0]
 
         # delists all unit length lists in a dictionary
         data = [cls._delist_dict(d) for d in data]
 
-        # denotes the fields that are considered as x and y coordinates by data type
+        # denotes the fields that are considered as x and y coordinates by data type, use None if no coordinates are available
         x_and_y_columns = {
             "instruments": None,
             "peaks": None,
@@ -353,24 +352,28 @@ class STNFloodEventData:
             "sites": ("longitude_dd", "latitude_dd"),
         }
 
+        # if list is desired
         if as_list:
             return data
-        elif x_and_y_columns[data_type] is None:
-            return pd.DataFrame(data)
-        else:
-            x_column, y_column = x_and_y_columns[data_type]
 
-            return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
+        # when no x and y columns are present, convert to DataFrame
+        if x_and_y_columns[data_type] is None:
+            return pd.DataFrame(data)
+
+        # when x and y columns are present, convert to GeoDataFrame
+        x_column, y_column = x_and_y_columns[data_type]
+
+        return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
 
     @classmethod
     def get_filtered_data(
         cls,
         data_type: str,
-        query_params: Optional[Dict] = None,
-        as_list: Optional[bool] = False,
-        crs: Optional[str] = DEFAULT_CRS,
-        async_retriever_kwargs: Optional[Dict] = None,
-    ) -> Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]:
+        query_params: dict | None = None,
+        as_list: bool | None = False,
+        crs: str | None = DEFAULT_CRS,
+        async_retriever_kwargs: dict | None = None,
+    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
         """
         Retrieve filtered data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
 
@@ -378,7 +381,7 @@ class STNFloodEventData:
         ----------
         data_type : str
             The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
-        query_params : Optional[Dict], default = None
+        query_params : dict | None, default = None
             RESTFUL API query parameters. For accepted values, see the STNFloodEventData class attributes instruments_accepted_params, peaks_accepted_params, hwms_accepted_params, and sites_accepted_params for available values.
 
             Also, see the API documentation for each data type for more information:
@@ -386,16 +389,16 @@ class STNFloodEventData:
                 - [peaks](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
                 - [hwms](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
                 - [sites](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
-        as_list : Optional[bool], default = False
+        as_list : bool | None, default = False
             If True, return the data as a list.
-        crs : Optional[str], default = DEFAULT_CRS
+        crs : str | None, default = DEFAULT_CRS
             Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames outputs.
-        async_retriever_kwargs : Optional[Dict], default = None
+        async_retriever_kwargs : dict | None, default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL and request_kwds are already set.
 
         Returns
         -------
-        Union[gpd.GeoDataFrame, pd.DataFrame, List[Dict]]
+        geopandas.GeoDataFrame | pandas.DataFrame | list of dict
             The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
 
         Raises
@@ -477,7 +480,7 @@ class STNFloodEventData:
 
         # retrieve data
         data = ar.retrieve_json(
-            [urljoin(cls.service_url, endpoint)],
+            [f"{cls.service_url}{endpoint}"],
             request_kwds=[{"params": query_params}],
             **async_retriever_kwargs,
         )[0]
@@ -485,7 +488,7 @@ class STNFloodEventData:
         # delists all unit length lists in a dictionary
         data = [cls._delist_dict(d) for d in data]
 
-        # denotes the fields that are considered as x and y coordinates by data type
+        # denotes the fields that are considered as x and y coordinates by data type, use None if no coordinates are available
         x_and_y_columns = {
             "instruments": ("longitude", "latitude"),
             "peaks": ("longitude_dd", "latitude_dd"),
@@ -493,12 +496,16 @@ class STNFloodEventData:
             "sites": ("longitude_dd", "latitude_dd"),
         }
 
+        # return data as a list
         if as_list:
             return data
-        # all of the data types can be returned as GeoDataFrames, commenting out unless needed
-        # elif x_and_y_columns[data_type] is None:
-        # return pd.DataFrame(data)
-        else:
-            x_column, y_column = x_and_y_columns[data_type]
 
-            return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
+        # when x and y columns are not available, return as a DataFrame
+        # all of the data types can be returned as GeoDataFrames, commenting out unless needed
+        # if x_and_y_columns[data_type] is None:
+        #    return pd.DataFrame(data)
+
+        # when x and y columns are available, return as a GeoDataFrame
+        x_column, y_column = x_and_y_columns[data_type]
+
+        return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
