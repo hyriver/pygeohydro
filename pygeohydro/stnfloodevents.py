@@ -25,7 +25,7 @@ CRSTYPE = int | str | CRS
 
 # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
 # this is the CRS used for visualization on STN front-end.
-DEFAULT_CRS = "EPSG:3857"
+DEFAULT_CRS = "EPSG:4326"
 
 
 class STNFloodEventData:
@@ -156,9 +156,9 @@ class STNFloodEventData:
         if crs is None:
             crs = DEFAULT_CRS
 
-        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=DEFAULT_CRS).to_crs(crs)
+        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=DEFAULT_CRS)
 
-        return gpd.GeoDataFrame(df, crs=crs)
+        return gpd.GeoDataFrame(df, crs=DEFAULT_CRS).to_crs(crs)
 
     @classmethod
     def _delist_dict(cls, d):
