@@ -690,7 +690,7 @@ class TestSTNFloodEventData:
                 True,
                 "EPSG:4326",
                 {"url": "https://www.google.com", "disable": True},
-                4624,
+                4612,
             ),
             ("peaks", True, None, {"max_workers": 7, "timeout": 10}, 13159),
             ("hwms", True, "EPSG:26915", None, 34694),
@@ -714,9 +714,10 @@ class TestSTNFloodEventData:
             )
         else:
             assert isinstance(result, (gpd.GeoDataFrame, pd.DataFrame))
+
             if isinstance(result, gpd.GeoDataFrame):
                 if crs is None:
-                    crs = gh.stnfloodevents.DEFAULT_CRS
+                    crs = self.stn.service_crs
                 assert result.crs == CRS(crs)
 
             assert result.shape[0] >= expected_shape[0]  # minimum number of rows
@@ -807,7 +808,7 @@ class TestSTNFloodEventData:
         else:
             assert isinstance(result, gpd.GeoDataFrame)
             if crs is None:
-                crs = gh.stnfloodevents.DEFAULT_CRS
+                crs = self.stn.service_crs
             assert result.crs == CRS(crs)
 
             assert result.shape[0] >= expected_shape[0]

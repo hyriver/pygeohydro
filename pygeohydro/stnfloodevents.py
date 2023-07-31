@@ -12,6 +12,7 @@ References
 from __future__ import annotations
 
 from io import StringIO
+from typing import TYPE_CHECKING, Union
 
 import geopandas as gpd
 import pandas as pd
@@ -21,11 +22,10 @@ from pyproj import CRS
 import async_retriever as ar
 from pygeohydro.exceptions import InputValueError
 
-CRSTYPE = int | str | CRS
+if TYPE_CHECKING:
+    CRSTYPE = Union[int, str, CRS]
 
-# Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
-# this is the CRS used for visualization on STN front-end.
-DEFAULT_CRS = "EPSG:4326"
+__all__ = ["STNFloodEventData"]
 
 
 class STNFloodEventData:
@@ -44,13 +44,15 @@ class STNFloodEventData:
         The service url of the STN Flood Event Data RESTFUL Service API.
     data_dictionary_url : str
         The data dictionary url of the STN Flood Event Data RESTFUL Service API.
-    instruments_query_params : Set[str]
+    service_crs : CRS, default: EPSG:4326
+        The coordinate reference system of the data from the service.
+    instruments_query_params : Set of str
         The accepted query parameters for the instruments data type.
-    peaks_query_params : Set[str]
+    peaks_query_params : Set of str
         The accepted query parameters for the peaks data type.
-    hwms_query_params : Set[str]
+    hwms_query_params : Set of str
         The accepted query parameters for the hwms data type.
-    sites_query_params : Set[str]
+    sites_query_params : Set of str
         The accepted query parameters for the sites data type.
 
     Methods
@@ -70,6 +72,10 @@ class STNFloodEventData:
     -----
     - Point data from the service is assumed to be in the WGS84 coordinate reference system (EPSG:4326).
     """
+
+    # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
+    # this is the CRS used for visualization on STN front-end.
+    service_crs = "EPSG:4326"
 
     service_url = "https://stn.wim.usgs.gov/STNServices/"
     data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
@@ -132,7 +138,7 @@ class STNFloodEventData:
     def _geopandify(
         cls,
         input_list: list[dict],
-        crs: CRSTYPE | None = DEFAULT_CRS,
+        crs: CRSTYPE | None = service_crs,
         x_column: str = "longitude_dd",
         y_column: str = "latitude_dd",
     ) -> gpd.GeoDataFrame:
@@ -143,7 +149,7 @@ class STNFloodEventData:
         ----------
         input_list : list of dict
             The list of dictionaries to be converted to a geodataframe.
-        crs : CRSTYPE | None, default = DEFAULT_CRS
+        crs : CRSTYPE | None, default =  STNFloodEventData.service_crs
             Desired the coordinate reference system.
         x_column : str, default = 'longitude'
             The column name of the x-coordinate.
@@ -158,11 +164,11 @@ class STNFloodEventData:
         df = pd.DataFrame(input_list)
 
         if crs is None:
-            crs = DEFAULT_CRS
+            crs = cls.service_crs
 
-        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=DEFAULT_CRS)
+        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=cls.service_crs)
 
-        return gpd.GeoDataFrame(df, crs=DEFAULT_CRS).to_crs(crs)
+        return gpd.GeoDataFrame(df, crs=cls.service_crs).to_crs(crs)
 
     @classmethod
     def _delist_dict(cls, d):
@@ -266,7 +272,7 @@ class STNFloodEventData:
         cls,
         data_type: str,
         as_list: bool | None = False,
-        crs: str | None = DEFAULT_CRS,
+        crs: str | None = service_crs,
         async_retriever_kwargs: dict | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
         """
@@ -278,7 +284,7 @@ class STNFloodEventData:
             The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
         as_list : bool | None, default = False
             If True, return the data as a list.
-        crs : str | None, default = DEFAULT_CRS
+        crs : str | None, default =  STNFloodEventData.service_crs
             Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames with hwms and sites data types.
         async_retriever_kwargs : dict | None, default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL is already set.
@@ -375,7 +381,7 @@ class STNFloodEventData:
         data_type: str,
         query_params: dict | None = None,
         as_list: bool | None = False,
-        crs: str | None = DEFAULT_CRS,
+        crs: str | None = service_crs,
         async_retriever_kwargs: dict | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
         """
@@ -395,7 +401,7 @@ class STNFloodEventData:
                 - [sites](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
         as_list : bool | None, default = False
             If True, return the data as a list.
-        crs : str | None, default = DEFAULT_CRS
+        crs : str | None, default =  STNFloodEventData.service_crs
             Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames outputs.
         async_retriever_kwargs : dict | None, default = None
             Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL and request_kwds are already set.
