@@ -44,7 +44,7 @@ class STNFloodEventData:
         The service url of the STN Flood Event Data RESTFUL Service API.
     data_dictionary_url : str
         The data dictionary url of the STN Flood Event Data RESTFUL Service API.
-    service_crs : CRS, default: EPSG:4326
+    service_crs : CRS, default = "EPSG:4326"
         The coordinate reference system of the data from the service.
     instruments_query_params : Set of str
         The accepted query parameters for the instruments data type.
