@@ -65,6 +65,10 @@ class STNFloodEventData:
     References
     ----------
     .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+
+    Notes
+    -----
+    - Point data from the service is assumed to be in the WGS84 coordinate reference system (EPSG:4326).
     """
 
     service_url = "https://stn.wim.usgs.gov/STNServices/"
