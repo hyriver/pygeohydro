@@ -21,6 +21,7 @@ from pyproj import CRS
 
 import async_retriever as ar
 from pygeohydro.exceptions import InputValueError
+from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
     CRSTYPE = Union[int, str, CRS]
@@ -77,12 +78,9 @@ class STNFloodEventData:
     # this is the CRS used for visualization on STN front-end.
     service_crs = "EPSG:4326"
 
-    service_url = "https://stn.wim.usgs.gov/STNServices/"
-    data_dictionary_url = "https://stn.wim.usgs.gov/STNWeb/datadictionary/"
-
-    # will uncomment when v0.15.1 pygeoogc is released
-    # service_url = ServiceURL().restful.stnflood
-    # data_dictionary_url = ServiceURL().restful.stnflood_dd
+    # pygeoogc's RESTfulURLs
+    service_url = ServiceURL().restful.stnflood
+    data_dictionary_url = ServiceURL().restful.stnflood_dd
 
     # accepted query parameters for instruments data type
     instruments_query_params = {
@@ -215,10 +213,10 @@ class STNFloodEventData:
 
         Examples
         --------
-        >>> from stnfloodevents import STNFloodEventData
+        >>> from pygeohydro.stnfloodevents import STNFloodEventData
         >>> data = STNFloodEventData.data_dictionary(data_type="instruments", as_dict=False)
-        >>> data.shape
-        (26, 2)
+        >>> data.shape[1]
+        2
         >>> data.columns
         Index(['Field', 'Definition'], dtype='object')
         """
@@ -318,10 +316,10 @@ class STNFloodEventData:
 
         Examples
         --------
-        >>> from stnfloodevents import STNFloodEventData
+        >>> from pygeohydro.stnfloodevents import STNFloodEventData
         >>> data = STNFloodEventData.get_all_data(data_type="instruments")
-        >>> data.shape
-        (4624, 18)
+        >>> data.shape[1]
+        18
         >>> data.columns
         Index(['instrument_id', 'sensor_type_id', 'deployment_type_id',
                'location_description', 'serial_number', 'interval', 'site_id',
@@ -437,11 +435,11 @@ class STNFloodEventData:
 
         Examples
         --------
-        >>> from stnfloodevents import STNFloodEventData
+        >>> from pygeohydro.stnfloodevents import STNFloodEventData
         >>> query_params = {"States": "SC, CA"}
         >>> data = STNFloodEventData.get_filtered_data(data_type="instruments", query_params=query_params)
-        >>> data.shape
-        (473, 34)
+        >>> data.shape[1]
+        34
         >>> data.columns
         Index(['sensorType', 'deploymentType', 'eventName', 'collectionCondition',
             'housingType', 'sensorBrand', 'statusId', 'timeStamp', 'site_no',
