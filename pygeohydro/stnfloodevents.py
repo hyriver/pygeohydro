@@ -1,12 +1,13 @@
 """
 Access USGS Short-Term Network (STN) via Restful API.
 
-TODO:
-    - [ ] Add RESTfulURLs to pygeoogc's
-
 References
 ----------
  .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+ .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
+ .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
+ .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
+ .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
 """
 
 from __future__ import annotations
@@ -68,6 +69,10 @@ class STNFloodEventData:
     References
     ----------
     .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+    .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
+    .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
+    .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
+    .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
 
     Notes
     -----
@@ -205,6 +210,10 @@ class STNFloodEventData:
         References
         ----------
         .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
+        .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
+        .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
+        .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
+        .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
 
         See Also
         --------
@@ -304,6 +313,10 @@ class STNFloodEventData:
         .. [3] [All Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries)
         .. [4] [All HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs)
         .. [5] [All Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites)
+        .. [6] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
+        .. [7] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
+        .. [8] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
+        .. [9] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
 
         See Also
         --------
@@ -423,6 +436,10 @@ class STNFloodEventData:
         .. [3] [Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
         .. [4] [Filtered HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
         .. [5] [Filtered Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
+        .. [6] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
+        .. [7] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
+        .. [8] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
+        .. [9] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
 
         See Also
         --------
