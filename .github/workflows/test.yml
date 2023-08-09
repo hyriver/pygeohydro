@@ -9,8 +9,6 @@ on:
   pull_request:
     branches:
     - '**'
-    tags-ignore:
-    - '**'
   workflow_dispatch:
 
 concurrency:
@@ -39,14 +37,14 @@ jobs:
         echo "CONDA_ENV_FILE=ci/requirements/environment.yml" >> $GITHUB_ENV
         echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
     - name: Setup micromamba
-      uses: mamba-org/provision-with-micromamba@main
+      uses: mamba-org/setup-micromamba@v1
       with:
         environment-file: ${{ env.CONDA_ENV_FILE }}
         environment-name: ${{ env.REPO_NAME }}-tests
-        extra-specs: |
+        create-args: >-
           python=${{ env.PYTHON_VERSION }}
-        cache-env: true
-        cache-env-key: ${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}
+        cache-environment: true
+        cache-environment-key: ${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}
     - name: Install error reporter
       if: ${{ matrix.os }} == 'ubuntu-latest' and ${{ matrix.python-version }} == '3.10'
       run: |
