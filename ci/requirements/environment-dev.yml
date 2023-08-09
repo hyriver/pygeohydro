@@ -16,15 +16,20 @@ dependencies:
 - ujson
 
 # pygeoogc deps
-# - async-retriever >=0.3.5
+# - async-retriever>=0.15,<0.16
 - cytoolz
 - defusedxml
-- owslib >=0.27.2
-- pyproj >=2.2
+- joblib
+- multidict
+- owslib>=0.27.2
+- pyproj>=3.0.1
 - requests
-- requests-cache >=0.9.6
-- shapely >=2.0
+- requests-cache>=0.9.6
+- shapely>=1.8.5
+- ujson
+- url-normalize>=1.4
 - urllib3
+- yarl
 
 # pygeoutils deps
 - cytoolz
