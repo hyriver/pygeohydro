@@ -290,7 +290,9 @@ class NWIS:
         except (TypeError, IntCastingNaNError):
             area["comid"] = area["comid"].astype("Int32")
         nhd_area = pynhd.streamcat("fert", comids=area["comid"].dropna().to_list())
-        area = area.merge(nhd_area[["COMID", "WSAREASQKM"]], left_on="comid", right_on="COMID", how="left")
+        area = area.merge(
+            nhd_area[["COMID", "WSAREASQKM"]], left_on="comid", right_on="COMID", how="left"
+        )
         area["identifier"] = area["identifier"].str.replace("USGS-", "")
         area = area[["identifier", "comid", "reachcode", "measure", "WSAREASQKM"]].copy()
         area = area.rename(
