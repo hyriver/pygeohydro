@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+from datetime import datetime
 from typing import Any, NamedTuple
 
 import cytoolz.curried as tlz
@@ -65,12 +66,12 @@ def nlcd_helper() -> dict[str, Any]:
         tag = t.text.split(" - ")
         descriptors[tag[0]] = v.text if tag[-1].isnumeric() else f"{tag[-1]}: {v.text}"
 
-    cyear = [2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001]
+    cyear = [2021, 2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001]
     nlcd_meta = {
         "cover_years": cyear,
         "impervious_years": cyear,
         "descriptor_years": cyear,
-        "canopy_years": [2016, 2011],
+        "canopy_years": list(range(2011, 2022)),
         "classes": cover_classes,
         "categories": {
             "Background": ("127",),
@@ -122,20 +123,21 @@ def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[p
     if not isinstance(dates, (tuple, list, int)):
         raise InputTypeError("dates", "tuple, list, or int", "(start, end), year, or [years, ...]")
 
+    year = datetime.now().year - 1
     if isinstance(dates, tuple):
         if len(dates) != 2:
             raise InputTypeError("dates", "(start, end)")
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
-        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime("2020-12-31"):
-            raise InputRangeError("SSEBop", ("2000", "2020"))
+        if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime(f"{year}-12-31"):
+            raise InputRangeError("SSEBop", ("2000", year))
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
-        seebop_yrs = np.arange(2000, 2021)
+        seebop_yrs = np.arange(2000, year)
 
         if any(y not in seebop_yrs for y in years):
-            raise InputRangeError("SSEBop", ("2000", "2020"))
+            raise InputRangeError("SSEBop", ("2000", year))
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list.pop(0)

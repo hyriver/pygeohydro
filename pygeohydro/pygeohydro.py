@@ -247,15 +247,15 @@ def ssebopeta_bygeom(
 
 
 class NLCD:
-    """Get data from NLCD database (2019).
+    """Get data from NLCD database (2021).
 
     Parameters
     ----------
     years : dict, optional
         The years for NLCD layers as a dictionary, defaults to
-        ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
-        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2019]}`` returns
-        land cover data for 2016 and 2019.
+        ``{'impervious': [2021], 'cover': [2021], 'canopy': [2021], "descriptor": [2021]}``.
+        Layers that are not in years are ignored, e.g., ``{'cover': [2016, 2021]}`` returns
+        land cover data for 2016 and 2021.
     region : str, optional
         Region in the US that the input geometries are located, defaults to ``L48``.
         Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
@@ -276,15 +276,16 @@ class NLCD:
         ssl: SSLContext | bool | None = None,
     ) -> None:
         default_years = {
-            "impervious": [2019],
-            "cover": [2019],
-            "canopy": [2016],
-            "descriptor": [2019],
+            "impervious": [2021],
+            "cover": [2021],
+            "canopy": [2021],
+            "descriptor": [2021],
         }
         years = default_years if years is None else years
         if not isinstance(years, dict):
             raise InputTypeError("years", "dict", f"{default_years}")
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
+        self.years = cast("dict[str, list[int]]", self.years)
         self.region = region.upper()
         self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
         self.crs = pyproj.CRS(crs).to_string().lower()
@@ -297,14 +298,14 @@ class NLCD:
 
         self.wms = WMS(
             ServiceURL().wms.mrlc,
-            layers=self.layers,
+            layers=list(self.layers.values()),
             outformat="image/geotiff",
             crs=self.crs,
             validation=False,
             ssl=ssl,
         )
 
-    def get_layers(self) -> list[str]:
+    def get_layers(self) -> dict[str, str]:
         """Get NLCD layers for the provided years dictionary."""
         valid_regions = ["L48", "HI", "PR", "AK"]
         if self.region not in valid_regions:
@@ -323,20 +324,23 @@ class NLCD:
             vals = [f"\n{lyr}: {', '.join(str(y) for y in yr)}" for lyr, yr in avail_years.items()]
             raise InputValueError("years", vals)
 
-        def layer_name(lyr: str) -> str:
+        def layer_name(lyr: str, yr: int) -> str:
             if lyr == "canopy":
-                return "Tree_Canopy"
+                if self.region == "L48":
+                    return f"nlcd_tcc_conus_{yr}_v2021-4"
+                return f"NLCD_{yr}_Tree_Canopy_{self.region}"
             if lyr == "cover":
-                return "Land_Cover_Science_Product"
+                return f"NLCD_{yr}_Land_Cover_Science_Product_{self.region}"
             if lyr == "impervious":
-                return "Impervious"
-            return "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
+                return f"NLCD_{yr}_Impervious_{self.region}"
+            if self.region in ("HI", "PR"):
+                raise InputValueError("region (descriptor)", ("L48, AK"))  # noqa: TRY003
+            service_lyr = (
+                "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
+            )
+            return f"NLCD_{yr}_{service_lyr}_{self.region}"
 
-        return [
-            f"NLCD_{yr}_{layer_name(lyr)}_{self.region}"
-            for lyr, yrs in self.years.items()
-            for yr in yrs
-        ]
+        return {f"{lyr}_{yr}": layer_name(lyr, yr) for lyr, yrs in self.years.items() for yr in yrs}
 
     def get_map(
         self,
@@ -355,9 +359,8 @@ class NLCD:
 
         ds = _ds.to_dataset() if isinstance(_ds, xr.DataArray) else _ds
         ds.attrs = _ds.attrs
-        for lyr in self.layers:
-            name = [n for n in self.units if n in lyr.lower()][-1]
-            lyr_name = f"{name}_{lyr.split('_')[1]}"
+        for lyr_name, lyr in self.layers.items():
+            name = lyr_name.split("_")[0]
             ds = ds.rename({lyr: lyr_name})
             ds[lyr_name] = ds[lyr_name].where(ds[lyr_name] < 255, self.nodata[name])
             ds[lyr_name].attrs["units"] = self.units[name]
@@ -463,7 +466,7 @@ def nlcd_bycoords(
     if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
         raise InputTypeError("coords", "list of (lon, lat)")
 
-    nlcd_wms = NLCD(years=years, region=region, crs="epsg:3857", ssl=ssl)
+    nlcd_wms = NLCD(years=years, region=region, crs=3857, ssl=ssl)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=4326)
     points_proj = points.to_crs(nlcd_wms.crs)
     geoms = points_proj.buffer(50, cap_style=3)
@@ -599,8 +602,8 @@ def nlcd_area_percent(
         A GeoDataFrame or GeoSeries with the geometry to query. The indices are used
         as keys in the output dictionary.
     year : int, optional
-        Year of the NLCD data, defaults to 2019. Available years are 2019, 2016, 2013,
-        2011, 2008, 2006, 2004, and 2001.
+        Year of the NLCD data, defaults to 2019. Available years are 2021, 2019, 2016,
+        2013, 2011, 2008, 2006, 2004, and 2001.
     region : str, optional
         Region in the US that the input geometries are located, defaults to ``L48``.
         Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
@@ -615,7 +618,7 @@ def nlcd_area_percent(
         is always 100, as well as the sume of natural, developed, and impervious
         percentages.
     """
-    valid_year = (2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001)
+    valid_year = (2021, 2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001)
     if year not in valid_year:
         raise InputValueError("year", valid_year)
 
@@ -627,7 +630,7 @@ def nlcd_area_percent(
 
     geoms = geo_df.to_crs(4326).geometry
 
-    wms = NLCD(years={"impervious": year, "cover": year}, region=region)
+    wms = NLCD(years={"impervious": year, "cover": year}, region=region, ssl=False)
 
     return pd.DataFrame.from_dict(
         {i: _area_percent(wms.get_map(g, 30), year) for i, g in geoms.items()},
