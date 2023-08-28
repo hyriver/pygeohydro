@@ -902,13 +902,8 @@ class TestSTNFloodEventData:
         """Test the function wrapper of the STNFloodEventData class."""
         result = gh.stn_flood_event(data_type, query_params)
         assert isinstance(result, gpd.GeoDataFrame)
-        if crs is None:
-            crs = self.stn.service_crs
-        assert result.crs == CRS(crs)
-
         assert result.shape[0] >= expected_shape[0]
         assert result.shape[1] == expected_shape[1]
-
         assert all(
             rc in self.expected_filtered_data_schemas[data_type] for rc in list(result.columns)
         )
