@@ -5,9 +5,9 @@ Credits
 Development Lead
 ----------------
 
-* Taher Chegini <cheginit@gmail.com>
+`Taher Cheginil <https://github.com/cheginit>`_
 
 Contributors
 ------------
 
-None yet. Why not be the first?
+`Fernando Aristizabal <https://github.com/fernando-aristizabal>`_
