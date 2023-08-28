@@ -4,19 +4,23 @@ History
 
 0.15.1 (2023-0X-XX)
 -------------------
-Contributor: [Fernando Aristizabal](https://github.com/fernando-aristizabal)
-
-From release 0.15 onward, all minor versions of HyRiver packages
-will be pinned. This ensures that previous minor versions of HyRiver
-packages cannot be installed with later minor releases. For example,
-if you have ``py3dep==0.14.x`` installed, you cannot install
-``pydaymet==0.15.x``. This is to ensure that the API is
-consistent across all minor versions.
 
 New Features
 ~~~~~~~~~~~~
-- Added new `stnfloodevents` module with `STNFloodEventData` class for
-  retrieving flood event data from the [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/) RESTful Service. This Python API abstracts away RESTful principles and produces analysis ready data in geo-referenced GeoDataFrames, DataFrames, lists, or dictionaries as desired. The core class methods available are `data_dictionary`, `get_all_data`, and `get_filtered_data`. These class methods retrieve the data dictionaries by type, get all the available data by type, and make filtered requests for data by type as well, respectively. The four types of data include "instruments", "peaks", "hwms", and "sites".
+- Add new ``stnfloodevents`` module with ``STNFloodEventData`` class for
+  retrieving flood event data from the
+  `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
+  RESTful Service. This Python API abstracts away RESTful principles and
+  produces analysis ready data in geo-referenced GeoDataFrames, DataFrames,
+  lists, or dictionaries as desired. The core class methods available are 
+  ``data_dictionary``, ``get_all_data``, and ``get_filtered_data``.
+  These class methods retrieve the data dictionaries by type, get all the
+  available data by type, and make filtered requests for data by type as well,
+  respectively. The four types of data include ``instruments``, ``peaks``,
+  ``hwms``, and ``sites``.
+  Contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`_.
+- Add a wrapper function for the ``STNFloodEventData`` class called
+  ``stn_flood_event``.
 
 0.15.0 (2023-05-07)
 -------------------
