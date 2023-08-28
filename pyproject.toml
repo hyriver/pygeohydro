@@ -87,37 +87,6 @@ fallback_version = "999"
 [tool.black]
 line-length = 100
 
-[tool.pytest.ini_options]
-addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
-doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
-filterwarnings = [
-  "ignore:.*distutils.*",
-  "ignore:.*--rsyncdir command line argument.*",
-  "ignore:.*numpy.ndarray size changed.*",
-  "ignore:.*invalid value encountered in cast.*",
-  "ignore:.*'cgi' is deprecated.*",
-]
-testpaths = [
-  "tests",
-  "pygeohydro"
-]
-
-[tool.coverage.report]
-exclude_lines = [
-  'raise ServiceUnavailableError',
-  "if TYPE_CHECKING:"
-]
-ignore_errors = true
-
-[tool.coverage.run]
-branch = true
-omit = [
-  "**/__init__.py",
-  "**/print_versions.py"
-]
-parallel = true
-source = ['pygeohydro']
-
 [tool.ruff]
 target-version = 'py38'
 select = [
@@ -190,6 +159,40 @@ known-first-party = [
   "pydaymet",
   "pynldas2",
 ]
+
+[tool.pytest.ini_options]
+addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
+doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
+filterwarnings = [
+  "ignore:.*distutils.*",
+  "ignore:.*--rsyncdir command line argument.*",
+  "ignore:.*numpy.ndarray size changed.*",
+  "ignore:.*invalid value encountered in cast.*",
+  "ignore:.*'cgi' is deprecated.*",
+]
+testpaths = [
+  "tests",
+  "pygeohydro"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+  'raise ServiceUnavailableError',
+  "if TYPE_CHECKING:"
+]
+ignore_errors = true
+
+[tool.coverage.run]
+branch = true
+omit = [
+  "**/__init__.py",
+  "**/print_versions.py"
+]
+parallel = true
+source = ['pygeohydro']
+
+[tool.fixit]
+formatter = "ufmt"
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py"
