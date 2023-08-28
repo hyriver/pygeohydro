@@ -47,8 +47,8 @@ class TestETAExceptions:
             columns=["id", "x", "y"],
         )
         with pytest.raises(InputRangeError) as ex:
-            _ = gh.ssebopeta_bycoords(coords, dates=[2010, 2014, 2021])
-        assert "2020" in str(ex.value)
+            _ = gh.ssebopeta_bycoords(coords, dates=[2010, 2014, 2030])
+        assert "2022" in str(ex.value)
 
 
 class TestNLCDExceptions:
@@ -73,7 +73,7 @@ class TestNLCDExceptions:
 
     def test_invalid_years(self):
         with pytest.raises(InputValueError) as ex:
-            _ = gh.nlcd_bygeom(self.geom, years={"cover": 2020}, resolution=self.res, ssl=False)
+            _ = gh.nlcd_bygeom(self.geom, years={"cover": 2030}, resolution=self.res, ssl=False)
         assert "2019" in str(ex.value)
 
     @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")

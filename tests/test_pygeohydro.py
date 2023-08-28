@@ -139,13 +139,13 @@ class TestNLCD:
     def test_coords(self):
         coords = list(GEOM.exterior.coords)
         lulc = gh.nlcd_bycoords(coords, ssl=False)
-        assert lulc.cover_2019.sum() == 211
+        assert lulc.cover_2021.sum() == 211
 
     def test_consistency(self):
         coords = [(-87.11890, 34.70421), (-88.83390, 40.17190), (-95.68978, 38.23926)]
         lulc_m = gh.nlcd_bycoords(coords, ssl=False)
         lulc_s = gh.nlcd_bycoords(coords[:1], ssl=False)
-        assert lulc_m.iloc[0]["cover_2019"] == lulc_s.iloc[0]["cover_2019"] == 24
+        assert lulc_m.iloc[0]["cover_2021"] == lulc_s.iloc[0]["cover_2021"] == 24
 
     def test_roughness(self):
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
@@ -188,8 +188,8 @@ class TestNID:
         assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91752, 77)
-        assert self.nid.gdf.shape == (91604, 92)
+        assert self.nid.df.shape == (91807, 79)
+        assert self.nid.gdf.shape == (91658, 97)
 
 
 class TestWaterQuality:
@@ -313,7 +313,7 @@ def test_sensorthings():
     )
     odata = sensor.odata_helper(conditionals=cond)
     df = sensor.query_byodata(odata)
-    assert df.shape[0] == 192
+    assert df.shape[0] == 195
 
     df = sensor.sensor_info("USGS-09380000")
     assert df["description"].iloc[0] == "Stream"
@@ -328,7 +328,6 @@ def test_show_versions():
     assert "SYS INFO" in f.getvalue()
 
 
-# write test for STNFloodEvents class
 class TestSTNFloodEventData:
     stn: gh.STNFloodEventData = gh.STNFloodEventData()
 
@@ -674,7 +673,7 @@ class TestSTNFloodEventData:
     @pytest.mark.parametrize(
         "data_type, as_list, crs, async_retriever_kwargs, expected_shape",
         [
-            ("instruments", False, "EPSG:4329", {"raise_status": False}, (4612, 18)),
+            ("instruments", False, 4329, {"raise_status": False}, (4612, 18)),
             ("peaks", False, None, None, (13159, 22)),
             ("hwms", False, None, {"url": "https://www.google.com"}, (34694, 33)),
             (
@@ -684,16 +683,16 @@ class TestSTNFloodEventData:
                 {},
                 (23600, 37),
             ),
-            ("sites", False, "EPSG:4236", {}, (23600, 37)),
+            ("sites", False, 4236, {}, (23600, 37)),
             (
                 "instruments",
                 True,
-                "EPSG:4326",
+                4326,
                 {"url": "https://www.google.com", "disable": True},
                 4612,
             ),
             ("peaks", True, None, {"max_workers": 7, "timeout": 10}, 13159),
-            ("hwms", True, "EPSG:26915", None, 34694),
+            ("hwms", True, 26915, None, 34694),
             ("sites", True, None, None, 23600),
         ],
     )
@@ -728,7 +727,7 @@ class TestSTNFloodEventData:
     @pytest.mark.parametrize(
         "data_type, as_list, crs, async_retriever_kwargs, expected_exception",
         [
-            ("instruments", False, "EPSG:4329", {"raise_status": False, "anything": 1}, TypeError),
+            ("instruments", False, 4329, {"raise_status": False, "anything": 1}, TypeError),
             ("peekks", False, None, None, gh.exceptions.InputValueError),
             ("hwms", False, None, {"url": "https://www.google.com", "any": "yes"}, TypeError),
             ("sites", False, "EBSJ:3829", {}, CRSError),
@@ -750,7 +749,7 @@ class TestSTNFloodEventData:
                 "instruments",
                 {"States": "OR,WA,AK,HI"},
                 False,
-                "EPSG:4329",
+                4329,
                 {"raise_status": False},
                 (1, 32),
             ),
@@ -768,7 +767,7 @@ class TestSTNFloodEventData:
                 "instruments",
                 {"States": "NE,IL,IA,TX"},
                 True,
-                "EPSG:4326",
+                4326,
                 {"url": "https://www.google.com", "disable": True},
                 143,
             ),
@@ -780,7 +779,7 @@ class TestSTNFloodEventData:
                 {"max_workers": 7, "timeout": 10},
                 205,
             ),
-            ("hwms", {"States": "KY,WV,NC,GA,TN,PA"}, True, "EPSG:26915", None, 6220),
+            ("hwms", {"States": "KY,WV,NC,GA,TN,PA"}, True, 26915, None, 6220),
             ("sites", {"State": "NY"}, True, None, None, 712),
             ("instruments", None, True, None, None, 4612),
         ],
@@ -825,7 +824,7 @@ class TestSTNFloodEventData:
                 "instruments",
                 {"States": "OR,WA,AK,HI"},
                 False,
-                "EPSG:4329",
+                4329,
                 {"raise_status": False, "anything": 1},
                 TypeError,
             ),
@@ -868,3 +867,48 @@ class TestSTNFloodEventData:
                 crs=crs,
                 async_retriever_kwargs=async_retriever_kwargs,
             )
+    
+    @pytest.mark.parametrize(
+        "data_type, query_params, expected_shape",
+        [
+            (
+                "instruments",
+                {"States": "OR,WA,AK,HI"},
+                (1, 32),
+            ),
+            ("peaks", {"States": "CA, FL, SC"}, (885, 31)),
+            (
+                "hwms",
+                {"States": "LA"},
+                (1208, 54),
+            ),
+            ("sites", {"State": "OK, KS, NE, SD, MS, MD, MN, WI"}, (1, 36)),
+            (
+                "instruments",
+                {"States": "NE,IL,IA,TX"},
+                143,
+            ),
+            (
+                "peaks",
+                {"States": "NV, AZ, AR, MO, IN"},
+                205,
+            ),
+            ("hwms", {"States": "KY,WV,NC,GA,TN,PA"}, 6220),
+            ("sites", {"State": "NY"}, 712),
+            ("instruments", None, 4612),
+        ],
+    )
+    def test_stn_func(self, data_type, query_params, expected_shape):
+        """Test the function wrapper of the STNFloodEventData class."""
+        result = gh.stn_flood_event(data_type, query_params)
+        assert isinstance(result, gpd.GeoDataFrame)
+        if crs is None:
+            crs = self.stn.service_crs
+        assert result.crs == CRS(crs)
+
+        assert result.shape[0] >= expected_shape[0]
+        assert result.shape[1] == expected_shape[1]
+
+        assert all(
+            rc in self.expected_filtered_data_schemas[data_type] for rc in list(result.columns)
+        )
