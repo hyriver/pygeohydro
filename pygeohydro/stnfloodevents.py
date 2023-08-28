@@ -1,23 +1,13 @@
-"""
-Access USGS Short-Term Network (STN) via Restful API.
-
-References
-----------
- .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
- .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
- .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
- .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
- .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
-"""
+"""Access USGS Short-Term Network (STN) via Restful API."""
 
 from __future__ import annotations
 
 from io import StringIO
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Union
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
-from numpy import nan
 from pyproj import CRS
 
 import async_retriever as ar
@@ -27,18 +17,19 @@ from pygeoogc import ServiceURL
 if TYPE_CHECKING:
     CRSTYPE = Union[int, str, CRS]
 
-__all__ = ["STNFloodEventData"]
+__all__ = ["STNFloodEventData", "stn_flood_event"]
 
 
 class STNFloodEventData:
-    """
-    Python client to retrieve data from the STN Flood Event Data RESTFUL Service API.
+    """Client for STN Flood Event Data's RESTFUL Service API.
 
     Advantages of using this client are:
-        - The user does not need to know the details of RESTFUL in general and of this API specifically.
-        - Parses the data and returns Python objects (e.g., pandas.DataFrame, geopandas.GeoDataFrame) instead of JSON.
-        - Convenience functions are offered for data dictionaries.
-        - Geo-references the data where applicable.
+    - The user does not need to know the details of RESTFUL in
+      general and of this API specifically.
+    - Parses the data and returns Python objects
+      (e.g., pandas.DataFrame, geopandas.GeoDataFrame) instead of JSON.
+    - Convenience functions are offered for data dictionaries.
+    - Geo-references the data where applicable.
 
     Attributes
     ----------
@@ -46,15 +37,16 @@ class STNFloodEventData:
         The service url of the STN Flood Event Data RESTFUL Service API.
     data_dictionary_url : str
         The data dictionary url of the STN Flood Event Data RESTFUL Service API.
-    service_crs : CRS, default = "EPSG:4326"
-        The coordinate reference system of the data from the service.
-    instruments_query_params : Set of str
+    service_crs : int, str, or CRS, optional
+        The coordinate reference system of the data from the service, defaults
+        to ``EPSG:4326``.
+    instruments_query_params : set of str
         The accepted query parameters for the instruments data type.
-    peaks_query_params : Set of str
+    peaks_query_params : set of str
         The accepted query parameters for the peaks data type.
-    hwms_query_params : Set of str
+    hwms_query_params : set of str
         The accepted query parameters for the hwms data type.
-    sites_query_params : Set of str
+    sites_query_params : set of str
         The accepted query parameters for the sites data type.
 
     Methods
@@ -66,29 +58,30 @@ class STNFloodEventData:
     get_filtered_data
         Retrieves filtered data for a given data type.
 
-    References
-    ----------
-    .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-    .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
-    .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
-    .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
-    .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
-
     Notes
     -----
-    - Point data from the service is assumed to be in the WGS84 coordinate reference system (EPSG:4326).
+    Point data from the service is assumed to be in the WGS84
+    coordinate reference system (EPSG:4326).
+
+    References
+    ----------
+    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
+    * `All Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/AllSensors>`_
+    * `All Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries>`_
+    * `All HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs>`_
+    * `All Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites>`_
+    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`_
+    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`_
+    * `High-Water Marks and Flooding <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`_
+    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`_
     """
 
     # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
     # this is the CRS used for visualization on STN front-end.
-    service_crs = "EPSG:4326"
-
-    # pygeoogc's RESTfulURLs
-    service_url = ServiceURL().restful.stnflood
-    data_dictionary_url = ServiceURL().restful.stnflood_dd
-
-    # accepted query parameters for instruments data type
-    instruments_query_params = {
+    service_crs: int = 4326
+    service_url: str = ServiceURL().restful.stnflood
+    data_dictionary_url: str = ServiceURL().restful.stnflood_dd
+    instruments_query_params: set[str] = {
         "Event",
         "EventType",
         "EventStatus",
@@ -99,9 +92,7 @@ class STNFloodEventData:
         "SensorType",
         "DeploymentType",
     }
-
-    # accepted query parameters for peaks data type
-    peaks_query_params = {
+    peaks_query_params: set[str] = {
         "Event",
         "EventType",
         "EventStatus",
@@ -110,9 +101,7 @@ class STNFloodEventData:
         "StartDate",
         "EndDate",
     }
-
-    # accepted query parameters for hwms data type
-    hwms_query_params = {
+    hwms_query_params: set[str] = {
         "Event",
         "EventType",
         "EventStatus",
@@ -121,9 +110,7 @@ class STNFloodEventData:
         "StartDate",
         "EndDate",
     }
-
-    # accepted query parameters for sites data type
-    sites_query_params = {
+    sites_query_params: set[str] = {
         "Event",
         "State",
         "SensorType",
@@ -140,24 +127,24 @@ class STNFloodEventData:
     @classmethod
     def _geopandify(
         cls,
-        input_list: list[dict],
-        crs: CRSTYPE | None = service_crs,
-        x_column: str = "longitude_dd",
-        y_column: str = "latitude_dd",
+        input_list: list[dict[str, Any]],
+        x_col: str,
+        y_col: str,
+        crs: CRSTYPE,
     ) -> gpd.GeoDataFrame:
-        """
-        Georeference a list of dictionaries to a GeoDataFrame.
+        """Georeference a list of dictionaries to a GeoDataFrame.
 
         Parameters
         ----------
         input_list : list of dict
             The list of dictionaries to be converted to a geodataframe.
-        crs : CRSTYPE | None, default =  STNFloodEventData.service_crs
-            Desired the coordinate reference system.
-        x_column : str, default = 'longitude'
-            The column name of the x-coordinate.
-        y_column : str, default = 'latitude'
-            The column name of the y-coordinate.
+        x_col : str
+            The name of the column containing the x-coordinate.
+        y_col : str
+            The name of the column containing the y-coordinate.
+        crs : int, str, or CRS
+            Desired Coordinate reference system (CRS) of output.
+            Only used for GeoDataFrames outputs.
 
         Returns
         -------
@@ -169,19 +156,20 @@ class STNFloodEventData:
         if crs is None:
             crs = cls.service_crs
 
-        df["geometry"] = gpd.points_from_xy(df[x_column], df[y_column], crs=cls.service_crs)
-
-        return gpd.GeoDataFrame(df, crs=cls.service_crs).to_crs(crs)
+        return gpd.GeoDataFrame(
+            df,
+            geometry=gpd.points_from_xy(df[x_col], df[y_col], crs=cls.service_crs),
+        ).to_crs(crs)
 
     @classmethod
-    def _delist_dict(cls, d):
+    def _delist_dict(cls, d: dict[str, list[float] | float]) -> dict[str, float]:
         """De-lists all unit length lists in a dictionary."""
 
-        def delist(x):
+        def delist(x: list[float] | float) -> float:
             if isinstance(x, list) and len(x) == 1:
                 return x[0]
-            elif isinstance(x, list) and len(x) == 0:
-                return nan
+            if isinstance(x, list) and len(x) == 0:
+                return np.nan
             return x
 
         return {k: delist(v) for k, v in d.items()}
@@ -189,36 +177,31 @@ class STNFloodEventData:
     @classmethod
     def data_dictionary(
         cls, data_type: str, as_dict: bool = False, async_retriever_kwargs: dict | None = None
-    ) -> pd.DataFrame | dict:
-        """
-        Retrieve data dictionaries from the STN Flood Event Data API.
+    ) -> pd.DataFrame | dict[str, Any]:
+        """Retrieve data dictionaries from the STN Flood Event Data API.
 
         Parameters
         ----------
         data_type : str
-            Type of the data to retrieve. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
+            The data source from STN Flood Event Data API.
+            It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
         as_dict : bool, default = False
-            If True, return the data dictionary as a dictionary. Otherwise, it returns as pd.DataFrame.
-        async_retriever_kwargs : dict | None, default = None
-            Additional keyword arguments to pass to `async_retriever.retrieve_text()`. URL is already set.
+            If True, return the data dictionary as a dictionary.
+            Otherwise, it returns as ``pandas.DataFrame``.
+        async_retriever_kwargs : dict, optional
+            Additional keyword arguments to pass to
+            ``async_retriever.retrieve_json()``. The ``url`` and ``request_kwds``
+            options are already set.
 
         Returns
         -------
-        pandas.DataFrame | dict
-            The retrieved data dictionary as pd.DataFrame or dict.
-
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        .. [2] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
-        .. [3] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
-        .. [4] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
-        .. [5] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
+        pandas.DataFrame or dict
+            The retrieved data dictionary as pandas.DataFrame or dict.
 
         See Also
         --------
-        `STNFloodEventData.get_all_data` : Retrieves all data for a given data type.
-        `STNFloodEventData.get_filtered_data` : Retrieves filtered data for a given data type.
+        :meth:`~get_all_data` : Retrieves all data for a given data type.
+        :meth:`~get_filtered_data` : Retrieves filtered data for a given data type.
 
         Examples
         --------
@@ -246,21 +229,17 @@ class STNFloodEventData:
         else:
             async_retriever_kwargs.pop("url", None)
 
-        # retrieve
-        response = ar.retrieve_text(
-            [f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs
-        )[0]
-
-        # convert to DataFrame
-        data = pd.read_csv(StringIO(response))
+        resp = ar.retrieve_text([f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs)
+        data = pd.read_csv(StringIO(resp[0]))
 
         if "Field" not in data.columns:
             data.iloc[0] = data.columns.tolist()
             data.columns = ["Field", "Definition"]
 
-        data["Definition"] = data["Definition"].apply(lambda x: x.replace("\r\n", "  "))
+        data["Definition"] = data["Definition"].str.replace("\r\n", "  ")
 
-        # concatenate definitions corresponding to NaN fields until a non-NaN field is encountered
+        # concatenate definitions corresponding to NaN fields until
+        # a non-NaN field is encountered
         data_dict = {"Field": [], "Definition": []}
 
         for _, row in data.iterrows():
@@ -278,54 +257,48 @@ class STNFloodEventData:
     def get_all_data(
         cls,
         data_type: str,
-        as_list: bool | None = False,
+        as_list: bool = False,
         crs: str | None = service_crs,
         async_retriever_kwargs: dict | None = None,
-    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
-        """
-        Retrieve all data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
+    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
+        """Retrieve all data from the STN Flood Event Data API.
 
         Parameters
         ----------
         data_type : str
-            The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
-        as_list : bool | None, default = False
-            If True, return the data as a list.
-        crs : str | None, default =  STNFloodEventData.service_crs
-            Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames with hwms and sites data types.
-        async_retriever_kwargs : dict | None, default = None
-            Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL is already set.
+            The data source from STN Flood Event Data API.
+            It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
+        as_list : bool, optional
+            If True, return the data as a list, defaults to False.
+        crs : int, str, or CRS, optional
+            Desired Coordinate reference system (CRS) of output.
+            Only used for GeoDataFrames with ``hwms`` and ``sites`` data types.
+        async_retriever_kwargs : dict, optional
+            Additional keyword arguments to pass to
+            ``async_retriever.retrieve_json()``. The ``url`` and ``request_kwds``
+            options are already set.
 
         Returns
         -------
-        geopandas.GeoDataFrame | pandas.DataFrame | list of dict
+        geopandas.GeoDataFrame or pandas.DataFrame or list of dict
             The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
 
         Raises
         ------
         InputValueError
-            If the input data_type is not one of 'instruments', 'peaks', 'hwms', or 'sites'.
-
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        .. [2] [All Sensors API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/AllSensors)
-        .. [3] [All Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries)
-        .. [4] [All HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs)
-        .. [5] [All Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites)
-        .. [6] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
-        .. [7] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
-        .. [8] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
-        .. [9] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
+            If the input data_type is not one of
+            ``instruments``, ``peaks``, ``hwms``, or ``sites``
 
         See Also
         --------
-        `STNFloodEventData.get_filtered_data` : Retrieves filtered data for a given data type.
-        `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
+        :meth:`~get_filtered_data` : Retrieves filtered data for a given data type.
+        :meth:`~get_data_dictionary` : Retrieves the data dictionary for a given data type.
 
         Notes
         -----
-        - Notice schema differences between the data dictionaries, filtered data queries, and all data queries. This is a known issue and is being addressed by USGS.
+        Notice schema differences between the data dictionaries, filtered data
+        queries, and all data queries. This is a known issue and is being addressed
+        by USGS.
 
         Examples
         --------
@@ -341,7 +314,6 @@ class STNFloodEventData:
                'last_updated_by', 'housing_serial_number'],
                dtype='object')
         """
-        # non-filtered endpoints
         endpoint_dict = {
             "instruments": "Instruments.json",
             "peaks": "PeakSummaries.json",
@@ -357,34 +329,25 @@ class STNFloodEventData:
         if async_retriever_kwargs is None:
             async_retriever_kwargs = {}
         else:
-            async_retriever_kwargs.pop("url", None)
+            _ = async_retriever_kwargs.pop("url", None)
 
-        # retrieve data
-        data = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)[0]
+        resp = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)
+        data = [cls._delist_dict(d) for d in resp[0]]
 
-        # delists all unit length lists in a dictionary
-        data = [cls._delist_dict(d) for d in data]
+        if as_list:
+            return data
 
-        # denotes the fields that are considered as x and y coordinates by data type, use None if no coordinates are available
-        x_and_y_columns = {
+        xy_cols = {
             "instruments": None,
             "peaks": None,
             "hwms": ("longitude_dd", "latitude_dd"),
             "sites": ("longitude_dd", "latitude_dd"),
         }
-
-        # if list is desired
-        if as_list:
-            return data
-
-        # when no x and y columns are present, convert to DataFrame
-        if x_and_y_columns[data_type] is None:
+        if xy_cols[data_type] is None:
             return pd.DataFrame(data)
 
-        # when x and y columns are present, convert to GeoDataFrame
-        x_column, y_column = x_and_y_columns[data_type]
-
-        return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
+        x_col, y_col = xy_cols[data_type]
+        return cls._geopandify(data, x_col, y_col, crs)
 
     @classmethod
     def get_filtered_data(
@@ -394,61 +357,64 @@ class STNFloodEventData:
         as_list: bool | None = False,
         crs: str | None = service_crs,
         async_retriever_kwargs: dict | None = None,
-    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict]:
-        """
-        Retrieve filtered data from the STN Flood Event Data API for instruments, peaks, hwms, and sites.
+    ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
+        """Retrieve filtered data from the STN Flood Event Data API.
 
         Parameters
         ----------
         data_type : str
-            The data source from STN Flood Event Data API. It can be 'instruments', 'peaks', 'hwms', or 'sites'.
-        query_params : dict | None, default = None
-            RESTFUL API query parameters. For accepted values, see the STNFloodEventData class attributes instruments_accepted_params, peaks_accepted_params, hwms_accepted_params, and sites_accepted_params for available values.
+            The data source from STN Flood Event Data API.
+            It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
+        query_params : dict, optional
+            RESTFUL API query parameters. For accepted values, see
+            the STNFloodEventData class attributes ``instruments_accepted_params``,
+            ``peaks_accepted_params``, ``hwms_accepted_params``, and
+            ``sites_accepted_params`` for available values.
 
             Also, see the API documentation for each data type for more information:
-                - [instruments](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors)
-                - [peaks](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
-                - [hwms](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
-                - [sites](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
-        as_list : bool | None, default = False
-            If True, return the data as a list.
-        crs : str | None, default =  STNFloodEventData.service_crs
-            Desired Coordinate reference system (CRS) of output. Only used for GeoDataFrames outputs.
-        async_retriever_kwargs : dict | None, default = None
-            Additional keyword arguments to pass to `async_retriever.retrieve_json()`. URL and request_kwds are already set.
+                - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
+                - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
+                - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
+                - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
+
+        as_list : bool, optional
+            If True, return the data as a list, defaults to False.
+        crs : int, str, or CRS, optional
+            Desired Coordinate reference system (CRS) of output.
+            Only used for GeoDataFrames outputs.
+        async_retriever_kwargs : dict, optional
+            Additional keyword arguments to pass to
+            ``async_retriever.retrieve_json()``. The ``url`` and ``request_kwds``
+            options are already set.
 
         Returns
         -------
-        geopandas.GeoDataFrame | pandas.DataFrame | list of dict
-            The retrieved data as a GeoDataFrame, DataFrame, or a list of dictionaries.
+        geopandas.GeoDataFrame or pandas.DataFrame or list of dict
+            The retrieved data as a GeoDataFrame, DataFrame, or a
+            list of dictionaries.
 
         Raises
         ------
         InputValueError
-            If the input data_type is not one of 'instruments', 'peaks', 'hwms', or 'sites'.
+            If the input data_type is not one of
+            ``instruments``, ``peaks``, ``hwms``, or ``sites``
         InputValueError
-            If any of the input query_params are not in accepted parameters (See `STNFloodEventData.instruments_accepted_params`, `STNFloodEventData.peaks_accepted_params`, `STNFloodEventData.hwms_accepted_params`, or `STNFloodEventData.sites_accepted_params`).
-
-        References
-        ----------
-        .. [1] [USGS Short-Term Network (STN)](https://stn.wim.usgs.gov/STNWeb/#/)
-        .. [2] [Filtered Sensors API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors)
-        .. [3] [Peak Summary API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries)
-        .. [4] [Filtered HWM API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs)
-        .. [5] [Filtered Sites API Documentation](https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites)
-        .. [6] [USGS Flood Event Viewer: Providing Hurricane and Flood Response Data](https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood)
-        .. [7] [A USGS guide for finding and interpreting high-water marks](https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks)
-        .. [8] [High-Water Marks and Flooding ](https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding)
-        .. [9] [Identifying and preserving high-water mark data](https://doi.org/10.3133/tm3A24)
+            If any of the input query_params are not in accepted
+            parameters (See :meth:`~instruments_accepted_params`,
+            :meth:`~peaks_accepted_params`, :meth:`~hwms_accepted_params`,
+            or :meth:`~sites_accepted_params`).
 
         See Also
         --------
-        `STNFloodEventData.get_all_data` : Retrieves all data for a given data type.
-        `STNFloodEventData.get_data_dictionary` : Retrieves the data dictionary for a given data type.
+        :meth:`~get_all_data` : Retrieves all data for a given data type.
+        :meth:`~get_data_dictionary` : Retrieves the data dictionary for a
+        given data type.
 
         Notes
         -----
-        - Notice schema differences between the data dictionaries, filtered data queries, and all data queries. This is a known issue and is being addressed by USGS.
+        Notice schema differences between the data dictionaries,
+        filtered data queries, and all data queries. This is a known
+        issue and is being addressed by USGS.
 
         Examples
         --------
@@ -468,7 +434,6 @@ class STNFloodEventData:
             'vented', 'instrument_status', 'data_files', 'files', 'geometry'],
             dtype='object')
         """
-        # filtered endpoints
         endpoint_dict = {
             "instruments": "Instruments/FilteredInstruments.json",
             "peaks": "PeakSummaries/FilteredPeaks.json",
@@ -493,7 +458,6 @@ class STNFloodEventData:
         if query_params is None:
             query_params = {}
 
-        # check if query_params are valid
         if not set(query_params.keys()).issubset(allowed_query_params):
             raise InputValueError("query_param", allowed_query_params)
 
@@ -503,34 +467,102 @@ class STNFloodEventData:
             async_retriever_kwargs.pop("url", None)
             async_retriever_kwargs.pop("request_kwds", None)
 
-        # retrieve data
-        data = ar.retrieve_json(
+        resp = ar.retrieve_json(
             [f"{cls.service_url}{endpoint}"],
             request_kwds=[{"params": query_params}],
             **async_retriever_kwargs,
-        )[0]
+        )
+        data = [cls._delist_dict(d) for d in resp[0]]
+        if as_list:
+            return data
 
-        # delists all unit length lists in a dictionary
-        data = [cls._delist_dict(d) for d in data]
-
-        # denotes the fields that are considered as x and y coordinates by data type, use None if no coordinates are available
-        x_and_y_columns = {
+        xy_cols = {
             "instruments": ("longitude", "latitude"),
             "peaks": ("longitude_dd", "latitude_dd"),
             "hwms": ("longitude", "latitude"),
             "sites": ("longitude_dd", "latitude_dd"),
         }
+        x_col, y_col = xy_cols[data_type]
+        return cls._geopandify(data, x_col, y_col, crs)
 
-        # return data as a list
-        if as_list:
-            return data
 
-        # when x and y columns are not available, return as a DataFrame
-        # all of the data types can be returned as GeoDataFrames, commenting out unless needed
-        # if x_and_y_columns[data_type] is None:
-        #    return pd.DataFrame(data)
+def stn_flood_event(data_type: str, query_params: dict | None = None) -> gpd.GeoDataFrame | pd.DataFrame:
+    """Retrieve data from the STN Flood Event Data API.
 
-        # when x and y columns are available, return as a GeoDataFrame
-        x_column, y_column = x_and_y_columns[data_type]
+    Parameters
+    ----------
+    data_type : str
+        The data source from STN Flood Event Data API.
+        It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
+    query_params : dict, optional
+        RESTFUL API query parameters, defaults to ``None`` which returns
+        all the available data for the given ``data_type``.
+        For accepted values, see the STNFloodEventData class attributes
+        :class:`STNFloodEventData.instruments_accepted_params`,
+        :class:`STNFloodEventData.peaks_accepted_params`,
+        :class:`STNFloodEventData.hwms_accepted_params`, and
+        :class:`STNFloodEventData.sites_accepted_params` for available values.
 
-        return cls._geopandify(data, crs=crs, x_column=x_column, y_column=y_column)
+        Also, see the API documentation for each data type for more information:
+        - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
+        - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
+        - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
+        - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
+
+    as_list : bool, optional
+        If True, return the data as a list, defaults to False.
+
+    Returns
+    -------
+    geopandas.GeoDataFrame or pandas.DataFrame or list of dict
+        The retrieved data as a GeoDataFrame, DataFrame, or a
+        list of dictionaries.
+
+    Raises
+    ------
+    InputValueError
+        If the input data_type is not one of
+        ``instruments``, ``peaks``, ``hwms``, or ``sites``
+    InputValueError
+        If any of the input query_params are not in accepted
+        parameters.
+
+    References
+    ----------
+    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
+    * `Filtered Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
+    * `Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
+    * `Filtered HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
+    * `Filtered Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
+    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`_
+    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`_
+    * `High-Water Marks and Flooding  <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`_
+    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`_
+
+    Notes
+    -----
+    Notice schema differences between the data dictionaries,
+    filtered data queries, and all data queries. This is a known
+    issue and is being addressed by USGS.
+
+    Examples
+    --------
+    >>> from pygeohydro.stnfloodevents import STNFloodEventData
+    >>> query_params = {"States": "SC, CA"}
+    >>> data = stn_flood_event("instruments", query_params=query_params)
+    >>> data.shape[1]
+    34
+    >>> data.columns
+    Index(['sensorType', 'deploymentType', 'eventName', 'collectionCondition',
+        'housingType', 'sensorBrand', 'statusId', 'timeStamp', 'site_no',
+        'latitude', 'longitude', 'siteDescription', 'networkNames', 'stateName',
+        'countyName', 'siteWaterbody', 'siteHDatum', 'sitePriorityName',
+        'siteZone', 'siteHCollectMethod', 'sitePermHousing', 'instrument_id',
+        'sensor_type_id', 'deployment_type_id', 'location_description',
+        'serial_number', 'housing_serial_number', 'interval', 'site_id',
+        'vented', 'instrument_status', 'data_files', 'files', 'geometry'],
+        dtype='object')
+    """
+    if query_params is None:
+        return STNFloodEventData.get_all_data(data_type=data_type)
+    return STNFloodEventData.get_filtered_data(data_type=data_type, query_params=query_params)
