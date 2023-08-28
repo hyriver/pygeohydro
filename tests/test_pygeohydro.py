@@ -901,9 +901,16 @@ class TestSTNFloodEventData:
     def test_stn_func(self, data_type, query_params, expected_shape):
         """Test the function wrapper of the STNFloodEventData class."""
         result = gh.stn_flood_event(data_type, query_params)
-        assert isinstance(result, gpd.GeoDataFrame)
-        assert result.shape[0] >= expected_shape[0]
-        assert result.shape[1] == expected_shape[1]
-        assert all(
-            rc in self.expected_filtered_data_schemas[data_type] for rc in list(result.columns)
-        )
+        if isinstance(expected_shape, tuple):
+            assert result.shape[0] >= expected_shape[0]
+            assert result.shape[1] == expected_shape[1]
+        else:
+            assert len(result) >= expected_shape
+        if query_params is None:
+            assert all(
+                rc in self.expected_all_data_schemas[data_type] for rc in result
+            )
+        else:
+            assert all(
+                rc in self.expected_filtered_data_schemas[data_type] for rc in result
+            )
