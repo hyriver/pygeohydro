@@ -496,7 +496,7 @@ def stn_flood_event(data_type: str, query_params: dict | None = None) -> gpd.Geo
         It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
     query_params : dict, optional
         RESTFUL API query parameters, defaults to ``None`` which returns
-        all the available data for the given ``data_type``.
+        a ``pandas.DataFrame`` of information about the given ``data_type``.
         For accepted values, see the STNFloodEventData class attributes
         :class:`STNFloodEventData.instruments_accepted_params`,
         :class:`STNFloodEventData.peaks_accepted_params`,
@@ -509,14 +509,11 @@ def stn_flood_event(data_type: str, query_params: dict | None = None) -> gpd.Geo
         - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
         - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
 
-    as_list : bool, optional
-        If True, return the data as a list, defaults to False.
-
     Returns
     -------
-    geopandas.GeoDataFrame or pandas.DataFrame or list of dict
-        The retrieved data as a GeoDataFrame, DataFrame, or a
-        list of dictionaries.
+    geopandas.GeoDataFrame or pandas.DataFrame
+        The retrieved data as a GeoDataFrame or DataFrame
+        (if ``query_params`` is not passed).
 
     Raises
     ------
@@ -547,7 +544,6 @@ def stn_flood_event(data_type: str, query_params: dict | None = None) -> gpd.Geo
 
     Examples
     --------
-    >>> from pygeohydro.stnfloodevents import STNFloodEventData
     >>> query_params = {"States": "SC, CA"}
     >>> data = stn_flood_event("instruments", query_params=query_params)
     >>> data.shape[1]
