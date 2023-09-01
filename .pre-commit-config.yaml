@@ -24,11 +24,11 @@ repos:
   hooks:
   - id: fixit-fix
 
-# - repo: https://github.com/psf/black
-#   rev: 23.7.0
-#   hooks:
-#   - id: black
-#     name: Autoformat with black
+- repo: https://github.com/psf/black
+  rev: 23.7.0
+  hooks:
+  - id: black
+    name: Autoformat with black
 
 - repo: https://github.com/asottile/blacken-docs
   rev: 1.16.0
