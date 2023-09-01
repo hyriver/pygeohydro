@@ -12,7 +12,7 @@ from pyproj.exceptions import CRSError
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
-from pygeohydro import NID, NWIS, WBD
+from pygeohydro import NID, NWIS, WBD, EHydro
 from pygeoogc import utils as ogc_utils
 
 DEF_CRS = 4326
@@ -867,7 +867,7 @@ class TestSTNFloodEventData:
                 crs=crs,
                 async_retriever_kwargs=async_retriever_kwargs,
             )
-    
+
     @pytest.mark.parametrize(
         "data_type, query_params, expected_shape",
         [
@@ -907,10 +907,13 @@ class TestSTNFloodEventData:
         else:
             assert len(result) >= expected_shape
         if query_params is None:
-            assert all(
-                rc in self.expected_all_data_schemas[data_type] for rc in result
-            )
+            assert all(rc in self.expected_all_data_schemas[data_type] for rc in result)
         else:
-            assert all(
-                rc in self.expected_filtered_data_schemas[data_type] for rc in result
-            )
+            assert all(rc in self.expected_filtered_data_schemas[data_type] for rc in result)
+
+
+def test_ehydro():
+    bound = (-122.53, 45.57, -122.52, 45.59)
+    ehydro = EHydro()
+    bathy = ehydro.bygeom(bound)
+    assert_close(bathy["depthMean"].mean(), 25.5078)
