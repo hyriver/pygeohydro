@@ -50,7 +50,7 @@ Package          Description                                                    
 ================ ==================================================================== ============
 PyNHD_           Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
 Py3DEP_          Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_      Access NWIS, NID, WQP, HCDN 2009, NLCD, CAMELS, and SSEBop databases |pygeohydro|
+PyGeoHydro_      Access NWIS, NID, WQP, eHydro, NLCD, CAMELS, and SSEBop databases    |pygeohydro|
 PyDaymet_        Access daily, monthly, and annual climate data via Daymet            |pydaymet|
 PyNLDAS2_        Access hourly NLDAS-2 data via web services                          |pynldas2|
 HydroSignatures_ A collection of tools for computing hydrological signatures          |signatures|
@@ -139,7 +139,7 @@ PyGeoHydro supports the following datasets:
   web service,
 * `HCDN 2009 <https://www2.usgs.gov/science/cite-view.php?cite=2932>`__ for identifying sites
   where human activity affects the natural flow of the watercourse,
-* `NLCD 2019 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness, imperviousness
+* `NLCD 2021 <https://www.mrlc.gov/>`__ for land cover/land use, imperviousness
   descriptor, and canopy data. You can get data using both geometries and coordinates.
 * `WBD <https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/>`__ for accessing
   Hydrologic Unit (HU) polygon boundaries within the US (all HUC levels).
@@ -147,8 +147,11 @@ PyGeoHydro supports the following datasets:
   evapotranspiration, for both single pixel and gridded data.
 * `Irrigation Withdrawals <https://doi.org/10.5066/P9FDLY8P>`__ for estimated
   monthly water use for irrigation by 12-digit hydrologic unit in the CONUS for 2015
+* `STN <https://stn.wim.usgs.gov/STNWeb/#/>`__ for access USGS Short-Term Network (STN)
+* `eHydro <https://navigation.usace.army.mil/Survey/Hydro>`__ for accessing USACE
+  Hydrographic Surveys that includes topobathymetry data
 
-Also, it has two other functions:
+Also, it includes several other functions:
 
 * ``interactive_map``: Interactive map for exploring NWIS stations within a bounding box.
 * ``cover_statistics``: Categorical statistics of land use/land cover data.
@@ -245,6 +248,15 @@ using `Conda <https://docs.conda.io/en/latest/>`__:
 
 Quick start
 -----------
+We can obtain river topobathymetry data using the ``EHydro`` class. We can subset
+the dataset either using a geometry or a bounding box, based on their ID, or SQL query:
+
+.. code-block:: python
+
+    from pygeohydro import EHydro
+
+    ehydro = EHydro()
+    topobathy = ehydro.bygeom((-122.53, 45.57, -122.52, 45.59))
 
 We can explore the available NWIS stations within a bounding box using ``interactive_map``
 function. It returns an interactive map and by clicking on a station some of the most
