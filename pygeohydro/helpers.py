@@ -130,14 +130,14 @@ def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[p
         start = pd.to_datetime(dates[0])
         end = pd.to_datetime(dates[1])
         if start < pd.to_datetime("2000-01-01") or end > pd.to_datetime(f"{year}-12-31"):
-            raise InputRangeError("SSEBop", ("2000", year))
+            raise InputRangeError("SSEBop", ("2000", str(year)))
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
         seebop_yrs = np.arange(2000, year)
 
         if any(y not in seebop_yrs for y in years):
-            raise InputRangeError("SSEBop", ("2000", year))
+            raise InputRangeError("SSEBop", ("2000", str(year)))
 
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list.pop(0)
