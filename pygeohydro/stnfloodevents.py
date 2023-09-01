@@ -486,7 +486,9 @@ class STNFloodEventData:
         return cls._geopandify(data, x_col, y_col, crs)
 
 
-def stn_flood_event(data_type: str, query_params: dict | None = None) -> gpd.GeoDataFrame | pd.DataFrame:
+def stn_flood_event(
+    data_type: str, query_params: dict | None = None
+) -> gpd.GeoDataFrame | pd.DataFrame:
     """Retrieve data from the STN Flood Event Data API.
 
     Parameters
