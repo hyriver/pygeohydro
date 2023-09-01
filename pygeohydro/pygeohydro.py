@@ -7,7 +7,7 @@ import itertools
 import warnings
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Mapping, Sequence, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
 import cytoolz.curried as tlz
@@ -20,7 +20,12 @@ import pyproj
 import rasterio as rio
 import xarray as xr
 from rioxarray import _io as rxr
+from shapely import __version__ as shapely_version
 
+if shapely_version[0] == "2":
+    from shapely.errors import GEOSException
+else:
+    GEOSException = BaseException
 import async_retriever as ar
 import pygeoogc as ogc
 import pygeoutils as geoutils
@@ -37,7 +42,8 @@ from pygeohydro.exceptions import (
 from pygeohydro.helpers import Stats
 from pygeoogc import WMS, RetrySession, ServiceURL
 from pygeoogc import utils as ogc_utils
-from pynhd.core import ScienceBase
+from pygeoutils import EmptyResponseError
+from pynhd.core import AGRBase, ScienceBase
 
 if TYPE_CHECKING:
     from numbers import Number
@@ -60,6 +66,7 @@ __all__ = [
     "soil_properties",
     "soil_gnatsgo",
     "NID",
+    "EHydro",
 ]
 
 
@@ -1194,3 +1201,78 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         _ = ds.attrs.pop("units", None)
         _ = ds.attrs.pop("long_name", None)
     return ds
+
+
+class EHydro(AGRBase):
+    """Access USACE Hydrographic Surveys (eHydro).
+
+    Notes
+    -----
+    For more info visit: https://navigation.usace.army.mil/Survey/Hydro
+    """
+
+    def __init__(self):
+        super().__init__(ServiceURL().restful.ehydro)
+        self._error_msg = "No survey data found within the given bound."
+        self._engine = "pyogrio" if importlib.util.find_spec("pyogrio") else "fiona"
+
+        warnings.filterwarnings("ignore", message=".*3D.*")
+        warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
+        if self._engine == "pyogrio":
+            self.kwargs = {"force_2d": True}
+        else:
+            import logging
+
+            root_logger = logging.getLogger("fiona")
+            root_logger.setLevel(logging.ERROR)
+            self.kwargs = {}
+
+    def __post_process(self, survey: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+        urls = survey["sourcedatalocation"].to_list()
+        fnames = [Path("cache", Path(u).name) for u in urls]
+        _ = ogc.streaming_download(urls, fnames=fnames)
+
+        def get_depth(fname: Path) -> gpd.GeoDataFrame:
+            with zipfile.ZipFile(fname, "r") as zip_ref:
+                gdb = next(
+                    (
+                        f"zip://{fname}!{n.filename}"
+                        for n in zip_ref.filelist
+                        if ".gdb" in n.filename
+                    ),
+                    None,
+                )
+                if gdb is None:
+                    raise ZeroMatchedError(self._error_msg)
+            try:
+                return gpd.read_file(gdb, engine=self._engine, **self.kwargs)
+            except GEOSException:
+                return gpd.read_file(gdb)
+
+        return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
+
+    def _getfeatures(
+        self, oids: Iterator[tuple[str, ...]], return_m: bool = False, return_geom: bool = True
+    ) -> gpd.GeoDataFrame:
+        """Send a request for getting data based on object IDs.
+
+        Parameters
+        ----------
+        return_m : bool
+            Whether to activate the Return M (measure) in the request, defaults to False.
+        return_geom : bool, optional
+            Whether to return the geometry of the feature, defaults to ``True``.
+
+        Returns
+        -------
+        geopandas.GeoDataFrame
+            The requested features as a GeoDataFrame.
+        """
+        try:
+            return self.__post_process(
+                geoutils.json2geodf(
+                    self.client.get_features(oids, return_m, return_geom), self.client.client.crs
+                )
+            )
+        except EmptyResponseError as ex:
+            raise ZeroMatchedError(self._error_msg) from ex

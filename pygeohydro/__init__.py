@@ -20,6 +20,7 @@ from pygeohydro.plot import interactive_map
 from pygeohydro.print_versions import show_versions
 from pygeohydro.pygeohydro import (
     NID,
+    EHydro,
     cover_statistics,
     get_camels,
     nlcd_area_percent,
@@ -41,6 +42,7 @@ except PackageNotFoundError:
     __version__ = "999"
 
 __all__ = [
+    "EHydro",
     "NID",
     "WBD",
     "NWIS",
