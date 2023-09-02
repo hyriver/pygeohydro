@@ -43,7 +43,7 @@ dependencies:
 - scipy
 - shapely >=2.0
 - ujson
-- xarray >=2022.03.0
+- xarray >=2023.04.0
 
 # hydrosignatures deps
 - numpy
@@ -64,7 +64,7 @@ dependencies:
 - rioxarray >=0.11
 - scipy
 - shapely >=2.0
-- xarray >=2022.03.0
+- xarray >=2023.04.0
 # optional dep
 - pyflwdir >=0.5.6
 
@@ -96,7 +96,7 @@ dependencies:
 - rasterio >=1.2
 - scipy
 - shapely >=2.0
-- xarray >=2022.03.0
+- xarray >=2023.04.0
 # optional deps
 - numba
 
@@ -118,7 +118,7 @@ dependencies:
 - rioxarray >=0.11.0
 - scipy
 - shapely >=2.0
-- xarray >=2022.03.0
+- xarray >=2023.04.0
 # optional deps
 - planetary-computer
 - pystac-client
@@ -131,7 +131,7 @@ dependencies:
 # - pygeoutils >=0.13.10
 - pyproj >=2.2
 - rioxarray >=0.11
-- xarray >=2022.03.0
+- xarray >=2023.04.0
 
 # optional deps for speeding up some operations
 - bottleneck

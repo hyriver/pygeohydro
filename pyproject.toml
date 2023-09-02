@@ -43,7 +43,7 @@ dependencies = [
   "matplotlib>=3.5",
   "numpy>=1.21",
   "pandas>=1",
-  "pygeoogc<0.16,>=0.15",
+  "pygeoogc<0.16,>=0.15.1",
   "pygeoutils<0.16,>=0.15",
   "pynhd<0.16,>=0.15",
   "pyproj>=3.0.1",
@@ -51,7 +51,7 @@ dependencies = [
   "scipy",
   "shapely>=1.8.5",
   "ujson",
-  "xarray>=2022.03",
+  "xarray>=2023.04",
 ]
 [project.optional-dependencies]
 stac = [
