@@ -2,7 +2,7 @@
 History
 =======
 
-0.15.1 (2023-0X-XX)
+0.15.1 (2023-08-02)
 -------------------
 This release provides access to three new datasets:
 
