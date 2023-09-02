@@ -24,6 +24,7 @@ class STNFloodEventData:
     """Client for STN Flood Event Data's RESTFUL Service API.
 
     Advantages of using this client are:
+
     - The user does not need to know the details of RESTFUL in
       general and of this API specifically.
     - Parses the data and returns Python objects
@@ -37,7 +38,7 @@ class STNFloodEventData:
         The service url of the STN Flood Event Data RESTFUL Service API.
     data_dictionary_url : str
         The data dictionary url of the STN Flood Event Data RESTFUL Service API.
-    service_crs : int, str, or CRS, optional
+    service_crs : int, str, or pyproj.CRS, optional
         The coordinate reference system of the data from the service, defaults
         to ``EPSG:4326``.
     instruments_query_params : set of str
@@ -48,15 +49,6 @@ class STNFloodEventData:
         The accepted query parameters for the hwms data type.
     sites_query_params : set of str
         The accepted query parameters for the sites data type.
-
-    Methods
-    -------
-    data_dictionary
-        Retrieves the data dictionary for a given data type.
-    get_all_data
-        Retrieves all data for a given data type.
-    get_filtered_data
-        Retrieves filtered data for a given data type.
 
     Notes
     -----
@@ -270,7 +262,7 @@ class STNFloodEventData:
             It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
         as_list : bool, optional
             If True, return the data as a list, defaults to False.
-        crs : int, str, or CRS, optional
+        crs : int, str, or pyproj.CRS, optional
             Desired Coordinate reference system (CRS) of output.
             Only used for GeoDataFrames with ``hwms`` and ``sites`` data types.
         async_retriever_kwargs : dict, optional
@@ -292,7 +284,7 @@ class STNFloodEventData:
         See Also
         --------
         :meth:`~get_filtered_data` : Retrieves filtered data for a given data type.
-        :meth:`~get_data_dictionary` : Retrieves the data dictionary for a given data type.
+        :meth:`~data_dictionary` : Retrieves the data dictionary for a given data type.
 
         Notes
         -----
@@ -379,7 +371,7 @@ class STNFloodEventData:
 
         as_list : bool, optional
             If True, return the data as a list, defaults to False.
-        crs : int, str, or CRS, optional
+        crs : int, str, or pyproj.CRS, optional
             Desired Coordinate reference system (CRS) of output.
             Only used for GeoDataFrames outputs.
         async_retriever_kwargs : dict, optional
@@ -407,7 +399,7 @@ class STNFloodEventData:
         See Also
         --------
         :meth:`~get_all_data` : Retrieves all data for a given data type.
-        :meth:`~get_data_dictionary` : Retrieves the data dictionary for a
+        :meth:`~data_dictionary` : Retrieves the data dictionary for a
         given data type.
 
         Notes
