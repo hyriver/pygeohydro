@@ -1096,7 +1096,7 @@ def soil_properties(
         Soil properties to extract, default to "*", i.e., all the properties.
         Available properties are ``awc`` for available water capacity, ``fc`` for
         field capacity, and ``por`` for porosity.
-    soil_dir : str or pathlib.Path
+    soil_dir : str or pathlib.Pathlib.Path
         Directory to store zip files or if exists read from them, defaults to
         ``./cache``.
     """

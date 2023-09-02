@@ -144,7 +144,7 @@ class STNFloodEventData:
             The name of the column containing the x-coordinate.
         y_col : str
             The name of the column containing the y-coordinate.
-        crs : int, str, or CRS
+        crs : int, str, or pyproj.CRS
             Desired Coordinate reference system (CRS) of output.
             Only used for GeoDataFrames outputs.
 
