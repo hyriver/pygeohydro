@@ -8,7 +8,7 @@ This release provides access to three new datasets:
 
 - USACE Hydrographic Surveys (eHydro) and
 - USGS Short-Term Network (STN) Flood Event Data
-  (contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`_)
+  (contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`__)
 - NLCD 2021
 
 New Features
@@ -18,7 +18,7 @@ New Features
   the ability to subset the eHydro dataset by geometry, ID, or SQL queries.
 - Add new ``stnfloodevents`` module with ``STNFloodEventData`` class for
   retrieving flood event data from the
-  `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
+  `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`__
   RESTful Service. This Python API abstracts away RESTful principles and
   produces analysis ready data in geo-referenced GeoDataFrames, DataFrames,
   lists, or dictionaries as desired. The core class methods available are
@@ -27,7 +27,7 @@ New Features
   available data by type, and make filtered requests for data by type as well,
   respectively. The four types of data include ``instruments``, ``peaks``,
   ``hwms``, and ``sites``.
-  Contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`_.
+  Contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`__.
 - Add a wrapper function for the ``STNFloodEventData`` class called
   ``stn_flood_event``.
 - Add support for the new NLCD data (2021) for the three supported layers.

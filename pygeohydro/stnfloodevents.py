@@ -57,15 +57,15 @@ class STNFloodEventData:
 
     References
     ----------
-    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
-    * `All Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/AllSensors>`_
-    * `All Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries>`_
-    * `All HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs>`_
-    * `All Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites>`_
-    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`_
-    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`_
-    * `High-Water Marks and Flooding <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`_
-    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`_
+    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`__
+    * `All Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/AllSensors>`__
+    * `All Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/AllPeakSummaries>`__
+    * `All HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/AllHWMs>`__
+    * `All Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/AllSites>`__
+    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`__
+    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`__
+    * `High-Water Marks and Flooding <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`__
+    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`__
     """
 
     # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
@@ -364,10 +364,10 @@ class STNFloodEventData:
             ``sites_accepted_params`` for available values.
 
             Also, see the API documentation for each data type for more information:
-                - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
-                - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
-                - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
-                - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
+                - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
+                - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`__
+                - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`__
+                - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`__
 
         as_list : bool, optional
             If True, return the data as a list, defaults to False.
@@ -498,10 +498,10 @@ def stn_flood_event(
         :class:`STNFloodEventData.sites_accepted_params` for available values.
 
         Also, see the API documentation for each data type for more information:
-        - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
-        - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
-        - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
-        - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
+        - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
+        - `peaks <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`__
+        - `hwms <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`__
+        - `sites <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`__
 
     Returns
     -------
@@ -520,15 +520,15 @@ def stn_flood_event(
 
     References
     ----------
-    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`_
-    * `Filtered Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`_
-    * `Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`_
-    * `Filtered HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`_
-    * `Filtered Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`_
-    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`_
-    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`_
-    * `High-Water Marks and Flooding  <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`_
-    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`_
+    * `USGS Short-Term Network (STN) <https://stn.wim.usgs.gov/STNWeb/#/>`__
+    * `Filtered Sensors API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
+    * `Peak Summary API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/PeakSummary/FilteredPeakSummaries>`__
+    * `Filtered HWM API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/HWM/FilteredHWMs>`__
+    * `Filtered Sites API Documentation <https://stn.wim.usgs.gov/STNServices/Documentation/Site/FilteredSites>`__
+    * `USGS Flood Event Viewer: Providing Hurricane and Flood Response Data <https://www.usgs.gov/mission-areas/water-resources/science/usgs-flood-event-viewer-providing-hurricane-and-flood>`__
+    * `A USGS guide for finding and interpreting high-water marks <https://www.usgs.gov/media/videos/a-usgs-guide-finding-and-interpreting-high-water-marks>`__
+    * `High-Water Marks and Flooding  <https://www.usgs.gov/special-topics/water-science-school/science/high-water-marks-and-flooding>`__
+    * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`__
 
     Notes
     -----
