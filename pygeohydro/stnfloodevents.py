@@ -392,7 +392,7 @@ class STNFloodEventData:
             ``instruments``, ``peaks``, ``hwms``, or ``sites``
         InputValueError
             If any of the input query_params are not in accepted
-            parameters (See :meth:`~instruments_accepted_params`,
+            parameters (See :attr:`~instruments_accepted_params`,
             :attr:`~peaks_accepted_params`, :attr:`~hwms_accepted_params`,
             or :attr:`~sites_accepted_params`).
 
@@ -491,10 +491,10 @@ def stn_flood_event(
         RESTFUL API query parameters, defaults to ``None`` which returns
         a ``pandas.DataFrame`` of information about the given ``data_type``.
         For accepted values, see the STNFloodEventData class attributes
-        :attr:`STNFloodEventData.instruments_accepted_params`,
-        :attr:`STNFloodEventData.peaks_accepted_params`,
-        :attr:`STNFloodEventData.hwms_accepted_params`, and
-        :attr:`STNFloodEventData.sites_accepted_params` for available values.
+        :attr:`~.STNFloodEventData.instruments_accepted_params`,
+        :attr:`~.STNFloodEventData.peaks_accepted_params`,
+        :attr:`~.STNFloodEventData.hwms_accepted_params`, and
+        :attr:`~.STNFloodEventData.sites_accepted_params` for available values.
 
         Also, see the API documentation for each data type for more information:
         - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
