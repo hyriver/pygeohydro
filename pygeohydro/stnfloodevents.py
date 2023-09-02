@@ -42,13 +42,23 @@ class STNFloodEventData:
         The coordinate reference system of the data from the service, defaults
         to ``EPSG:4326``.
     instruments_query_params : set of str
-        The accepted query parameters for the instruments data type.
+        The accepted query parameters for the instruments data type:
+        ``SensorType``, ``CurrentStatus``, ``States``, ``Event``,
+        ``County``, ``DeploymentType``, ``EventType``, ``EventStatus``,
+        and ``CollectionCondition``.
     peaks_query_params : set of str
-        The accepted query parameters for the peaks data type.
+        The accepted query parameters for the peaks data type:
+        ``EndDate``, ``States``, ``Event``, ``StartDate``, ``County``,
+        ``EventType``, and ``EventStatus``.
     hwms_query_params : set of str
-        The accepted query parameters for the hwms data type.
+        The accepted query parameters for the hwms data type:
+        ``EndDate``, ``States``, ``Event``, ``StartDate``, ``County``,
+        ``EventType``, and ``EventStatus``.
     sites_query_params : set of str
-        The accepted query parameters for the sites data type.
+        The accepted query parameters for the sites data type:
+        ``OPDefined``, ``HousingTypeOne``, ``NetworkName``,
+        ``HousingTypeSeven``, ``RDGOnly``, ``HWMOnly``, ``Event``,
+        ``SensorOnly``, ``State``, ``SensorType``, and ``HWMSurveyed``.
 
     Notes
     -----
