@@ -63,7 +63,7 @@ class STNFloodEventData:
     Notes
     -----
     Point data from the service is assumed to be in the WGS84
-    coordinate reference system (EPSG:4326).
+    coordinate reference system (``EPSG:4326``).
 
     References
     ----------
