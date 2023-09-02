@@ -359,9 +359,9 @@ class STNFloodEventData:
             It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
         query_params : dict, optional
             RESTFUL API query parameters. For accepted values, see
-            the STNFloodEventData class attributes ``instruments_accepted_params``,
-            ``peaks_accepted_params``, ``hwms_accepted_params``, and
-            ``sites_accepted_params`` for available values.
+            the STNFloodEventData class attributes :attr:`~instruments_accepted_params`,
+            :attr:`~peaks_accepted_params`, :attr:`~hwms_accepted_params`, and
+            :attr:`~sites_accepted_params` for available values.
 
             Also, see the API documentation for each data type for more information:
                 - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
@@ -393,14 +393,13 @@ class STNFloodEventData:
         InputValueError
             If any of the input query_params are not in accepted
             parameters (See :meth:`~instruments_accepted_params`,
-            :meth:`~peaks_accepted_params`, :meth:`~hwms_accepted_params`,
-            or :meth:`~sites_accepted_params`).
+            :attr:`~peaks_accepted_params`, :attr:`~hwms_accepted_params`,
+            or :attr:`~sites_accepted_params`).
 
         See Also
         --------
         :meth:`~get_all_data` : Retrieves all data for a given data type.
-        :meth:`~data_dictionary` : Retrieves the data dictionary for a
-        given data type.
+        :meth:`~data_dictionary` : Retrieves the data dictionary for a given data type.
 
         Notes
         -----
@@ -492,10 +491,10 @@ def stn_flood_event(
         RESTFUL API query parameters, defaults to ``None`` which returns
         a ``pandas.DataFrame`` of information about the given ``data_type``.
         For accepted values, see the STNFloodEventData class attributes
-        :class:`STNFloodEventData.instruments_accepted_params`,
-        :class:`STNFloodEventData.peaks_accepted_params`,
-        :class:`STNFloodEventData.hwms_accepted_params`, and
-        :class:`STNFloodEventData.sites_accepted_params` for available values.
+        :attr:`STNFloodEventData.instruments_accepted_params`,
+        :attr:`STNFloodEventData.peaks_accepted_params`,
+        :attr:`STNFloodEventData.hwms_accepted_params`, and
+        :attr:`STNFloodEventData.sites_accepted_params` for available values.
 
         Also, see the API documentation for each data type for more information:
         - `instruments <https://stn.wim.usgs.gov/STNServices/Documentation/Sensor/FilteredSensors>`__
