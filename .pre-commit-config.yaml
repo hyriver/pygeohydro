@@ -25,7 +25,7 @@ repos:
   - id: fixit-fix
 
 - repo: https://github.com/psf/black
-  rev: 23.7.0
+  rev: 23.9.0
   hooks:
   - id: black
     name: Autoformat with black
@@ -39,7 +39,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.286
+  rev: v0.0.287
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -61,7 +61,7 @@ repos:
     - tomli
 
 - repo: https://github.com/dosisod/refurb
-  rev: v1.20.0
+  rev: v1.21.0
   hooks:
   - id: refurb
     name: Modernizing Python codebases using Refurb
