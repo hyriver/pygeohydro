@@ -34,7 +34,6 @@ dynamic = [
 dependencies = [
   "async-retriever<0.16,>=0.15",
   "cytoolz",
-  "dask",
   "defusedxml",
   "folium",
   "geopandas>=0.10",
@@ -51,7 +50,7 @@ dependencies = [
   "scipy",
   "shapely>=1.8.5",
   "ujson",
-  "xarray>=2023.04",
+  "xarray>=2023.01",
 ]
 [project.optional-dependencies]
 stac = [

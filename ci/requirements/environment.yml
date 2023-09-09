@@ -37,7 +37,7 @@ dependencies:
 - scipy
 - shapely >=2.0
 - ujson
-- xarray >=2023.04.0
+- xarray >=2023.01.0
 
   # hydrosignatures deps
 - numpy
@@ -76,7 +76,7 @@ dependencies:
 - rioxarray >=0.11.0
 - scipy
 - shapely >=2.0
-- xarray >=2023.04.0
+- xarray >=2023.01.0
   # optional deps
 - planetary-computer
 - pystac-client
