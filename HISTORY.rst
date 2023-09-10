@@ -5,9 +5,18 @@ History
 0.15.2 (2023-0X-XX)
 -------------------
 
+New Features
+~~~~~~~~~~~~
+- Add a new attribute to ``EHydro`` class called ``survey_grid``.
+  It's a ``geopandas.GeoDataFrame`` that includes the survey grid
+  of the eHydro dataset which is a 35-km hexagonal grid.
+
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Remove dependency on ``dask``.
+- Move all NLCD related functions to a separate module called ``nlcd``.
+  This doesn't affect the API since the functions are still available
+  under ``pygeohydro`` namespace.
 
 0.15.1 (2023-08-02)
 -------------------
