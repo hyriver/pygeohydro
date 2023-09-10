@@ -897,8 +897,13 @@ class EHydro(AGRBase):
             raise ZeroMatchedError(self._error_msg) from ex
 
     @property
-    def survey_grid(self)->gpd.GeoDataFrame:
+    def survey_grid(self) -> gpd.GeoDataFrame:
         """Full survey availability on hexagonal grid cells of 35 km resolution."""
-        url = "/".join(("https://services7.arcgis.com/n1YM8pTrFmm7L4hs/ArcGIS/rest", "services/Hydrographic_Survey_Bins/FeatureServer/2"))
+        url = "/".join(
+            (
+                "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/ArcGIS/rest",
+                "services/Hydrographic_Survey_Bins/FeatureServer/2",
+            )
+        )
         bins = AGRBase(url)
         return bins.bygeom(bins.client.client.extent)

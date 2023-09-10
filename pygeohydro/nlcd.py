@@ -17,14 +17,13 @@ from pygeohydro import helpers
 from pygeohydro.exceptions import (
     InputTypeError,
     InputValueError,
-    ServiceUnavailableError,
     MissingCRSError,
+    ServiceUnavailableError,
 )
 from pygeohydro.helpers import Stats
-from pygeoogc import ServiceURL
-
 from pygeoogc import WMS, ServiceURL
 from pygeoogc import utils as ogc_utils
+
 if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
@@ -169,8 +168,6 @@ class NLCD:
     def __repr__(self) -> str:
         """Print the services properties."""
         return self.wms.__repr__()
-
-
 
 
 def nlcd_bygeom(
