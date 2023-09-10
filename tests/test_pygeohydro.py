@@ -917,3 +917,4 @@ def test_ehydro():
     ehydro = EHydro()
     bathy = ehydro.bygeom(bound)
     assert_close(bathy["depthMean"].mean(), 25.5078)
+    assert ehydro.survey_grid.shape[0] == 1022
