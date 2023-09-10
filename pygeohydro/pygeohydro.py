@@ -820,11 +820,6 @@ class EHydro(AGRBase):
     -----
     For more info visit: https://navigation.usace.army.mil/Survey/Hydro
 
-    Attributes
-    ----------
-    survey_grid : geopandas.GeoDataFrame
-        Full survey availability on hexagonal grid cells of 35 km resolution.
-    
     Methods
     -------
     bygeom(geom, geo_crs=4326, sql_clause="", distance=None, return_m=False, return_geom=True)
