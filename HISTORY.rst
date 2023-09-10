@@ -2,6 +2,13 @@
 History
 =======
 
+0.15.2 (2023-0X-XX)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Remove dependency on ``dask``.
+
 0.15.1 (2023-08-02)
 -------------------
 This release provides access to three new datasets:
