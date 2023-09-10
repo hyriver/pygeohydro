@@ -346,10 +346,6 @@ observations between 1980-2014 as a ``xarray.Dataset``, like so:
 
     attrs, qobs = gh.get_camels()
 
-.. image:: https://raw.githubusercontent.com/hyriver/HyRiver-examples/main/notebooks/_static/camels.png
-    :target: https://github.com/hyriver/HyRiver-examples/blob/main/notebooks/camels.ipynb
-    :alt: CAMELS
-
 The ``WaterQuality`` has a number of convenience methods to retrieve data from the
 web service. Since there are many parameter combinations that can be
 used to retrieve data, a general method is also provided to retrieve data from
