@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Iterator, Mapping, Sequence, Tuple, Union
 from unittest.mock import patch
 
 import cytoolz.curried as tlz
-import dask.config
 import geopandas as gpd
 import numpy as np
 import numpy.typing as npt
@@ -1145,6 +1144,18 @@ def soil_properties(
     return soil
 
 
+def _open_tiff(file: Path, name: str) -> xr.DataArray:
+    """Open a .tif file."""
+    ds = rxr.open_rasterio(file)
+    ds = cast("xr.DataArray", ds)
+    if "band" in ds.dims:
+        ds = ds.squeeze("band", drop=True)
+    ds.name = name
+    ds = xr.where(ds != ds.rio.nodata, ds, np.nan)
+    ds = ds.rio.write_nodata(np.nan)
+    return ds
+
+
 def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
     """Get US soil data from the gNATSGO dataset.
 
@@ -1187,19 +1198,22 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     lyrs = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
 
     def get_layer(lyr: str) -> xr.DataArray:
-        data = xr.open_mfdataset(lyr_href[lyr], engine="rasterio").band_data
-        if "band" in data.dims:
-            data = data.squeeze("band", drop=True)
-        data.name = lyr
-        return data  # type: ignore[no-any-return]
+        fpaths = ogc.streaming_download(list(lyr_href[lyr]), file_extention="tiff")
+        ds = xr.merge(_open_tiff(f, lyr) for f in fpaths)
+        affine = ds.rio.transform(recalc=True)
+        with rio.open(fpaths[0]) as src:
+            ds_crs = src.crs
+        ds = ds.rio.write_transform(affine)
+        ds = ds.rio.write_crs(ds_crs)
+        ds = ds.rio.write_coordinate_system()
+        return ds
 
-    with dask.config.set({"array.slicing.split_large_chunks": True}):
-        ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
-        poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
-        ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
-        _ = ds.attrs.pop("_FillValue", None)
-        _ = ds.attrs.pop("units", None)
-        _ = ds.attrs.pop("long_name", None)
+    ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
+    poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
+    ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
+    _ = ds.attrs.pop("_FillValue", None)
+    _ = ds.attrs.pop("units", None)
+    _ = ds.attrs.pop("long_name", None)
     return ds
 
 
