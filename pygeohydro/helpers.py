@@ -3,20 +3,30 @@ from __future__ import annotations
 
 import io
 from datetime import datetime
-from typing import Any, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple, Tuple, Union
 
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import pyproj
 import ujson as json
 from defusedxml import ElementTree
 
 import async_retriever as ar
 from pygeohydro import us_abbrs
-from pygeohydro.exceptions import InputRangeError, InputTypeError, InputValueError
+from pygeohydro.exceptions import (
+    InputRangeError,
+    InputTypeError,
+    InputValueError,
+)
 from pygeoogc import ServiceURL
 
+if TYPE_CHECKING:
+    from shapely.geometry import MultiPolygon, Polygon
+
+    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    CRSTYPE = Union[int, str, pyproj.CRS]
 __all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table", "get_us_states"]
 
 
