@@ -835,16 +835,22 @@ class EHydro(AGRBase):
         self._error_msg = "No survey data found within the given bound."
         self._engine = "pyogrio" if importlib.util.find_spec("pyogrio") else "fiona"
 
+        url = "/".join(
+            (
+                "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/ArcGIS/rest",
+                "services/Hydrographic_Survey_Bins/FeatureServer/2",
+            )
+        )
+        bins = AGRBase(url)
+        self._survey_grid = bins.bygeom(bins.client.client.extent)
+
         warnings.filterwarnings("ignore", message=".*3D.*")
         warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
-        if self._engine == "pyogrio":
-            self.kwargs = {"force_2d": True}
-        else:
+        if self._engine == "fiona":
             import logging
 
             root_logger = logging.getLogger("fiona")
             root_logger.setLevel(logging.ERROR)
-            self.kwargs = {}
 
     def __post_process(self, survey: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         urls = survey["sourcedatalocation"].to_list()
@@ -863,9 +869,20 @@ class EHydro(AGRBase):
                 )
                 if gdb is None:
                     raise ZeroMatchedError(self._error_msg)
-            try:
-                return gpd.read_file(gdb, engine=self._engine, **self.kwargs)
-            except GEOSException:
+
+            if self._engine == "pyogrio":
+                import pyogrio
+
+                pyogrio.set_gdal_config_options(
+                    {"OGR_GEOMETRY_ACCEPT_UNCLOSED_RING": "YES", "OGR_ORGANIZE_POLYGONS": "SKIP"}
+                )
+                warnings.filterwarnings("ignore", message=".*Non closed ring detected.*")
+                warnings.filterwarnings("ignore", message=".*translated to Simple Geometry.*")
+                try:
+                    return gpd.read_file(gdb, engine="pyogrio", use_arrow=True)
+                except GEOSException:
+                    return gpd.read_file(gdb)
+            else:
                 return gpd.read_file(gdb)
 
         return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
@@ -899,11 +916,4 @@ class EHydro(AGRBase):
     @property
     def survey_grid(self) -> gpd.GeoDataFrame:
         """Full survey availability on hexagonal grid cells of 35 km resolution."""
-        url = "/".join(
-            (
-                "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/ArcGIS/rest",
-                "services/Hydrographic_Survey_Bins/FeatureServer/2",
-            )
-        )
-        bins = AGRBase(url)
-        return bins.bygeom(bins.client.client.extent)
+        return self._survey_grid
