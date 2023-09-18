@@ -150,6 +150,8 @@ PyGeoHydro supports the following datasets:
 * `STN <https://stn.wim.usgs.gov/STNWeb/#/>`__ for access USGS Short-Term Network (STN)
 * `eHydro <https://navigation.usace.army.mil/Survey/Hydro>`__ for accessing USACE
   Hydrographic Surveys that includes topobathymetry data
+* `NFHL <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`__ for accessing
+  FEMA's National Flood Hazard Layer (NFHL) data.
 
 Also, it includes several other functions:
 

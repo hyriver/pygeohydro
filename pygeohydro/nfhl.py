@@ -39,6 +39,7 @@ class NFHL(AGRBase):
             - ``Prelim_CSLF``: Preliminary Changes Since Last Firm (CSLF)
             - ``Draft_CSLF``: Draft Changes Since Last Firm (CSLF)
             - ``Prelim_NFHL``: Preliminary National Flood Hazard Layers
+            - ``Pending_NFHL``: Pending National Flood Hazard Layers
             - ``Draft_NFHL``: Draft National Flood Hazard Layers
 
         layer : str

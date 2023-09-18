@@ -2,6 +2,15 @@
 History
 =======
 
+0.15.3 (2023-XX-XX)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add ``NFHL`` class within ``nfhl.py`` module to access FEMA's
+  National Flood Hazard Layer (NFHL) using six different ArcGISRESTFul
+  services.
+
 0.15.2 (2023-0X-XX)
 -------------------
 
