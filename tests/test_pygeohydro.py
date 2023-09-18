@@ -191,8 +191,8 @@ class TestNID:
         assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91807, 79)
-        assert self.nid.gdf.shape == (91658, 97)
+        assert self.nid.df.shape == (91753, 77)
+        assert self.nid.gdf.shape == (91624, 95)
 
 
 class TestWaterQuality:
@@ -525,6 +525,7 @@ class TestSTNFloodEventData:
             "zone",
             "height_above_gnd",
             "is_hag_estimated",
+            "aep_upperci",
             "geometry",
         ],
         "hwms": [
@@ -985,14 +986,43 @@ class TestNFHL:
             NFHL("NTHL", "cross-sections")
 
     @pytest.mark.parametrize(
-        "service, layer, geom, expected_gdf_len",
+        "service, layer, geom, expected_gdf_len, expected_schema",
         [
-            ("NFHL", "cross-sections", (-73.42, 43.28, -72.9, 43.52), 165),
+            (
+                "NFHL",
+                "cross-sections",
+                (-73.42, 43.48, -72.5, 43.52),
+                44,
+                [
+                    "geometry",
+                    "OBJECTID",
+                    "DFIRM_ID",
+                    "VERSION_ID",
+                    "XS_LN_ID",
+                    "WTR_NM",
+                    "STREAM_STN",
+                    "START_ID",
+                    "XS_LTR",
+                    "XS_LN_TYP",
+                    "WSEL_REG",
+                    "STRMBED_EL",
+                    "LEN_UNIT",
+                    "V_DATUM",
+                    "PROFXS_TXT",
+                    "MODEL_ID",
+                    "SEQ",
+                    "SOURCE_CIT",
+                    "SHAPE.STLength()",
+                    "GFID",
+                    "GlobalID",
+                ],
+            ),
         ],
     )
-    def test_nfhl_getgeom(self, service, layer, geom, expected_gdf_len):
+    def test_nfhl_getgeom(self, service, layer, geom, expected_gdf_len, expected_schema):
         """Test the NFHL bygeom method."""
         nfhl = NFHL(service, layer)
         gdf_xs = nfhl.bygeom(geom, geo_crs="epsg:4269")
         assert isinstance(gdf_xs, gpd.GeoDataFrame)
         assert len(gdf_xs) >= expected_gdf_len
+        assert set(gdf_xs.columns) == set(expected_schema)
