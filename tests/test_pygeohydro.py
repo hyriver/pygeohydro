@@ -12,8 +12,11 @@ from pyproj.exceptions import CRSError
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
-from pygeohydro import NID, NWIS, WBD, EHydro
+from pygeohydro import NFHL, NID, NWIS, WBD, EHydro
+from pygeohydro.exceptions import InputValueError as InputValueError_pygeohydro
 from pygeoogc import utils as ogc_utils
+from pynhd.core import ServiceInfo
+from pynhd.exceptions import InputValueError as InputValueError_pynhd
 
 DEF_CRS = 4326
 ALT_CRS = 3542
@@ -918,3 +921,78 @@ def test_ehydro():
     bathy = ehydro.bygeom(bound)
     assert_close(bathy["depthMean"].mean(), 25.5078)
     assert ehydro.survey_grid.shape[0] == 1022
+
+
+class TestNFHL:
+    """Test the Natinoal Flood Hazard Layer (NFHL) class."""
+
+    @pytest.mark.parametrize(
+        "service, layer, expected_url, expected_layer",
+        [
+            (
+                "NFHL",
+                "cross-sections",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer",
+                "Cross-Sections (14)",
+            ),
+            (
+                "Prelim_CSLF",
+                "floodway change",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
+                "Floodway Change (2)",
+            ),
+            (
+                "Draft_CSLF",
+                "special flood hazard area change",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
+                "Special Flood Hazard Area Change (3)",
+            ),
+            (
+                "Prelim_NFHL",
+                "preliminary water lines",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
+                "Preliminary Water Lines (17)",
+            ),
+            (
+                "Pending_NFHL",
+                "pending high water marks",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
+                "Pending High Water Marks (12)",
+            ),
+            (
+                "Draft_NFHL",
+                "draft transect baselines",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
+                "Draft Transect Baselines (13)",
+            ),
+        ],
+    )
+    def test_nfhl(self, service, layer, expected_url, expected_layer):
+        """Test the NFHL class."""
+        nfhl = NFHL(service, layer)
+        assert isinstance(nfhl.service_info, ServiceInfo)
+        assert nfhl.service_info.url == expected_url
+        assert nfhl.service_info.layer == expected_layer
+
+    def test_nfhl_fail_layer(self):
+        """Test the layer argument failures in NFHL init."""
+        with pytest.raises(InputValueError_pynhd):
+            NFHL("NFHL", "cross_sections")
+
+    def test_nfhl_fail_service(self):
+        """Test the service argument failures in NFHL init."""
+        with pytest.raises(InputValueError_pygeohydro):
+            NFHL("NTHL", "cross-sections")
+
+    @pytest.mark.parametrize(
+        "service, layer, geom, expected_gdf_len",
+        [
+            ("NFHL", "cross-sections", (-73.42, 43.28, -72.9, 43.52), 165),
+        ],
+    )
+    def test_nfhl_getgeom(self, service, layer, geom, expected_gdf_len):
+        """Test the NFHL bygeom method."""
+        nfhl = NFHL(service, layer)
+        gdf_xs = nfhl.bygeom(geom, geo_crs="epsg:4269")
+        assert isinstance(gdf_xs, gpd.GeoDataFrame)
+        assert len(gdf_xs) >= expected_gdf_len
