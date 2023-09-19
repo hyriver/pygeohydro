@@ -452,6 +452,18 @@ get the two Hudson HUC4s:
     wbd = WBD("huc4")
     hudson = wbd.byids("huc4", ["0202", "0203"])
 
+
+The ``NFHL`` class allows us to retrieve FEMA's National Flood Hazard Layer (NFHL) data.
+Let's get the cross-section data for a small region in Vermont:
+
+.. code-block:: python
+
+    from pygeohydro import NFHL
+
+    nfhl = NFHL("NFHL", "cross-sections")
+    gdf_xs = nfhl.bygeom((-73.42, 43.28, -72.9, 43.52), geo_crs="epsg:4269")
+
+
 Contributing
 ------------
 
