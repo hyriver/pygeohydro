@@ -19,10 +19,34 @@ class NFHL(AGRBase):
     """
     Access National Flood Hazard Layers (NFHL).
 
+    Attributes
+    ----------
+    valid_services : Dict
+        A dictionary of valid services and their URLs.
+
+    Methods
+    -------
+    bygeom(geom, geo_crs=4326, sql_clause="", distance=None, return_m=False, return_geom=True)
+        Get features within a geometry that can be combined with a SQL where clause.
+    byids(field, fids, return_m=False, return_geom=True)
+        Get features by object IDs.
+    bysql(sql_clause, return_m=False, return_geom=True)
+        Get features using a valid SQL 92 WHERE clause.
+
     References
     ----------
     * `National Flood Hazard Layer GIS Web Services` <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>
     """
+
+    # service URLs
+    valid_services = {
+        "NFHL": ServiceURL().restful.fema_nfhl,
+        "Prelim_CSLF": ServiceURL().restful.fema_prelim_cslf,
+        "Draft_CSLF": ServiceURL().restful.fema_draft_cslf,
+        "Prelim_NFHL": ServiceURL().restful.fema_prelim_nfhl,
+        "Pending_NFHL": ServiceURL().restful.fema_pending_nfhl,
+        "Draft_NFHL": ServiceURL().restful.fema_draft_nfhl,
+    }
 
     def __init__(
         self, service: str, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326
@@ -67,31 +91,20 @@ class NFHL(AGRBase):
         ----------
         * `National Flood Hazard Layer GIS Web Services` <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>
         """
-        """
-        NOTE: Will replace below once pygeoogc is updated.
-        self.valid_services = {
-            "NFHL": ServiceURL().restful.fema,
-            "Prelim_CSLF": ServiceURL().restful.fema_prelim_cslf,
-            "Draft_CSLF": ServiceURL().restful.fema_draft_cslf,
-            "Prelim_NFHL": ServiceURL().restful.fema_prelim_nfhl,
-            "Pending_NFHL": ServiceURL().restful.fema_pending_nfhl,
-            "Draft_NFHL": ServiceURL().restful.fema_draft_nfhl
-        }
-        """
-
-        # NOTE: Temporary URLs until pygeoogc is updated.
-        self.valid_services = {
-            "NFHL": ServiceURL().restful.fema,
-            "Prelim_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
-            "Draft_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
-            "Prelim_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
-            "Pending_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
-            "Draft_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
-        }
-
         url = self.valid_services.get(service)
         if url is None:
             raise InputValueError("service", list(self.valid_services))
 
-        _layer = layer
-        super().__init__(url, _layer, outfields, crs)
+        super().__init__(url, layer, outfields, crs)
+
+    """
+    # TODO: Will remove once pygeoogc is updated.
+    valid_services = {
+        "NFHL": ServiceURL().restful.fema,
+        "Prelim_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
+        "Draft_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
+        "Prelim_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
+        "Pending_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
+        "Draft_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
+    }
+    """
