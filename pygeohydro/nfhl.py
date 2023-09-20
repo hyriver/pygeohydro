@@ -96,15 +96,3 @@ class NFHL(AGRBase):
             raise InputValueError("service", list(self.valid_services))
 
         super().__init__(url, layer, outfields, crs)
-
-    """
-    # TODO: Will remove once pygeoogc is updated.
-    valid_services = {
-        "NFHL": ServiceURL().restful.fema,
-        "Prelim_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
-        "Draft_CSLF": "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
-        "Prelim_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
-        "Pending_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
-        "Draft_NFHL": "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
-    }
-    """

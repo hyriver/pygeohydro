@@ -12,11 +12,9 @@ from pyproj.exceptions import CRSError
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
+import pynhd as nhd
 from pygeohydro import NFHL, NID, NWIS, WBD, EHydro
-from pygeohydro.exceptions import InputValueError as InputValueError_pygeohydro
 from pygeoogc import utils as ogc_utils
-from pynhd.core import ServiceInfo
-from pynhd.exceptions import InputValueError as InputValueError_pynhd
 
 DEF_CRS = 4326
 ALT_CRS = 3542
@@ -971,18 +969,18 @@ class TestNFHL:
     def test_nfhl(self, service, layer, expected_url, expected_layer):
         """Test the NFHL class."""
         nfhl = NFHL(service, layer)
-        assert isinstance(nfhl.service_info, ServiceInfo)
+        assert isinstance(nfhl.service_info, nhd.ServiceInfo)
         assert nfhl.service_info.url == expected_url
         assert nfhl.service_info.layer == expected_layer
 
     def test_nfhl_fail_layer(self):
         """Test the layer argument failures in NFHL init."""
-        with pytest.raises(InputValueError_pynhd):
+        with pytest.raises(nhd.exceptions.InputValueError):
             NFHL("NFHL", "cross_sections")
 
     def test_nfhl_fail_service(self):
         """Test the service argument failures in NFHL init."""
-        with pytest.raises(InputValueError_pygeohydro):
+        with pytest.raises(gh.exceptions.InputValueError):
             NFHL("NTHL", "cross-sections")
 
     @pytest.mark.parametrize(
