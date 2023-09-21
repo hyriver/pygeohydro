@@ -14,6 +14,9 @@ New Features
   eHydro. You can set ``data_type`` in ``EHydro`` to ``bathymetry``,
   ``points``, ``outlines``, or ``contours`` to get the corresponding
   data. The default is ``bathymetry`` for backward compatibility.
+- Add ``NFHL`` class within ``nfhl.py`` module to access FEMA's
+  National Flood Hazard Layer (NFHL) using six different ArcGISRESTFul
+  services.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
