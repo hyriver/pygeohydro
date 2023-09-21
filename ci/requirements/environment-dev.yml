@@ -7,12 +7,10 @@ dependencies:
 
 # async-retriever deps
 - aiodns
-- aiosqlite
-- aiohttp >=3.8.3
+- aiohttp-client-cache >=0.8.1
 - brotli
 - cytoolz
 - nest-asyncio
-- aiohttp-client-cache >=0.8.1
 - ujson
 
 # pygeoogc deps
@@ -33,8 +31,8 @@ dependencies:
 
 # pygeoutils deps
 - cytoolz
-- dask-core
-- geopandas >=0.7
+- geopandas-base >=0.7
+- fiona
 - netcdf4
 - numpy >=1.21
 - pyproj >=2.2
@@ -71,7 +69,7 @@ dependencies:
 # pynhd deps
 # - async-retriever >=0.3.6
 - cytoolz
-- geopandas >=0.9
+- geopandas-base >=0.9
 - networkx
 - numpy >=1.21
 - pandas >=1.0
@@ -86,7 +84,6 @@ dependencies:
 # pydaymet deps
 # - async-retriever >=0.3.6
 - click >=0.7
-- dask-core
 - lxml
 - numpy >=1.21
 - pandas >=1.0
@@ -104,7 +101,7 @@ dependencies:
 - cytoolz
 - defusedxml
 - folium
-- geopandas >=0.7
+- geopandas-base >=0.7
 - h5netcdf
 # - hydrosignatures >=0.1.1
 - lxml

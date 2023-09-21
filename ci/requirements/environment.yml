@@ -27,8 +27,7 @@ dependencies:
 
   # pygeoutils deps
 - cytoolz
-- dask-core
-- geopandas >=0.7
+- geopandas-base >=0.7
 - netcdf4
 - numpy >=1.17
 - pyproj >=2.2
@@ -49,7 +48,7 @@ dependencies:
   # pynhd deps
   # - async-retriever >=0.3.6
 - cytoolz
-- geopandas >=0.9
+- geopandas-base >=0.9
 - networkx
 - numpy >=1.17
 - pandas >=1.0
@@ -62,7 +61,7 @@ dependencies:
 - cytoolz
 - defusedxml
 - folium
-- geopandas >=0.7
+- geopandas-base >=0.7
 - h5netcdf
   # - hydrosignatures >=0.1.1
 - lxml
