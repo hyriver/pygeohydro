@@ -104,63 +104,60 @@ def show_versions(file: TextIO = sys.stdout) -> None:
     deps = [
         #  async_retriever
         "async-retriever",
-        "aiodns",
         "aiohttp",
         "aiohttp-client-cache",
         "aiosqlite",
-        "brotli",
         "cytoolz",
         "ujson",
         #  pygeoogc
         "pygeoogc",
         "defusedxml",
+        "joblib",
+        "multidict",
         "owslib",
-        "yaml",
         "pyproj",
         "requests",
         "requests-cache",
         "shapely",
+        "url-normalize",
         "urllib3",
+        "yarl",
         #  pygeoutils
         "pygeoutils",
-        "dask",
         "geopandas",
-        "netCDF4",
+        "netcdf4",
         "numpy",
         "rasterio",
-        "xarray",
         "rioxarray",
+        "scipy",
+        "shapely",
+        "ujson",
+        "xarray",
         #  py3dep
         "py3dep",
         "click",
-        "scipy",
-        "richdem",
+        "pyflwdir",
         #  pynhd
         "pynhd",
         "networkx",
-        "pandas",
         "pyarrow",
         #  pygeohydro
         "pygeohydro",
         "folium",
-        "lxml",
+        "h5netcdf",
         "matplotlib",
+        "pandas",
         #  pydaymet
         "pydaymet",
         #  hydrosignatures
         "hydrosignatures",
         #  pynldas2
         "pynldas2",
-        "h5netcdf",
-        #  misc
+        #  optional
         "numba",
         "bottleneck",
-        "pygeos",
-        "tables",
-        #  test
-        "pytest",
-        "pytest-cov",
-        "xdist",
+        "py7zr",
+        "pyogrio",
     ]
     pad = len(max(deps, key=len)) + 1
 
