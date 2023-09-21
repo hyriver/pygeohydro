@@ -969,7 +969,7 @@ class TestNFHL:
     def test_nfhl(self, service, layer, expected_url, expected_layer):
         """Test the NFHL class."""
         nfhl = NFHL(service, layer)
-        assert isinstance(nfhl.service_info, nhd.ServiceInfo)
+        assert isinstance(nfhl.service_info, nhd.core.ServiceInfo)
         assert nfhl.service_info.url == expected_url
         assert nfhl.service_info.layer == expected_layer
 
