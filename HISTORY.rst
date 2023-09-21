@@ -10,6 +10,10 @@ New Features
 - Add a new attribute to ``EHydro`` class called ``survey_grid``.
   It's a ``geopandas.GeoDataFrame`` that includes the survey grid
   of the eHydro dataset which is a 35-km hexagonal grid.
+- Add support for getting point cloud and survey outline data from
+  eHydro. You can set ``data_type`` in ``EHydro`` to ``bathymetry``,
+  ``points``, ``outlines``, or ``contours`` to get the corresponding
+  data. The default is ``bathymetry`` for backward compatibility.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
