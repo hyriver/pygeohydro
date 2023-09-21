@@ -189,8 +189,8 @@ class TestNID:
         assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91753, 77)
-        assert self.nid.gdf.shape == (91624, 95)
+        assert self.nid.df.shape == (91807, 79)
+        assert self.nid.gdf.shape == (91658, 97)
 
 
 class TestWaterQuality:
@@ -916,7 +916,7 @@ class TestSTNFloodEventData:
 
 def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
-    ehydro = EHydro()
+    ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
     assert_close(bathy["depthMean"].mean(), 25.5078)
     assert ehydro.survey_grid.shape[0] == 1022
