@@ -1,13 +1,14 @@
 """Accessing data from the supported databases through their APIs."""
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import io
 import itertools
 import warnings
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Sequence, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Iterator, Literal, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
 import cytoolz.curried as tlz
@@ -828,29 +829,63 @@ class EHydro(AGRBase):
         Get features by object IDs.
     bysql(sql_clause, return_m=False, return_geom=True)
         Get features using a valid SQL 92 WHERE clause.
+
+    Parameters
+    ----------
+    data_type : str, optional
+        Type of the survey data to retrieve, defaults to ``points``.
+        Note that the ``points`` data type gets the best available point
+        cloud data, i.e., if ``SurveyPointHD`` is available, it will be
+        returned, otherwise ``SurveyPoint`` will be returned.
+        Available types are:
+
+        - ``points``: Point clouds
+        - ``outlines``: Polygons of survey outlines
+        - ``contours``: Depth contours
+        - ``bathymetry``: Bathymetry data
+
+        Note that point clouds are not available for all surveys.
     """
 
-    def __init__(self):
+    def __init__(
+        self, data_type: Literal["points", "outlines", "bathymetry", "contours"] = "points"
+    ):
         super().__init__(ServiceURL().restful.ehydro)
+        self.data_type = data_type
+        layer = {
+            "points": "SurveyPoint",
+            "outlines": "SurveyJob",
+            "bathymetry": "Bathymetry_Vector",
+            "contours": "ElevationContour_ALL",
+        }
+        if self.data_type not in layer:
+            raise InputValueError("data_type", list(layer))
+        self._layer = layer[self.data_type]
         self._error_msg = "No survey data found within the given bound."
         self._engine = "pyogrio" if importlib.util.find_spec("pyogrio") else "fiona"
+        if self._engine == "pyogrio":
+            import pyogrio
 
-        url = "/".join(
-            (
-                "https://services7.arcgis.com/n1YM8pTrFmm7L4hs/ArcGIS/rest",
-                "services/Hydrographic_Survey_Bins/FeatureServer/2",
+            pyogrio.set_gdal_config_options(
+                {"OGR_GEOMETRY_ACCEPT_UNCLOSED_RING": "YES", "OGR_ORGANIZE_POLYGONS": "SKIP"}
             )
-        )
-        bins = AGRBase(url)
+            warnings.filterwarnings("ignore", message=".*Non closed ring detected.*")
+            warnings.filterwarnings("ignore", message=".*translated to Simple Geometry.*")
+            self._get_layers = pyogrio.list_layers
+        else:
+            import logging
+
+            import fiona
+
+            root_logger = logging.getLogger("fiona")
+            root_logger.setLevel(logging.ERROR)
+            self._get_layers = fiona.listlayers
+
+        bins = AGRBase(ServiceURL().restful.ehydro_bins)
         self._survey_grid = bins.bygeom(bins.client.client.extent)
 
         warnings.filterwarnings("ignore", message=".*3D.*")
         warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
-        if self._engine == "fiona":
-            import logging
-
-            root_logger = logging.getLogger("fiona")
-            root_logger.setLevel(logging.ERROR)
 
     def __post_process(self, survey: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
         urls = survey["sourcedatalocation"].to_list()
@@ -863,27 +898,20 @@ class EHydro(AGRBase):
                     (
                         f"zip://{fname}!{n.filename}"
                         for n in zip_ref.filelist
-                        if ".gdb" in n.filename
+                        if n.filename.endswith(".gdb/")
                     ),
                     None,
                 )
                 if gdb is None:
                     raise ZeroMatchedError(self._error_msg)
 
-            if self._engine == "pyogrio":
-                import pyogrio
+            if self._layer == "SurveyPoint" and "SurveyPointHD" in self._get_layers(gdb):
+                self._layer = "SurveyPointHD"
 
-                pyogrio.set_gdal_config_options(
-                    {"OGR_GEOMETRY_ACCEPT_UNCLOSED_RING": "YES", "OGR_ORGANIZE_POLYGONS": "SKIP"}
-                )
-                warnings.filterwarnings("ignore", message=".*Non closed ring detected.*")
-                warnings.filterwarnings("ignore", message=".*translated to Simple Geometry.*")
-                try:
-                    return gpd.read_file(gdb, engine="pyogrio", use_arrow=True)
-                except GEOSException:
-                    return gpd.read_file(gdb)
-            else:
-                return gpd.read_file(gdb)
+            if self._engine == "pyogrio":
+                with contextlib.suppress(GEOSException):
+                    return gpd.read_file(gdb, layer=self._layer, engine="pyogrio", use_arrow=True)
+            return gpd.read_file(gdb, layer=self._layer)
 
         return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
 
