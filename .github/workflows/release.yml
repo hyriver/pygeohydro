@@ -48,10 +48,15 @@ jobs:
     runs-on: ubuntu-latest
     env:
       REPO_NAME: ${{ github.event.repository.name }}
+      name: pypi
+      url: https://pypi.org/p/${{ github.event.repository.name }}
+    permissions:
+      id-token: write
     steps:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
+
     - name: Set up Python
       uses: actions/setup-python@master
       with:
@@ -80,8 +85,4 @@ jobs:
         fi
 
     - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        user: __token__
-        password: ${{ secrets.PYPI_PASSWORD }}
-        verbose: true
+      uses: pypa/gh-action-pypi-publish@v1.8.10
