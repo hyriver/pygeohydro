@@ -257,7 +257,7 @@ the dataset either using a geometry or a bounding box, based on their ID, or SQL
 
     from pygeohydro import EHydro
 
-    ehydro = EHydro()
+    ehydro = EHydro("points")
     topobathy = ehydro.bygeom((-122.53, 45.57, -122.52, 45.59))
 
 We can explore the available NWIS stations within a bounding box using ``interactive_map``

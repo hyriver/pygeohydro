@@ -13,10 +13,13 @@ New Features
 - Add support for getting point cloud and survey outline data from
   eHydro. You can set ``data_type`` in ``EHydro`` to ``bathymetry``,
   ``points``, ``outlines``, or ``contours`` to get the corresponding
-  data. The default is ``bathymetry`` for backward compatibility.
-- Add ``NFHL`` class within ``nfhl.py`` module to access FEMA's
+  data. The default is ``points`` since this is the recommended data
+  type by USACE.
+- Add ``NFHL`` class within ``nfhl`` module to access FEMA's
   National Flood Hazard Layer (NFHL) using six different ArcGISRESTFul
-  services.
+  services. Contributed by
+  `Fernando Aristizabal <https://github.com/fernando-aristizabal>`__.
+  (:pull_hydro:`108`)
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
@@ -30,8 +33,9 @@ Internal Changes
 This release provides access to three new datasets:
 
 - USACE Hydrographic Surveys (eHydro) and
-- USGS Short-Term Network (STN) Flood Event Data
-  (contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`__)
+- USGS Short-Term Network (STN) Flood Event Data,
+  contributed by `Fernando Aristizabal <https://github.com/fernando-aristizabal>`__.
+  (:pull_hydro:`108`)
 - NLCD 2021
 
 New Features
