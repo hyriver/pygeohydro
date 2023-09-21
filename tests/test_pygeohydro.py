@@ -12,7 +12,8 @@ from pyproj.exceptions import CRSError
 from shapely.geometry import Polygon
 
 import pygeohydro as gh
-from pygeohydro import NID, NWIS, WBD, EHydro
+import pynhd as nhd
+from pygeohydro import NFHL, NID, NWIS, WBD, EHydro
 from pygeoogc import utils as ogc_utils
 
 DEF_CRS = 4326
@@ -188,8 +189,8 @@ class TestNID:
         assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91807, 79)
-        assert self.nid.gdf.shape == (91658, 97)
+        assert self.nid.df.shape == (91753, 77)
+        assert self.nid.gdf.shape == (91624, 95)
 
 
 class TestWaterQuality:
@@ -522,6 +523,7 @@ class TestSTNFloodEventData:
             "zone",
             "height_above_gnd",
             "is_hag_estimated",
+            "aep_upperci",
             "geometry",
         ],
         "hwms": [
@@ -918,3 +920,107 @@ def test_ehydro():
     bathy = ehydro.bygeom(bound)
     assert_close(bathy["depthMean"].mean(), 25.5078)
     assert ehydro.survey_grid.shape[0] == 1022
+
+
+class TestNFHL:
+    """Test the Natinoal Flood Hazard Layer (NFHL) class."""
+
+    @pytest.mark.parametrize(
+        "service, layer, expected_url, expected_layer",
+        [
+            (
+                "NFHL",
+                "cross-sections",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer",
+                "Cross-Sections (14)",
+            ),
+            (
+                "Prelim_CSLF",
+                "floodway change",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
+                "Floodway Change (2)",
+            ),
+            (
+                "Draft_CSLF",
+                "special flood hazard area change",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
+                "Special Flood Hazard Area Change (3)",
+            ),
+            (
+                "Prelim_NFHL",
+                "preliminary water lines",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
+                "Preliminary Water Lines (17)",
+            ),
+            (
+                "Pending_NFHL",
+                "pending high water marks",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
+                "Pending High Water Marks (12)",
+            ),
+            (
+                "Draft_NFHL",
+                "draft transect baselines",
+                "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
+                "Draft Transect Baselines (13)",
+            ),
+        ],
+    )
+    def test_nfhl(self, service, layer, expected_url, expected_layer):
+        """Test the NFHL class."""
+        nfhl = NFHL(service, layer)
+        assert isinstance(nfhl.service_info, nhd.core.ServiceInfo)
+        assert nfhl.service_info.url == expected_url
+        assert nfhl.service_info.layer == expected_layer
+
+    def test_nfhl_fail_layer(self):
+        """Test the layer argument failures in NFHL init."""
+        with pytest.raises(nhd.exceptions.InputValueError):
+            NFHL("NFHL", "cross_sections")
+
+    def test_nfhl_fail_service(self):
+        """Test the service argument failures in NFHL init."""
+        with pytest.raises(gh.exceptions.InputValueError):
+            NFHL("NTHL", "cross-sections")
+
+    @pytest.mark.parametrize(
+        "service, layer, geom, expected_gdf_len, expected_schema",
+        [
+            (
+                "NFHL",
+                "cross-sections",
+                (-73.42, 43.48, -72.5, 43.52),
+                44,
+                [
+                    "geometry",
+                    "OBJECTID",
+                    "DFIRM_ID",
+                    "VERSION_ID",
+                    "XS_LN_ID",
+                    "WTR_NM",
+                    "STREAM_STN",
+                    "START_ID",
+                    "XS_LTR",
+                    "XS_LN_TYP",
+                    "WSEL_REG",
+                    "STRMBED_EL",
+                    "LEN_UNIT",
+                    "V_DATUM",
+                    "PROFXS_TXT",
+                    "MODEL_ID",
+                    "SEQ",
+                    "SOURCE_CIT",
+                    "SHAPE.STLength()",
+                    "GFID",
+                    "GlobalID",
+                ],
+            ),
+        ],
+    )
+    def test_nfhl_getgeom(self, service, layer, geom, expected_gdf_len, expected_schema):
+        """Test the NFHL bygeom method."""
+        nfhl = NFHL(service, layer)
+        gdf_xs = nfhl.bygeom(geom, geo_crs="epsg:4269")
+        assert isinstance(gdf_xs, gpd.GeoDataFrame)
+        assert len(gdf_xs) >= expected_gdf_len
+        assert set(gdf_xs.columns) == set(expected_schema)

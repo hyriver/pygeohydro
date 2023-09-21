@@ -150,6 +150,8 @@ PyGeoHydro supports the following datasets:
 * `STN <https://stn.wim.usgs.gov/STNWeb/#/>`__ for access USGS Short-Term Network (STN)
 * `eHydro <https://navigation.usace.army.mil/Survey/Hydro>`__ for accessing USACE
   Hydrographic Surveys that includes topobathymetry data
+* `NFHL <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`__ for accessing
+  FEMA's National Flood Hazard Layer (NFHL) data.
 
 Also, it includes several other functions:
 
@@ -449,6 +451,18 @@ get the two Hudson HUC4s:
 
     wbd = WBD("huc4")
     hudson = wbd.byids("huc4", ["0202", "0203"])
+
+
+The ``NFHL`` class allows us to retrieve FEMA's National Flood Hazard Layer (NFHL) data.
+Let's get the cross-section data for a small region in Vermont:
+
+.. code-block:: python
+
+    from pygeohydro import NFHL
+
+    nfhl = NFHL("NFHL", "cross-sections")
+    gdf_xs = nfhl.bygeom((-73.42, 43.28, -72.9, 43.52), geo_crs="epsg:4269")
+
 
 Contributing
 ------------

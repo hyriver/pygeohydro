@@ -15,6 +15,7 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeohydro.helpers import get_us_states
+from pygeohydro.nfhl import NFHL
 from pygeohydro.nlcd import (
     cover_statistics,
     nlcd_area_percent,
@@ -48,6 +49,7 @@ __all__ = [
     "NID",
     "WBD",
     "NWIS",
+    "NFHL",
     "WaterQuality",
     "streamflow_fillna",
     "cover_statistics",
