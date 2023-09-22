@@ -144,7 +144,7 @@ def ssebopeta_bycoords(
     f_list = helpers.get_ssebopeta_urls(dates)
     session = RetrySession()
 
-    with patch("socket.has_ipv6", False):
+    with patch("socket.has_ipv6", False), RetrySession() as session:
 
         def _ssebop(url: str) -> list[npt.NDArray[np.float64]]:
             r = session.get(url)
@@ -216,8 +216,7 @@ def ssebopeta_bygeom(
         raise InputTypeError("geometry", "(Multi)Polygon or tuple of length 4") from ex
 
     gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
-    session = RetrySession()
-    with patch("socket.has_ipv6", False):
+    with patch("socket.has_ipv6", False), RetrySession() as session:
 
         def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray:
             resp = session.get(url)
