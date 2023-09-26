@@ -53,7 +53,6 @@ dependencies:
 
 # py3dep
 # - async-retriever >=0.3.6
-- click >=0.7
 - cytoolz
 - numpy >=1.21
 # - pygeoogc >=0.13.7
@@ -83,7 +82,6 @@ dependencies:
 
 # pydaymet deps
 # - async-retriever >=0.3.6
-- click >=0.7
 - lxml
 - numpy >=1.21
 - pandas >=1.0
