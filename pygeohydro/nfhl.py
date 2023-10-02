@@ -3,13 +3,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Union
 
-import pyproj
-
 from pygeohydro.exceptions import InputValueError
 from pygeoogc import ServiceURL
 from pynhd import AGRBase
 
 if TYPE_CHECKING:
+    import pyproj
+
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = ["NFHL"]
@@ -101,12 +101,7 @@ class NFHL(AGRBase):
 
     References
     ----------
-    * `National Flood Hazard Layer GIS Web Services <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`__
-
-    Attributes
-    ----------
-    valid_services : Dict
-        A dictionary of valid services and their URLs.
+    * `National Flood Hazard Layer <https://hazards.fema.gov/femaportal/wps/portal/NFHLWMS>`__
 
     Methods
     -------
@@ -118,21 +113,25 @@ class NFHL(AGRBase):
         Get features using a valid SQL 92 WHERE clause.
     """
 
-    # service URLs
-    valid_services = {
-        "NFHL": ServiceURL().restful.fema_nfhl,
-        "Prelim_CSLF": ServiceURL().restful.fema_prelim_cslf,
-        "Draft_CSLF": ServiceURL().restful.fema_draft_cslf,
-        "Prelim_NFHL": ServiceURL().restful.fema_prelim_nfhl,
-        "Pending_NFHL": ServiceURL().restful.fema_pending_nfhl,
-        "Draft_NFHL": ServiceURL().restful.fema_draft_nfhl,
-    }
-
     def __init__(
         self, service: str, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326
     ):
+        # service URLs
+        self.__valid_services = {
+            "NFHL": ServiceURL().restful.fema_nfhl,
+            "Prelim_CSLF": ServiceURL().restful.fema_prelim_cslf,
+            "Draft_CSLF": ServiceURL().restful.fema_draft_cslf,
+            "Prelim_NFHL": ServiceURL().restful.fema_prelim_nfhl,
+            "Pending_NFHL": ServiceURL().restful.fema_pending_nfhl,
+            "Draft_NFHL": ServiceURL().restful.fema_draft_nfhl,
+        }
         url = self.valid_services.get(service)
         if url is None:
             raise InputValueError("service", list(self.valid_services))
 
         super().__init__(url, layer, outfields, crs)
+
+    @property
+    def valid_services(self) -> dict[str, str]:
+        """A dictionary of valid services and their URLs."""
+        return self.__valid_services

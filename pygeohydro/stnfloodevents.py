@@ -8,13 +8,14 @@ from typing import TYPE_CHECKING, Any, Union
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from pyproj import CRS
 
 import async_retriever as ar
 from pygeohydro.exceptions import InputValueError
 from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
+    from pyproj import CRS
+
     CRSTYPE = Union[int, str, CRS]
 
 __all__ = ["STNFloodEventData", "stn_flood_event"]
@@ -31,34 +32,6 @@ class STNFloodEventData:
       (e.g., pandas.DataFrame, geopandas.GeoDataFrame) instead of JSON.
     - Convenience functions are offered for data dictionaries.
     - Geo-references the data where applicable.
-
-    Attributes
-    ----------
-    service_url : str
-        The service url of the STN Flood Event Data RESTFUL Service API.
-    data_dictionary_url : str
-        The data dictionary url of the STN Flood Event Data RESTFUL Service API.
-    service_crs : int, str, or pyproj.CRS, optional
-        The coordinate reference system of the data from the service, defaults
-        to ``EPSG:4326``.
-    instruments_query_params : set of str
-        The accepted query parameters for the instruments data type:
-        ``SensorType``, ``CurrentStatus``, ``States``, ``Event``,
-        ``County``, ``DeploymentType``, ``EventType``, ``EventStatus``,
-        and ``CollectionCondition``.
-    peaks_query_params : set of str
-        The accepted query parameters for the peaks data type:
-        ``EndDate``, ``States``, ``Event``, ``StartDate``, ``County``,
-        ``EventType``, and ``EventStatus``.
-    hwms_query_params : set of str
-        The accepted query parameters for the hwms data type:
-        ``EndDate``, ``States``, ``Event``, ``StartDate``, ``County``,
-        ``EventType``, and ``EventStatus``.
-    sites_query_params : set of str
-        The accepted query parameters for the sites data type:
-        ``OPDefined``, ``HousingTypeOne``, ``NetworkName``,
-        ``HousingTypeSeven``, ``RDGOnly``, ``HWMOnly``, ``Event``,
-        ``SensorOnly``, ``State``, ``SensorType``, and ``HWMSurveyed``.
 
     Notes
     -----
@@ -78,53 +51,107 @@ class STNFloodEventData:
     * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`__
     """
 
-    # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
-    # this is the CRS used for visualization on STN front-end.
-    service_crs: int = 4326
-    service_url: str = ServiceURL().restful.stnflood
-    data_dictionary_url: str = ServiceURL().restful.stnflood_dd
-    instruments_query_params: set[str] = {
-        "Event",
-        "EventType",
-        "EventStatus",
-        "States",
-        "County",
-        "CurrentStatus",
-        "CollectionCondition",
-        "SensorType",
-        "DeploymentType",
-    }
-    peaks_query_params: set[str] = {
-        "Event",
-        "EventType",
-        "EventStatus",
-        "States",
-        "County",
-        "StartDate",
-        "EndDate",
-    }
-    hwms_query_params: set[str] = {
-        "Event",
-        "EventType",
-        "EventStatus",
-        "States",
-        "County",
-        "StartDate",
-        "EndDate",
-    }
-    sites_query_params: set[str] = {
-        "Event",
-        "State",
-        "SensorType",
-        "NetworkName",
-        "OPDefined",
-        "HWMOnly",
-        "HWMSurveyed",
-        "SensorOnly",
-        "RDGOnly",
-        "HousingTypeOne",
-        "HousingTypeSeven",
-    }
+    def __init__(self) -> None:
+        # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
+        # this is the CRS used for visualization on STN front-end.
+        self.__service_crs = 4326
+        self.__service_url = ServiceURL().restful.stnflood
+        self.__data_dictionary_url = ServiceURL().restful.stnflood_dd
+        self.__instruments_query_params = {
+            "Event",
+            "EventType",
+            "EventStatus",
+            "States",
+            "County",
+            "CurrentStatus",
+            "CollectionCondition",
+            "SensorType",
+            "DeploymentType",
+        }
+        self.__peaks_query_params = {
+            "Event",
+            "EventType",
+            "EventStatus",
+            "States",
+            "County",
+            "StartDate",
+            "EndDate",
+        }
+        self.__hwms_query_params = {
+            "Event",
+            "EventType",
+            "EventStatus",
+            "States",
+            "County",
+            "StartDate",
+            "EndDate",
+        }
+        self.__sites_query_params = {
+            "Event",
+            "State",
+            "SensorType",
+            "NetworkName",
+            "OPDefined",
+            "HWMOnly",
+            "HWMSurveyed",
+            "SensorOnly",
+            "RDGOnly",
+            "HousingTypeOne",
+            "HousingTypeSeven",
+        }
+
+    @property
+    def service_url(self) -> str:
+        """The service url of the STN Flood Event Data RESTFUL Service API."""
+        return self.__service_url
+
+    @property
+    def data_dictionary_url(self) -> str:
+        """The data dictionary url of the STN Flood Event Data RESTFUL Service API."""
+        return self.__data_dictionary_url
+
+    @property
+    def service_crs(self) -> int:
+        """The coordinate reference system of the data from the service."""
+        return self.__service_crs
+
+    @property
+    def instruments_query_params(self) -> set[str]:
+        """The accepted query parameters for the instruments data type.
+
+        Accepted values are ``SensorType``, ``CurrentStatus``, ``States``,
+        ``Event``, ``County``, ``DeploymentType``, ``EventType``,
+        ``EventStatus``, and ``CollectionCondition``.
+        """
+        return self.__instruments_query_params
+
+    @property
+    def peaks_query_params(self) -> set[str]:
+        """The accepted query parameters for the peaks data type.
+
+        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
+        ``County``, ``EventType``, and ``EventStatus``.
+        """
+        return self.__peaks_query_params
+
+    @property
+    def hwms_query_params(self) -> set[str]:
+        """The accepted query parameters for the hwms data type.
+
+        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
+        ``County``, ``EventType``, and ``EventStatus``.
+        """
+        return self.__hwms_query_params
+
+    @property
+    def sites_query_params(self) -> set[str]:
+        """The accepted query parameters for the sites data type.
+
+        Accepted values are ``OPDefined``, ``HousingTypeOne``, ``NetworkName``,
+        ``HousingTypeSeven``, ``RDGOnly``, ``HWMOnly``, ``Event``,
+        ``SensorOnly``, ``State``, ``SensorType``, and ``HWMSurveyed``.
+        """
+        return self.__sites_query_params
 
     @classmethod
     def _geopandify(
