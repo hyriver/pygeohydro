@@ -39,7 +39,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.289
+  rev: v0.0.291
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -69,7 +69,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 1.1.0
+  rev: 1.2.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
