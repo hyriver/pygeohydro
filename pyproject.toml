@@ -90,23 +90,59 @@ line-length = 100
 [tool.ruff]
 target-version = 'py38'
 select = [
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "D",  # pydocstyle
-    "E",  # Error
-    "F",  # pyflakes
-    "I",  # isort
-    "ISC", # flake8-implicit-str-concat
-    "N",  # pep8-naming
-    "PGH",  # pygrep-hooks
-    "PTH", # flake8-use-pathlib
-    "Q",  # flake8-quotes
-    "S",  # bandit
-    "SIM",  # flake8-simplify
-    "TRY",  # tryceratops
-    "UP",  # pyupgrade
-    "W",  # Warning
-    "YTT", # flake8-2020
+    # flake8-bugbear
+    "B",
+    # flake8-comprehensions
+    "C4",
+    # pydocstyle
+    "D",
+    # Error
+    "E",
+    # pyflakes
+    "F",
+    # isort
+    "I",
+    # flake8-implicit-str-concat
+    "ISC",
+    # pep8-naming
+    "N",
+    # pygrep-hooks
+    "PGH",
+    # flake8-use-pathlib
+    "PTH",
+    # flake8-quotes
+    "Q",
+    # bandit
+    "S",
+    # flake8-simplify
+    "SIM",
+    # tryceratops
+    "TRY",
+    # pyupgrade
+    "UP",
+    # Warning
+    "W",
+    # flake8-2020
+    "YTT",
+    # flake8-debugger
+    "T10",
+    # flake8-gettext
+    "INT",
+    # pylint
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+    # misc lints
+    "PIE",
+    # flake8-pyi
+    "PYI",
+    # tidy imports
+    "TID",
+    # type-checking imports
+    "TCH",
+    # Ruff-specific rules
+    "RUF",
 ]
 
 exclude = [
@@ -118,6 +154,8 @@ ignore = [
     "D103",
     "D105",
     "E501",
+    "PLR2004",
+    "PLR0913",
 ]
 line-length = 100
 
@@ -141,10 +179,16 @@ convention = "numpy"
     "D105",
     "D106",
     "D107",
-    "S101",  # use of "assert"
-    "S102",  # use of "exec"
-    "S106",  # possible hardcoded password.
-    "PGH001",  # use of "eval"
+    # use of "assert"
+    "S101",
+    # use of "exec"
+    "S102",
+    # possible hardcoded password
+    "S106",
+    # use of "eval"
+    "PGH001",
+    # Mutable class attributes
+    "RUF012",
 ]
 
 [tool.ruff.isort]
