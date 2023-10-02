@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING, Union
 
 import geopandas as gpd
 import pandas as pd
-import pyproj
 import xarray as xr
 
 import async_retriever as ar
@@ -19,6 +18,8 @@ from pynhd import AGRBase
 from pynhd.core import ScienceBase
 
 if TYPE_CHECKING:
+    import pyproj
+
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [

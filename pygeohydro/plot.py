@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, Union
 import folium
 import matplotlib.pyplot as plt
 import pandas as pd
-import pyproj
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 import hydrosignatures as hs
@@ -22,6 +21,8 @@ from pygeohydro.nwis import NWIS
 from pygeoogc import utils as ogc_utils
 
 if TYPE_CHECKING:
+    import pyproj
+
     DF = TypeVar("DF", pd.DataFrame, pd.Series)
     CRSTYPE = Union[int, str, pyproj.CRS]
 
@@ -105,7 +106,7 @@ def signatures(
     output: str | Path | None = None,
     close: bool = False,
 ) -> None:
-    """Plot hydrological signatures with w/ or w/o precipitation.
+    """Plot hydrological signatures w/ or w/o precipitation.
 
     Plots includes daily hydrograph, regime curve (mean monthly) and
     flow duration curve. The input discharges are converted from cms
@@ -134,10 +135,10 @@ def signatures(
     daily = qdaily.daily
     figsize = (9, 5) if figsize is None else figsize
     fig = plt.figure(constrained_layout=True, figsize=figsize, facecolor="w")
+    plt.grid(False)
     gs = fig.add_gridspec(2, 3)
 
     ax = fig.add_subplot(gs[0, :])
-    ax.grid(False)
     for c, q in daily.items():
         ax.plot(q, label=c)
     lines, labels = ax.get_legend_handles_labels()
@@ -171,7 +172,6 @@ def signatures(
 
     ax.set_xmargin(0)
     ax.set_xlabel("")
-
     ax.legend(
         lines,
         labels,
@@ -183,7 +183,6 @@ def signatures(
     ax = fig.add_subplot(gs[1, :-1])
     ax.plot(qdaily.mean_monthly)
     ax.set_xmargin(0)
-    ax.grid(False)
     ax.set_ylabel("$Q$ (mm/month)")
     ax.text(0.02, 0.9, "(b)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
 
@@ -196,7 +195,6 @@ def signatures(
     ax.set_xlim(0, 100)
     ax.set_xlabel("% Exceedance")
     ax.set_ylabel(rf"$\log(Q)$ ({qdaily.units['ranked']})")
-    ax.grid(False)
     ax.text(0.02, 0.9, "(c)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
 
     fig.suptitle(title)
@@ -218,7 +216,7 @@ def descriptor_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values())[: len(bounds)])
     norm = BoundaryNorm(bounds, cmap.N)
-    levels = bounds + [30]
+    levels = [*bounds, 30]
     return cmap, norm, levels
 
 
@@ -231,7 +229,7 @@ def cover_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
 
     cmap = ListedColormap(list(nlcd_meta["colors"].values()))
     norm = BoundaryNorm(bounds, cmap.N)
-    levels = bounds + [100]
+    levels = [*bounds, 100]
     return cmap, norm, levels
 
 
@@ -338,7 +336,7 @@ def interactive_map(
 
     for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
-            location=list(coords)[0][::-1],
+            location=next(iter(coords))[::-1],
             popup=folium.Popup(msg, max_width=250),
             icon=folium.Icon(),
         ).add_to(imap)

@@ -2,15 +2,17 @@
 from __future__ import annotations
 
 import io
-from typing import Any, Literal, cast, overload
+from typing import TYPE_CHECKING, Any, Literal, cast, overload
 
 import cytoolz.curried as tlz
-import geopandas as gpd
 import pandas as pd
 
 import async_retriever as ar
 import pygeoutils as geoutils
 from pygeohydro.exceptions import InputTypeError, InputValueError, ServiceError
+
+if TYPE_CHECKING:
+    import geopandas as gpd
 
 __all__ = ["WaterQuality", "SensorThings"]
 

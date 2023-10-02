@@ -9,7 +9,6 @@ import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-import pyproj
 import ujson as json
 from defusedxml import ElementTree
 
@@ -23,6 +22,7 @@ from pygeohydro.exceptions import (
 from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
+    import pyproj
     from shapely.geometry import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
@@ -188,7 +188,7 @@ def _get_state_codes(subset_key: str | list[str]) -> list[str]:
         other_keys.append("contiguous")
     valid_keys = ["contiguous", "continental", "territories", "commonwealths"]
     if any(k not in valid_keys for k in other_keys):
-        raise InputValueError("subset_key", valid_keys + ["conus"])
+        raise InputValueError("subset_key", [*valid_keys, "conus"])
     if other_keys:
         state_cd += tlz.concat(getattr(us_abbrs, k.upper()) for k in other_keys)
     return state_cd
