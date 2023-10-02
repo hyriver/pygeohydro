@@ -149,7 +149,7 @@ def tests(session: nox.Session) -> None:
     extras = get_extras()
     if "speedup" in extras:
         extras.remove("speedup")
-        install_deps(session, ",".join(["test"] + extras))
+        install_deps(session, ",".join(["test", *extras]))
         session.run("pytest", "--doctest-modules", *session.posargs)
         session.run("coverage", "report")
         session.run("coverage", "html")
@@ -157,7 +157,7 @@ def tests(session: nox.Session) -> None:
         install_deps(session, "speedup")
         session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
     else:
-        install_deps(session, ",".join(["test"] + extras))
+        install_deps(session, ",".join(["test", *extras]))
         session.run("pytest", "--doctest-modules", *session.posargs)
         session.run("coverage", "report")
         session.run("coverage", "html")
@@ -169,7 +169,7 @@ def test_shapely(session: nox.Session) -> None:
     extras = get_extras()
     deps = get_deps()
     if any("shapely" in d for d in deps):
-        install_deps(session, ",".join(["test"] + extras), ["pygeos", "shapely<2"])
+        install_deps(session, ",".join(["test", *extras]), ["pygeos", "shapely<2"])
         session.run("pytest", "--doctest-modules", *session.posargs)
     else:
         session.skip("No shapely dependency found.")
