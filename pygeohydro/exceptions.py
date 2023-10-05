@@ -81,13 +81,21 @@ class InputValueError(Exception):
         Name of the input parameter
     valid_inputs : tuple
         List of valid inputs
+    given : str, optional
+        The given input, defaults to None.
     """
 
     def __init__(
-        self, inp: str, valid_inputs: Sequence[str | int] | Generator[str | int, None, None]
+        self,
+        inp: str,
+        valid_inputs: Sequence[str | int] | Generator[str | int, None, None],
+        given: str | int | None = None,
     ) -> None:
-        self.message = f"Given {inp} is invalid. Valid {inp}s are:\n"
-        self.message += ", ".join(str(i) for i in valid_inputs)
+        if given is None:
+            self.message = f"Given {inp} is invalid. Valid options are:\n"
+        else:
+            self.message = f"Given {inp} ({given}) is invalid. Valid options are:\n"
+        self.message += "\n".join(str(i) for i in valid_inputs)
         super().__init__(self.message)
 
     def __str__(self) -> str:
