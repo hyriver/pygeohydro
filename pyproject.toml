@@ -88,7 +88,7 @@ fallback_version = "999"
 line-length = 100
 
 [tool.ruff]
-target-version = 'py38'
+target-version = "py38"
 select = [
     # flake8-bugbear
     "B",
@@ -211,7 +211,6 @@ filterwarnings = [
   "ignore:.*distutils.*",
   "ignore:.*--rsyncdir command line argument.*",
   "ignore:.*numpy.ndarray size changed.*",
-  "ignore:.*invalid value encountered in cast.*",
   "ignore:.*'cgi' is deprecated.*",
 ]
 testpaths = [
@@ -240,7 +239,7 @@ formatter = "ufmt"
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
-ignore-words-list = "gage"
+ignore-words-list = "gage,paramss,trough"
 
 [tool.pycln]
 all = true

@@ -18,7 +18,6 @@ repos:
   - id: absolufy-imports
     name: Convert relative imports to absolute with absolufy-imports
 
-
 - repo: https://github.com/Instagram/Fixit
   rev: v2.0.0.post1
   hooks:
@@ -39,7 +38,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.291
+  rev: v0.0.292
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -53,7 +52,7 @@ repos:
     args: [--max-line-length, '100']
 
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.2.5
+  rev: v2.2.6
   hooks:
   - id: codespell
     name: Check common misspellings in text files with codespell.
@@ -107,3 +106,17 @@ repos:
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
+
+- repo: local
+  hooks:
+  - id: future-annotations
+    name: import annotations from __future__
+    entry: from __future__ import annotations
+    language: pygrep
+    args: [--negate]
+    files: ^pygeohydro/
+    types: [python]
+    exclude: |
+      (?x)
+      /(__init__\.py)|(conftest\.py)$
+      |/tests/
