@@ -239,7 +239,7 @@ formatter = "ufmt"
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
-ignore-words-list = "gage,paramss,trough"
+ignore-words-list = "gage,gages,paramss,trough"
 
 [tool.pycln]
 all = true
