@@ -13,8 +13,6 @@ from pygeohydro import (
     InputValueError,
 )
 
-has_typeguard = bool(sys.modules.get("typeguard"))
-
 SID_NATURAL = "01031500"
 GEOM = Polygon(
     [
@@ -30,7 +28,6 @@ GEOM = Polygon(
 class TestETAExceptions:
     dates = ("2000-01-01", "2000-01-05")
 
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_dates(self):
         with pytest.raises(InputTypeError) as ex:
             _ = gh.ssebopeta_bycoords((GEOM.centroid.x, GEOM.centroid.y), dates="2000-01-01")
@@ -58,7 +55,6 @@ class TestNLCDExceptions:
     res = 1e3
     geom = gpd.GeoSeries([GEOM], crs=4326)
 
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_years_type(self):
         with pytest.raises(InputTypeError) as ex:
             _ = gh.nlcd_bygeom(self.geom, years=2010, resolution=self.res, ssl=False)
@@ -76,7 +72,6 @@ class TestNLCDExceptions:
             _ = gh.nlcd_bygeom(self.geom, years={"cover": 2030}, resolution=self.res, ssl=False)
         assert "2019" in str(ex.value)
 
-    @pytest.mark.skipif(has_typeguard, reason="Broken if Typeguard is enabled")
     def test_invalid_cover_type(self):
         with pytest.raises(InputTypeError) as ex:
             lulc = gh.nlcd_bygeom(
