@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import shutil
-import textwrap
 from pathlib import Path
 
 import nox
@@ -50,7 +49,6 @@ nox.options.sessions = (
     "pre-commit",
     "type-check",
     "tests",
-    "test-shapely",
 )
 
 
@@ -73,65 +71,17 @@ def install_deps(
             shutil.rmtree(f, ignore_errors=True)
 
 
-def activate_virtualenv_in_precommit_hooks(session: nox.Session) -> None:
-    """Activate virtualenv in hooks installed by pre-commit.
-
-    This function patches git hooks installed by pre-commit to activate the
-    session's virtual environment. This allows pre-commit to locate hooks in
-    that environment when invoked from git.
-
-    Parameters
-    ----------
-    session
-        The Session object.
-    """
-    if session.bin is None:
-        return
-
-    virtualenv = session.env.get("VIRTUAL_ENV")
-    if virtualenv is None:
-        return
-
-    hookdir = Path(".git") / "hooks"
-    if not hookdir.is_dir():
-        return
-
-    for hook in hookdir.iterdir():
-        if hook.name.endswith(".sample") or not hook.is_file():
-            continue
-
-        text = hook.read_text()
-        bindir = repr(session.bin)[1:-1]  # strip quotes
-        if not (Path("A") == Path("a") and bindir.lower() in text.lower() or bindir in text):
-            continue
-
-        lines = text.splitlines()
-        if not (lines[0].startswith("#!") and "python" in lines[0].lower()):
-            continue
-
-        header = textwrap.dedent(
-            f"""\
-            import os
-            os.environ["VIRTUAL_ENV"] = {virtualenv!r}
-            os.environ["PATH"] = os.pathsep.join((
-                {session.bin!r},
-                os.environ.get("PATH", ""),
-            ))
-            """
-        )
-
-        lines.insert(1, header)
-        hook.write_text("\n".join(lines))
-
-
 @nox.session(name="pre-commit", python=lint_versions)
 def pre_commit(session: nox.Session) -> None:
     """Lint using pre-commit."""
-    args = session.posargs or ["run", "--all-files"]
     session.install("pre-commit")
-    session.run("pre-commit", *args)
-    if args and args[0] == "install":
-        activate_virtualenv_in_precommit_hooks(session)
+    session.run(
+        "pre-commit",
+        "run",
+        "--all-files",
+        "--hook-stage=manual",
+        *session.posargs,
+    )
 
 
 @nox.session(name="type-check", python=python_versions)
@@ -151,25 +101,19 @@ def tests(session: nox.Session) -> None:
         extras.remove("speedup")
         install_deps(session, ",".join(["test", *extras]))
         session.run("pytest", "--doctest-modules", *session.posargs)
-        session.run("coverage", "report")
-        session.run("coverage", "html")
+        session.notify("cover")
 
         install_deps(session, "speedup")
         session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
     else:
         install_deps(session, ",".join(["test", *extras]))
         session.run("pytest", "--doctest-modules", *session.posargs)
-        session.run("coverage", "report")
-        session.run("coverage", "html")
+        session.notify("cover")
 
 
-@nox.session(name="test-shapely", python=python_versions)
-def test_shapely(session: nox.Session) -> None:
-    """Run the test suite with shapely<2."""
-    extras = get_extras()
-    deps = get_deps()
-    if any("shapely" in d for d in deps):
-        install_deps(session, ",".join(["test", *extras]), ["pygeos", "shapely<2"])
-        session.run("pytest", "--doctest-modules", *session.posargs)
-    else:
-        session.skip("No shapely dependency found.")
+@nox.session
+def cover(session: nox.Session) -> None:
+    """Coverage analysis."""
+    session.install("coverage[toml]")
+    session.run("coverage", "report")
+    session.run("coverage", "erase")
