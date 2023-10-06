@@ -49,7 +49,7 @@ dependencies = [
   "pyproj>=3.0.1",
   "rioxarray>=0.11",
   "scipy",
-  "shapely>=2.0.0",
+  "shapely>=2",
   "ujson",
   "xarray>=2023.01",
 ]
