@@ -97,18 +97,24 @@ def type_check(session: nox.Session) -> None:
 def tests(session: nox.Session) -> None:
     """Run the test suite."""
     extras = get_extras()
-    if "speedup" in extras:
+    try:
         extras.remove("speedup")
-        install_deps(session, ",".join(["test", *extras]))
-        session.run("pytest", "--doctest-modules", *session.posargs)
-        session.notify("cover")
+        speedup = True
+    except ValueError:
+        speedup = False
 
-        install_deps(session, "speedup")
-        session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
-    else:
-        install_deps(session, ",".join(["test", *extras]))
-        session.run("pytest", "--doctest-modules", *session.posargs)
-        session.notify("cover")
+    install_deps(session, ",".join(["test", *extras]))
+    session.run("pytest", "--doctest-modules", *session.posargs)
+    session.notify("cover")
+    if speedup:
+        session.notify("speedup")
+
+
+@nox.session(python=python_versions)
+def speedup(session: nox.Session) -> None:
+    extras = get_extras()
+    install_deps(session, ",".join(["test", "speedup", *extras]))
+    session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
 
 
 @nox.session
