@@ -23,7 +23,7 @@ dependencies:
 - pyproj>=3.0.1
 - requests
 - requests-cache>=0.9.6
-- shapely>=1.8.5
+- shapely>=2.0.0
 - ujson
 - url-normalize>=1.4
 - urllib3

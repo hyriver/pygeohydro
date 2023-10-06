@@ -49,7 +49,7 @@ dependencies = [
   "pyproj>=3.0.1",
   "rioxarray>=0.11",
   "scipy",
-  "shapely>=1.8.5",
+  "shapely>=2.0.0",
   "ujson",
   "xarray>=2023.01",
 ]
@@ -59,7 +59,6 @@ stac = [
   "pystac-client",
 ]
 test = [
-  "coverage[toml]",
   "pytest-cov",
   "pytest-xdist[psutil]",
 ]
@@ -212,6 +211,8 @@ filterwarnings = [
   "ignore:.*--rsyncdir command line argument.*",
   "ignore:.*numpy.ndarray size changed.*",
   "ignore:.*'cgi' is deprecated.*",
+  "ignore:.*Calling float on a single element.*",
+  "ignore:.*Shapely GEOS version.*",
 ]
 testpaths = [
   "tests",
