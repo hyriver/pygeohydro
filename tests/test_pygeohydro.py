@@ -9,12 +9,12 @@ import pytest
 import xarray as xr
 from pyproj import CRS
 from pyproj.exceptions import CRSError
-from shapely.geometry import Polygon
+from shapely import Polygon
 
 import pygeohydro as gh
+import pygeoutils as geoutils
 import pynhd as nhd
 from pygeohydro import NFHL, NID, NWIS, WBD, EHydro
-from pygeoogc import utils as ogc_utils
 
 DEF_CRS = 4326
 ALT_CRS = 3542
@@ -69,7 +69,8 @@ class TestNWIS:
     def test_info_box(self):
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query, nhd_info=True)
-        assert info_box.shape[0] == 35 and info_box["nhd_areasqkm"].isna().sum() == 29
+        assert info_box.shape[0] == 35
+        assert info_box["nhd_areasqkm"].isna().sum() == 29
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
@@ -118,7 +119,8 @@ class TestETA:
         _ = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years[0])
         urls_dates = gh.pygeohydro.helpers.get_ssebopeta_urls(DATES_LONG)
         urls_years = gh.pygeohydro.helpers.get_ssebopeta_urls(self.years)
-        assert len(urls_dates) == 3653 and len(urls_years) == 1095
+        assert len(urls_dates) == 3653
+        assert len(urls_years) == 1095
 
 
 class TestNLCD:
@@ -167,7 +169,8 @@ class TestNID:
 
     def test_suggestion(self):
         dams, contexts = self.nid.get_suggestions("houston", "city")
-        assert dams.empty and contexts["suggestion"].to_list() == ["Houston", "Houston Lake"]
+        assert dams.empty
+        assert contexts["suggestion"].to_list() == ["Houston", "Houston Lake"]
 
     def test_filter(self):
         query_list = [
@@ -183,10 +186,11 @@ class TestNID:
 
     def test_geom(self):
         dams_geo = self.nid.get_bygeom(GEOM, DEF_CRS)
-        bbox = ogc_utils.match_crs(GEOM.bounds, DEF_CRS, ALT_CRS)
+        bbox = geoutils.geometry_reproject(GEOM.bounds, DEF_CRS, ALT_CRS)
         dams_box = self.nid.get_bygeom(bbox, ALT_CRS)
         name = "Pingree Pond"
-        assert (dams_geo.name == name).any() and (dams_box.name == "Pingree Pond").any()
+        assert (dams_geo.name == name).any()
+        assert (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
         assert self.nid.df.shape == (91807, 79)
@@ -270,7 +274,7 @@ def test_nwis_errors():
 
 
 @pytest.mark.parametrize(
-    "key,expected",
+    ("key", "expected"),
     [
         (None, 56),
         (["TX", "ca"], 2),
@@ -314,7 +318,7 @@ def test_sensorthings():
     )
     odata = sensor.odata_helper(conditionals=cond)
     df = sensor.query_byodata(odata)
-    assert df.shape[0] == 195
+    assert df.shape[0] == 196
 
     df = sensor.sensor_info("USGS-09380000")
     assert df["description"].iloc[0] == "Stream"
@@ -330,7 +334,7 @@ def test_show_versions():
 
 
 class TestSTNFloodEventData:
-    stn: gh.STNFloodEventData = gh.STNFloodEventData()
+    stn: gh.STNFloodEventData = gh.STNFloodEventData
 
     expected_data_dictionary_schema = ["Field", "Definition"]
 
@@ -623,7 +627,7 @@ class TestSTNFloodEventData:
     }
 
     @pytest.mark.parametrize(
-        "data_type, as_dict, async_retriever_kwargs, expected_shape",
+        ("data_type", "as_dict", "async_retriever_kwargs", "expected_shape"),
         [
             ("instruments", False, None, (26, 2)),
             ("peaks", False, {"raise_status": True}, (41, 2)),
@@ -656,7 +660,7 @@ class TestSTNFloodEventData:
             assert result.dtypes.to_list() == [np.dtype("O"), np.dtype("O")]
 
     @pytest.mark.parametrize(
-        "data_type, as_dict, async_retriever_kwargs, expected_exception",
+        ("data_type", "as_dict", "async_retriever_kwargs", "expected_exception"),
         [
             ("instrimants", False, None, gh.exceptions.InputValueError),
             ("peaks", True, {"dummy": "dummy"}, TypeError),
@@ -673,7 +677,7 @@ class TestSTNFloodEventData:
             )
 
     @pytest.mark.parametrize(
-        "data_type, as_list, crs, async_retriever_kwargs, expected_shape",
+        ("data_type", "as_list", "crs", "async_retriever_kwargs", "expected_shape"),
         [
             ("instruments", False, 4329, {"raise_status": False}, (4612, 18)),
             ("peaks", False, None, None, (13159, 22)),
@@ -727,7 +731,7 @@ class TestSTNFloodEventData:
             assert list(result.columns) == self.expected_all_data_schemas[data_type]
 
     @pytest.mark.parametrize(
-        "data_type, as_list, crs, async_retriever_kwargs, expected_exception",
+        ("data_type", "as_list", "crs", "async_retriever_kwargs", "expected_exception"),
         [
             ("instruments", False, 4329, {"raise_status": False, "anything": 1}, TypeError),
             ("peekks", False, None, None, gh.exceptions.InputValueError),
@@ -745,7 +749,7 @@ class TestSTNFloodEventData:
             )
 
     @pytest.mark.parametrize(
-        "data_type, query_params, as_list, crs, async_retriever_kwargs, expected_shape",
+        ("data_type", "query_params", "as_list", "crs", "async_retriever_kwargs", "expected_shape"),
         [
             (
                 "instruments",
@@ -820,7 +824,14 @@ class TestSTNFloodEventData:
             )
 
     @pytest.mark.parametrize(
-        "data_type, query_params, as_list, crs, async_retriever_kwargs, expected_exception",
+        (
+            "data_type",
+            "query_params",
+            "as_list",
+            "crs",
+            "async_retriever_kwargs",
+            "expected_exception",
+        ),
         [
             (
                 "instruments",
@@ -871,7 +882,7 @@ class TestSTNFloodEventData:
             )
 
     @pytest.mark.parametrize(
-        "data_type, query_params, expected_shape",
+        ("data_type", "query_params", "expected_shape"),
         [
             (
                 "instruments",
@@ -926,7 +937,7 @@ class TestNFHL:
     """Test the Natinoal Flood Hazard Layer (NFHL) class."""
 
     @pytest.mark.parametrize(
-        "service, layer, expected_url, expected_layer",
+        ("service", "layer", "expected_url", "expected_layer"),
         [
             (
                 "NFHL",
@@ -984,7 +995,7 @@ class TestNFHL:
             NFHL("NTHL", "cross-sections")
 
     @pytest.mark.parametrize(
-        "service, layer, geom, expected_gdf_len, expected_schema",
+        ("service", "layer", "geom", "expected_gdf_len", "expected_schema"),
         [
             (
                 "NFHL",

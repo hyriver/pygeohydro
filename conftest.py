@@ -4,7 +4,7 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
-def add_standard_imports(doctest_namespace):
+def _add_standard_imports(doctest_namespace):
     """Add pygeohydro namespace for doctest."""
     import pygeohydro as gh
 

@@ -1,9 +1,7 @@
-import sys
-
 import geopandas as gpd
 import pandas as pd
 import pytest
-from shapely.geometry import Polygon
+from shapely import Polygon
 
 import pygeohydro as gh
 from pygeohydro import (
@@ -73,34 +71,33 @@ class TestNLCDExceptions:
         assert "2019" in str(ex.value)
 
     def test_invalid_cover_type(self):
-        with pytest.raises(InputTypeError) as ex:
-            lulc = gh.nlcd_bygeom(
-                self.geom,
-                years={"cover": [2016, 2019]},
-                resolution=1e3,
-                crs="epsg:3542",
-                ssl=False,
-            )
-            _ = gh.cover_statistics(lulc[0])
-        assert "DataArray" in str(ex.value)
+        lulc = gh.nlcd_bygeom(
+            self.geom,
+            years={"cover": [2016, 2019]},
+            resolution=1e3,
+            crs="epsg:3542",
+            ssl=False,
+        )
+        cover = lulc[0].cover_2016
+        with pytest.raises(InputTypeError, match="DataArray"):
+            _ = gh.cover_statistics(cover)
 
     def test_invalid_cover_values(self):
-        with pytest.raises(InputValueError) as ex:
-            lulc = gh.nlcd_bygeom(
-                self.geom,
-                years={"cover": [2016, 2019]},
-                resolution=1e3,
-                crs="epsg:3542",
-                ssl=False,
-            )
-            _ = gh.cover_statistics(lulc[0].cover_2016 * 2)
-        assert "11" in str(ex.value)
+        lulc = gh.nlcd_bygeom(
+            self.geom,
+            years={"cover": [2016, 2019]},
+            resolution=1e3,
+            crs="epsg:3542",
+            ssl=False,
+        )
+        cover = lulc[0].cover_2016
+        with pytest.raises(InputValueError, "11"):
+            _ = gh.cover_statistics(cover * 2)
 
 
 class TestNWISExceptions:
     nwis = gh.NWIS()
 
     def test_invaild_station(self):
-        with pytest.raises(DataNotAvailableError) as ex:
+        with pytest.raises(DataNotAvailableError, match="Discharge"):
             _ = self.nwis.get_streamflow(SID_NATURAL, ("1900-01-01", "1900-01-31"))
-        assert "Discharge" in str(ex.value)
