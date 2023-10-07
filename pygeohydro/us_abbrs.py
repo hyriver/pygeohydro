@@ -1,4 +1,5 @@
 """US states and territories Abbreviations from ``us`` package."""
+from __future__ import annotations
 
 CONTIGUOUS = [
     "AL",

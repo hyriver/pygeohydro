@@ -1,9 +1,10 @@
 """Some helper function for PyGeoHydro."""
+# pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import io
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, NamedTuple, Tuple, Union
+from typing import TYPE_CHECKING, Any, NamedTuple, Tuple, Union, cast
 
 import cytoolz.curried as tlz
 import geopandas as gpd
@@ -23,7 +24,7 @@ from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
     import pyproj
-    from shapely.geometry import MultiPolygon, Polygon
+    from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
@@ -152,8 +153,10 @@ def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[p
         d_list = [pd.date_range(f"{y}0101", f"{y}1231") for y in years]
         date_range = d_list.pop(0)
         while d_list:
-            date_range = date_range.union(d_list.pop(0))
+            date = d_list.pop(0)
+            date_range = date_range.union(date)  # pyright: ignore[reportOptionalMemberAccess]
 
+    date_range = cast("pd.DatetimeIndex", date_range)
     base_url = ServiceURL().http.ssebopeta
 
     f_list = [
@@ -263,7 +266,7 @@ def states_lookup_table() -> dict[str, StateCounties]:
 
     def _state_cd(state: str) -> str | None:
         try:
-            return codes.loc[state, "STUSAB"]  # type: ignore[no-any-return]
+            return codes.loc[state, "STUSAB"]
         except KeyError:
             return None
 

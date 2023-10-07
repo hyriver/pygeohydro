@@ -15,10 +15,10 @@ import pandas as pd
 from matplotlib.colors import BoundaryNorm, ListedColormap
 
 import hydrosignatures as hs
+import pygeoutils as geoutils
 from pygeohydro import helpers
 from pygeohydro.exceptions import InputTypeError
 from pygeohydro.nwis import NWIS
-from pygeoogc import utils as ogc_utils
 
 if TYPE_CHECKING:
     import pyproj
@@ -40,7 +40,7 @@ class PlotDataType(NamedTuple):
 
 
 def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
-    """Generae a structured data for plotting hydrologic signatures.
+    """Generate a structured data for plotting hydrologic signatures.
 
     Parameters
     ----------
@@ -201,7 +201,7 @@ def signatures(
 
     if output is not None:
         Path(output).parent.mkdir(exist_ok=True, parents=True)
-        fig.savefig(output, dpi=300)
+        fig.savefig(output, dpi=300)  # pyright: ignore[reportGeneralTypeIssues]
 
     if close:
         plt.close(fig)
@@ -266,7 +266,7 @@ def interactive_map(
     10
     """
     nwis = NWIS()
-    bbox = ogc_utils.match_crs(bbox, crs, 4326)
+    bbox = geoutils.geometry_reproject(bbox, crs, 4326)
     query = {"bBox": ",".join(f"{b:.06f}" for b in bbox)}
     if isinstance(nwis_kwds, dict):
         query.update(nwis_kwds)
@@ -337,7 +337,7 @@ def interactive_map(
     for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
             location=next(iter(coords))[::-1],
-            popup=folium.Popup(msg, max_width=250),
+            popup=folium.Popup(msg, max_width=250),  # pyright: ignore[reportGeneralTypeIssues]
             icon=folium.Icon(),
         ).add_to(imap)
 

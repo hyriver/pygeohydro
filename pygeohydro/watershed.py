@@ -4,7 +4,7 @@ from __future__ import annotations
 import importlib.util
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Union, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -115,6 +115,7 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
         )
     )
     huc = huc.reset_index().rename(columns={"level_0": "huc2"}).drop(columns="level_1")
+    huc = cast("gpd.GeoDataFrame", huc)
     return huc
 
 

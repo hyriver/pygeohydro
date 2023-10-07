@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from numbers import Number
     from ssl import SSLContext
 
-    from shapely.geometry import MultiPolygon, Polygon
+    from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
@@ -144,7 +144,8 @@ class NLCD:
         resolution: int,
     ) -> xr.Dataset:
         """Get NLCD response and convert it to ``xarray.DataArray``."""
-        r_dict = self.wms.getmap_bybox(geometry.bounds, resolution, self.crs)
+        bbox = cast("tuple[float, float, float, float]", geometry.bounds)
+        r_dict = self.wms.getmap_bybox(bbox, resolution, self.crs)
         gtiff2xarray = tlz.partial(
             geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255
         )
@@ -222,11 +223,12 @@ def nlcd_bygeom(
 
     if geometry.crs is None:
         raise MissingCRSError
-    _geometry = geometry.to_crs(crs).geometry.to_dict()
+    _geometry = cast("gpd.GeoDataFrame", geometry.to_crs(crs))
+    geo_dict = _geometry.geometry.to_dict()
 
     nlcd_wms = NLCD(years=years, region=region, crs=crs, ssl=ssl)
 
-    return {i: nlcd_wms.get_map(g, resolution) for i, g in _geometry.items()}
+    return {i: nlcd_wms.get_map(g, resolution) for i, g in geo_dict.items()}
 
 
 def nlcd_bycoords(
@@ -276,8 +278,9 @@ def nlcd_bycoords(
     values = {
         v: [get_value(ds[v], p.x, p.y) for ds, p in zip(ds_list, points_proj)] for v in ds_list[0]
     }
-    return points.to_frame("geometry").merge(
-        pd.DataFrame(values), left_index=True, right_index=True
+    points = cast("gpd.GeoDataFrame", points.to_frame("geometry"))
+    return gpd.GeoDataFrame(
+        pd.merge(points, pd.DataFrame(values), left_index=True, right_index=True)
     )
 
 
@@ -424,7 +427,7 @@ def nlcd_area_percent(
     if geo_df.crs is None:
         raise MissingCRSError
 
-    geoms = geo_df.to_crs(4326).geometry
+    geoms = geo_df.to_crs(4326).geometry  # pyright: ignore[reportOptionalMemberAccess]
 
     wms = NLCD(years={"impervious": year, "cover": year}, region=region, ssl=False)
 

@@ -35,6 +35,7 @@ from pygeohydro.exceptions import (
     InputTypeError,
     InputValueError,
     MissingColumnError,
+    ServiceError,
     ZeroMatchedError,
 )
 from pygeoogc import RetrySession, ServiceURL
@@ -42,7 +43,7 @@ from pygeoutils import EmptyResponseError
 from pynhd.core import AGRBase, ScienceBase
 
 if TYPE_CHECKING:
-    from shapely.geometry import MultiPolygon, Polygon
+    from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
@@ -266,7 +267,8 @@ class NID:
             11: "Concrete",
             12: "Other",
         }
-        self.dam_type.update({str(k): v for k, v in self.dam_type.items() if str(k).isdigit()})
+        dtype_str = {str(k): v for k, v in self.dam_type.items() if str(k).isdigit()}
+        self.dam_type = {**self.dam_type, **dtype_str}
         self.dam_purpose = {
             pd.NA: "N/A",
             None: "N/A",
@@ -283,9 +285,8 @@ class NID:
             11: "Grade Stabilization",
             12: "Other",
         }
-        self.dam_purpose.update(
-            {str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()}
-        )
+        purp_str = {str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()}
+        self.dam_purpose = {**self.dam_purpose, **purp_str}
         self.data_units = {
             "distance": "mile",
             "damHeight": "ft",
@@ -758,7 +759,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     Notes
     -----
     This function uses Microsoft's Planetary Computer service to get the data.
-    The dataset's description and its suppoerted soil properties can be found at:
+    The dataset's description and its supported soil properties can be found at:
     https://planetarycomputer.microsoft.com/dataset/gnatsgo-rasters
 
     Parameters
@@ -881,7 +882,11 @@ class EHydro(AGRBase):
             self._get_layers = fiona.listlayers
 
         bins = AGRBase(ServiceURL().restful.ehydro_bins)
-        self._survey_grid = bins.bygeom(bins.client.client.extent)
+        extent = bins.client.client.extent
+        if extent is None:
+            msg = "Unable to get the extent of eHydro"
+            raise ServiceError(msg)
+        self._survey_grid = bins.bygeom(extent)
 
         warnings.filterwarnings("ignore", message=".*3D.*")
         warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
@@ -909,8 +914,10 @@ class EHydro(AGRBase):
 
             if self._engine == "pyogrio":
                 with contextlib.suppress(GEOSException):
-                    return gpd.read_file(gdb, layer=self._layer, engine="pyogrio", use_arrow=True)
-            return gpd.read_file(gdb, layer=self._layer)
+                    return gpd.read_file(
+                        gdb, layer=self._layer, engine="pyogrio", use_arrow=True
+                    )  # pyright: ignore[reportGeneralTypeIssues]
+            return gpd.read_file(gdb, layer=self._layer)  # pyright: ignore[reportGeneralTypeIssues]
 
         return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
 

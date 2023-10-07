@@ -78,7 +78,7 @@ class TestNLCDExceptions:
             crs="epsg:3542",
             ssl=False,
         )
-        cover = lulc[0].cover_2016
+        cover = lulc[0]
         with pytest.raises(InputTypeError, match="DataArray"):
             _ = gh.cover_statistics(cover)
 
@@ -91,7 +91,7 @@ class TestNLCDExceptions:
             ssl=False,
         )
         cover = lulc[0].cover_2016
-        with pytest.raises(InputValueError, "11"):
+        with pytest.raises(InputValueError, match="11"):
             _ = gh.cover_statistics(cover * 2)
 
 
