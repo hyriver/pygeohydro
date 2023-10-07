@@ -1,9 +1,8 @@
 """Access USGS Short-Term Network (STN) via Restful API."""
-
 from __future__ import annotations
 
 from io import StringIO
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, Union, cast, overload
 
 import geopandas as gpd
 import numpy as np
@@ -33,6 +32,34 @@ class STNFloodEventData:
     - Convenience functions are offered for data dictionaries.
     - Geo-references the data where applicable.
 
+    Attributes
+    ----------
+    service_url : str
+        The service url of the STN Flood Event Data RESTFUL Service API.
+    data_dictionary_url : str
+        The data dictionary url of the STN Flood Event Data RESTFUL Service API.
+    service_crs : int
+        The CRS of the data from the service which is ``EPSG:4326``.
+    instruments_query_params : set
+        The accepted query parameters for the instruments data type.
+        Accepted values are ``SensorType``, ``CurrentStatus``, ``States``,
+        ``Event``, ``County``, ``DeploymentType``, ``EventType``,
+        ``EventStatus``, and ``CollectionCondition``.
+    peaks_query_params : set
+        The accepted query parameters for the peaks data type.
+        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
+        ``County``, ``EventType``, and ``EventStatus``.
+    hwms_query_params : set
+        The accepted query parameters for the hwms data type.
+        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
+        ``County``, ``EventType``, and ``EventStatus``.
+    sites_query_params : set
+        The accepted query parameters for the sites data type.
+        Accepted values are ``OPDefined``, ``HousingTypeOne``, ``NetworkName``,
+        ``HousingTypeSeven``, ``RDGOnly``, ``HWMOnly``, ``Event``,
+        ``SensorOnly``, ``State``, ``SensorType``, and ``HWMSurveyed``.
+
+
     Notes
     -----
     Point data from the service is assumed to be in the WGS84
@@ -51,115 +78,61 @@ class STNFloodEventData:
     * `Identifying and preserving high-water mark data <https://doi.org/10.3133/tm3A24>`__
     """
 
-    def __init__(self) -> None:
-        # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
-        # this is the CRS used for visualization on STN front-end.
-        self.__service_crs = 4326
-        self.__service_url = ServiceURL().restful.stnflood
-        self.__data_dictionary_url = ServiceURL().restful.stnflood_dd
-        self.__instruments_query_params = {
-            "Event",
-            "EventType",
-            "EventStatus",
-            "States",
-            "County",
-            "CurrentStatus",
-            "CollectionCondition",
-            "SensorType",
-            "DeploymentType",
-        }
-        self.__peaks_query_params = {
-            "Event",
-            "EventType",
-            "EventStatus",
-            "States",
-            "County",
-            "StartDate",
-            "EndDate",
-        }
-        self.__hwms_query_params = {
-            "Event",
-            "EventType",
-            "EventStatus",
-            "States",
-            "County",
-            "StartDate",
-            "EndDate",
-        }
-        self.__sites_query_params = {
-            "Event",
-            "State",
-            "SensorType",
-            "NetworkName",
-            "OPDefined",
-            "HWMOnly",
-            "HWMSurveyed",
-            "SensorOnly",
-            "RDGOnly",
-            "HousingTypeOne",
-            "HousingTypeSeven",
-        }
+    # Per Athena Clark, Lauren Privette, and Hans Vargas at USGS
+    # this is the CRS used for visualization on STN front-end.
+    service_crs: ClassVar[int] = 4326
+    service_url: ClassVar[str] = ServiceURL().restful.stnflood
+    data_dictionary_url: ClassVar[str] = ServiceURL().restful.stnflood_dd
+    instruments_query_params: ClassVar[set[str]] = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "CurrentStatus",
+        "CollectionCondition",
+        "SensorType",
+        "DeploymentType",
+    }
+    peaks_query_params: ClassVar[set[str]] = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "StartDate",
+        "EndDate",
+    }
+    hwms_query_params: ClassVar[set[str]] = {
+        "Event",
+        "EventType",
+        "EventStatus",
+        "States",
+        "County",
+        "StartDate",
+        "EndDate",
+    }
+    sites_query_params: ClassVar[set[str]] = {
+        "Event",
+        "State",
+        "SensorType",
+        "NetworkName",
+        "OPDefined",
+        "HWMOnly",
+        "HWMSurveyed",
+        "SensorOnly",
+        "RDGOnly",
+        "HousingTypeOne",
+        "HousingTypeSeven",
+    }
 
-    @property
-    def service_url(self) -> str:
-        """The service url of the STN Flood Event Data RESTFUL Service API."""
-        return self.__service_url
-
-    @property
-    def data_dictionary_url(self) -> str:
-        """The data dictionary url of the STN Flood Event Data RESTFUL Service API."""
-        return self.__data_dictionary_url
-
-    @property
-    def service_crs(self) -> int:
-        """The coordinate reference system of the data from the service."""
-        return self.__service_crs
-
-    @property
-    def instruments_query_params(self) -> set[str]:
-        """The accepted query parameters for the instruments data type.
-
-        Accepted values are ``SensorType``, ``CurrentStatus``, ``States``,
-        ``Event``, ``County``, ``DeploymentType``, ``EventType``,
-        ``EventStatus``, and ``CollectionCondition``.
-        """
-        return self.__instruments_query_params
-
-    @property
-    def peaks_query_params(self) -> set[str]:
-        """The accepted query parameters for the peaks data type.
-
-        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
-        ``County``, ``EventType``, and ``EventStatus``.
-        """
-        return self.__peaks_query_params
-
-    @property
-    def hwms_query_params(self) -> set[str]:
-        """The accepted query parameters for the hwms data type.
-
-        Accepted values are ``EndDate``, ``States``, ``Event``, ``StartDate``,
-        ``County``, ``EventType``, and ``EventStatus``.
-        """
-        return self.__hwms_query_params
-
-    @property
-    def sites_query_params(self) -> set[str]:
-        """The accepted query parameters for the sites data type.
-
-        Accepted values are ``OPDefined``, ``HousingTypeOne``, ``NetworkName``,
-        ``HousingTypeSeven``, ``RDGOnly``, ``HWMOnly``, ``Event``,
-        ``SensorOnly``, ``State``, ``SensorType``, and ``HWMSurveyed``.
-        """
-        return self.__sites_query_params
-
-    @classmethod
+    @staticmethod
     def _geopandify(
-        cls,
         input_list: list[dict[str, Any]],
         x_col: str,
         y_col: str,
-        crs: CRSTYPE,
+        crs: CRSTYPE | None,
+        service_crs: CRSTYPE,
     ) -> gpd.GeoDataFrame:
         """Georeference a list of dictionaries to a GeoDataFrame.
 
@@ -174,6 +147,8 @@ class STNFloodEventData:
         crs : int, str, or pyproj.CRS
             Desired Coordinate reference system (CRS) of output.
             Only used for GeoDataFrames outputs.
+        service_crs : int, str, or pyproj.CRS
+            The coordinate reference system of the data from the service.
 
         Returns
         -------
@@ -183,29 +158,54 @@ class STNFloodEventData:
         df = pd.DataFrame(input_list)
 
         if crs is None:
-            crs = cls.service_crs
+            crs = service_crs
 
-        return gpd.GeoDataFrame(
+        gdf = gpd.GeoDataFrame(
             df,
-            geometry=gpd.points_from_xy(df[x_col], df[y_col], crs=cls.service_crs),
-        ).to_crs(crs)
+            geometry=gpd.points_from_xy(df[x_col], df[y_col], crs=service_crs),
+        )
+        gdf = cast("gpd.GeoDataFrame", gdf.to_crs(crs))
+        return gdf
 
-    @classmethod
-    def _delist_dict(cls, d: dict[str, list[float] | float]) -> dict[str, float]:
+    @staticmethod
+    def _delist_dict(d: dict[str, list[float] | float]) -> dict[str, float]:
         """De-lists all unit length lists in a dictionary."""
 
         def delist(x: list[float] | float) -> float:
-            if isinstance(x, list) and len(x) == 1:
+            if not isinstance(x, list):
+                return x
+            if len(x) == 1:
                 return x[0]
-            if isinstance(x, list) and len(x) == 0:
-                return np.nan
-            return x
+            return np.nan
 
         return {k: delist(v) for k, v in d.items()}
 
+    @overload
     @classmethod
     def data_dictionary(
-        cls, data_type: str, as_dict: bool = False, async_retriever_kwargs: dict | None = None
+        cls,
+        data_type: str,
+        as_dict: Literal[False] = False,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> pd.DataFrame:
+        ...
+
+    @overload
+    @classmethod
+    def data_dictionary(
+        cls,
+        data_type: str,
+        as_dict: Literal[True] = True,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> dict[str, Any]:
+        ...
+
+    @classmethod
+    def data_dictionary(
+        cls,
+        data_type: str,
+        as_dict: bool = False,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> pd.DataFrame | dict[str, Any]:
         """Retrieve data dictionaries from the STN Flood Event Data API.
 
@@ -271,24 +271,46 @@ class STNFloodEventData:
         # a non-NaN field is encountered
         data_dict = {"Field": [], "Definition": []}
 
-        for _, row in data.iterrows():
-            if pd.isna(row["Field"]):
-                data_dict["Definition"][-1] += " " + row["Definition"]
+        for f, d in data[["Field", "Definition"]].itertuples(index=False, name=None):
+            if pd.isna(f):
+                data_dict["Definition"][-1] += " " + d
             else:
-                data_dict["Field"].append(row["Field"])
-                data_dict["Definition"].append(row["Definition"])
+                data_dict["Field"].append(f)
+                data_dict["Definition"].append(d)
 
         if as_dict:
             return data_dict
         return pd.DataFrame(data_dict)
+
+    @overload
+    @classmethod
+    def get_all_data(
+        cls,
+        data_type: str,
+        as_list: Literal[False] = False,
+        crs: CRSTYPE = ...,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> gpd.GeoDataFrame | pd.DataFrame:
+        ...
+
+    @overload
+    @classmethod
+    def get_all_data(
+        cls,
+        data_type: str,
+        as_list: Literal[True] = True,
+        crs: CRSTYPE = ...,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> list[dict[str, Any]]:
+        ...
 
     @classmethod
     def get_all_data(
         cls,
         data_type: str,
         as_list: bool = False,
-        crs: str | None = service_crs,
-        async_retriever_kwargs: dict | None = None,
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
         """Retrieve all data from the STN Flood Event Data API.
 
@@ -361,31 +383,56 @@ class STNFloodEventData:
             _ = async_retriever_kwargs.pop("url", None)
 
         resp = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)
-        data = [cls._delist_dict(d) for d in resp[0]]
+        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportGeneralTypeIssues]
 
         if as_list:
             return data
 
-        xy_cols = {
+        _xy_cols = {
             "instruments": None,
             "peaks": None,
             "hwms": ("longitude_dd", "latitude_dd"),
             "sites": ("longitude_dd", "latitude_dd"),
         }
-        if xy_cols[data_type] is None:
+        xy_cols = _xy_cols[data_type]
+        if xy_cols is None:
             return pd.DataFrame(data)
 
-        x_col, y_col = xy_cols[data_type]
-        return cls._geopandify(data, x_col, y_col, crs)
+        x_col, y_col = xy_cols
+        return cls._geopandify(data, x_col, y_col, crs, cls.service_crs)
+
+    @overload
+    @classmethod
+    def get_filtered_data(
+        cls,
+        data_type: str,
+        query_params: dict[str, Any] | None = ...,
+        as_list: Literal[False] = False,
+        crs: CRSTYPE = ...,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> gpd.GeoDataFrame | pd.DataFrame:
+        ...
+
+    @overload
+    @classmethod
+    def get_filtered_data(
+        cls,
+        data_type: str,
+        query_params: dict[str, Any] | None = ...,
+        as_list: Literal[True] = True,
+        crs: CRSTYPE = ...,
+        async_retriever_kwargs: dict[str, Any] | None = ...,
+    ) -> list[dict[str, Any]]:
+        ...
 
     @classmethod
     def get_filtered_data(
         cls,
         data_type: str,
-        query_params: dict | None = None,
-        as_list: bool | None = False,
-        crs: str | None = service_crs,
-        async_retriever_kwargs: dict | None = None,
+        query_params: dict[str, Any] | None = None,
+        as_list: bool = False,
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
         """Retrieve filtered data from the STN Flood Event Data API.
 
@@ -487,7 +534,7 @@ class STNFloodEventData:
             query_params = {}
 
         if not set(query_params.keys()).issubset(allowed_query_params):
-            raise InputValueError("query_param", allowed_query_params)
+            raise InputValueError("query_param", list(allowed_query_params))
 
         if async_retriever_kwargs is None:
             async_retriever_kwargs = {}
@@ -500,7 +547,7 @@ class STNFloodEventData:
             request_kwds=[{"params": query_params}],
             **async_retriever_kwargs,
         )
-        data = [cls._delist_dict(d) for d in resp[0]]
+        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportGeneralTypeIssues]
         if as_list:
             return data
 
@@ -511,11 +558,11 @@ class STNFloodEventData:
             "sites": ("longitude_dd", "latitude_dd"),
         }
         x_col, y_col = xy_cols[data_type]
-        return cls._geopandify(data, x_col, y_col, crs)
+        return cls._geopandify(data, x_col, y_col, crs, cls.service_crs)
 
 
 def stn_flood_event(
-    data_type: str, query_params: dict | None = None
+    data_type: str, query_params: dict[str, Any] | None = None
 ) -> gpd.GeoDataFrame | pd.DataFrame:
     """Retrieve data from the STN Flood Event Data API.
 
