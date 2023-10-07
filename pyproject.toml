@@ -54,6 +54,9 @@ dependencies = [
   "xarray>=2023.01",
 ]
 [project.optional-dependencies]
+io = [
+  "pyogrio",
+]
 stac = [
   "planetary-computer",
   "pystac-client",
