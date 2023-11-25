@@ -6,6 +6,7 @@ The original script is from
 # pyright: reportMissingImports=false
 from __future__ import annotations
 
+import contextlib
 import importlib
 import importlib.util
 import locale
@@ -16,6 +17,7 @@ import subprocess
 import sys
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as get_version
+from pathlib import Path
 from typing import TextIO
 
 __all__ = ["show_versions"]
@@ -39,34 +41,29 @@ def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
 
 
 def get_sys_info():
-    """Returns system information as a dict"""
-
+    """Return system information as a dict."""
     blob = []
 
     # get full commit hash
     commit = None
-    if os.path.isdir(".git"):
-        try:
+    if Path(".git").is_dir():
+        with contextlib.suppress(Exception):
             pipe = subprocess.Popen(
-                'git log --format="%H" -n 1'.split(" "),
+                'git log --format="%H" -n 1'.split(" "),  # noqa: S603
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
             so, _ = pipe.communicate()
-        except Exception:
-            pass
-        else:
-            if pipe.returncode == 0:
-                commit = so
-                try:
-                    commit = so.decode("utf-8")
-                except ValueError:
-                    pass
-                commit = commit.strip().strip('"')
+
+        if pipe.returncode == 0:
+            commit = so
+            with contextlib.suppress(ValueError):
+                commit = so.decode("utf-8")
+            commit = commit.strip().strip('"')
 
     blob.append(("commit", commit))
 
-    try:
+    with contextlib.suppress(Exception):
         (sysname, _, release, _, machine, processor) = platform.uname()
         blob.extend(
             [
@@ -82,9 +79,6 @@ def get_sys_info():
                 ("LOCALE", f"{locale.getlocale()}"),
             ]
         )
-    except Exception:
-        pass
-
     return blob
 
 
