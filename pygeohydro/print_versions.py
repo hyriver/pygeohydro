@@ -55,11 +55,11 @@ def get_sys_info():
             )
             so, _ = pipe.communicate()
 
-        if pipe.returncode == 0:
-            commit = so
-            with contextlib.suppress(ValueError):
-                commit = so.decode("utf-8")
-            commit = commit.strip().strip('"')
+            if pipe.returncode == 0:
+                commit = so
+                with contextlib.suppress(ValueError):
+                    commit = so.decode("utf-8")
+                    commit = commit.strip().strip('"')
 
     blob.append(("commit", commit))
 
