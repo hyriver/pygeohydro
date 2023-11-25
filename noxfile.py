@@ -43,6 +43,7 @@ gh_deps = {
     "py3dep": ["async-retriever", "pygeoogc", "pygeoutils"],
     "pygeohydro": ["async-retriever", "pygeoogc", "pygeoutils", "pynhd", "hydrosignatures"],
     "pydaymet": ["async-retriever", "pygeoogc", "pygeoutils", "py3dep"],
+    "pygridmet": ["async-retriever", "pygeoogc", "pygeoutils"],
     "pynldas2": ["async-retriever", "pygeoutils"],
 }
 nox.options.sessions = (
