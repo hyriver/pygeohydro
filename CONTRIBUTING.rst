@@ -95,12 +95,12 @@ Ready to contribute? Here's how to set up pygridmet for local development.
 
 .. code-block:: console
 
-    $ mamba create -n py11 python=3.11 nox tomli pre-commit codespell
+    $ mamba create -n py11 python=3.11 nox tomli pre-commit codespell gdal
     $ mamba activate py11
     $ nox -s pre-commit
     $ nox -s type-check
 
-    $ mamba create -n py38 python=3.8 nox tomli pre-commit codespell
+    $ mamba create -n py38 python=3.8 nox tomli pre-commit codespell gdal
     $ mamba activate py38
     $ nox -s tests
 
@@ -110,7 +110,7 @@ Ready to contribute? Here's how to set up pygridmet for local development.
 
 .. code-block:: console
 
-    $ mamba create -n py38 python=3.8 nox tomli pre-commit codespell
+    $ mamba create -n py38 python=3.8 nox tomli pre-commit codespell gdal
     $ mamba activate py38
     $ nox
 
