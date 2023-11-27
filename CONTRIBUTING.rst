@@ -15,7 +15,7 @@ Types of Contributions
 Report Bugs
 ~~~~~~~~~~~
 
-Report bugs at https://github.com/hyriver/pygridmet/issues.
+Report bugs at https://github.com/hyriver/pygeohydro/issues.
 
 Fix Bugs
 ~~~~~~~~
@@ -33,14 +33,14 @@ and "help wanted" is open to whoever wants to implement it.
 Write Documentation
 ~~~~~~~~~~~~~~~~~~~
 
-PyGridMet could always use more documentation, whether as part of the
-official PyGridMet docs, in docstrings, or even on the web in blog posts,
+PyGeoHydro could always use more documentation, whether as part of the
+official PyGeoHydro docs, in docstrings, or even on the web in blog posts,
 articles, and such.
 
 Submit Feedback
 ~~~~~~~~~~~~~~~
 
-The best way to send feedback is to file an issue at https://github.com/hyriver/pygridmet/issues.
+The best way to send feedback is to file an issue at https://github.com/hyriver/pygeohydro/issues.
 
 If you are proposing a feature:
 
@@ -52,24 +52,24 @@ If you are proposing a feature:
 Get Started!
 ------------
 
-Ready to contribute? Here's how to set up pygridmet for local development.
+Ready to contribute? Here's how to set up pygeohydro for local development.
 
-1. Fork the PyGridMet repo through the GitHub website.
-2. Clone your fork locally and add the main ``pygridmet`` as the upstream remote:
+1. Fork the PyGeoHydro repo through the GitHub website.
+2. Clone your fork locally and add the main ``pygeohydro`` as the upstream remote:
 
 .. code-block:: console
 
-    $ git clone git@github.com:your_name_here/pygridmet.git
-    $ git remote add upstream git@github.com:hyriver/pygridmet.git
+    $ git clone git@github.com:your_name_here/pygeohydro.git
+    $ git remote add upstream git@github.com:hyriver/pygeohydro.git
 
 3. Install your local copy into a virtualenv. Assuming you have ``mamba`` installed,
    this is how you can set up your fork for local development:
 
 .. code-block:: console
 
-    $ cd pygridmet/
+    $ cd pygeohydro/
     $ mamba env create -f ci/requirements/environment-dev.yml
-    $ mamba activate pygridmet-dev
+    $ mamba activate pygeohydro-dev
     $ python -m pip install . --no-deps
 
 4. Create a branch for local development:
