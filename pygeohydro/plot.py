@@ -135,7 +135,6 @@ def signatures(
     daily = qdaily.daily
     figsize = (9, 5) if figsize is None else figsize
     fig = plt.figure(constrained_layout=True, figsize=figsize, facecolor="w")
-    plt.grid(False)
     gs = fig.add_gridspec(2, 3)
 
     ax = fig.add_subplot(gs[0, :])
@@ -328,11 +327,7 @@ def interactive_map(
     lon = (west + east) * 0.5
     lat = (south + north) * 0.5
 
-    imap = folium.Map(
-        location=(lat, lon),
-        tiles="Stamen Terrain",
-        zoom_start=10,
-    )
+    imap = folium.Map(location=(lat, lon), zoom_start=10)
 
     for coords, msg in sites[["Coordinate", "msg"]].itertuples(name=None, index=False):
         folium.Marker(
