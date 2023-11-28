@@ -428,7 +428,7 @@ bounding box and have a maximum storage larger than 200 acre-feet.
 .. code-block:: python
 
     nid = NID()
-    dams = nid.get_bygeom((-65.77, 43.07, -69.31, 45.45), "epsg:4326")
+    dams = nid.get_bygeom((-65.77, 43.07, -69.31, 45.45), 4326)
     dams = nid.inventory_byid(dams.id.to_list())
     dams = dams[dams.maxStorage > 200]
 
@@ -467,7 +467,7 @@ Let's get the cross-section data for a small region in Vermont:
     from pygeohydro import NFHL
 
     nfhl = NFHL("NFHL", "cross-sections")
-    gdf_xs = nfhl.bygeom((-73.42, 43.28, -72.9, 43.52), geo_crs="epsg:4269")
+    gdf_xs = nfhl.bygeom((-73.42, 43.28, -72.9, 43.52), geo_crs=4269)
 
 
 Contributing

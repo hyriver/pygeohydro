@@ -768,7 +768,7 @@ class TestSTNFloodEventData:
                 {"url": "https://www.google.com", "request_kwds": {"k": "v"}},
                 (1208, 54),
             ),
-            ("sites", {"State": "OK, KS, NE, SD, MS, MD, MN, WI"}, False, "EPSG:3829", {}, (1, 36)),
+            ("sites", {"State": "OK, KS, NE, SD, MS, MD, MN, WI"}, False, 3829, {}, (1, 36)),
             (
                 "instruments",
                 {"States": "NE,IL,IA,TX"},
@@ -861,7 +861,7 @@ class TestSTNFloodEventData:
                 "sitessss",
                 {"State": "OK, KS, NE, SD, MS, MD, MN, WI"},
                 False,
-                "EPSG:3829",
+                3829,
                 {},
                 gh.exceptions.InputValueError,
             ),
@@ -1031,7 +1031,7 @@ class TestNFHL:
     def test_nfhl_getgeom(self, service, layer, geom, expected_gdf_len, expected_schema):
         """Test the NFHL bygeom method."""
         nfhl = NFHL(service, layer)
-        gdf_xs = nfhl.bygeom(geom, geo_crs="epsg:4269")
+        gdf_xs = nfhl.bygeom(geom, geo_crs=4269)
         assert isinstance(gdf_xs, gpd.GeoDataFrame)
         assert len(gdf_xs) >= expected_gdf_len
         assert set(gdf_xs.columns) == set(expected_schema)

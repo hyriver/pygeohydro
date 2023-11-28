@@ -75,7 +75,7 @@ class TestNLCDExceptions:
             self.geom,
             years={"cover": [2016, 2019]},
             resolution=1e3,
-            crs="epsg:3542",
+            crs=3542,
             ssl=False,
         )
         cover = lulc[0]
@@ -87,7 +87,7 @@ class TestNLCDExceptions:
             self.geom,
             years={"cover": [2016, 2019]},
             resolution=1e3,
-            crs="epsg:3542",
+            crs=3542,
             ssl=False,
         )
         cover = lulc[0].cover_2016
