@@ -31,7 +31,7 @@ def get_deps() -> list[str]:
         return tomli.load(f)["project"]["dependencies"]
 
 
-python_versions = ["3.8"]
+python_versions = ["3.9"]
 lint_versions = ["3.11"]
 package = get_package_name()
 gh_deps = {
