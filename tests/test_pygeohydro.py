@@ -193,8 +193,8 @@ class TestNID:
         assert (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91807, 79)
-        assert self.nid.gdf.shape == (91658, 97)
+        assert self.nid.df.shape == (91773, 77)
+        assert self.nid.gdf.shape == (91624, 95)
 
 
 class TestWaterQuality:
@@ -318,7 +318,7 @@ def test_sensorthings():
     )
     odata = sensor.odata_helper(conditionals=cond)
     df = sensor.query_byodata(odata)
-    assert df.shape[0] == 196
+    assert df.shape[0] == 197
 
     df = sensor.sensor_info("USGS-09380000")
     assert df["description"].iloc[0] == "Stream"
@@ -961,7 +961,7 @@ class TestNFHL:
                 "Prelim_NFHL",
                 "preliminary water lines",
                 "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
-                "Preliminary Water Lines (17)",
+                "Preliminary Water Lines (20)",
             ),
             (
                 "Pending_NFHL",
