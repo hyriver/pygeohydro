@@ -84,14 +84,13 @@ def _prepare_plot_data(
     discharge = prepare_plot_data(daily)
     if precipitation is not None:
         if isinstance(precipitation, pd.DataFrame) and precipitation.shape[1] == 1:
-            precipitation = precipitation.squeeze()
-
-        if not isinstance(precipitation, pd.Series):
+            prcp = prepare_plot_data(precipitation.squeeze())
+        elif isinstance(precipitation, pd.Series):
+            prcp = prepare_plot_data(precipitation)
+        else:
             raise InputTypeError(
                 "precipitation", "pandas.Series or pandas.DataFrame with one column"
             )
-
-        prcp = prepare_plot_data(precipitation)
     else:
         prcp = None
 
