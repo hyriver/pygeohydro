@@ -26,7 +26,6 @@ from pygeoogc import utils as ogc_utils
 
 if TYPE_CHECKING:
     from numbers import Number
-    from ssl import SSLContext
 
     from shapely import MultiPolygon, Polygon
 
@@ -59,9 +58,8 @@ class NLCD:
     crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
-        SSL certification verification.
+    ssl : bool, optional
+        Whether to use SSL for the connection, defaults to ``True``.
     """
 
     def __init__(
@@ -69,7 +67,7 @@ class NLCD:
         years: Mapping[str, int | list[int]] | None = None,
         region: str = "L48",
         crs: CRSTYPE = 4326,
-        ssl: SSLContext | bool | None = None,
+        ssl: bool = True,
     ) -> None:
         default_years = {
             "impervious": [2021],
@@ -173,11 +171,11 @@ class NLCD:
 
 def nlcd_bygeom(
     geometry: gpd.GeoSeries | gpd.GeoDataFrame,
-    resolution: int,
+    resolution: int = 30,
     years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
     crs: CRSTYPE = 4326,
-    ssl: SSLContext | bool | None = None,
+    ssl: bool = True,
 ) -> dict[int | str, xr.Dataset]:
     """Get data from NLCD database (2019).
 
@@ -186,9 +184,10 @@ def nlcd_bygeom(
     geometry : geopandas.GeoDataFrame or geopandas.GeoSeries
         A GeoDataFrame or GeoSeries with the geometry to query. The indices are used
         as keys in the output dictionary.
-    resolution : float
+    resolution : float, optional
         The data resolution in meters. The width and height of the output are computed in pixel
-        based on the geometry bounds and the given resolution.
+        based on the geometry bounds and the given resolution. The default is 30 m which is the
+        native resolution of NLCD data.
     years : dict, optional
         The years for NLCD layers as a dictionary, defaults to
         ``{'impervious': [2019], 'cover': [2019], 'canopy': [2019], "descriptor": [2019]}``.
@@ -201,9 +200,8 @@ def nlcd_bygeom(
     crs : str, int, or pyproj.CRS, optional
         The spatial reference system to be used for requesting the data, defaults to
         ``epsg:4326``.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
-        SSL certification verification.
+    ssl : bool, optional
+        Whether to use SSL for the connection, defaults to ``True``.
 
     Returns
     -------
@@ -235,7 +233,7 @@ def nlcd_bycoords(
     coords: list[tuple[float, float]],
     years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
-    ssl: SSLContext | bool | None = None,
+    ssl: bool = True,
 ) -> gpd.GeoDataFrame:
     """Get data from NLCD database (2019).
 
@@ -252,19 +250,16 @@ def nlcd_bycoords(
         Region in the US that the input geometries are located, defaults to ``L48``.
         Valid values are ``L48`` (for CONUS), ``HI`` (for Hawaii), ``AK`` (for Alaska),
         and ``PR`` (for Puerto Rico). Both lower and upper cases are acceptable.
-    ssl : bool or SSLContext, optional
-        SSLContext to use for the connection, defaults to None. Set to ``False`` to disable
-        SSL certification verification.
+    ssl : bool, optional
+        Whether to use SSL for the connection, defaults to ``True``.
 
     Returns
     -------
     geopandas.GeoDataFrame
         A GeoDataFrame with the NLCD data and the coordinates.
     """
-    if not isinstance(coords, list) or any(len(c) != 2 for c in coords):
-        raise InputTypeError("coords", "list of (lon, lat)")
-
     nlcd_wms = NLCD(years=years, region=region, crs=3857, ssl=ssl)
+    coords = geoutils.geometry_reproject(coords, 4326, 4326)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=4326)
     points_proj = points.to_crs(nlcd_wms.crs)
     geoms = points_proj.buffer(50, cap_style=3)
