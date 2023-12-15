@@ -159,14 +159,19 @@ class NWIS:
             raise ZeroMatchedError(ogc_utils.check_response(str(ex))) from ex
 
         with contextlib.suppress(StopIteration):
-            not_found = next(filter(lambda x: x[0] != "#", resp), None)
+            zero_len = next(filter(lambda x: len(x) == 0, resp), None)
+            if zero_len is not None:
+                raise ZeroMatchedError
+
+            not_found = next(filter(lambda x: not x.startswith("#"), resp), None)
             if not_found is not None:
                 msg = re.findall("<p>(.*?)</p>", not_found)[1].rsplit(">", 1)[1]
                 msg = f"Server error message:\n{msg}"
                 raise ZeroMatchedError(msg)
 
-        data = [r.strip().split("\n") for r in resp if r[0] == "#"]
-        data = [t.split("\t") for d in data for t in d if "#" not in t]
+        data = [
+            line.split("\t") for r in resp for line in r.splitlines() if not line.startswith("#")
+        ]
         if not data:
             raise ZeroMatchedError
 
