@@ -1,7 +1,7 @@
 """Access USGS Short-Term Network (STN) via Restful API."""
 from __future__ import annotations
 
-from io import StringIO
+from io import BytesIO
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Union, cast, overload
 
 import geopandas as gpd
@@ -258,8 +258,10 @@ class STNFloodEventData:
         else:
             async_retriever_kwargs.pop("url", None)
 
-        resp = ar.retrieve_text([f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs)
-        data = pd.read_csv(StringIO(resp[0]))
+        resp = ar.retrieve_binary(
+            [f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs
+        )
+        data = pd.read_csv(BytesIO(resp[0]), encoding="latin-1")
 
         if "Field" not in data.columns:
             data.iloc[0] = data.columns.tolist()
