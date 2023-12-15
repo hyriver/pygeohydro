@@ -727,8 +727,7 @@ def soil_properties(
                 raise ZeroMatchedError from ex
             ds = rxr.open_rasterio(io.BytesIO(z.read(fname)))
             ds = cast("xr.DataArray", ds)
-            if "band" in ds.dims:
-                ds = ds.squeeze("band", drop=True)
+            ds = ds.squeeze("band", drop=True)
             ds.name = valid_props[file.stem.split("_")[0]]["name"]
             ds.attrs["units"] = valid_props[file.stem.split("_")[0]]["units"]
             ds.attrs["long_name"] = valid_props[file.stem.split("_")[0]]["long_name"]
@@ -745,8 +744,7 @@ def _open_tiff(file: Path, name: str) -> xr.DataArray:
     """Open a .tif file."""
     ds = rxr.open_rasterio(file)
     ds = cast("xr.DataArray", ds)
-    if "band" in ds.dims:
-        ds = ds.squeeze("band", drop=True)
+    ds = ds.squeeze("band", drop=True)
     ds.name = name
     ds = xr.where(ds != ds.rio.nodata, ds, np.nan)
     ds = ds.rio.write_nodata(np.nan)
