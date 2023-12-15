@@ -126,7 +126,9 @@ def nlcd_helper() -> dict[str, Any]:
 
 def nwis_errors() -> pd.DataFrame:
     """Get error code lookup table for USGS sites that have daily values."""
-    return pd.read_html("https://waterservices.usgs.gov/rest/DV-Service.html")[0]
+    return pd.read_html(
+        "https://waterservices.usgs.gov/docs/dv-service/daily-values-service-details/#error-codes"
+    )[0]
 
 
 def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[pd.Timestamp, str]]:
