@@ -24,7 +24,7 @@ repos:
   - id: fixit-fix
 
 - repo: https://github.com/psf/black
-  rev: 23.11.0
+  rev: 23.12.0
   hooks:
   - id: black
     name: Autoformat with black
@@ -38,7 +38,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.1.6
+  rev: v0.1.8
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -60,7 +60,7 @@ repos:
     - tomli
 
 - repo: https://github.com/dosisod/refurb
-  rev: v1.24.0
+  rev: v1.25.0
   hooks:
   - id: refurb
     name: Modernizing Python codebases using Refurb
@@ -68,7 +68,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 1.5.1
+  rev: 1.5.3
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
@@ -102,7 +102,7 @@ repos:
     exclude: \.(html|svg)$
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.11.0
+  rev: v2.12.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
