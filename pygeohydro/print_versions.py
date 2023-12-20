@@ -69,14 +69,14 @@ def get_sys_info():
             [
                 ("python", sys.version),
                 ("python-bits", struct.calcsize("P") * 8),
-                ("OS", f"{sysname}"),
-                ("OS-release", f"{release}"),
-                ("machine", f"{machine}"),
-                ("processor", f"{processor}"),
-                ("byteorder", f"{sys.byteorder}"),
-                ("LC_ALL", f'{os.environ.get("LC_ALL", "None")}'),
-                ("LANG", f'{os.environ.get("LANG", "None")}'),
-                ("LOCALE", f"{locale.getlocale()}"),
+                ("OS", str(sysname)),
+                ("OS-release", str(release)),
+                ("machine", str(machine)),
+                ("processor", str(processor)),
+                ("byteorder", str(sys.byteorder)),
+                ("LC_ALL", os.environ.get("LC_ALL", "None")),
+                ("LANG", os.environ.get("LANG", "None")),
+                ("LOCALE", str(locale.getlocale())),
             ]
         )
     return blob
