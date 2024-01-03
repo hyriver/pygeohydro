@@ -135,7 +135,7 @@ def irrigation_withdrawals() -> xr.Dataset:
     resp = ar.retrieve_text(urls.tolist())
     irr = {}
     for name, r in zip(urls.index, resp):
-        df = pd.read_csv(io.StringIO(r), usecols=lambda x: "m3" in x or "huc12t" in x)  # type: ignore
+        df = pd.read_csv(io.StringIO(r), usecols=lambda x: "m3" in x or "huc12t" in x)  # pyright: ignore[reportGeneralTypeIssues]
         df["huc12t"] = df["huc12t"].str.strip("'")
         df = df.rename(columns={"huc12t": "huc12"}).set_index("huc12")
         df = df.rename(columns={c: str(c)[:3].capitalize() for c in df})

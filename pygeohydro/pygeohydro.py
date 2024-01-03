@@ -9,7 +9,7 @@ import itertools
 import warnings
 import zipfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterator, Literal, Sequence, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Sequence, Tuple, Union, cast
 from unittest.mock import patch
 
 import cytoolz.curried as tlz
@@ -22,6 +22,7 @@ import rasterio as rio
 import xarray as xr
 from rioxarray import _io as rxr
 from shapely.errors import GEOSException
+
 import async_retriever as ar
 import pygeoogc as ogc
 import pygeoutils as geoutils
@@ -602,11 +603,13 @@ class NID:
         >>> nid = NID()
         >>> dams = nid.inventory_byid(['KY01232', 'GA02400', 'NE04081', 'IL55070', 'TN05345'])
         """
-        ids = set(federal_ids) if isinstance(federal_ids, (list, tuple)) else {federal_ids}
-        ids = {str(i).upper() for i in ids}
-        urls = [f"{self.base_url}/dams/{i}/inventory" for i in ids]
-        if len(urls) != len(ids):
-            raise InputTypeError("dam_ids", "list of Federal IDs")
+        if not isinstance(federal_ids, Iterable) or isinstance(federal_ids, (str, int)):
+            raise InputTypeError("federal_ids", "list of str (Federal IDs)")
+        
+        if not all(isinstance(i, str) for i in federal_ids):
+            raise InputTypeError("federal_ids", "list of str (Federal IDs)")
+
+        urls = [f"{self.base_url}/dams/{i.upper()}/inventory" for i in set(federal_ids)]
         return self._to_geodf(pd.DataFrame(self._get_json(urls)).set_index("id"))
 
     def get_suggestions(
