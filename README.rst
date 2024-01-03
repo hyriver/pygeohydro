@@ -182,20 +182,22 @@ The ``helpers`` module includes:
 You can find some example notebooks `here <https://github.com/hyriver/HyRiver-examples>`__.
 
 Moreover, under the hood, PyGeoHydro uses
-`AsyncRetriever <https://github.com/hyriver/async-retriever>`__
-for making requests asynchronously with persistent caching. This improves the
-reliability and speed of data retrieval significantly. AsyncRetriever caches all request/response
-pairs and upon making an already cached request, it will retrieve the responses from the cache
-if the server's response is unchanged.
+`PyGeoOGC <https://github.com/hyriver/pygeoogc>`__ and
+`AsyncRetriever <https://github.com/hyriver/async-retriever>`__ packages
+for making requests in parallel and storing responses in chunks. This improves the
+reliability and speed of data retrieval significantly.
 
 You can control the request/response caching behavior and verbosity of the package
 by setting the following environment variables:
 
-* ``HYRIVER_CACHE_NAME``: Path to the caching SQLite database. It defaults to
-  ``./cache/aiohttp_cache.sqlite``
+* ``HYRIVER_CACHE_NAME``: Path to the caching SQLite database for asynchronous HTTP
+  requests. It defaults to ``./cache/aiohttp_cache.sqlite``
+* ``HYRIVER_CACHE_NAME_HTTP``: Path to the caching SQLite database for HTTP requests.
+  It defaults to ``./cache/http_cache.sqlite``
 * ``HYRIVER_CACHE_EXPIRE``: Expiration time for cached requests in seconds. It defaults to
-  -1 (never expire).
+  one week.
 * ``HYRIVER_CACHE_DISABLE``: Disable reading/writing from/to the cache. The default is false.
+* ``HYRIVER_SSL_CERT``: Path to a SSL certificate file.
 
 For example, in your code before making any requests you can do:
 
@@ -203,9 +205,11 @@ For example, in your code before making any requests you can do:
 
     import os
 
-    os.environ["HYRIVER_CACHE_NAME"] = "path/to/file.sqlite"
+    os.environ["HYRIVER_CACHE_NAME"] = "path/to/aiohttp_cache.sqlite"
+    os.environ["HYRIVER_CACHE_NAME_HTTP"] = "path/to/http_cache.sqlite"
     os.environ["HYRIVER_CACHE_EXPIRE"] = "3600"
     os.environ["HYRIVER_CACHE_DISABLE"] = "true"
+    os.environ["HYRIVER_SSL_CERT"] = "path/to/cert.pem"
 
 You can also try using PyGeoHydro without installing
 it on your system by clicking on the binder badge. A Jupyter Lab
