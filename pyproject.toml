@@ -33,19 +33,19 @@ dynamic = [
   "version",
 ]
 dependencies = [
-  "async-retriever<0.16,>=0.15.2",
+  "async-retriever<0.17,>=0.16",
   "cytoolz",
   "defusedxml",
   "folium",
   "geopandas>=0.10",
   "h5netcdf",
-  "hydrosignatures<0.16,>=0.15.2",
+  "hydrosignatures<0.17,>=0.16",
   "matplotlib>=3.5",
   "numpy>=1.21",
   "pandas>=1",
-  "pygeoogc<0.16,>=0.15.2",
-  "pygeoutils<0.16,>=0.15.2",
-  "pynhd<0.16,>=0.15.2",
+  "pygeoogc<0.17,>=0.16",
+  "pygeoutils<0.17,>=0.16",
+  "pynhd<0.17,>=0.16",
   "pyproj>=3.0.1",
   "rioxarray>=0.11",
   "scipy",
@@ -277,3 +277,7 @@ formatter = "ufmt"
 [tool.refurb]
 python_version = "3.8"
 quiet = true
+
+[[tool.refurb.amend]]
+path = "tests"
+ignore = ["FURB184"]
