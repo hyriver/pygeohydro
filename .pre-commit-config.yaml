@@ -114,9 +114,9 @@ repos:
     entry: from __future__ import annotations
     language: pygrep
     args: [--negate]
-    files: ^pygeohydro/
+    files: .*/.*\.py$
     types: [python]
     exclude: |
       (?x)
       /(__init__\.py)|(conftest\.py)$
-      |/tests/
+      |tests/
