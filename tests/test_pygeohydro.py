@@ -193,8 +193,8 @@ class TestNID:
         assert (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91773, 77)
-        assert self.nid.gdf.shape == (91624, 95)
+        assert self.nid.df.shape == (91807, 79)
+        assert self.nid.gdf.shape == (91658, 97)
 
 
 class TestWaterQuality:

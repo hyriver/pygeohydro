@@ -43,7 +43,7 @@ class TestETAExceptions:
         )
         with pytest.raises(InputRangeError) as ex:
             _ = gh.ssebopeta_bycoords(coords, dates=[2010, 2014, 2030])
-        assert "2022" in str(ex.value)
+        assert "2000" in str(ex.value)
 
 
 class TestNLCDExceptions:
