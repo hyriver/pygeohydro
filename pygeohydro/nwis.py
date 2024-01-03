@@ -300,17 +300,19 @@ class NWIS:
             nhd_area[["COMID", "WSAREASQKM"]], left_on="comid", right_on="COMID", how="left"
         )
         area["identifier"] = area["identifier"].str.replace("USGS-", "")
-        area = area[["identifier", "comid", "reachcode", "measure", "WSAREASQKM"]].copy()
-        area = area.rename(
-            columns={
-                "identifier": "site_no",
-                "comid": "nhd_id",
-                "reachcode": "nhd_reachcode",
-                "measure": "nhd_measure",
-                "WSAREASQKM": "nhd_areasqkm",
-            }
+        return (
+            area[["identifier", "comid", "reachcode", "measure", "WSAREASQKM"]]
+            .copy()
+            .rename(
+                columns={
+                    "identifier": "site_no",
+                    "comid": "nhd_id",
+                    "reachcode": "nhd_reachcode",
+                    "measure": "nhd_measure",
+                    "WSAREASQKM": "nhd_areasqkm",
+                }
+            )
         )
-        return area
 
     def get_info(
         self,
@@ -598,20 +600,18 @@ class NWIS:
                 return pd.DataFrame()
             discharge["value"] = pd.to_numeric(discharge["value"], errors="coerce")
             tz = resp[0]["value"]["timeSeries"][0]["sourceInfo"]["timeZoneInfo"]
-            tz_dict = {
+            time_zone = {
                 "CST": "US/Central",
                 "MST": "US/Mountain",
                 "PST": "US/Pacific",
                 "EST": "US/Eastern",
-            }
-            time_zone = tz_dict.get(
+            }.get(
                 tz["defaultTimeZone"]["zoneAbbreviation"],
                 tz["defaultTimeZone"]["zoneAbbreviation"],
             )
             discharge.index = pd.DatetimeIndex(
                 pd.Timestamp(i, tz=time_zone) for i in discharge.index
-            )
-            discharge.index = discharge.index.tz_convert("UTC")
+            ).tz_convert("UTC")
             discharge.columns = [col]
             return discharge
 

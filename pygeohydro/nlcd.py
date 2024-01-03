@@ -77,7 +77,7 @@ class NLCD:
         }
         years = default_years if years is None else years
         if not isinstance(years, dict):
-            raise InputTypeError("years", "dict", f"{default_years}")
+            raise InputTypeError("years", "dict", str(default_years))
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.years = cast("dict[str, list[int]]", self.years)
         self.region = region.upper()
@@ -260,7 +260,7 @@ def nlcd_bycoords(
     """
     nlcd_wms = NLCD(years=years, region=region, crs=3857, ssl=ssl)
     coords = geoutils.geometry_reproject(coords, 4326, 4326)
-    points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords)), crs=4326)
+    points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords), crs=4326))
     points_proj = points.to_crs(nlcd_wms.crs)
     geoms = points_proj.buffer(50, cap_style=3)
     ds_list = [nlcd_wms.get_map(g, 30) for g in geoms]

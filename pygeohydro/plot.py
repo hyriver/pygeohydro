@@ -3,6 +3,7 @@
 Plots include daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
+# pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import contextlib
@@ -55,8 +56,8 @@ def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
     """
     if isinstance(daily, pd.Series):
         daily = daily.to_frame()
-    mean_month = hs.compute_mean_monthly(daily, True)
-    ranked = hs.compute_exceedance(daily)
+    mean_month = hs.mean_monthly(daily, True)
+    ranked = hs.exceedance(daily)
 
     _titles = [
         "Total Hydrograph (daily)",
@@ -195,7 +196,8 @@ def signatures(
     ax.set_ylabel(rf"$\log(Q)$ ({qdaily.units['ranked']})")
     ax.text(0.02, 0.9, "(c)", transform=ax.transAxes, ha="left", va="center", fontweight="bold")
 
-    fig.suptitle(title)
+    if title:
+        fig.suptitle(title)
 
     if output is not None:
         Path(output).parent.mkdir(exist_ok=True, parents=True)
@@ -306,8 +308,12 @@ def interactive_map(
         "HCDN 2009",
     ]
 
-    sites = sites.groupby("site_no")[cols_old[1:]].agg(set).reset_index()
-    sites = sites.rename(columns=dict(zip(cols_old, cols_new)))
+    sites = (
+        sites.groupby("site_no")[cols_old[1:]]
+        .agg(set)
+        .reset_index()
+        .rename(columns=dict(zip(cols_old, cols_new)))
+    )
 
     msgs = []
     base_url = "https://waterdata.usgs.gov/nwis/inventory?agency_code=USGS&site_no="

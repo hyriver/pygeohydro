@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib.util
 import io
 import itertools
@@ -20,12 +21,7 @@ import pyproj
 import rasterio as rio
 import xarray as xr
 from rioxarray import _io as rxr
-from shapely import __version__ as shapely_version
-
-if shapely_version[0] == "2":
-    from shapely.errors import GEOSException
-else:
-    GEOSException = BaseException
+from shapely.errors import GEOSException
 import async_retriever as ar
 import pygeoogc as ogc
 import pygeoutils as geoutils
@@ -137,9 +133,8 @@ def ssebopeta_bycoords(
         raise MissingColumnError(req_cols)
 
     _coords = gpd.GeoSeries(
-        gpd.points_from_xy(coords["x"], coords["y"]), index=coords["id"], crs=crs
-    )
-    _coords = _coords.to_crs(4326)
+        gpd.points_from_xy(coords["x"], coords["y"], crs=crs), index=coords["id"]
+    ).to_crs(4326)
     co_list = list(zip(_coords.x, _coords.y))
 
     f_list = helpers.get_ssebopeta_urls(dates)
@@ -216,20 +211,18 @@ def ssebopeta_bygeom(
     except geoutils.InputTypeError as ex:
         raise InputTypeError("geometry", "(Multi)Polygon or tuple of length 4") from ex
 
-    gtiff2xarray = tlz.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
+    gtiff2xarray = functools.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
     with patch("socket.has_ipv6", False), RetrySession() as session:
 
-        def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray:
+        def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray | xr.Dataset:
             resp = session.get(url)
             zfile = zipfile.ZipFile(io.BytesIO(resp.content))
             content = zfile.read(zfile.filelist[0].filename)
-            ds = gtiff2xarray(r_dict={"eta": content})
-            ds = cast("xr.DataArray", ds)
-            return ds.expand_dims({"time": [t]})
+            return gtiff2xarray(r_dict={"eta": content}).expand_dims({"time": [t]})
 
         data = xr.merge(itertools.starmap(_ssebop, f_list))
-    eta: xr.DataArray = data.eta
-    eta = eta.where(eta < eta.rio.nodata) * 1e-3
+    eta = data.eta.where(data.eta < data.eta.rio.nodata) * 1e-3
+    eta = cast("xr.DataArray", eta)
     eta.attrs.update(
         {
             "units": "mm/day",
@@ -513,8 +506,7 @@ class NID:
         """
         return gpd.GeoDataFrame(
             nid_df,
-            geometry=gpd.points_from_xy(nid_df["longitude"], nid_df["latitude"]),
-            crs=4326,
+            geometry=gpd.points_from_xy(nid_df["longitude"], nid_df["latitude"], crs=4326),
         )
 
     def get_byfilter(self, query_list: list[dict[str, list[str]]]) -> list[gpd.GeoDataFrame]:
@@ -582,7 +574,7 @@ class NID:
         idx = self.gdf.sindex.query(_geometry, "contains")
         return self.gdf.iloc[idx].copy()
 
-    def inventory_byid(self, federal_ids: list[int]) -> gpd.GeoDataFrame:
+    def inventory_byid(self, federal_ids: list[str]) -> gpd.GeoDataFrame:
         """Get extra attributes for dams based on their dam ID.
 
         Notes
@@ -707,8 +699,8 @@ def soil_properties(
         prop = [properties] if isinstance(properties, str) else properties
         if not all(p in valid_props for p in prop):
             raise InputValueError("properties", list(valid_props))
-    sb = ScienceBase()
-    soil = sb.get_file_urls("5fd7c19cd34e30b9123cb51f")
+
+    soil = ScienceBase().get_file_urls("5fd7c19cd34e30b9123cb51f")
     pat = "|".join(prop)
     _files, urls = zip(*soil[soil.index.str.contains(f"{pat}.*zip")].url.to_dict().items())
     urls = list(urls)
@@ -744,11 +736,10 @@ def _open_tiff(file: Path, name: str) -> xr.DataArray:
     """Open a .tif file."""
     ds = rxr.open_rasterio(file)
     ds = cast("xr.DataArray", ds)
-    ds = ds.squeeze("band", drop=True)
+    if "band" in ds:
+        ds = ds.squeeze("band", drop=True)
     ds.name = name
-    ds = xr.where(ds != ds.rio.nodata, ds, np.nan)
-    ds = ds.rio.write_nodata(np.nan)
-    return ds
+    return xr.where(ds != ds.rio.nodata, ds, np.nan).rio.write_nodata(np.nan)
 
 
 def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
