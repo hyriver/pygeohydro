@@ -7,7 +7,7 @@ repos:
     args: [--config=pyproject.toml]
 
 - repo: https://github.com/bwhmather/ssort
-  rev: v0.11.6
+  rev: v0.12.0
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
@@ -38,7 +38,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.1.9
+  rev: v0.1.11
   hooks:
   - id: ruff
     name: Linting with Ruff
