@@ -2,17 +2,18 @@
 History
 =======
 
-0.16.0 (2023-XX-XX)
+0.16.0 (2024-01-03)
 -------------------
 
 Breaking Changes
 ~~~~~~~~~~~~~~~~
-- The minimum supported version of Shapely is now 2.
+- Bump the minimum supported version of ``shapely`` to 2.
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
 - Update the link to NWIS error codes tables in the ``nwis_errors`` function.
 - Update ``NWIS`` class based on the latest changes to the NWIS web service.
+- Use the default tiles for the ``interactive_map`` function.
 
 0.15.2 (2023-09-22)
 -------------------
