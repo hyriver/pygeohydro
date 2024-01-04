@@ -163,6 +163,7 @@ ignore = [
     "E501",
     "PLR2004",
     "PLR0913",
+    "PGH003",
 ]
 line-length = 100
 
