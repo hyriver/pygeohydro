@@ -605,7 +605,7 @@ class NID:
         """
         if not isinstance(federal_ids, Iterable) or isinstance(federal_ids, (str, int)):
             raise InputTypeError("federal_ids", "list of str (Federal IDs)")
-        
+
         if not all(isinstance(i, str) for i in federal_ids):
             raise InputTypeError("federal_ids", "list of str (Federal IDs)")
 
@@ -703,7 +703,7 @@ def soil_properties(
         if not all(p in valid_props for p in prop):
             raise InputValueError("properties", list(valid_props))
 
-    soil = ScienceBase().get_file_urls("5fd7c19cd34e30b9123cb51f")
+    soil = ScienceBase.get_file_urls("5fd7c19cd34e30b9123cb51f")
     pat = "|".join(prop)
     _files, urls = zip(*soil[soil.index.str.contains(f"{pat}.*zip")].url.to_dict().items())
     urls = list(urls)
