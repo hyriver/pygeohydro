@@ -130,12 +130,15 @@ def irrigation_withdrawals() -> xr.Dataset:
     -----
     Dataset is retrieved from https://doi.org/10.5066/P9FDLY8P.
     """
-    item = ScienceBase().get_file_urls("5ff7acf4d34ea5387df03d73")
+    item = ScienceBase.get_file_urls("5ff7acf4d34ea5387df03d73")
     urls = item.loc[item.index.str.contains(".csv"), "url"]
     resp = ar.retrieve_text(urls.tolist())
     irr = {}
     for name, r in zip(urls.index, resp):
-        df = pd.read_csv(io.StringIO(r), usecols=lambda x: "m3" in x or "huc12t" in x)  # pyright: ignore[reportGeneralTypeIssues]
+        df = pd.read_csv(
+            io.StringIO(r),
+            usecols=lambda s: "m3" in s or "huc12t" in s,  # type: ignore
+        )
         df["huc12t"] = df["huc12t"].str.strip("'")
         df = df.rename(columns={"huc12t": "huc12"}).set_index("huc12")
         df = df.rename(columns={c: str(c)[:3].capitalize() for c in df})
