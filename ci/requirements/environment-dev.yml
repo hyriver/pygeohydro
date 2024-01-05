@@ -14,122 +14,138 @@ dependencies:
 - ujson
 
 # pygeoogc deps
-# - async-retriever>=0.15,<0.16
+# - async-retriever
 - cytoolz
 - defusedxml
 - joblib
 - multidict
-- owslib>=0.27.2
-- pyproj>=3.0.1
+- owslib >=0.27.2
+- pyproj >=3.0.1
 - requests
-- requests-cache>=0.9.6
-- shapely>=2.0.0
+- requests-cache >=0.9.6
+- shapely >=2
+- typing_extensions
 - ujson
-- url-normalize>=1.4
+- url-normalize >=1.4
 - urllib3
 - yarl
 
 # pygeoutils deps
 - cytoolz
-- geopandas-base >=0.7
+- geopandas-base >=0.10
 - fiona
 - netcdf4
 - numpy >=1.21
-- pyproj >=2.2
+- pyproj >=3.0.1
 - rasterio >=1.2
 - rioxarray >=0.11
 - scipy
 - shapely >=2.0
 - ujson
-- xarray >=2023.01.0
+- xarray >=2023.01
 
 # hydrosignatures deps
-- numpy
-- pandas
+- numpy >=1.21
+- pandas >=1
 - scipy
-- xarray
+- xarray >=2023.01
 # optional deps
 - numba
+- numbagg
 
 # py3dep
-# - async-retriever >=0.3.6
+# - async-retriever
+- click >=0.7
 - cytoolz
+- geopandas-base >=0.10
 - numpy >=1.21
-# - pygeoogc >=0.13.7
-# - pygeoutils >=0.13.7
+# - pygeoogc
+# - pygeoutils
 - rasterio >=1.2
 - rioxarray >=0.11
 - scipy
-- shapely >=2.0
-- xarray >=2023.01.0
-# optional dep
-- pyflwdir >=0.5.6
+- shapely >=2
+- xarray >=2023.01
 
 # pynhd deps
-# - async-retriever >=0.3.6
+# - async-retriever
 - cytoolz
 - geopandas-base >=0.9
 - networkx
 - numpy >=1.21
 - pandas >=1.0
 - pyarrow >=1.0.1
-# - pygeoogc >=0.13.7
-# - pygeoutils >=0.13.7
+# - pygeoogc
+# - pygeoutils
 - shapely >=2.0
 # optional deps
 - pyogrio
 - py7zr
 
 # pydaymet deps
-# - async-retriever >=0.3.6
-- lxml
+# - async-retriever
+- click >=0.7
+- geopandas-base >=0.10
 - numpy >=1.21
-- pandas >=1.0
-# - py3dep >=0.13.7
-# - pygeoogc >=0.13.7
-# - pygeoutils >=0.13.9
-- rasterio >=1.2
+- pandas >=1
+# - py3dep
+# - pygeoogc
+# - pygeoutils
+- pyproj >=3.0.1
 - scipy
-- shapely >=2.0
-- xarray >=2023.01.0
+- shapely >=2
+- xarray >=2023.01
 # optional deps
 - numba
 
+# pygridmet deps
+# - async-retriever
+- click >=0.7
+- geopandas-base >=0.10
+- numpy >=1.21
+- pandas >=1
+# - pygeoogc
+# - pygeoutils
+- pyproj >=3.0.1
+- shapely >=2
+- xarray >=2023.01
+
 # pygeohydro deps
+# - async-retriever
 - cytoolz
 - defusedxml
 - folium
-- geopandas-base >=0.7
+- geopandas-base >=0.10
 - h5netcdf
-# - hydrosignatures >=0.1.1
-- lxml
-- matplotlib-base >=3.5
+# - hydrosignatures
+- matplotlib >=3.5
 - numpy >=1.21
-- pandas >=1.0
-# - pygeoogc >=0.13.7
-# - pygeoutils >=0.13.9
-# - pynhd >=0.13.7
-- rasterio >=1.2
-- rioxarray >=0.11.0
+- pandas >=1
+# - pygeoogc
+# - pygeoutils
+# - pynhd
+- pyproj >=3.0.1
+- rioxarray >=0.11
 - scipy
-- shapely >=2.0
-- xarray >=2023.01.0
+- shapely >=2
+- ujson
+- xarray >=2023.01
 # optional deps
 - planetary-computer
 - pystac-client
+- pyogrio
 
 # pynldas2
-# - async-retriever >=0.3.6
+# - async-retriever
 - h5netcdf
 - numpy >=1.21
 - pandas >=1.0
-# - pygeoutils >=0.13.10
-- pyproj >=2.2
+# - pygeoutils
+- pyproj >=3.0.1
 - rioxarray >=0.11
 - xarray >=2023.01.0
 
 # optional deps for speeding up some operations
-- numbagg
 - flox
 
 # Other deps required by example notebooks
@@ -164,5 +180,6 @@ dependencies:
   - git+https://github.com/hyriver/pynhd.git
   - git+https://github.com/hyriver/py3dep.git
   - git+https://github.com/hyriver/pydaymet.git
+  - git+https://github.com/hyriver/pygridmet.git
   - git+https://github.com/hyriver/pynldas2.git
   - git+https://github.com/hyriver/pygeohydro.git
