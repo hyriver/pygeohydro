@@ -66,6 +66,8 @@ dependencies:
 - scipy
 - shapely >=2
 - xarray >=2023.01
+# optional deps
+- pyflwdir >=0.5.8
 
 # pynhd deps
 # - async-retriever
