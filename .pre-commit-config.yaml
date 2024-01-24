@@ -7,7 +7,7 @@ repos:
     args: [--config=pyproject.toml]
 
 - repo: https://github.com/bwhmather/ssort
-  rev: v0.12.0
+  rev: 0.12.3
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
@@ -40,7 +40,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.1.11
+  rev: v0.1.14
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -62,7 +62,7 @@ repos:
     - tomli
 
 - repo: https://github.com/dosisod/refurb
-  rev: v1.26.0
+  rev: v1.28.0
   hooks:
   - id: refurb
     name: Modernizing Python codebases using Refurb
@@ -70,7 +70,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 1.5.3
+  rev: 1.7.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
@@ -108,6 +108,13 @@ repos:
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
+
+- repo: https://github.com/rhysd/actionlint
+  rev: v1.6.26
+  hooks:
+  - id: actionlint
+    files: .github/workflows/
+    args: [-ignore, SC1090, -ignore, SC2046, -ignore, SC2086, -ignore, SC2129, -ignore, SC2155]
 
 - repo: local
   hooks:
