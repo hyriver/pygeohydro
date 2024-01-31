@@ -7,7 +7,7 @@ repos:
     args: [--config=pyproject.toml]
 
 - repo: https://github.com/bwhmather/ssort
-  rev: 0.12.3
+  rev: 0.12.4
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
@@ -25,12 +25,6 @@ repos:
     additional_dependencies:
     - ufmt
 
-- repo: https://github.com/psf/black
-  rev: 23.12.1
-  hooks:
-  - id: black
-    name: Autoformat with black
-
 - repo: https://github.com/asottile/blacken-docs
   rev: 1.16.0
   hooks:
@@ -39,12 +33,16 @@ repos:
     additional_dependencies: [black]
     args: [-t, py38, -l, '100']
 
-- repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.1.14
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.1.15
   hooks:
   - id: ruff
     name: Linting with Ruff
-    args: [--fix, --exit-non-zero-on-fix]
+    types_or: [python]
+    args: [--fix]
+  - id: ruff-format
+    name: Formatting with Ruff
+    types_or: [python]
 
 - repo: https://github.com/PyCQA/doc8
   rev: v1.1.1
