@@ -87,9 +87,6 @@ find = {namespaces = false}
 [tool.setuptools_scm]
 fallback_version = "999"
 
-[tool.black]
-line-length = 100
-
 [tool.ruff]
 target-version = "py38"
 select = [
@@ -164,6 +161,8 @@ ignore = [
     "PLR2004",
     "PLR0913",
     "PGH003",
+    # conflict with ruff-formatter
+    "ISC001",
 ]
 line-length = 100
 
