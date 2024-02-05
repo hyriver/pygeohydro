@@ -31,6 +31,7 @@ class MissingColumnError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -42,6 +43,7 @@ class MissingCRSError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -69,6 +71,7 @@ class DataNotAvailableError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -99,6 +102,7 @@ class InputValueError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -118,6 +122,7 @@ class InputRangeError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -141,6 +146,7 @@ class InputTypeError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -161,6 +167,7 @@ class ZeroMatchedError(ValueError):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
 
 
@@ -180,4 +187,5 @@ class DependencyError(Exception):
         super().__init__(self.message)
 
     def __str__(self) -> str:
+        """Return the error message."""
         return self.message
