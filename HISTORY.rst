@@ -2,6 +2,18 @@
 History
 =======
 
+0.16.2 (2024-XX-XX)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Converted all methods of ``NWIS`` class to ``classmethod``s so the class can be used
+  without instantiating it. This change makes the class more flexible and easier to use.
+- In ``NID`` class, the ``stage_nid_inventory`` method now checks if the remote NID
+  database has been modified since the last download and only downloads the new data
+  if it has been modified. This change makes the method more efficient and reduces the
+  network traffic while ensuring that the local database is always up-to-date.
+
 0.16.0 (2024-01-03)
 -------------------
 
