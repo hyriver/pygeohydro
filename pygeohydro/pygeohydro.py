@@ -8,6 +8,7 @@ import io
 import itertools
 import warnings
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Sequence, Tuple, Union, cast
 from unittest.mock import patch
@@ -19,6 +20,7 @@ import numpy.typing as npt
 import pandas as pd
 import pyproj
 import rasterio as rio
+import requests
 import xarray as xr
 from rioxarray import _io as rxr
 from shapely.errors import GEOSException
@@ -192,7 +194,7 @@ def ssebopeta_bygeom(
 
     Parameters
     ----------
-    geometry : shapely.geometry.Polygon or tuple
+    geometry : shapely.Polygon or tuple
         The geometry for downloading clipping the data. For a tuple bbox,
         the order should be (west, south, east, north).
     dates : tuple or list, optional
@@ -233,6 +235,26 @@ def ssebopeta_bygeom(
         }
     )
     return eta
+
+
+def _remote_file_modified(file_path: Path) -> bool:
+    """Check if the file is older than the last modification date of the NID web service."""
+    url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
+    # we need to get the redirect URL so that we can get the last modified date, so
+    # we need to send a request with the Range header set to 0-0 to avoid downloading
+    # the entire file.
+    response = requests.get(url, headers={"Range": "bytes=0-0"}, allow_redirects=True, timeout=50)
+    if response.status_code != 200:
+        raise ServiceError(response.reason, url)
+    response = requests.head(response.url, timeout=50)
+    if response.status_code != 200:
+        raise ServiceError(response.reason, url)
+
+    remote_last_modified = datetime.strptime(
+        response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S GMT"
+    )
+    local_last_modified = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
+    return local_last_modified < remote_last_modified
 
 
 class NID:
@@ -324,6 +346,8 @@ class NID:
 
         self.nid_inventory_path = fname
         if not self.nid_inventory_path.exists():
+            if _remote_file_modified(fname.with_suffix(".gpkg")):
+                fname.with_suffix(".gpkg").unlink()
             url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
             _ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
             dams = (
@@ -906,10 +930,8 @@ class EHydro(AGRBase):
 
             if self._engine == "pyogrio":
                 with contextlib.suppress(GEOSException):
-                    return gpd.read_file(
-                        gdb, layer=self._layer, engine="pyogrio", use_arrow=True
-                    )  # pyright: ignore[reportGeneralTypeIssues]
-            return gpd.read_file(gdb, layer=self._layer)  # pyright: ignore[reportGeneralTypeIssues]
+                    return gpd.read_file(gdb, layer=self._layer, engine="pyogrio", use_arrow=True)  # pyright: ignore[reportReturnType]
+            return gpd.read_file(gdb, layer=self._layer)  # pyright: ignore[reportReturnType]
 
         return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
 
