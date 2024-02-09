@@ -113,6 +113,7 @@ def tests(session: nox.Session) -> None:
 
 @nox.session(python=python_versions)
 def speedup(session: nox.Session) -> None:
+    """Run tests that require speedup deps."""
     extras = get_extras()
     install_deps(session, ",".join(["test", *extras]))
     session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
