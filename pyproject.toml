@@ -269,6 +269,7 @@ reportUnknownParameterType = false
 reportUnknownVariableType = false
 reportUnnecessaryIsInstance = false
 reportUntypedFunctionDecorator = false
+reportAttributeAccessIssue = false
 typeCheckingMode = "strict"
 
 [tool.fixit]
