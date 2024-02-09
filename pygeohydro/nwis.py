@@ -1,5 +1,5 @@
 """Accessing NWIS."""
-# pyright: reportGeneralTypeIssues=false
+# pyright: reportArgumentType=false,reportCallIssue=false,reportReturnType=false
 from __future__ import annotations
 
 import contextlib
@@ -40,6 +40,7 @@ try:
 except ImportError:
     IntCastingNaNError = ValueError
 
+YEAR_END = "Y" if int(pd.__version__.split(".")[0]) < 2 else "YE"
 T_FMT = "%Y-%m-%d"
 __all__ = ["NWIS", "streamflow_fillna"]
 
@@ -86,7 +87,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
 
     df[df < 0] = np.nan
     s_nan = pd.DataFrame.from_dict(
-        {yr: q.isna().sum() for yr, q in df.resample("Y")}, orient="index"
+        {yr: q.isna().sum() for yr, q in df.resample(YEAR_END)}, orient="index"
     )
     if np.all(s_nan == 0):
         return streamflow
@@ -129,8 +130,7 @@ class NWIS:
     `webpage <https://help.waterdata.usgs.gov/codes-and-parameters>`__.
     """
 
-    def __init__(self) -> None:
-        self.url = ServiceURL().restful.nwis
+    url: str = ServiceURL().restful.nwis
 
     @staticmethod
     def retrieve_rdb(url: str, payloads: list[dict[str, str]]) -> pd.DataFrame:
@@ -175,7 +175,7 @@ class NWIS:
         if not data:
             raise ZeroMatchedError
 
-        rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])
+        rdb_df = pd.DataFrame.from_dict(dict(zip(data[0], d)) for d in data[2:])  # pyright: ignore[reportArgumentType]
         if "agency_cd" in rdb_df:
             rdb_df = rdb_df[~rdb_df["agency_cd"].str.contains("agency_cd|5s")].copy()
         return rdb_df
@@ -314,8 +314,9 @@ class NWIS:
             )
         )
 
+    @classmethod
     def get_info(
-        self,
+        cls,
         queries: dict[str, str] | list[dict[str, str]],
         expanded: bool = False,
         fix_names: bool = True,
@@ -348,8 +349,8 @@ class NWIS:
         """
         queries = [queries] if isinstance(queries, dict) else queries
 
-        payloads = self._validate_usgs_queries(queries, False)
-        sites = self.retrieve_rdb(f"{self.url}/site", payloads)
+        payloads = cls._validate_usgs_queries(queries, False)
+        sites = cls.retrieve_rdb(f"{cls.url}/site", payloads)
 
         def fix_station_nm(station_nm: str) -> str:
             name = station_nm.title().rsplit(" ", 1)
@@ -369,9 +370,9 @@ class NWIS:
         numeric_cols = ["dec_lat_va", "dec_long_va", "alt_va", "alt_acy_va"]
 
         if expanded:
-            payloads = self._validate_usgs_queries(queries, True)
+            payloads = cls._validate_usgs_queries(queries, True)
             sites = sites.merge(
-                self.retrieve_rdb(f"{self.url}/site", payloads),
+                cls.retrieve_rdb(f"{cls.url}/site", payloads),
                 on="site_no",
                 how="outer",
                 suffixes=("", "_overlap"),
@@ -384,7 +385,7 @@ class NWIS:
             sites["end_date"] = pd.to_datetime(sites["end_date"])
 
         if nhd_info:
-            nhd = self._nhd_info(sites["site_no"].to_list())
+            nhd = cls._nhd_info(sites["site_no"].to_list())
             sites = pd.merge(sites, nhd, left_on="site_no", right_on="site_no", how="left")
 
         urls = [
@@ -408,7 +409,8 @@ class NWIS:
             crs=4326,
         )
 
-    def get_parameter_codes(self, keyword: str) -> pd.DataFrame:
+    @classmethod
+    def get_parameter_codes(cls, keyword: str) -> pd.DataFrame:
         """Search for parameter codes by name or number.
 
         Notes
@@ -441,7 +443,7 @@ class NWIS:
         """
         url = "https://help.waterdata.usgs.gov/code/parameter_cd_nm_query"
         kwds = [{"parm_nm_cd": keyword, "fmt": "rdb"}]
-        return self.retrieve_rdb(url, kwds)
+        return cls.retrieve_rdb(url, kwds)
 
     @staticmethod
     def _to_xarray(qobs: pd.DataFrame, long_names: dict[str, str], mmd: bool) -> xr.Dataset:
@@ -521,14 +523,15 @@ class NWIS:
         end = pd.to_datetime(dates[1], utc=utc)
         return sids_df.to_list(), start, end
 
-    def _drainage_area_sqm(self, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
+    @classmethod
+    def _drainage_area_sqm(cls, siteinfo: pd.DataFrame, freq: str) -> pd.Series:
         """Get drainage area of the stations."""
         if "nhd_areasqkm" not in siteinfo:
-            area = self._nhd_info(siteinfo["site_no"].to_list())
+            area = cls._nhd_info(siteinfo["site_no"].to_list())
             area = area[["site_no", "nhd_areasqkm"]].copy()
         else:
-            area = siteinfo[["site_no", "nhd_areasqkm"]].copy()
-        if area["nhd_areasqkm"].isna().any():
+            area = siteinfo[["site_no", "nhd_areasqkm"]].copy()  # pyright: ignore[reportGeneralTypeIssues]
+        if area["nhd_areasqkm"].isna().any():  # pyright: ignore[reportGeneralTypeIssues]
             sids = area[area["nhd_areasqkm"].isna()].site_no
             queries = [
                 {
@@ -539,7 +542,7 @@ class NWIS:
                 }
                 for s in tlz.partition_all(1500, sids)
             ]
-            info = self.get_info(queries, expanded=True)
+            info = cls.get_info(queries, expanded=True)
 
             def get_idx(ids: list[str]) -> tuple[pd.Index, pd.Index]:
                 return info.site_no.isin(ids), area.site_no.isin(ids)
@@ -547,17 +550,18 @@ class NWIS:
             i_idx, a_idx = get_idx(sids)
             # Drainage areas in info are in sq mi and should be converted to sq km
             area.loc[a_idx, "nhd_areasqkm"] = info.loc[i_idx, "contrib_drain_area_va"] * 0.38610
-            if area["nhd_areasqkm"].isna().any():
+            if area["nhd_areasqkm"].isna().any():  # pyright: ignore[reportGeneralTypeIssues]
                 sids = area[area["nhd_areasqkm"].isna()].site_no
                 i_idx, a_idx = get_idx(sids)
                 area.loc[a_idx, "nhd_areasqkm"] = info.loc[i_idx, "drain_area_va"] * 0.38610
 
-        if area["nhd_areasqkm"].isna().all():
+        if area["nhd_areasqkm"].isna().all():  # pyright: ignore[reportGeneralTypeIssues]
             raise DataNotAvailableError("drainage")
         return area.set_index("site_no").nhd_areasqkm * 1e6
 
+    @classmethod
     def _get_streamflow(
-        self,
+        cls,
         sids: Sequence[str],
         start_dt: str,
         end_dt: str,
@@ -575,7 +579,7 @@ class NWIS:
             for s in tlz.partition_all(1500, sids)
         ]
         resp = ar.retrieve_json(
-            [f"{self.url}/{freq}"] * len(payloads), [{"params": p} for p in payloads]
+            [f"{cls.url}/{freq}"] * len(payloads), [{"params": p} for p in payloads]
         )
         resp = cast("list[dict[str, Any]]", resp)
 
@@ -622,9 +626,10 @@ class NWIS:
         # Convert cfs to cms
         return qobs * np.float_power(0.3048, 3)
 
+    @classmethod
     @overload
     def get_streamflow(
-        self,
+        cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
         freq: str = "dv",
@@ -633,9 +638,10 @@ class NWIS:
     ) -> pd.DataFrame:
         ...
 
+    @classmethod
     @overload
     def get_streamflow(
-        self,
+        cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
         freq: str = "dv",
@@ -644,8 +650,9 @@ class NWIS:
     ) -> xr.Dataset:
         ...
 
+    @classmethod
     def get_streamflow(
-        self,
+        cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
         freq: str = "dv",
@@ -682,7 +689,7 @@ class NWIS:
             raise InputValueError("freq", valid_freqs)
         utc = True if freq == "iv" else None
 
-        sids, start, end = self._check_inputs(station_ids, dates, utc)
+        sids, start, end = cls._check_inputs(station_ids, dates, utc)
 
         queries = [
             {
@@ -697,7 +704,7 @@ class NWIS:
         ]
 
         try:
-            siteinfo = self.get_info(queries)
+            siteinfo = cls.get_info(queries)
         except ZeroMatchedError as ex:
             raise DataNotAvailableError("discharge") from ex
 
@@ -727,7 +734,7 @@ class NWIS:
         time_fmt = T_FMT if utc is None else "%Y-%m-%dT%H:%M%z"
         start_dt = start.strftime(time_fmt)
         end_dt = end.strftime(time_fmt)
-        qobs = self._get_streamflow(sids, start_dt, end_dt, freq, params)
+        qobs = cls._get_streamflow(sids, start_dt, end_dt, freq, params)
 
         n_orig = len(sids)
         sids = [s.split("-")[1] for s in qobs]
@@ -742,7 +749,7 @@ class NWIS:
             )
         siteinfo = siteinfo[siteinfo.site_no.isin(sids)]
         if mmd:
-            area_sqm = self._drainage_area_sqm(siteinfo, freq)
+            area_sqm = cls._drainage_area_sqm(siteinfo, freq)
             ms2mmd = 1000.0 * 24.0 * 3600.0
             try:
                 qobs = pd.DataFrame(
@@ -751,7 +758,7 @@ class NWIS:
             except KeyError as ex:
                 raise DataNotAvailableError("drainage") from ex
 
-        qobs.attrs, long_names = self._get_attrs(siteinfo, mmd)
+        qobs.attrs, long_names = cls._get_attrs(siteinfo, mmd)
         if to_xarray:
-            return self._to_xarray(qobs, long_names, mmd)
+            return cls._to_xarray(qobs, long_names, mmd)
         return qobs
