@@ -301,7 +301,7 @@ def test_irrigation():
 
 def test_soil():
     soil = gh.soil_properties("por")
-    assert soil.dims["x"] == 266301
+    assert soil.sizes["x"] == 266301
 
 
 def test_gnatsgo():
