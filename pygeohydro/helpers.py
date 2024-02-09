@@ -1,10 +1,12 @@
 """Some helper function for PyGeoHydro."""
+
 # pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import io
+from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, NamedTuple, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Tuple, Union, cast
 
 import cytoolz.curried as tlz
 import geopandas as gpd
@@ -15,11 +17,7 @@ from defusedxml import ElementTree
 
 import async_retriever as ar
 from pygeohydro import us_abbrs
-from pygeohydro.exceptions import (
-    InputRangeError,
-    InputTypeError,
-    InputValueError,
-)
+from pygeohydro.exceptions import InputRangeError, InputTypeError, InputValueError
 from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
@@ -56,8 +54,8 @@ def nlcd_helper() -> dict[str, Any]:
         root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
         return (
             root,
-            root.findall(f"{base_path}/edomv"),
-            root.findall(f"{base_path}/edomvd"),
+            root.findall(f"{base_path}/edomv"),  # pyright: ignore[reportAttributeAccessIssue]
+            root.findall(f"{base_path}/edomvd"),  # pyright: ignore[reportAttributeAccessIssue]
         )
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
@@ -168,7 +166,8 @@ def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[p
     return f_list
 
 
-class Stats(NamedTuple):
+@dataclass(frozen=True)
+class Stats:
     """Statistics for NLCD."""
 
     classes: dict[str, float]
@@ -200,7 +199,7 @@ def _get_state_codes(subset_key: str | list[str]) -> list[str]:
 
 
 def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame:
-    """Get US states as a GeoDataFrame from Census' TIGERLine 2022 database.
+    """Get US states as a GeoDataFrame from Census' TIGERLine 2023 database.
 
     Parameters
     ----------
@@ -219,15 +218,16 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
     geopandas.GeoDataFrame
         GeoDataFrame of requested US states.
     """
-    url = "https://www2.census.gov/geo/tiger/TIGER2022/STATE/tl_2022_us_state.zip"
+    url = "https://www2.census.gov/geo/tiger/TIGER2023/STATE/tl_2023_us_state.zip"
     us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))
     if subset_key is not None:
         state_cd = _get_state_codes(subset_key)
-        return us_states[us_states.STUSPS.isin(state_cd)].copy()
-    return us_states
+        return us_states[us_states.STUSPS.isin(state_cd)].copy()  # pyright: ignore[reportReturnType]
+    return us_states  # pyright: ignore[reportReturnType]
 
 
-class StateCounties(NamedTuple):
+@dataclass(frozen=True)
+class StateCounties:
     """State and county codes and names."""
 
     name: str
@@ -264,7 +264,7 @@ def states_lookup_table() -> dict[str, StateCounties]:
     codes = codes.set_index("STATE")
 
     def _county2series(cd: dict[str, dict[str, str]]) -> pd.Series:
-        return pd.DataFrame.from_dict(cd, orient="index")["name"]
+        return pd.DataFrame.from_dict(cd, orient="index")["name"]  # pyright: ignore[reportReturnType]
 
     def _state_cd(state: str) -> str | None:
         try:

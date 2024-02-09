@@ -381,7 +381,7 @@ class SensorThings:
         urls = [f"{self.base_url}('{i}')" for i in sensor_ids]
         data = pd.json_normalize(self._get_urls(urls))
         columns = data.columns[data.columns.str.endswith("Link")]
-        return data.drop(columns=columns)  # pyright: ignore[reportGeneralTypeIssues]
+        return data.drop(columns=columns)  # pyright: ignore[reportCallIssue,reportArgumentType]
 
     def sensor_property(self, sensor_property: str, sensor_ids: str | list[str]) -> pd.DataFrame:
         """Query a sensor property.

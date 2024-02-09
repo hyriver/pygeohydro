@@ -385,7 +385,7 @@ class STNFloodEventData:
             _ = async_retriever_kwargs.pop("url", None)
 
         resp = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)
-        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportGeneralTypeIssues]
+        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportArgumentType]
 
         if as_list:
             return data
@@ -549,7 +549,7 @@ class STNFloodEventData:
             request_kwds=[{"params": query_params}],
             **async_retriever_kwargs,
         )
-        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportGeneralTypeIssues]
+        data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportArgumentType]
         if as_list:
             return data
 

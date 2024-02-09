@@ -3,12 +3,14 @@
 Plots include daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
+
 # pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import contextlib
+from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, NamedTuple, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar, Union
 
 import folium
 import matplotlib.pyplot as plt
@@ -30,7 +32,8 @@ if TYPE_CHECKING:
 __all__ = ["signatures", "prepare_plot_data"]
 
 
-class PlotDataType(NamedTuple):
+@dataclass(frozen=True)
+class PlotDataType:
     """Data structure for plotting hydrologic signatures."""
 
     daily: pd.DataFrame
@@ -38,6 +41,11 @@ class PlotDataType(NamedTuple):
     ranked: pd.DataFrame
     titles: dict[str, str]
     units: dict[str, str]
+
+    @classmethod
+    def fields(cls) -> tuple[str, ...]:
+        """Return the field names of the dataclass."""
+        return tuple(field.name for field in fields(cls))
 
 
 def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
@@ -69,7 +77,7 @@ def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
         "mm/month",
         "mm/day",
     ]
-    fields = PlotDataType._fields
+    fields = PlotDataType.fields()
     titles = dict(zip(fields[:-1], _titles))
     units = dict(zip(fields[:-1], _units))
     return PlotDataType(daily, mean_month, ranked, titles, units)
@@ -85,7 +93,7 @@ def _prepare_plot_data(
     discharge = prepare_plot_data(daily)
     if precipitation is not None:
         if isinstance(precipitation, pd.DataFrame) and precipitation.shape[1] == 1:
-            prcp = prepare_plot_data(precipitation.squeeze())
+            prcp = prepare_plot_data(precipitation.squeeze())  # pyright: ignore[reportArgumentType]
         elif isinstance(precipitation, pd.Series):
             prcp = prepare_plot_data(precipitation)
         else:
@@ -151,9 +159,14 @@ def signatures(
         ax_p = ax.twinx()
         ax_p.grid(False)
         if _prcp.shape[0] > 1000:
-            ax_p.plot(_prcp, alpha=0.7, color="g", label=label)
+            ax_p.plot(  # pyright: ignore[reportAttributeAccessIssue]
+                _prcp,
+                alpha=0.7,
+                color="g",
+                label=label,
+            )
         else:
-            ax_p.bar(
+            ax_p.bar(  # pyright: ignore[reportAttributeAccessIssue]
                 _prcp.index,
                 _prcp.to_numpy().ravel(),
                 alpha=0.7,
@@ -165,7 +178,7 @@ def signatures(
         ax_p.set_ylim(_prcp.max() * 2.5, 0)
         ax_p.set_ylabel(label)
         ax_p.set_xmargin(0)
-        lines_p, labels_p = ax_p.get_legend_handles_labels()
+        lines_p, labels_p = ax_p.get_legend_handles_labels()  # pyright: ignore[reportAttributeAccessIssue]
         lines.extend(lines_p)
         labels.extend(labels_p)
 
