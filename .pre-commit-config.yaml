@@ -34,7 +34,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.15
+  rev: v0.2.1
   hooks:
   - id: ruff
     name: Linting with Ruff
