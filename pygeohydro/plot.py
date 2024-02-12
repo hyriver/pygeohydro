@@ -159,14 +159,14 @@ def signatures(
         ax_p = ax.twinx()
         ax_p.grid(False)
         if _prcp.shape[0] > 1000:
-            ax_p.plot(  # pyright: ignore[reportAttributeAccessIssue]
+            ax_p.plot(
                 _prcp,
                 alpha=0.7,
                 color="g",
                 label=label,
             )
         else:
-            ax_p.bar(  # pyright: ignore[reportAttributeAccessIssue]
+            ax_p.bar(
                 _prcp.index,
                 _prcp.to_numpy().ravel(),
                 alpha=0.7,
@@ -178,7 +178,7 @@ def signatures(
         ax_p.set_ylim(_prcp.max() * 2.5, 0)
         ax_p.set_ylabel(label)
         ax_p.set_xmargin(0)
-        lines_p, labels_p = ax_p.get_legend_handles_labels()  # pyright: ignore[reportAttributeAccessIssue]
+        lines_p, labels_p = ax_p.get_legend_handles_labels()
         lines.extend(lines_p)
         labels.extend(labels_p)
 

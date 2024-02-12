@@ -54,8 +54,8 @@ def nlcd_helper() -> dict[str, Any]:
         root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
         return (
             root,
-            root.findall(f"{base_path}/edomv"),  # pyright: ignore[reportAttributeAccessIssue]
-            root.findall(f"{base_path}/edomvd"),  # pyright: ignore[reportAttributeAccessIssue]
+            root.findall(f"{base_path}/edomv"),
+            root.findall(f"{base_path}/edomvd"),
         )
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
