@@ -7,7 +7,7 @@ History
 
 New Features
 ~~~~~~~~~~~~
-- Converted all methods of ``NWIS`` class to ``classmethod``s so the class can be used
+- Converted all methods of ``NWIS`` class to ``classmethod`` so the class can be used
   without instantiating it. This change makes the class more flexible and easier to use.
 - In ``NID`` class, the ``stage_nid_inventory`` method now checks if the remote NID
   database has been modified since the last download and only downloads the new data
