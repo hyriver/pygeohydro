@@ -7,11 +7,11 @@ import importlib.util
 import io
 import itertools
 import warnings
-import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Sequence, Tuple, Union, cast
 from unittest.mock import patch
+from zipfile import ZipFile
 
 import cytoolz.curried as tlz
 import geopandas as gpd
@@ -22,6 +22,7 @@ import pyproj
 import rasterio as rio
 import requests
 import xarray as xr
+from rasterio.io import MemoryFile
 from rioxarray import _io as rxr
 from shapely.errors import GEOSException
 
@@ -147,9 +148,7 @@ def ssebopeta_bycoords(
 
         def _ssebop(url: str) -> list[npt.NDArray[np.float64]]:
             r = session.get(url)
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-
-            with rio.MemoryFile() as memfile:
+            with ZipFile(io.BytesIO(r.content)) as z, MemoryFile() as memfile:
                 memfile.write(z.read(z.filelist[0].filename))
                 with memfile.open() as src:
                     return list(src.sample(co_list))
@@ -219,9 +218,9 @@ def ssebopeta_bygeom(
 
         def _ssebop(t: pd.Timestamp, url: str) -> xr.DataArray | xr.Dataset:
             resp = session.get(url)
-            zfile = zipfile.ZipFile(io.BytesIO(resp.content))
-            content = zfile.read(zfile.filelist[0].filename)
-            return gtiff2xarray(r_dict={"eta": content}).expand_dims({"time": [t]})
+            with ZipFile(io.BytesIO(resp.content)) as zfile:
+                content = zfile.read(zfile.filelist[0].filename)
+                return gtiff2xarray(r_dict={"eta": content}).expand_dims({"time": [t]})
 
         data = xr.merge(itertools.starmap(_ssebop, f_list))
     eta = data.eta.where(data.eta < data.eta.rio.nodata) * 1e-3
@@ -739,7 +738,7 @@ def soil_properties(
 
     def get_tif(file: Path) -> xr.DataArray:
         """Get the .tif file from a zip file."""
-        with zipfile.ZipFile(file) as z:
+        with ZipFile(file) as z:
             try:
                 fname = next(f.filename for f in z.filelist if f.filename.endswith(".tif"))
             except StopIteration as ex:
@@ -913,7 +912,7 @@ class EHydro(AGRBase):
         _ = ogc.streaming_download(urls, fnames=fnames)
 
         def get_depth(fname: Path) -> gpd.GeoDataFrame:
-            with zipfile.ZipFile(fname, "r") as zip_ref:
+            with ZipFile(fname, "r") as zip_ref:
                 gdb = next(
                     (
                         f"zip://{fname}!{n.filename}"
