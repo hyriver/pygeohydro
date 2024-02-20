@@ -5,6 +5,11 @@ History
 0.16.2 (2024-XX-XX)
 -------------------
 
+Bug Fixes
+~~~~~~~~~
+- In ``nlcd_helper`` function the roughness value for class 82 was set to 0.16
+  instead of 0.037.
+
 New Features
 ~~~~~~~~~~~~
 - Converted all methods of ``NWIS`` class to ``classmethod`` so the class can be used
