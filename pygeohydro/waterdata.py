@@ -290,7 +290,7 @@ class SensorThings:
             ``properties/monitoringLocationType eq 'Stream' and ...``
         expand : dict of dict, optional
             Expand the properties of the selected columns, defaults to ``None``.
-            Note that the expand should have the form of
+            Note that the ``expand`` should have the form of
             ``{Property: {func: value, ...}}``. For example: ``{"Locations":
             {"select": "location", "filter": "ObservedProperty/@iot.id eq '00060'"}}``
         max_count : int, optional

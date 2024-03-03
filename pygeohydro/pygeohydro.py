@@ -820,13 +820,13 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         ds = ds.rio.write_coordinate_system()
         return ds
 
-    ds = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
-    poly = geoutils.geo2polygon(geometry, crs, ds.rio.crs)
-    ds = geoutils.xarray_geomask(ds, poly, ds.rio.crs)
-    _ = ds.attrs.pop("_FillValue", None)
-    _ = ds.attrs.pop("units", None)
-    _ = ds.attrs.pop("long_name", None)
-    return ds
+    soil = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
+    poly = geoutils.geo2polygon(geometry, crs, soil.rio.crs)
+    soil = geoutils.xarray_geomask(soil, poly, soil.rio.crs)
+    _ = soil.attrs.pop("_FillValue", None)
+    _ = soil.attrs.pop("units", None)
+    _ = soil.attrs.pop("long_name", None)
+    return soil
 
 
 class EHydro(AGRBase):

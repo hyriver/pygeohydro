@@ -57,7 +57,7 @@ def streamflow_fillna(streamflow: ArrayLike, missing_max: int = 5) -> ArrayLike:
 
     Parameters
     ----------
-    discharge : xarray.DataArray or pandas.DataFrame or pandas.Series
+    streamflow : xarray.DataArray or pandas.DataFrame or pandas.Series
         Daily streamflow observations with at least 10 years of daily data.
     missing_max : int
         Maximum allowed number of missing daily data per year for filling,

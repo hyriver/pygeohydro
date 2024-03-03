@@ -77,9 +77,9 @@ def prepare_plot_data(daily: pd.DataFrame | pd.Series) -> PlotDataType:
         "mm/month",
         "mm/day",
     ]
-    fields = PlotDataType.fields()
-    titles = dict(zip(fields[:-1], _titles))
-    units = dict(zip(fields[:-1], _units))
+    _fields = PlotDataType.fields()
+    titles = dict(zip(_fields[:-1], _titles))
+    units = dict(zip(_fields[:-1], _units))
     return PlotDataType(daily, mean_month, ranked, titles, units)
 
 
@@ -260,7 +260,7 @@ def interactive_map(
     crs : str, int, or pyproj.CRS, optional
         CRS of the input bounding box, defaults to EPSG:4326.
     nwis_kwds : dict, optional
-        Optional keywords to include in the NWIS request as a dictionary like so:
+        Additional keywords to include in the NWIS request as a dictionary like so:
         ``{"hasDataTypeCd": "dv,iv", "outputDataTypeCd": "dv,iv", "parameterCd": "06000"}``.
         Default to None.
 

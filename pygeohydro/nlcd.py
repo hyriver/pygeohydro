@@ -101,7 +101,7 @@ class NLCD:
 
     def get_layers(self) -> dict[str, str]:
         """Get NLCD layers for the provided years dictionary."""
-        valid_regions = ["L48", "HI", "PR", "AK"]
+        valid_regions = ("L48", "HI", "PR", "AK")
         if self.region not in valid_regions:
             raise InputValueError("region", valid_regions)
 
@@ -128,7 +128,7 @@ class NLCD:
             if lyr == "impervious":
                 return f"NLCD_{yr}_Impervious_{self.region}"
             if self.region in ("HI", "PR"):
-                raise InputValueError("region (descriptor)", ("L48, AK"))  # noqa: TRY003
+                raise InputValueError("region (descriptor)", ("L48", "AK"))  # noqa: TRY003
             service_lyr = (
                 "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
             )
@@ -392,7 +392,7 @@ def nlcd_area_percent(
 
     Parameters
     ----------
-    geometry : geopandas.GeoDataFrame or geopandas.GeoSeries
+    geo_df : geopandas.GeoDataFrame or geopandas.GeoSeries
         A GeoDataFrame or GeoSeries with the geometry to query. The indices are used
         as keys in the output dictionary.
     year : int, optional
@@ -409,7 +409,7 @@ def nlcd_area_percent(
         A dataframe with the same index as input ``geo_df`` and columns are the area
         percentages of the natural, developed, impervious, and urban
         (sum of developed and impervious) areas. Sum of urban and natural percentages
-        is always 100, as well as the sume of natural, developed, and impervious
+        is always 100, as well as the sum of natural, developed, and impervious
         percentages.
     """
     valid_year = (2021, 2019, 2016, 2013, 2011, 2008, 2006, 2004, 2001)

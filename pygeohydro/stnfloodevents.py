@@ -180,8 +180,8 @@ class STNFloodEventData:
 
         return {k: delist(v) for k, v in d.items()}
 
-    @overload
     @classmethod
+    @overload
     def data_dictionary(
         cls,
         data_type: str,
@@ -190,8 +190,8 @@ class STNFloodEventData:
     ) -> pd.DataFrame:
         ...
 
-    @overload
     @classmethod
+    @overload
     def data_dictionary(
         cls,
         data_type: str,
@@ -284,8 +284,8 @@ class STNFloodEventData:
             return data_dict
         return pd.DataFrame(data_dict)
 
-    @overload
     @classmethod
+    @overload
     def get_all_data(
         cls,
         data_type: str,
@@ -295,8 +295,8 @@ class STNFloodEventData:
     ) -> gpd.GeoDataFrame | pd.DataFrame:
         ...
 
-    @overload
     @classmethod
+    @overload
     def get_all_data(
         cls,
         data_type: str,
@@ -403,8 +403,8 @@ class STNFloodEventData:
         x_col, y_col = xy_cols
         return cls._geopandify(data, x_col, y_col, crs, cls.service_crs)
 
-    @overload
     @classmethod
+    @overload
     def get_filtered_data(
         cls,
         data_type: str,
@@ -415,8 +415,8 @@ class STNFloodEventData:
     ) -> gpd.GeoDataFrame | pd.DataFrame:
         ...
 
-    @overload
     @classmethod
+    @overload
     def get_filtered_data(
         cls,
         data_type: str,

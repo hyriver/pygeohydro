@@ -43,7 +43,7 @@ def nlcd_helper() -> dict[str, Any]:
     Returns
     -------
     dict
-        Years where data is available and cover classes and categories, and roughness estimations.
+        Years when data is available and cover classes and categories, and roughness estimations.
     """
     base_url = "https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata"
     base_path = "eainfo/detailed/attr/attrdomv/edom"
@@ -51,11 +51,11 @@ def nlcd_helper() -> dict[str, Any]:
     def _get_xml(
         layer: str,
     ) -> tuple[Any, Any, Any]:
-        root = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
+        et = ElementTree.fromstring(ar.retrieve_text([f"{base_url}/{layer}.xml"], ssl=False)[0])
         return (
-            root,
-            root.findall(f"{base_path}/edomv"),
-            root.findall(f"{base_path}/edomvd"),
+            et,
+            et.findall(f"{base_path}/edomv"),
+            et.findall(f"{base_path}/edomvd"),
         )
 
     root, edomv, edomvd = _get_xml("NLCD_2019_Land_Cover_Science_Product_L48_20210604")
@@ -67,7 +67,7 @@ def nlcd_helper() -> dict[str, Any]:
     colors = {
         int(c): (float(r) / 255.0, float(g) / 255.0, float(b) / 255.0, 1.0) for c, r, g, b in clist
     }
-    colors[0] = (*colors[0][:3], 0.0)
+    colors[0] = (colors[0][0], colors[0][1], colors[0][2], 0.0)
 
     _, edomv, edomvd = _get_xml("nlcd_2019_impervious_descriptor_l48_20210604")
     descriptors = {}
