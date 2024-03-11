@@ -199,6 +199,7 @@ convention = "numpy"
 ]
 
 [tool.ruff.lint.isort]
+required-imports = ["from future import annotations"]
 known-first-party = [
   "async_retriever",
   "pygeoogc",
