@@ -3,6 +3,7 @@
 The original script is from
 `xarray <https://github.com/pydata/xarray/blob/main/xarray/util/print_versions.py>`__
 """
+
 # pyright: reportMissingImports=false
 from __future__ import annotations
 

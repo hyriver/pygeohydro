@@ -1,4 +1,5 @@
 """Accessing WaterData related APIs."""
+
 from __future__ import annotations
 
 import io
@@ -243,13 +244,13 @@ class SensorThings:
 
     @overload
     @staticmethod
-    def _get_urls(url: str, kwd: dict[str, Any] | None = ...) -> dict[str, Any]:
-        ...
+    def _get_urls(url: str, kwd: dict[str, Any] | None = ...) -> dict[str, Any]: ...
 
     @overload
     @staticmethod
-    def _get_urls(url: list[str], kwd: list[dict[str, Any]] | None = ...) -> list[dict[str, Any]]:
-        ...
+    def _get_urls(
+        url: list[str], kwd: list[dict[str, Any]] | None = ...
+    ) -> list[dict[str, Any]]: ...
 
     @staticmethod
     def _get_urls(

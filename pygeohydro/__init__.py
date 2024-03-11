@@ -1,4 +1,7 @@
 """Top-level package for PyGeoHydro."""
+
+from __future__ import annotations
+
 from importlib.metadata import PackageNotFoundError, version
 
 from pygeohydro import helpers, plot

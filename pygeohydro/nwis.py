@@ -1,4 +1,5 @@
 """Accessing NWIS."""
+
 # pyright: reportArgumentType=false,reportCallIssue=false,reportReturnType=false
 from __future__ import annotations
 
@@ -635,8 +636,7 @@ class NWIS:
         freq: str = "dv",
         mmd: bool = False,
         to_xarray: Literal[False] = ...,
-    ) -> pd.DataFrame:
-        ...
+    ) -> pd.DataFrame: ...
 
     @classmethod
     @overload
@@ -647,8 +647,7 @@ class NWIS:
         freq: str = "dv",
         mmd: bool = False,
         to_xarray: Literal[True] = ...,
-    ) -> xr.Dataset:
-        ...
+    ) -> xr.Dataset: ...
 
     @classmethod
     def get_streamflow(

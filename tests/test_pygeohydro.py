@@ -1,4 +1,7 @@
 """Tests for PyGeoHydro package."""
+
+from __future__ import annotations
+
 import io
 import shutil
 

@@ -1,4 +1,5 @@
 """Access USGS Short-Term Network (STN) via Restful API."""
+
 from __future__ import annotations
 
 from io import BytesIO
@@ -187,8 +188,7 @@ class STNFloodEventData:
         data_type: str,
         as_dict: Literal[False] = False,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> pd.DataFrame:
-        ...
+    ) -> pd.DataFrame: ...
 
     @classmethod
     @overload
@@ -197,8 +197,7 @@ class STNFloodEventData:
         data_type: str,
         as_dict: Literal[True] = True,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> dict[str, Any]:
-        ...
+    ) -> dict[str, Any]: ...
 
     @classmethod
     def data_dictionary(
@@ -292,8 +291,7 @@ class STNFloodEventData:
         as_list: Literal[False] = False,
         crs: CRSTYPE = ...,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> gpd.GeoDataFrame | pd.DataFrame:
-        ...
+    ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
     @classmethod
     @overload
@@ -303,8 +301,7 @@ class STNFloodEventData:
         as_list: Literal[True] = True,
         crs: CRSTYPE = ...,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @classmethod
     def get_all_data(
@@ -412,8 +409,7 @@ class STNFloodEventData:
         as_list: Literal[False] = False,
         crs: CRSTYPE = ...,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> gpd.GeoDataFrame | pd.DataFrame:
-        ...
+    ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
     @classmethod
     @overload
@@ -424,8 +420,7 @@ class STNFloodEventData:
         as_list: Literal[True] = True,
         crs: CRSTYPE = ...,
         async_retriever_kwargs: dict[str, Any] | None = ...,
-    ) -> list[dict[str, Any]]:
-        ...
+    ) -> list[dict[str, Any]]: ...
 
     @classmethod
     def get_filtered_data(

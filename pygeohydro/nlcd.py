@@ -1,4 +1,5 @@
 """Accessing data from the supported databases through their APIs."""
+
 from __future__ import annotations
 
 import warnings
