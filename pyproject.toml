@@ -164,6 +164,10 @@ lint.ignore = [
     # conflict with ruff-formatter
     "ISC001",
 ]
+lint.extend-safe-fixes = [
+  # absolute imports
+  "TID252",
+]
 line-length = 100
 
 [tool.ruff.lint.flake8-bugbear]
@@ -212,12 +216,6 @@ known-first-party = [
   "pygridmet",
   "pynldas2",
 ]
-
-[tool.pycln]
-all = true
-expand_stars = true
-no_gitignore = false
-verbose = true
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
