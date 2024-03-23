@@ -279,7 +279,10 @@ class NWIS:
         _queries = queries.copy()
         if expanded:
             _ = [
-                q.pop(k) for k in ("outputDataTypeCd", "outputDataType") for q in _queries if k in q
+                q.pop(k)
+                for k in ("outputDataTypeCd", "outputDataType", "seriesCatalogOutput")
+                for q in _queries
+                if k in q
             ]
             output_type = {"siteOutput": "expanded"}
         else:
@@ -382,8 +385,12 @@ class NWIS:
             numeric_cols += ["drain_area_va", "contrib_drain_area_va"]
 
         with contextlib.suppress(KeyError):
-            sites["begin_date"] = pd.to_datetime(sites["begin_date"])
-            sites["end_date"] = pd.to_datetime(sites["end_date"])
+            sites["begin_date"] = pd.to_datetime(
+                sites["begin_date"], errors="coerce", yearfirst=True
+            ).fillna(sites["begin_date"])
+            sites["end_date"] = pd.to_datetime(
+                sites["end_date"], errors="coerce", yearfirst=True
+            ).fillna(sites["end_date"])
 
         if nhd_info:
             nhd = cls._nhd_info(sites["site_no"].to_list())
