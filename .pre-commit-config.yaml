@@ -21,7 +21,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.3.4
+  rev: v0.3.5
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -89,7 +89,7 @@ repos:
     exclude: \.(html|svg)$
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.12.0
+  rev: v2.13.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
