@@ -37,7 +37,7 @@ GEOM = Polygon(
 
 
 def assert_close(a: float, b: float) -> None:
-    assert np.isclose(a, b, rtol=1e-3).all()
+    np.testing.assert_allclose(a, b, rtol=1e-3)
 
 
 class TestNWIS:
