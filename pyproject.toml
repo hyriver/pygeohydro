@@ -147,6 +147,8 @@ lint.select = [
     "TCH",
     # Ruff-specific rules
     "RUF",
+    # compatibility with numpy 2.0
+    "NPY201",
 ]
 
 exclude = [
