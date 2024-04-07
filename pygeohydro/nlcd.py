@@ -260,7 +260,6 @@ def nlcd_bycoords(
         A GeoDataFrame with the NLCD data and the coordinates.
     """
     nlcd_wms = NLCD(years=years, region=region, crs=3857, ssl=ssl)
-    coords = geoutils.geometry_reproject(coords, 4326, 4326)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords), crs=4326))
     points_proj = points.to_crs(nlcd_wms.crs)
     geoms = points_proj.buffer(50, cap_style=3)
