@@ -50,7 +50,7 @@ dependencies:
 - scipy
 - xarray >=2023.01
 # optional deps
-- numba
+- numba>=0.57
 - numbagg
 
 # py3dep
@@ -98,7 +98,7 @@ dependencies:
 - shapely >=2
 - xarray >=2023.01
 # optional deps
-- numba
+- numba>=0.57
 
 # pygridmet deps
 # - async-retriever

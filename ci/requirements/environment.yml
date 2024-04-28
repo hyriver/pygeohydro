@@ -43,7 +43,7 @@ dependencies:
 - pandas
 - scipy
   # optional deps
-- numba
+- numba>=0.57
 
   # pynhd deps
   # - async-retriever >=0.3.6
