@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from pygeohydro import helpers, plot
+from pygeohydro import helpers, plot, exceptions
 from pygeohydro.exceptions import (
     DataNotAvailableError,
     DependencyError,
@@ -85,5 +85,6 @@ __all__ = [
     "ServiceError",
     "ServiceUnavailableError",
     "show_versions",
+    "exceptions",
     "__version__",
 ]
