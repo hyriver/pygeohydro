@@ -2,6 +2,15 @@
 History
 =======
 
+0.16.2 (2024-XX-XX)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- In ``EHydro`` class, sometimes the requested surveys are not in the same CRS,
+  so they couldn't be combined into a single ``GeoDataFrame``. This issue is fixed
+  by reprojecting all the requested surveys to 5070 CRS before combining them.
+
 0.16.1 (2024-04-24)
 -------------------
 
