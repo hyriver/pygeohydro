@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from pygeohydro import helpers, plot, exceptions
+from pygeohydro import exceptions, helpers, plot
 from pygeohydro.exceptions import (
     DataNotAvailableError,
     DependencyError,

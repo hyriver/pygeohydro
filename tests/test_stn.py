@@ -8,13 +8,13 @@ import pandas as pd
 import pytest
 from pyproj import CRS
 from pyproj.exceptions import CRSError
-from shapely import Polygon
 
 import pygeohydro as gh
 
 
 def assert_close(a: float, b: float) -> None:
     np.testing.assert_allclose(a, b, rtol=1e-3)
+
 
 class TestSTNFloodEventData:
     stn = gh.STNFloodEventData

@@ -10,8 +10,6 @@ import numpy as np
 import pandas as pd
 import pytest
 import xarray as xr
-from pyproj import CRS
-from pyproj.exceptions import CRSError
 from shapely import Polygon
 
 import pygeohydro as gh
