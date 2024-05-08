@@ -928,10 +928,13 @@ class EHydro(AGRBase):
             if self._layer == "SurveyPoint" and "SurveyPointHD" in self._get_layers(gdb):
                 self._layer = "SurveyPointHD"
 
+            gdf = None
             if self._engine == "pyogrio":
                 with contextlib.suppress(GEOSException):
-                    return gpd.read_file(gdb, layer=self._layer, engine="pyogrio", use_arrow=True)  # pyright: ignore[reportReturnType]
-            return gpd.read_file(gdb, layer=self._layer)  # pyright: ignore[reportReturnType]
+                    gdf = gpd.read_file(gdb, layer=self._layer, engine="pyogrio", use_arrow=True)
+            if gdf is None:
+                gdf = gpd.read_file(gdb, layer=self._layer)
+            return gdf.to_crs(5070)  # pyright: ignore[reportCallIssue,reportReturnType]
 
         return gpd.GeoDataFrame(pd.concat((get_depth(f) for f in fnames), ignore_index=True))
 
