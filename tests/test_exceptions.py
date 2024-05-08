@@ -6,7 +6,7 @@ import pytest
 from shapely import Polygon
 
 import pygeohydro as gh
-from pygeohydro import (
+from pygeohydro.exceptions import (
     DataNotAvailableError,
     InputRangeError,
     InputTypeError,
