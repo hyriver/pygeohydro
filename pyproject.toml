@@ -9,8 +9,10 @@ requires = [
 name = "pygeohydro"
 description = "Access geospatial web services that offer hydrological data"
 readme = "README.rst"
-license = {text = "MIT"}
-authors = [{name = "Taher Chegini", email = "cheginit@gmail.com"}]
+license = { text = "MIT" }
+authors = [
+  { name = "Taher Chegini", email = "cheginit@gmail.com" },
+]
 requires-python = ">=3.8"
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -51,162 +53,147 @@ dependencies = [
   "scipy",
   "shapely>=2",
   "ujson",
-  "xarray>=2023.01",
+  "xarray>=2023.1",
 ]
-[project.optional-dependencies]
-io = [
+optional-dependencies.io = [
   "pyogrio",
 ]
-stac = [
+optional-dependencies.stac = [
   "planetary-computer",
   "pystac-client",
 ]
-test = [
+optional-dependencies.test = [
   "pytest-cov",
   "pytest-sugar",
   "pytest-xdist[psutil]",
 ]
-[project.urls]
-CI = "https://github.com/hyriver/pygeohydro/actions"
-Changelog = "https://docs.hyriver.io/changelogs/pygeohydro.html"
-Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
-Issues = "https://github.com/hyriver/pygeohydro/issues"
+urls.Changelog = "https://docs.hyriver.io/changelogs/pygeohydro.html"
+urls.CI = "https://github.com/hyriver/pygeohydro/actions"
+urls.Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
+urls.Issues = "https://github.com/hyriver/pygeohydro/issues"
 
 [tool.setuptools]
 include-package-data = true
-license-files = ["LICENSE"]
-platforms = ["any"]
+license-files = [
+  "LICENSE",
+]
+platforms = [
+  "any",
+]
 zip-safe = false
 
 [tool.setuptools.package-data]
-pygeohydro = ["py.typed"]
+pygeohydro = [
+  "py.typed",
+]
 
 [tool.setuptools.packages]
-find = {namespaces = false}
+find = { namespaces = false }
 
 [tool.setuptools_scm]
 fallback_version = "999"
 
 [tool.ruff]
 target-version = "py38"
-lint.select = [
-    # flake8-bugbear
-    "B",
-    # flake8-comprehensions
-    "C4",
-    # pydocstyle
-    "D",
-    # Error
-    "E",
-    # pyflakes
-    "F",
-    # isort
-    "I",
-    # flake8-implicit-str-concat
-    "ISC",
-    # pep8-naming
-    "N",
-    # pygrep-hooks
-    "PGH",
-    # flake8-pytest-style
-    "PT",
-    # flake8-use-pathlib
-    "PTH",
-    # flake8-quotes
-    "Q",
-    # bandit
-    "S",
-    # flake8-simplify
-    "SIM",
-    # flake8-print
-    "T20",
-    # tryceratops
-    "TRY",
-    # pyupgrade
-    "UP",
-    # Warning
-    "W",
-    # flake8-2020
-    "YTT",
-    # flake8-debugger
-    "T10",
-    # flake8-gettext
-    "INT",
-    # pylint
-    "PLC",
-    "PLE",
-    "PLR",
-    "PLW",
-    # misc lints
-    "PIE",
-    # flake8-pyi
-    "PYI",
-    # tidy imports
-    "TID",
-    # type-checking imports
-    "TCH",
-    # Ruff-specific rules
-    "RUF",
-    # compatibility with numpy 2.0
-    "NPY201",
-]
+line-length = 100
 
 exclude = [
-    "__pycache__",
-    ".nox",
+  ".nox",
+  "__pycache__",
 ]
 
-lint.ignore = [
-    "D103",
-    "D105",
-    "E501",
-    "PLR2004",
-    "PLR0913",
-    "PGH003",
-    # conflict with ruff-formatter
-    "ISC001",
+lint.select = [
+  # flake8-bugbear
+  "B",
+  # flake8-comprehensions
+  "C4",
+  # pydocstyle
+  "D",
+  # Error
+  "E",
+  # pyflakes
+  "F",
+  # isort
+  "I",
+  # flake8-gettext
+  "INT",
+  # flake8-implicit-str-concat
+  "ISC",
+  # pep8-naming
+  "N",
+  # compatibility with numpy 2.0
+  "NPY201",
+  # pygrep-hooks
+  "PGH",
+  # misc lints
+  "PIE",
+  # pylint
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  # flake8-pytest-style
+  "PT",
+  # flake8-use-pathlib
+  "PTH",
+  # flake8-pyi
+  "PYI",
+  # flake8-quotes
+  "Q",
+  # Ruff-specific rules
+  "RUF",
+  # bandit
+  "S",
+  # flake8-simplify
+  "SIM",
+  # flake8-debugger
+  "T10",
+  # flake8-print
+  "T20",
+  # type-checking imports
+  "TCH",
+  # tidy imports
+  "TID",
+  # tryceratops
+  "TRY",
+  # pyupgrade
+  "UP",
+  # Warning
+  "W",
+  # flake8-2020
+  "YTT",
+]
+
+lint.per-file-ignores."tests/*.py" = [
+  "D100",
+  "D101",
+  "D102",
+  "D103",
+  "D104",
+  "D105",
+  "D106",
+  "D107",
+  # use of "eval"
+  "PGH001",
+  # Mutable class attributes
+  "RUF012",
+  # use of "assert"
+  "S101",
+  # use of "exec"
+  "S102",
+  # possible hardcoded password
+  "S106",
 ]
 lint.extend-safe-fixes = [
   # absolute imports
   "TID252",
 ]
-line-length = 100
-
-[tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = [
-    "chr",
-    "typer.Argument",
-    "typer.Option",
+lint.flake8-bugbear.extend-immutable-calls = [
+  "chr",
+  "typer.Argument",
+  "typer.Option",
 ]
-
-[tool.ruff.lint.pydocstyle]
-convention = "numpy"
-
-[tool.ruff.lint.per-file-ignores]
-"tests/*.py" = [
-    "D100",
-    "D101",
-    "D102",
-    "D103",
-    "D104",
-    "D105",
-    "D106",
-    "D107",
-    # use of "assert"
-    "S101",
-    # use of "exec"
-    "S102",
-    # possible hardcoded password
-    "S106",
-    # use of "eval"
-    "PGH001",
-    # Mutable class attributes
-    "RUF012",
-]
-
-[tool.ruff.lint.isort]
-required-imports = ["from __future__ import annotations"]
-known-first-party = [
+lint.isort.known-first-party = [
   "async_retriever",
   "pygeoogc",
   "pygeoutils",
@@ -217,6 +204,20 @@ known-first-party = [
   "pydaymet",
   "pygridmet",
   "pynldas2",
+]
+lint.isort.required-imports = [
+  "from __future__ import annotations",
+]
+lint.pydocstyle.convention = "numpy"
+lint.ignore = [
+  "D103",
+  "D105",
+  "E501",
+  # conflict with ruff-formatter
+  "ISC001",
+  "PGH003",
+  "PLR0913",
+  "PLR2004",
 ]
 
 [tool.codespell]
@@ -236,13 +237,13 @@ filterwarnings = [
 ]
 testpaths = [
   "tests",
-  "pygeohydro"
+  "pygeohydro",
 ]
 
 [tool.coverage.report]
 exclude_lines = [
   'raise ServiceUnavailableError',
-  "if TYPE_CHECKING:"
+  "if TYPE_CHECKING:",
 ]
 ignore_errors = true
 
@@ -250,19 +251,23 @@ ignore_errors = true
 branch = true
 omit = [
   "**/__init__.py",
-  "**/print_versions.py"
+  "**/print_versions.py",
 ]
 parallel = true
-source = ['pygeohydro']
+source = [
+  'pygeohydro',
+]
 
 [tool.pyright]
 exclude = [
   ".nox/",
   "**/__pycache__",
   "**/__init__.py",
-  "tests/"
+  "tests/",
 ]
-include = ["pygeohydro"]
+include = [
+  "pygeohydro",
+]
 reportMissingTypeStubs = false
 reportUnknownArgumentType = false
 reportUnknownLambdaType = false
@@ -283,4 +288,6 @@ quiet = true
 
 [[tool.refurb.amend]]
 path = "tests"
-ignore = ["FURB184"]
+ignore = [
+  "FURB184",
+]
