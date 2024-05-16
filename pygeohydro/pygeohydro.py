@@ -349,7 +349,9 @@ class NID:
             if _remote_file_modified(fname.with_suffix(".gpkg")):
                 fname.with_suffix(".gpkg").unlink()
             url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
-            _ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
+            fname_ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
+            if fname_ is None:
+                raise EmptyResponseError
             dams = (
                 gpd.read_file(fname.with_suffix(".gpkg"), engine="pyogrio", use_arrow=True)
                 if importlib.util.find_spec("pyogrio")
@@ -463,8 +465,10 @@ class NID:
         if par_name.exists():
             return pd.read_parquet(par_name)
         url = "https://nid.sec.usace.army.mil/api/nation/csv"
-        _ = ogc.streaming_download(url, fnames=fname.with_suffix(".csv"))
-        dams = pd.read_csv(fname.with_suffix(".csv"), header=1, engine="pyarrow")
+        fname = ogc.streaming_download(url, fnames=fname.with_suffix(".csv"))
+        if fname is None:
+            raise EmptyResponseError
+        dams = pd.read_csv(fname, header=1, engine="pyarrow")
         dams.to_parquet(par_name)
         return dams
 
@@ -735,7 +739,8 @@ def soil_properties(
     root = Path(soil_dir)
     root.mkdir(exist_ok=True, parents=True)
     files = [root.joinpath(f) for f in _files]
-    _ = ogc.streaming_download(urls, fnames=files)
+    files = ogc.streaming_download(urls, fnames=files)
+    files = [f for f in files if f is not None]
 
     def get_tif(file: Path) -> xr.DataArray:
         """Get the .tif file from a zip file."""
@@ -812,6 +817,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 
     def get_layer(lyr: str) -> xr.DataArray:
         fpaths = ogc.streaming_download(list(lyr_href[lyr]), file_extention="tiff")
+        fpaths = [f for f in fpaths if f is not None]
         ds = xr.merge(_open_tiff(f, lyr) for f in fpaths)
         affine = ds.rio.transform(recalc=True)
         with rio.open(fpaths[0]) as src:
@@ -908,9 +914,14 @@ class EHydro(AGRBase):
         warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
 
     def __post_process(self, survey: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        urls = survey["sourcedatalocation"].to_list()
+        urls = survey.loc[~survey["sourcedatalocation"].str.contains("placeholder"), "sourcedatalocation"].to_list()
+        if not urls:
+            raise ZeroMatchedError(self._error_msg)
         fnames = [Path("cache", Path(u).name) for u in urls]
-        _ = ogc.streaming_download(urls, fnames=fnames)
+        fnames = ogc.streaming_download(urls, fnames=fnames)
+        fnames = [f for f in fnames if f is not None]
+        if len(fnames) == 0:
+            raise ZeroMatchedError(self._error_msg)
 
         def get_depth(fname: Path) -> gpd.GeoDataFrame:
             with ZipFile(fname, "r") as zip_ref:
@@ -925,7 +936,10 @@ class EHydro(AGRBase):
                 if gdb is None:
                     raise ZeroMatchedError(self._error_msg)
 
-            if self._layer == "SurveyPoint" and "SurveyPointHD" in self._get_layers(gdb):
+            layers = self._get_layers(gdb)
+            if self._layer not in layers:
+                raise ZeroMatchedError(self._error_msg)
+            if self._layer == "SurveyPoint" and "SurveyPointHD" in layers:
                 self._layer = "SurveyPointHD"
 
             gdf = None
