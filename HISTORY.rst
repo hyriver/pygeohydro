@@ -7,6 +7,10 @@ History
 
 Internal Changes
 ~~~~~~~~~~~~~~~~
+- More robust handling of failed download links for eHydro data.
+  For example, sometimes, eHydro web service uses placeholder as actual
+  links. There are also cases where links are in the database but they
+  are dead.
 - Add the ``exceptions`` module to the high-level API to declutter
   the main module. In the future, all exceptions will be raised from
   this module and not from the main module. For now, the exceptions
