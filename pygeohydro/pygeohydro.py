@@ -914,13 +914,15 @@ class EHydro(AGRBase):
         warnings.filterwarnings("ignore", message=".*OGR_GEOMETRY_ACCEPT_UNCLOSED_RING.*")
 
     def __post_process(self, survey: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-        urls = survey.loc[~survey["sourcedatalocation"].str.contains("placeholder"), "sourcedatalocation"].to_list()
+        urls = survey.loc[
+            ~survey["sourcedatalocation"].str.contains("placeholder"), "sourcedatalocation"
+        ].to_list()
         if not urls:
             raise ZeroMatchedError(self._error_msg)
         fnames = [Path("cache", Path(u).name) for u in urls]
         fnames = ogc.streaming_download(urls, fnames=fnames)
         fnames = [f for f in fnames if f is not None]
-        if len(fnames) == 0:
+        if not fnames:
             raise ZeroMatchedError(self._error_msg)
 
         def get_depth(fname: Path) -> gpd.GeoDataFrame:

@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Union, cast
 
 import geopandas as gpd
-from matplotlib.pylab import f
 import pandas as pd
 import xarray as xr
 
