@@ -244,7 +244,7 @@ def _remote_file_modified(file_path: Path) -> bool:
     # we need to send a request with the Range header set to 0-0 to avoid downloading
     # the entire file.
     response = requests.get(url, headers={"Range": "bytes=0-0"}, allow_redirects=True, timeout=50)
-    if response.status_code != 200:
+    if response.status_code not in (200, 206):
         raise ServiceError(response.reason, url)
     response = requests.head(response.url, timeout=50)
     if response.status_code != 200:
