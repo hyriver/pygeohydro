@@ -239,6 +239,8 @@ def ssebopeta_bygeom(
 
 def _remote_file_modified(file_path: Path) -> bool:
     """Check if the file is older than the last modification date of the NID web service."""
+    if not file_path.exists():
+        return True
     url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
     # we need to get the redirect URL so that we can get the last modified date, so
     # we need to send a request with the Range header set to 0-0 to avoid downloading
@@ -252,7 +254,7 @@ def _remote_file_modified(file_path: Path) -> bool:
 
     remote_last_modified = datetime.strptime(
         response.headers["Last-Modified"], "%a, %d %b %Y %H:%M:%S GMT"
-    )
+    ).replace(tzinfo=timezone.utc)
     local_last_modified = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
     return local_last_modified < remote_last_modified
 
@@ -319,11 +321,11 @@ class NID:
             "maxDischarge": "cfs",
             "spillwayWidth": "ft",
         }
-        self._nid_inventory_path = Path("cache", "nid_inventory.feather")
+        self._nid_inventory_path = Path("cache", "full_nid_inventory.parquet")
 
     @property
     def nid_inventory_path(self) -> Path:
-        """Path to the NID inventory feather file."""
+        """Path to the NID inventory parquet file."""
         return self._nid_inventory_path
 
     @nid_inventory_path.setter
@@ -332,30 +334,30 @@ class NID:
         self._nid_inventory_path.parent.mkdir(parents=True, exist_ok=True)
 
     def stage_nid_inventory(self, fname: str | Path | None = None) -> None:
-        """Download the entire NID inventory data and save to a feather file.
+        """Download the entire NID inventory data and save to a parquet file.
 
         Parameters
         ----------
         fname : str, pathlib.Path, optional
             The path to the file to save the data to, defaults to
-            ``./cache/nid_inventory.feather``.
+            ``./cache/full_nid_inventory.parquet``.
         """
         fname = self.nid_inventory_path if fname is None else Path(fname)
-        if fname.suffix != ".feather":
-            fname = fname.with_suffix(".feather")
+        if fname.suffix != ".parquet":
+            fname = fname.with_suffix(".parquet")
 
         self.nid_inventory_path = fname
-        if not self.nid_inventory_path.exists():
-            if _remote_file_modified(fname.with_suffix(".gpkg")):
-                fname.with_suffix(".gpkg").unlink()
+        gpkg_file = fname.with_suffix(".gpkg")
+        if _remote_file_modified(gpkg_file) or not self.nid_inventory_path.exists():
+            gpkg_file.unlink(missing_ok=True)
             url = "https://nid.sec.usace.army.mil/api/nation/gpkg"
-            fname_ = ogc.streaming_download(url, fnames=fname.with_suffix(".gpkg"))
+            fname_ = ogc.streaming_download(url, fnames=gpkg_file)
             if fname_ is None:
                 raise EmptyResponseError
             dams = (
-                gpd.read_file(fname.with_suffix(".gpkg"), engine="pyogrio", use_arrow=True)
+                gpd.read_file(gpkg_file, engine="pyogrio", use_arrow=True)
                 if importlib.util.find_spec("pyogrio")
-                else gpd.read_file(fname.with_suffix(".gpkg"))
+                else gpd.read_file(gpkg_file)
             )
 
             dams = dams.astype(
@@ -435,10 +437,6 @@ class NID:
                     "eapId": str,
                     "eapLastRevDate": "datetime64[ns]",
                     "websiteUrl": str,
-                    "privateDamId": str,
-                    "politicalPartyId": str,
-                    "id": "int32",
-                    "systemId": "int32",
                     "huc2": str,
                     "huc4": str,
                     "huc6": str,
@@ -454,8 +452,7 @@ class NID:
                 if (dams[c] == "Yes").any():
                     dams[c] = dams[c] == "Yes"
             dams.loc[dams["yearCompleted"] < 1000, "yearCompleted"] = pd.NA
-            dams.to_feather(fname)
-            fname.with_suffix(".gpkg").unlink()
+            dams.to_parquet(fname)
 
     @property
     def df(self):
@@ -476,7 +473,7 @@ class NID:
     def gdf(self):
         """Entire NID inventory (``gpkg`` version) as a ``geopandas.GeoDataFrame``."""
         self.stage_nid_inventory()
-        return gpd.read_feather(self.nid_inventory_path)
+        return gpd.read_parquet(self.nid_inventory_path)
 
     @staticmethod
     def _get_json(
