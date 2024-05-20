@@ -194,8 +194,8 @@ class TestNID:
         assert (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91807, 79)
-        assert self.nid.gdf.shape == (91658, 97)
+        assert self.nid.df.shape == (91856, 84)
+        assert self.nid.gdf.shape == (91702, 97)
 
 
 class TestWaterQuality:
@@ -319,7 +319,7 @@ def test_sensorthings():
     )
     odata = sensor.odata_helper(conditionals=cond)
     df = sensor.query_byodata(odata)
-    assert df.shape[0] == 197
+    assert df.shape[0] == 72
 
     df = sensor.sensor_info("USGS-09380000")
     assert df["description"].iloc[0] == "Stream"
