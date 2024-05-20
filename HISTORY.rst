@@ -2,7 +2,7 @@
 History
 =======
 
-0.16.4 (2024-XX-XX)
+0.16.4 (2024-05-20)
 -------------------
 
 Bug Fixes
@@ -11,6 +11,10 @@ Bug Fixes
   when the response status code was 206 (partial content). This issue is fixed
   by checking the response status code and if it's 206, the function will continue
   reading the headers and the get the modified date from the response headers.
+  Also, the function incorrectly didn't check if the local database was up-to-date
+  with the remote database when the processed database already existed. Now, the
+  function will check changes in the remote database and re-download the data even if
+  necessary even if the processed database exists.
 
 0.16.3 (2024-05-16)
 -------------------
