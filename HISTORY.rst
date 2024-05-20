@@ -2,6 +2,16 @@
 History
 =======
 
+0.16.4 (2024-XX-XX)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Fix an issue in ``NID.stage_nid_inventory`` where the function was failing
+  when the response status code was 206 (partial content). This issue is fixed
+  by checking the response status code and if it's 206, the function will continue
+  reading the headers and the get the modified date from the response headers.
+
 0.16.3 (2024-05-16)
 -------------------
 
