@@ -916,8 +916,8 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 
 
 def soil_soilgrids(
-    layers: list[str],
-    geometry: Polygon | MultiPolygon,
+    layers: list[str] | str,
+    geometry: GTYPE,
     geo_crs: CRSTYPE = 4326,
 ) -> xr.Dataset:
     """Get soil data from SoilGrids for the area of interest.
@@ -948,6 +948,7 @@ def soil_soilgrids(
     xarray.DataArray
         The request DEM at the specified resolution.
     """
+    layers_ = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
     valid_depths = {
         "5": "0-5cm",
         "15": "5-15cm",
@@ -960,11 +961,13 @@ def soil_soilgrids(
         f"{layer}_{depth}"
         for layer, depth in itertools.product(SG_ATTRS.keys(), valid_depths.keys())
     ]
-    invalid_layers = [layer for layer in layers if layer not in valid_layers]
+    invalid_layers = [layer for layer in layers_ if layer not in valid_layers]
     if invalid_layers:
         raise InputValueError("layers", valid_layers, ", ".join(invalid_layers))
-    lyr_names, lyr_depths = zip(*[layer.split("_") for layer in layers], strict=False)
+    lyr_names, lyr_depths = zip(*[layer.split("_") for layer in layers_])
     base_url = "https://files.isric.org/soilgrids/latest/data"
+    geometry_ = geoutils.geo2polygon(geometry)
+    bounds = geometry_.bounds
 
     def _read_layer(lyr: str, depth: str) -> xr.DataArray:
         """Read a SoilGrids layer."""
@@ -972,8 +975,8 @@ def soil_soilgrids(
         ds = cast("xr.DataArray", ds)
         ds = (
             ds.squeeze(drop=True)
-            .rio.clip_box(*geometry.bounds, crs=geo_crs)
-            .rio.clip([geometry], crs=geo_crs)
+            .rio.clip_box(*bounds, crs=geo_crs)
+            .rio.clip([geometry_], crs=geo_crs)
         )
         ds = ds.where(ds != ds.rio.nodata)
         ds = ds.rio.write_nodata(np.nan)
@@ -989,9 +992,7 @@ def soil_soilgrids(
 
         return ds
 
-    return xr.merge(
-        [_read_layer(lyr, valid_depths[d]) for lyr, d in zip(lyr_names, lyr_depths, strict=False)]
-    )
+    return xr.merge([_read_layer(lyr, valid_depths[d]) for lyr, d in zip(lyr_names, lyr_depths)])
 
 
 class EHydro(AGRBase):

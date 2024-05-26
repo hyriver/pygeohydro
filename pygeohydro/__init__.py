@@ -35,6 +35,7 @@ from pygeohydro.pygeohydro import (
     get_camels,
     soil_gnatsgo,
     soil_properties,
+    soil_soilgrids,
     ssebopeta_bycoords,
     ssebopeta_bygeom,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "ssebopeta_bycoords",
     "soil_properties",
     "soil_gnatsgo",
+    "soil_soilgrids",
     "helpers",
     "get_us_states",
     "plot",
