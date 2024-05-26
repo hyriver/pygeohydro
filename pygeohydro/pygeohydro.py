@@ -56,6 +56,7 @@ __all__ = [
     "soil_properties",
     "soil_gnatsgo",
     "soil_properties",
+    "soil_soilgrids",
     "NID",
     "EHydro",
 ]
