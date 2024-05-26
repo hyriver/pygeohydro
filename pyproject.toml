@@ -164,6 +164,17 @@ lint.select = [
   "YTT",
 ]
 
+lint.ignore = [
+  "D103",
+  "D105",
+  "E501",
+  # conflict with ruff-formatter
+  "ISC001",
+  "PGH003",
+  "PLR0913",
+  "PLR2004",
+]
+
 lint.per-file-ignores."tests/*.py" = [
   "D100",
   "D101",
@@ -209,16 +220,6 @@ lint.isort.required-imports = [
   "from __future__ import annotations",
 ]
 lint.pydocstyle.convention = "numpy"
-lint.ignore = [
-  "D103",
-  "D105",
-  "E501",
-  # conflict with ruff-formatter
-  "ISC001",
-  "PGH003",
-  "PLR0913",
-  "PLR2004",
-]
 
 [tool.codespell]
 skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
