@@ -2,6 +2,17 @@
 History
 =======
 
+0.16.5 (2024-XX-XX)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add new function called ``soil_soilgrids`` to get soil data from the
+  SoilGrids dataset. The signature of the function is the same as of the
+  ``soil_gnatsgo`` function, so they can be used interchangeably.
+  For more information on the SoilGrids dataset, visit
+  `ISRIC <https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean>`__.
+
 0.16.4 (2024-05-20)
 -------------------
 
