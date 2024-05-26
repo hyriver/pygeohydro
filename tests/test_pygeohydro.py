@@ -309,7 +309,14 @@ def test_gnatsgo():
     layers = ["Tk0_100a", "Soc20_50"]
     geometry = (-95.624515, 30.121598, -95.448253, 30.264074)
     soil = gh.soil_gnatsgo(layers, geometry, 4326)
-    assert_close(soil.tk0_100a.mean().compute().item(), 89.848)
+    assert_close(soil.tk0_100a.mean().item(), 89.848)
+
+
+def test_soilgrid():
+    layers = "bdod_5"
+    geometry = (-95.624515, 30.121598, -95.448253, 30.264074)
+    soil = gh.soil_soilgrids(layers, geometry, 4326)
+    assert_close(soil.bdod_0_5cm_mean.mean().item(), 1.4459)
 
 
 def test_sensorthings():
