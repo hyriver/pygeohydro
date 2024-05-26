@@ -892,7 +892,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     lyr_href = tlz.merge_with(
         set, ({n: a.href for n, a in i.assets.items()} for i in search.items())
     )
-    lyrs = [layers] if isinstance(layers, str) else list(layers)
+    layers_ = [layers] if isinstance(layers, str) else list(layers)
 
     def get_layer(lyr: str) -> xr.DataArray:
         fpaths = ogc.streaming_download(list(lyr_href[lyr]), file_extention="tiff")
@@ -906,7 +906,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         ds = ds.rio.write_coordinate_system()
         return ds
 
-    soil = xr.merge((get_layer(lyr) for lyr in lyrs), combine_attrs="drop_conflicts")
+    soil = xr.merge((get_layer(lyr) for lyr in layers_), combine_attrs="drop_conflicts")
     poly = geoutils.geo2polygon(geometry, crs, soil.rio.crs)
     soil = geoutils.xarray_geomask(soil, poly, soil.rio.crs)
     _ = soil.attrs.pop("_FillValue", None)
