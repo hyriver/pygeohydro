@@ -892,7 +892,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     lyr_href = tlz.merge_with(
         set, ({n: a.href for n, a in i.assets.items()} for i in search.items())
     )
-    lyrs = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
+    lyrs = [layers] if isinstance(layers, str) else list(layers)
 
     def get_layer(lyr: str) -> xr.DataArray:
         fpaths = ogc.streaming_download(list(lyr_href[lyr]), file_extention="tiff")
@@ -948,7 +948,7 @@ def soil_soilgrids(
     xarray.DataArray
         The request DEM at the specified resolution.
     """
-    layers_ = [layers.lower()] if isinstance(layers, str) else map(str.lower, layers)
+    layers_ = [layers] if isinstance(layers, str) else list(layers)
     valid_depths = {
         "5": "0-5cm",
         "15": "5-15cm",
