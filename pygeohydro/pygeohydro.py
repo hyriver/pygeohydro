@@ -55,9 +55,91 @@ __all__ = [
     "ssebopeta_bygeom",
     "soil_properties",
     "soil_gnatsgo",
+    "soil_properties",
     "NID",
     "EHydro",
 ]
+
+
+SG_ATTRS = {
+    "bdod": {
+        "description": "Bulk density of the fine earth fraction",
+        "long_name": "Bulk Density",
+        "mapped_units": "cg/cm³",
+        "conversion_factor": 100,
+        "conventional_units": "kg/dm³",
+    },
+    "cec": {
+        "description": "Cation Exchange Capacity of the soil",
+        "long_name": "Cation Exchange Capacity",
+        "mapped_units": "mmol(c)/kg",
+        "conversion_factor": 10,
+        "conventional_units": "cmol(c)/kg",
+    },
+    "cfvo": {
+        "description": "Volumetric fraction of coarse fragments (> 2 mm)",
+        "long_name": "Coarse Fragments Vol",
+        "mapped_units": "cm3/dm3 (vol‰)",
+        "conversion_factor": 10,
+        "conventional_units": "cm3/100cm3 (vol%)",
+    },
+    "clay": {
+        "description": "Proportion of clay particles (< 0.002 mm) in the fine earth fraction",
+        "long_name": "Clay Content",
+        "mapped_units": "g/kg",
+        "conversion_factor": 10,
+        "conventional_units": "g/100g (%)",
+    },
+    "nitrogen": {
+        "description": "Total nitrogen (N)",
+        "long_name": "Nitrogen Content",
+        "mapped_units": "cg/kg",
+        "conversion_factor": 100,
+        "conventional_units": "g/kg",
+    },
+    "phh2o": {
+        "description": "Soil pH",
+        "long_name": "Ph In H2O",
+        "mapped_units": "pHx10",
+        "conversion_factor": 10,
+        "conventional_units": "pH",
+    },
+    "sand": {
+        "description": "Proportion of sand particles (> 0.05 mm) in the fine earth fraction",
+        "long_name": "Sand Content",
+        "mapped_units": "g/kg",
+        "conversion_factor": 10,
+        "conventional_units": "g/100g (%)",
+    },
+    "silt": {
+        "description": "Proportion of silt particles (≥ 0.002 mm and ≤ 0.05 mm) in the fine earth fraction",
+        "long_name": "Silt Content",
+        "mapped_units": "g/kg",
+        "conversion_factor": 10,
+        "conventional_units": "g/100g (%)",
+    },
+    "soc": {
+        "description": "Soil organic carbon content in the fine earth fraction",
+        "long_name": "Soil Organic Carbon",
+        "mapped_units": "dg/kg",
+        "conversion_factor": 10,
+        "conventional_units": "g/kg",
+    },
+    "ocd": {
+        "description": "Organic carbon density",
+        "long_name": "Organic Carbon Density",
+        "mapped_units": "hg/m³",
+        "conversion_factor": 10,
+        "conventional_units": "kg/m³",
+    },
+    "ocs": {
+        "description": "Organic carbon stocks",
+        "long_name": "Organic Carbon Stock",
+        "mapped_units": "t/ha",
+        "conversion_factor": 10,
+        "conventional_units": "kg/m²",
+    },
+}
 
 
 def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
@@ -831,6 +913,85 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
     _ = soil.attrs.pop("units", None)
     _ = soil.attrs.pop("long_name", None)
     return soil
+
+
+def soil_soilgrids(
+    layers: list[str],
+    geometry: Polygon | MultiPolygon,
+    geo_crs: CRSTYPE = 4326,
+) -> xr.Dataset:
+    """Get soil data from SoilGrids for the area of interest.
+
+    Notes
+    -----
+    For more information on the SoilGrids dataset, visit
+    `ISRIC <https://www.isric.org/explore/soilgrids/faq-soilgrids#What_do_the_filename_codes_mean>`__.
+
+    Parameters
+    ----------
+    layers : list of str
+        SoilGrids layers to get. Available options are:
+        ``bdod_*``, ``cec_*``, ``cfvo_*``, ``clay_*``, ``nitrogen_*``, ``ocd_*``,
+        ``ocs_*``, ``phh2o_*``, ``sand_*``, ``silt_*``, and ``soc_*`` where ``*``
+        is the depth in cm and can be one of ``5``, ``15``, ``30``, ``60``,
+        ``100``, or ``200``. For example, ``bdod_5`` is the mean bulk density of
+        the fine earth fraction at 0-5 cm depth, and ``bdod_200`` is the mean bulk
+        density of the fine earth fraction at 100-200 cm depth.
+    geometry : Polygon, MultiPolygon, or tuple of length 4
+        Geometry to get DEM within. It can be a polygon or a boundong box
+        of form (xmin, ymin, xmax, ymax).
+    geo_crs : int, str, of pyproj.CRS, optional
+        CRS of the input geometry, defaults to ``epsg:4326``.
+
+    Returns
+    -------
+    xarray.DataArray
+        The request DEM at the specified resolution.
+    """
+    valid_depths = {
+        "5": "0-5cm",
+        "15": "5-15cm",
+        "30": "15-30cm",
+        "60": "30-60cm",
+        "100": "60-100cm",
+        "200": "100-200cm",
+    }
+    valid_layers = [
+        f"{layer}_{depth}"
+        for layer, depth in itertools.product(SG_ATTRS.keys(), valid_depths.keys())
+    ]
+    invalid_layers = [layer for layer in layers if layer not in valid_layers]
+    if invalid_layers:
+        raise InputValueError("layers", valid_layers, ", ".join(invalid_layers))
+    lyr_names, lyr_depths = zip(*[layer.split("_") for layer in layers], strict=False)
+    base_url = "https://files.isric.org/soilgrids/latest/data"
+
+    def _read_layer(lyr: str, depth: str) -> xr.DataArray:
+        """Read a SoilGrids layer."""
+        ds = rxr.open_rasterio(f"{base_url}/{lyr}/{lyr}_{depth}_mean.vrt")
+        ds = cast("xr.DataArray", ds)
+        ds = (
+            ds.squeeze(drop=True)
+            .rio.clip_box(*geometry.bounds, crs=geo_crs)
+            .rio.clip([geometry], crs=geo_crs)
+        )
+        ds = ds.where(ds != ds.rio.nodata)
+        ds = ds.rio.write_nodata(np.nan)
+
+        # Convert mapped units to conventional units
+        attributes = SG_ATTRS[lyr]
+        ds = ds / attributes["conversion_factor"]
+
+        ds.name = f"{lyr}_{depth.replace('-', '_')}_mean"
+        ds.attrs["long_name"] = f"Mean {attributes['long_name']} ({depth})"
+        ds.attrs["description"] = attributes["description"]
+        ds.attrs["units"] = attributes["conventional_units"]
+
+        return ds
+
+    return xr.merge(
+        [_read_layer(lyr, valid_depths[d]) for lyr, d in zip(lyr_names, lyr_depths, strict=False)]
+    )
 
 
 class EHydro(AGRBase):
