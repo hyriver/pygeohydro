@@ -226,7 +226,7 @@ skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
 ignore-words-list = "gage,gages,paramss,trough"
 
 [tool.pytest.ini_options]
-addopts = "--ignore=noxfile.py -n=auto -v --cov=pygeohydro --cov-report xml --durations=5"
+addopts = "--ignore=noxfile.py -n=auto -v --durations=5"
 doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
 filterwarnings = [
   "ignore:.*distutils.*",
