@@ -143,8 +143,7 @@ class NLCD:
         resolution: int,
     ) -> xr.Dataset:
         """Get NLCD response and convert it to ``xarray.DataArray``."""
-        bbox = cast("tuple[float, float, float, float]", geometry.bounds)
-        r_dict = self.wms.getmap_bybox(bbox, resolution, self.crs)
+        r_dict = self.wms.getmap_bybox(geometry.bounds, resolution, self.crs)
         gtiff2xarray = tlz.partial(
             geoutils.gtiff2xarray, geometry=geometry, geo_crs=self.crs, nodata=255
         )

@@ -894,6 +894,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
         set, ({n: a.href for n, a in i.assets.items()} for i in search.items())
     )
     layers_ = [layers] if isinstance(layers, str) else list(layers)
+    layers_ = [lyr.lower() for lyr in layers_]
 
     def get_layer(lyr: str) -> xr.DataArray:
         fpaths = ogc.streaming_download(list(lyr_href[lyr]), file_extention="tiff")
