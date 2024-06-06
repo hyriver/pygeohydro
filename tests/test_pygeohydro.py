@@ -15,7 +15,7 @@ from shapely import Polygon
 import pygeohydro as gh
 import pygeoutils as geoutils
 import pynhd as nhd
-from pygeohydro import NFHL, NID, NWIS, WBD, EHydro
+from pygeohydro import NFHL, NID, NLD, NWIS, WBD, EHydro
 
 DEF_CRS = 4326
 ALT_CRS = 3542
@@ -205,11 +205,11 @@ class TestWaterQuality:
         stations = self.wq.station_bybbox(
             (-92.8, 44.2, -88.9, 46.0), {"characteristicName": "Caffeine"}
         )
-        assert stations.shape[0] == 82
+        assert stations.shape[0] == 83
 
     def test_distance(self):
         stations = self.wq.station_bydistance(-92.8, 44.2, 30, {"characteristicName": "Caffeine"})
-        assert stations.shape[0] == 40
+        assert stations.shape[0] == 44
 
     def test_data(self):
         stations = [
@@ -305,6 +305,12 @@ def test_soil():
     assert soil.sizes["x"] == 266301
 
 
+def test_nld():
+    nld = NLD("levee_stations")
+    levees = nld.bygeom((-105.914551, 37.437388, -105.807434, 37.522392))
+    assert levees.shape == (1838, 12)
+
+
 def test_gnatsgo():
     layers = ["Tk0_100a", "Soc20_50"]
     geometry = (-95.624515, 30.121598, -95.448253, 30.264074)
@@ -345,8 +351,8 @@ def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
     ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
-    assert_close(bathy["depthMean"].mean(), 25.5078)
-    assert ehydro.survey_grid.shape[0] == 1022
+    assert_close(bathy["depthMean"].mean(), 25.4441)
+    assert ehydro.survey_grid.shape[0] == 1116
 
 
 class TestNFHL:
