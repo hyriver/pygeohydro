@@ -13,7 +13,7 @@ repos:
     - ufmt
 
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.16.0
+  rev: 1.18.0
   hooks:
   - id: blacken-docs
     name: Autoformat codes in docstrings with blacken-docs
@@ -21,7 +21,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.4.8
+  rev: v0.5.0
   hooks:
   - id: ruff
     name: Linting with Ruff
