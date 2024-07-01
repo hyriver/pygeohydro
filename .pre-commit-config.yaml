@@ -100,17 +100,3 @@ repos:
   - id: actionlint
     files: .github/workflows/
     args: [-ignore, SC1090, -ignore, SC2046, -ignore, SC2086, -ignore, SC2129, -ignore, SC2155]
-
-- repo: local
-  hooks:
-  - id: future-annotations
-    name: import annotations from __future__
-    entry: from __future__ import annotations
-    language: pygrep
-    args: [--negate]
-    files: .*/.*\.py$
-    types: [python]
-    exclude: |
-      (?x)
-      /(__init__\.py)|(conftest\.py)$
-      |tests/
