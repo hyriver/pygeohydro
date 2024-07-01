@@ -1,8 +1,9 @@
 [build-system]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
+
 requires = [
-  "setuptools>=60",
-  "setuptools-scm>=8",
+  "hatch-vcs",
+  "hatchling",
 ]
 
 [project]
@@ -72,26 +73,13 @@ urls.CI = "https://github.com/hyriver/pygeohydro/actions"
 urls.Homepage = "https://docs.hyriver.io/readme/pygeohydro.html"
 urls.Issues = "https://github.com/hyriver/pygeohydro/issues"
 
-[tool.setuptools]
-include-package-data = true
-license-files = [
-  "LICENSE",
-]
-platforms = [
-  "any",
-]
-zip-safe = false
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.package-data]
-pygeohydro = [
-  "py.typed",
+[tool.hatch.build.targets.wheel]
+packages = [
+  "src/pygeohydro",
 ]
-
-[tool.setuptools.packages]
-find = { namespaces = false }
-
-[tool.setuptools_scm]
-fallback_version = "999"
 
 [tool.ruff]
 target-version = "py38"
@@ -238,7 +226,7 @@ filterwarnings = [
 ]
 testpaths = [
   "tests",
-  "pygeohydro",
+  "src/pygeohydro",
 ]
 
 [tool.coverage.report]
@@ -256,7 +244,7 @@ omit = [
 ]
 parallel = true
 source = [
-  'pygeohydro',
+  'src/pygeohydro',
 ]
 
 [tool.pyright]
@@ -267,7 +255,7 @@ exclude = [
   "tests/",
 ]
 include = [
-  "pygeohydro",
+  "src/pygeohydro",
 ]
 reportMissingTypeStubs = false
 reportUnknownArgumentType = false
