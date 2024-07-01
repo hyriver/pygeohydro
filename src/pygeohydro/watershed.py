@@ -109,7 +109,7 @@ def huc_wb_full(huc_lvl: int) -> gpd.GeoDataFrame:
     fnames = ogc.streaming_download(urls, fnames=fnames)
     fnames = [f for f in fnames if f is not None]
     keys = (p.stem.split("_")[1] for p in fnames)
-    engine = "pyogrio" if importlib.util.find_spec("pyogrios") else "fiona"
+    engine = "pyogrio" if importlib.util.find_spec("pyogrio") else "fiona"
     huc = (
         gpd.GeoDataFrame(
             pd.concat(

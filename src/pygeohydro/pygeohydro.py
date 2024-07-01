@@ -6,6 +6,7 @@ import contextlib
 import functools
 import importlib.util
 import io
+import os
 import itertools
 import warnings
 from datetime import datetime, timezone
@@ -1028,13 +1029,17 @@ class EHydro(AGRBase):
         - ``bathymetry``: Bathymetry data
 
         Note that point clouds are not available for all surveys.
+    cache_dir : str or pathlib.Path, optional
+        Directory to store the downloaded raw data, defaults to ``./ehydro_cache``.
     """
 
     def __init__(
-        self, data_type: Literal["points", "outlines", "bathymetry", "contours"] = "points"
+        self, data_type: Literal["points", "outlines", "bathymetry", "contours"] = "points", cache_dir: str | Path = "ehydro_cache"
     ):
         super().__init__(ServiceURL().restful.ehydro)
         self.data_type = data_type
+        self.cache_dir = Path(cache_dir)
+        self.cache_dir.mkdir(exist_ok=True, parents=True)
         layer = {
             "points": "SurveyPoint",
             "outlines": "SurveyJob",
@@ -1080,7 +1085,7 @@ class EHydro(AGRBase):
         ].to_list()
         if not urls:
             raise ZeroMatchedError(self._error_msg)
-        fnames = [Path("cache", Path(u).name) for u in urls]
+        fnames = [Path(self.cache_dir, Path(u).name) for u in urls]
         fnames = ogc.streaming_download(urls, fnames=fnames)
         fnames = [f for f in fnames if f is not None]
         if not fnames:
