@@ -109,3 +109,5 @@ ENV/
 .nvimlog
 data/
 tags*
+
+ehydro_cache/
