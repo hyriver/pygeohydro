@@ -226,7 +226,6 @@ filterwarnings = [
 ]
 testpaths = [
   "tests",
-  "src/pygeohydro",
 ]
 
 [tool.coverage.report]
