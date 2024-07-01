@@ -2,6 +2,24 @@
 History
 =======
 
+0.16.6 (2024-XX-XX)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add support for the National Levee Dataset (NLD) from the USACE. The new
+  class is called ``NLD`` and gives users the ability to subset the NLD
+  dataset by geometry, ID, or SQL queries. The class has three methods:
+  ``bygeom``, ``byids``, and ``bysql``.
+
+Enhancements
+~~~~~~~~~~~~
+- Add a new argument to ``EHydro`` for passing a directory to store the
+  raw downloaded data. This is useful since most times the raw data is
+  needed for further processing and reuse. So, by storing them in a folder
+  other than its previous default location, i.e., ``./cache``, users can
+  easily access and manage them.
+
 0.16.5 (2024-05-26)
 -------------------
 
