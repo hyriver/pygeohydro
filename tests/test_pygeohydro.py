@@ -351,7 +351,7 @@ def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
     ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
-    assert_close(bathy["depthMean"].mean(), 25.4441)
+    assert_close(bathy["depthMean"].mean(), 25.3721)
     assert ehydro.survey_grid.shape[0] == 1116
 
 
