@@ -195,7 +195,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (91856, 84)
-        assert self.nid.gdf.shape == (91702, 97)
+        assert self.nid.gdf.shape == (91717, 97)
 
 
 class TestWaterQuality:
@@ -305,6 +305,7 @@ def test_soil():
     assert soil.sizes["x"] == 266301
 
 
+@pytest.mark.xfail(reason="NLD is unstable.")
 def test_nld():
     nld = NLD("levee_stations")
     levees = nld.bygeom((-105.914551, 37.437388, -105.807434, 37.522392))

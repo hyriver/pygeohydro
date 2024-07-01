@@ -261,7 +261,7 @@ def nlcd_bycoords(
     nlcd_wms = NLCD(years=years, region=region, crs=3857, ssl=ssl)
     points = gpd.GeoSeries(gpd.points_from_xy(*zip(*coords), crs=4326))
     points_proj = points.to_crs(nlcd_wms.crs)
-    geoms = points_proj.buffer(50, cap_style=3)
+    geoms = points_proj.buffer(50, cap_style="square")
     ds_list = [nlcd_wms.get_map(g, 30) for g in geoms]
 
     def get_value(da: xr.DataArray, x: float, y: float) -> Number:

@@ -6,7 +6,6 @@ import contextlib
 import functools
 import importlib.util
 import io
-import os
 import itertools
 import warnings
 from datetime import datetime, timezone
@@ -227,8 +226,6 @@ def ssebopeta_bycoords(
     co_list = list(zip(_coords.x, _coords.y))
 
     f_list = helpers.get_ssebopeta_urls(dates)
-    session = RetrySession()
-
     with patch("socket.has_ipv6", False), RetrySession() as session:
 
         def _ssebop(url: str) -> list[npt.NDArray[np.float64]]:
@@ -1034,7 +1031,9 @@ class EHydro(AGRBase):
     """
 
     def __init__(
-        self, data_type: Literal["points", "outlines", "bathymetry", "contours"] = "points", cache_dir: str | Path = "ehydro_cache"
+        self,
+        data_type: Literal["points", "outlines", "bathymetry", "contours"] = "points",
+        cache_dir: str | Path = "ehydro_cache",
     ):
         super().__init__(ServiceURL().restful.ehydro)
         self.data_type = data_type
@@ -1063,7 +1062,7 @@ class EHydro(AGRBase):
         else:
             import logging
 
-            import fiona
+            import fiona  # pyright: ignore[reportMissingImports]
 
             root_logger = logging.getLogger("fiona")
             root_logger.setLevel(logging.ERROR)

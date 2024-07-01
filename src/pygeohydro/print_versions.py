@@ -49,8 +49,8 @@ def get_sys_info():
     commit = None
     if Path(".git").is_dir():
         with contextlib.suppress(Exception):
-            pipe = subprocess.Popen(
-                'git log --format="%H" -n 1'.split(" "),  # noqa: S603
+            pipe = subprocess.Popen(  # noqa: S603
+                'git log --format="%H" -n 1'.split(" "),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
