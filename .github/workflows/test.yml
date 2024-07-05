@@ -58,7 +58,7 @@ jobs:
         python -c "import ${NAME}; ${NAME}.show_versions()"
     - name: Run pytest
       run: |-
-        pytest
+        pytest --cov --cov-append
     - name: Run codecov and upload the report
       uses: codecov/codecov-action@v4
       with:
