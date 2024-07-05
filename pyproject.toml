@@ -214,15 +214,16 @@ skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
 ignore-words-list = "gage,gages,paramss,trough"
 
 [tool.pytest.ini_options]
-addopts = "--ignore=noxfile.py -n=auto -v --durations=5"
+addopts = "--ignore=noxfile.py --doctest-modules -n=auto -v --durations=5"
 doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
 filterwarnings = [
   "ignore:.*distutils.*",
   "ignore:.*--rsyncdir command line argument.*",
   "ignore:.*numpy.ndarray size changed.*",
   "ignore:.*'cgi' is deprecated.*",
-  "ignore:.*Calling float on a single element.*",
+  "ignore:.*Ensure you extract a single element.*",
   "ignore:.*Shapely GEOS version.*",
+  "ignore:.*Deprecated in Pydantic V2.0.*",
 ]
 testpaths = [
   "tests",
@@ -235,15 +236,18 @@ exclude_lines = [
 ]
 ignore_errors = true
 
-[tool.coverage.run]
-branch = true
+[tool.coverage.paths]
+source = [ "src", "*/site-packages" ]
 omit = [
   "**/__init__.py",
   "**/print_versions.py",
 ]
+
+[tool.coverage.run]
+branch = true
 parallel = true
 source = [
-  'src/pygeohydro',
+  "pygeohydro",
 ]
 
 [tool.pyright]
