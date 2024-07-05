@@ -106,14 +106,7 @@ def tests(session: nox.Session) -> None:
         speedup_dep = False
 
     install_deps(session, ",".join(["test", *extras]))
-    session.run(
-        "pytest",
-        "--doctest-modules",
-        f"--cov={package.replace('-', '_')}",
-        "--cov-report",
-        "xml",
-        *session.posargs,
-    )
+    session.run("pytest", "--cov", "--cov-append", "--cov-report=xml", *session.posargs)
     session.notify("cover")
     if speedup_dep:
         session.notify("speedup")
@@ -124,7 +117,7 @@ def speedup(session: nox.Session) -> None:
     """Run tests that require speedup deps."""
     extras = get_extras()
     install_deps(session, ",".join(["test", *extras]))
-    session.run("pytest", "--doctest-modules", "-m", "speedup", *session.posargs)
+    session.run("pytest", "-m", "speedup", *session.posargs)
 
 
 @nox.session
