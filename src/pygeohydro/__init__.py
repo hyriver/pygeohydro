@@ -20,6 +20,7 @@ from pygeohydro.exceptions import (
 from pygeohydro.helpers import get_us_states
 from pygeohydro.levee import NLD
 from pygeohydro.nfhl import NFHL
+from pygeohydro.nid import NID
 from pygeohydro.nlcd import (
     cover_statistics,
     nlcd_area_percent,
@@ -31,7 +32,6 @@ from pygeohydro.nwis import NWIS, streamflow_fillna
 from pygeohydro.plot import interactive_map
 from pygeohydro.print_versions import show_versions
 from pygeohydro.pygeohydro import (
-    NID,
     EHydro,
     get_camels,
     soil_gnatsgo,

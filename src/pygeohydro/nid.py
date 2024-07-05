@@ -2,55 +2,36 @@
 
 from __future__ import annotations
 
-import contextlib
-import functools
 import importlib.util
-import io
-import itertools
 import warnings
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Iterator, Literal, Sequence, Tuple, Union, cast
-from unittest.mock import patch
-from zipfile import ZipFile
+from typing import TYPE_CHECKING, Any, Iterable, Sequence, Tuple, Union, cast
 
-import cytoolz.curried as tlz
 import geopandas as gpd
-import numpy as np
-import numpy.typing as npt
 import pandas as pd
-import pyproj
-import rasterio as rio
 import requests
-import xarray as xr
-from rasterio.io import MemoryFile
-from rioxarray import _io as rxr
-from shapely.errors import GEOSException
 
 import async_retriever as ar
 import pygeoogc as ogc
 import pygeoutils as geoutils
-from pygeohydro import helpers
 from pygeohydro.exceptions import (
-    DependencyError,
     InputTypeError,
     InputValueError,
-    MissingColumnError,
     ServiceError,
     ZeroMatchedError,
 )
-from pygeoogc import RetrySession, ServiceURL
+from pygeoogc import ServiceURL
 from pygeoutils import EmptyResponseError
-from pynhd.core import AGRBase, ScienceBase
 
 if TYPE_CHECKING:
+    import pyproj
     from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = ["NID"]
-
 
 
 def _remote_file_modified(file_path: Path) -> bool:
@@ -73,6 +54,7 @@ def _remote_file_modified(file_path: Path) -> bool:
     ).replace(tzinfo=timezone.utc)
     local_last_modified = datetime.fromtimestamp(file_path.stat().st_mtime, tz=timezone.utc)
     return local_last_modified < remote_last_modified
+
 
 class NID:
     """Retrieve data from the National Inventory of Dams web service."""
