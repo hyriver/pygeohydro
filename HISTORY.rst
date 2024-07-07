@@ -2,7 +2,7 @@
 History
 =======
 
-0.16.6 (2024-XX-XX)
+0.17.0 (2024-05-07)
 -------------------
 
 New Features
@@ -19,6 +19,20 @@ Enhancements
   needed for further processing and reuse. So, by storing them in a folder
   other than its previous default location, i.e., ``./cache``, users can
   easily access and manage them.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Add the ``exceptions`` module to the high-level API to declutter
+  the main module. In the future, all exceptions will be raised from
+  this module and not from the main module. For now, the exceptions
+  are raised from both modules for backward compatibility.
+- Switch to using the ``src`` layout instead of the ``flat`` layout
+  for the package structure. This is to make the package more
+  maintainable and to avoid any potential conflicts with other
+  packages.
+- Add artifact attestations to the release workflow.
+- Move ``NID`` class to the ``nid`` module to make the package more
+  organized and the main module less cluttered.
 
 0.16.5 (2024-05-26)
 -------------------
