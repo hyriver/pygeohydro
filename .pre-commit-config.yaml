@@ -21,7 +21,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.5.1
+  rev: v0.6.4
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -32,7 +32,7 @@ repos:
     types_or: [python]
 
 - repo: https://github.com/PyCQA/doc8
-  rev: v1.1.1
+  rev: v1.1.2
   hooks:
   - id: doc8
     name: Check documentation formats with doc8
@@ -55,7 +55,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 2.1.4
+  rev: 2.2.3
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
@@ -89,7 +89,7 @@ repos:
     exclude: \.(html|svg)$
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.13.0
+  rev: v2.14.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
