@@ -195,7 +195,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (92392, 83)
-        assert self.nid.gdf.shape == (91717, 97)
+        assert self.nid.gdf.shape == (92184, 96)
 
 
 class TestWaterQuality:
