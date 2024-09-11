@@ -2,6 +2,23 @@
 History
 =======
 
+0.17.1 (2024-XX-XX)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Update the ``nlcd`` module to reflect the changes in the MRLC web service.
+  There have been some breaking changes in the NLCD web service, and the module
+  is updated to reflect these changes. Thus, previous versions of the module
+  will not work with the new NLCD web service. (:issue_hydro:`122`)
+- Update the ``nid`` module based on the latest changes to the NID web service.
+  The changes include the addition of new fields to the NID dataset and the
+  removal of some fields. The module is updated to reflect these changes.
+- Update the ``nfhl`` module to reflect the changes in the NFHL web service.
+  There have been some breaking changes in the NFHL web service, and the module
+  is updated to reflect these changes. Thus, previous versions of the module
+  will not work with the new NFHL web service.
+
 0.17.0 (2024-05-07)
 -------------------
 
