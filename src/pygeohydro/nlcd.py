@@ -82,7 +82,8 @@ class NLCD:
         self.years = tlz.valmap(lambda x: x if isinstance(x, list) else [x], years)
         self.years = cast("dict[str, list[int]]", self.years)
         self.region = region.upper()
-        self.valid_crs = ogc_utils.valid_wms_crs(ServiceURL().wms.mrlc)
+        base_url = ServiceURL().wms.mrlc
+        self.valid_crs = ogc_utils.valid_wms_crs(base_url)
         self.crs = pyproj.CRS(crs).to_string().lower()
         if self.crs not in self.valid_crs:
             raise InputValueError("crs", self.valid_crs)
@@ -92,7 +93,7 @@ class NLCD:
         self.nodata = {"impervious": np.nan, "cover": 127, "canopy": np.nan, "descriptor": 127}
 
         self.wms = WMS(
-            ServiceURL().wms.mrlc,
+            base_url,
             layers=list(self.layers.values()),
             outformat="image/geotiff",
             crs=self.crs,
@@ -125,7 +126,7 @@ class NLCD:
                     return f"nlcd_tcc_conus_{yr}_v2021-4"
                 return f"NLCD_{yr}_Tree_Canopy_{self.region}"
             if lyr == "cover":
-                return f"NLCD_{yr}_Land_Cover_Science_Product_{self.region}"
+                return f"NLCD_{yr}_Land_Cover_{self.region}"
             if lyr == "impervious":
                 return f"NLCD_{yr}_Impervious_{self.region}"
             if self.region in ("HI", "PR"):
@@ -326,7 +327,7 @@ def cover_statistics(cover_da: xr.DataArray) -> Stats:
     zero_idx = np.argwhere(val == 127)
     val = np.delete(val, zero_idx).astype(str)
     freq = np.delete(freq, zero_idx)
-    freq_dict = dict(zip(val, freq))
+    freq_dict = dict(zip(val.tolist(), freq.tolist()))
     total_count = freq.sum()
 
     if any(c not in nlcd_meta["classes"] for c in freq_dict):
