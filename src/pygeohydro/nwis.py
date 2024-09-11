@@ -640,9 +640,9 @@ class NWIS:
         cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
-        freq: str = "dv",
-        mmd: bool = False,
-        to_xarray: Literal[False] = ...,
+        freq: str = ...,
+        mmd: bool = ...,
+        to_xarray: Literal[False] = False,
     ) -> pd.DataFrame: ...
 
     @classmethod
@@ -651,9 +651,9 @@ class NWIS:
         cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
-        freq: str = "dv",
-        mmd: bool = False,
-        to_xarray: Literal[True] = ...,
+        freq: str = ...,
+        mmd: bool = ...,
+        to_xarray: Literal[True] = True,
     ) -> xr.Dataset: ...
 
     @classmethod
