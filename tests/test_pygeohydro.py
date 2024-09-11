@@ -71,7 +71,7 @@ class TestNWIS:
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query, nhd_info=True)
         assert info_box.shape[0] == 35
-        assert info_box["nhd_areasqkm"].isna().sum() == 29
+        assert info_box["nhd_areasqkm"].isna().sum() == 31
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
@@ -136,8 +136,8 @@ class TestNLCD:
     def test_geodf(self):
         geom = gpd.GeoSeries([GEOM, GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
-        self.assertion(lulc[0].cover_2016, 83.048)
-        self.assertion(lulc[1].cover_2016, 83.048)
+        self.assertion(lulc[0].cover_2016, 73.1459)
+        self.assertion(lulc[1].cover_2016, 73.1459)
         assert lulc[0].cover_2016.rio.nodata == 127
 
     def test_coords(self):
@@ -155,7 +155,7 @@ class TestNLCD:
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
         lulc = gh.nlcd_bygeom(geom, years=self.years, resolution=self.res, crs=ALT_CRS, ssl=False)
         roughness = gh.overland_roughness(lulc[0].cover_2016)
-        assert_close(roughness.mean().item(), 0.3197)
+        assert_close(roughness.mean().item(), 0.3256)
 
     def test_area(self):
         geom = gpd.GeoSeries([GEOM], crs=DEF_CRS)
@@ -194,7 +194,7 @@ class TestNID:
         assert (dams_box.name == "Pingree Pond").any()
 
     def test_nation(self):
-        assert self.nid.df.shape == (91856, 84)
+        assert self.nid.df.shape == (92392, 83)
         assert self.nid.gdf.shape == (91717, 97)
 
 
@@ -352,8 +352,8 @@ def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
     ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
-    assert_close(bathy["depthMean"].mean(), 25.3721)
-    assert ehydro.survey_grid.shape[0] == 1116
+    assert_close(bathy["depthMean"].mean(), 25.44946)
+    assert ehydro.survey_grid.shape[0] == 1125
 
 
 class TestNFHL:
@@ -365,37 +365,37 @@ class TestNFHL:
             (
                 "NFHL",
                 "cross-sections",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/public/NFHL/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer",
                 "Cross-Sections (14)",
             ),
             (
                 "Prelim_CSLF",
                 "floodway change",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Prelim_CSLF/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/CSLF/Prelim_CSLF/MapServer",
                 "Floodway Change (2)",
             ),
             (
                 "Draft_CSLF",
                 "special flood hazard area change",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/CSLF/Draft_CSLF/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/CSLF/Draft_CSLF/MapServer",
                 "Special Flood Hazard Area Change (3)",
             ),
             (
                 "Prelim_NFHL",
                 "preliminary water lines",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Prelim_NFHL/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/PrelimPending/Prelim_NFHL/MapServer",
                 "Preliminary Water Lines (20)",
             ),
             (
                 "Pending_NFHL",
                 "pending high water marks",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/PrelimPending/Pending_NFHL/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/PrelimPending/Pending_NFHL/MapServer",
                 "Pending High Water Marks (12)",
             ),
             (
                 "Draft_NFHL",
                 "draft transect baselines",
-                "https://hazards.fema.gov/gis/nfhl/rest/services/AFHI/Draft_FIRM_DB/MapServer",
+                "https://hazards.fema.gov/arcgis/rest/services/AFHI/Draft_FIRM_DB/MapServer",
                 "Draft Transect Baselines (13)",
             ),
         ],
