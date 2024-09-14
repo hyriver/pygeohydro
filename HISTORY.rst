@@ -2,8 +2,12 @@
 History
 =======
 
-0.17.1 (2024-XX-XX)
+0.17.1 (2024-09-14)
 -------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Drop support for Python 3.8 since its end-of-life date is October 2024.
 
 Bug Fixes
 ~~~~~~~~~
