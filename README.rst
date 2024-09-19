@@ -49,20 +49,20 @@
     :target: https://github.com/hyriver/hydrosignatures/actions/workflows/test.yml
     :alt: Github Actions
 
-================ ==================================================================== ============
-Package          Description                                                          Status
-================ ==================================================================== ============
-PyNHD_           Navigate and subset NHDPlus (MR and HR) using web services           |pynhd|
-Py3DEP_          Access topographic data through National Map's 3DEP web service      |py3dep|
-PyGeoHydro_      Access NWIS, NID, WQP, eHydro, NLCD, CAMELS, and SSEBop databases    |pygeohydro|
-PyDaymet_        Access daily, monthly, and annual climate data via Daymet            |pydaymet|
-PyGridMET_       Access daily climate data via GridMET                                |pygridmet|
-PyNLDAS2_        Access hourly NLDAS-2 data via web services                          |pynldas2|
-HydroSignatures_ A collection of tools for computing hydrological signatures          |signatures|
-AsyncRetriever_  High-level API for asynchronous requests with persistent caching     |async|
-PyGeoOGC_        Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services    |pygeoogc|
-PyGeoUtils_      Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF data |pygeoutils|
-================ ==================================================================== ============
+================ ====================================================================
+Package          Description
+================ ====================================================================
+PyNHD_           Navigate and subset NHDPlus (MR and HR) using web services
+Py3DEP_          Access topographic data through National Map's 3DEP web service
+PyGeoHydro_      Access NWIS, NID, WQP, eHydro, NLCD, CAMELS, and SSEBop databases
+PyDaymet_        Access daily, monthly, and annual climate data via Daymet
+PyGridMET_       Access daily climate data via GridMET
+PyNLDAS2_        Access hourly NLDAS-2 data via web services
+HydroSignatures_ A collection of tools for computing hydrological signatures
+AsyncRetriever_  High-level API for asynchronous requests with persistent caching
+PyGeoOGC_        Send queries to any ArcGIS RESTful-, WMS-, and WFS-based services
+PyGeoUtils_      Utilities for manipulating geospatial, (Geo)JSON, and (Geo)TIFF data
+================ ====================================================================
 
 .. _PyGeoHydro: https://github.com/hyriver/pygeohydro
 .. _AsyncRetriever: https://github.com/hyriver/async-retriever
