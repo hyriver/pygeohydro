@@ -1,4 +1,38 @@
 repos:
+- repo: https://github.com/pre-commit/pre-commit-hooks
+  rev: v4.6.0
+  hooks:
+  - id: check-added-large-files
+    args: [--maxkb=50000]
+  - id: mixed-line-ending
+    args: [--fix=lf]
+  - id: check-ast
+  - id: check-builtin-literals
+  - id: check-case-conflict
+  - id: check-docstring-first
+  - id: check-shebang-scripts-are-executable
+  - id: check-merge-conflict
+  - id: check-json
+  - id: check-toml
+  - id: check-xml
+  - id: check-yaml
+  - id: debug-statements
+  - id: destroyed-symlinks
+  - id: detect-private-key
+  - id: end-of-file-fixer
+    exclude: ^LICENSE|\.(html|csv|txt|svg|py)$
+  - id: pretty-format-json
+    args: [--autofix, --no-ensure-ascii, --no-sort-keys]
+  - id: trailing-whitespace
+    args: [--markdown-linebreak-ext=md]
+    exclude: \.(html|svg)$
+
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.14.0
+  hooks:
+  - id: pretty-format-yaml
+    args: [--autofix, --indent, '2']
+
 - repo: https://github.com/bwhmather/ssort
   rev: 0.13.0
   hooks:
@@ -59,40 +93,6 @@ repos:
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
-
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
-  hooks:
-  - id: check-added-large-files
-    args: [--maxkb=50000]
-  - id: mixed-line-ending
-    args: [--fix=lf]
-  - id: check-ast
-  - id: check-builtin-literals
-  - id: check-case-conflict
-  - id: check-docstring-first
-  - id: check-shebang-scripts-are-executable
-  - id: check-merge-conflict
-  - id: check-json
-  - id: check-toml
-  - id: check-xml
-  - id: check-yaml
-  - id: debug-statements
-  - id: destroyed-symlinks
-  - id: detect-private-key
-  - id: end-of-file-fixer
-    exclude: ^LICENSE|\.(html|csv|txt|svg|py)$
-  - id: pretty-format-json
-    args: [--autofix, --no-ensure-ascii, --no-sort-keys]
-  - id: trailing-whitespace
-    args: [--markdown-linebreak-ext=md]
-    exclude: \.(html|svg)$
-
-- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
-  hooks:
-  - id: pretty-format-yaml
-    args: [--autofix, --indent, '2']
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.1
