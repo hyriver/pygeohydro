@@ -55,7 +55,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 2.2.3
+  rev: 2.2.4
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
