@@ -11,3 +11,6 @@ coverage:
         informational: true
 
 comment: false
+ignore:
+- '**/__init__.py'
+- '**/print_versions.py'
