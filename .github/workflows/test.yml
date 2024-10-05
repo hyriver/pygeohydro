@@ -44,7 +44,7 @@ jobs:
         environment-name: ${{ env.REPO_NAME }}-tests
         create-args: >-
           python=${{ env.PYTHON_VERSION }}
-        post-cleanup: 'all'
+        post-cleanup: all
         cache-environment: true
         cache-environment-key: ${{runner.os}}-${{runner.arch}}-py${{env.PYTHON_VERSION}}-${{env.TODAY}}-${{hashFiles(env.CONDA_ENV_FILE)}}
     - name: Install error reporter
