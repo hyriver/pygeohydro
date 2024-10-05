@@ -81,7 +81,7 @@ packages = [
 ]
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py39"
 line-length = 100
 
 exclude = [
@@ -213,7 +213,7 @@ skip = "__pycache__,_build,.mypy_cache,.git,./htmlcov,.nox,**/us_abbrs.py,cache"
 ignore-words-list = "gage,gages,paramss,trough"
 
 [tool.pytest.ini_options]
-addopts = "--ignore=noxfile.py --doctest-modules -n=auto -v --durations=5"
+addopts = "--doctest-modules -n=auto -v --durations=5"
 doctest_optionflags = 'NORMALIZE_WHITESPACE IGNORE_EXCEPTION_DETAIL NUMBER'
 filterwarnings = [
   "ignore:.*distutils.*",
@@ -221,7 +221,6 @@ filterwarnings = [
   "ignore:.*numpy.ndarray size changed.*",
   "ignore:.*'cgi' is deprecated.*",
   "ignore:.*Ensure you extract a single element.*",
-  "ignore:.*Shapely GEOS version.*",
   "ignore:.*Deprecated in Pydantic V2.0.*",
 ]
 testpaths = [
@@ -274,7 +273,7 @@ typeCheckingMode = "strict"
 formatter = "ufmt"
 
 [tool.refurb]
-python_version = "3.8"
+python_version = "3.9"
 quiet = true
 
 [[tool.refurb.amend]]
