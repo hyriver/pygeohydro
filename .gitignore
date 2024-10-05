@@ -110,3 +110,4 @@ data/
 tags*
 cache
 junit.xml
+.DS_Store
