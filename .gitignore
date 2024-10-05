@@ -7,7 +7,6 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-cache/
 .Python
 env/
 build/
@@ -109,5 +108,5 @@ ENV/
 .nvimlog
 data/
 tags*
-
-ehydro_cache/
+cache
+junit.xml
