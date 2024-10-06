@@ -2,6 +2,21 @@
 History
 =======
 
+0.18.0 (2024-10-05)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Bump the minimum version of ``aiohttp-client-cache>=0.12.3`` to fix an
+  issue with the latest version of ``aiohttp``. (:issue_hydro:`124`)
+
+Breaking Changes
+~~~~~~~~~~~~~~~~
+- Drop support for Python 3.8 since its end-of-life date is October 2024.
+- Remove all exceptions from the main module and raise them from the
+  ``exceptions`` module. This is to declutter the public API and make
+  it easier to maintain.
+
 0.17.1 (2024-09-14)
 -------------------
 
