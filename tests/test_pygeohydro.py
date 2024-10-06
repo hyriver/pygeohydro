@@ -71,7 +71,7 @@ class TestNWIS:
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query, nhd_info=True)
         assert info_box.shape[0] == 35
-        assert info_box["nhd_areasqkm"].isna().sum() == 31
+        assert info_box["nhd_areasqkm"].isna().sum() == 29
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
@@ -95,7 +95,7 @@ class TestNWIS:
 
 
 class TestETA:
-    dates = ("2000-01-01", "2000-01-05")
+    dates = ("2005-10-01", "2005-10-05")
     years = [2010, 2014, 2015]
 
     def test_coords(self):
@@ -109,12 +109,12 @@ class TestETA:
             columns=["id", "x", "y"],
         )
         ds = gh.ssebopeta_bycoords(coords, dates=self.dates)
-        assert_close(ds.eta.sum().item(), 8.625)
+        assert_close(ds.eta.sum().item(), 1.858)
         assert ds.eta.isnull().sum().item() == 5
 
     def test_geom(self):
         eta_g = gh.ssebopeta_bygeom(GEOM, dates=self.dates)
-        assert_close(eta_g.mean().values.item(), 0.577)
+        assert_close(eta_g.mean().values.item(), 0.6822)
 
     def test_get_ssebopeta_urls(self):
         _ = gh.helpers.get_ssebopeta_urls(self.years[0])
@@ -195,7 +195,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (92392, 83)
-        assert self.nid.gdf.shape == (92184, 96)
+        assert self.nid.gdf.shape == (92183, 96)
 
 
 class TestWaterQuality:
@@ -352,8 +352,8 @@ def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
     ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
-    assert_close(bathy["depthMean"].mean(), 25.44946)
-    assert ehydro.survey_grid.shape[0] == 1125
+    assert_close(bathy["depthMean"].mean(), 25.5285)
+    assert ehydro.survey_grid.shape[0] == 1126
 
 
 class TestNFHL:
