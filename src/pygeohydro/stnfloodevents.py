@@ -186,8 +186,9 @@ class STNFloodEventData:
     def data_dictionary(
         cls,
         data_type: str,
+        *,
         as_dict: Literal[False] = False,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> pd.DataFrame: ...
 
     @classmethod
@@ -195,8 +196,9 @@ class STNFloodEventData:
     def data_dictionary(
         cls,
         data_type: str,
-        as_dict: Literal[True] = True,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        *,
+        as_dict: Literal[True],
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> dict[str, Any]: ...
 
     @classmethod
@@ -288,9 +290,10 @@ class STNFloodEventData:
     def get_all_data(
         cls,
         data_type: str,
+        *,
         as_list: Literal[False] = False,
-        crs: CRSTYPE = ...,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
     @classmethod
@@ -298,9 +301,10 @@ class STNFloodEventData:
     def get_all_data(
         cls,
         data_type: str,
-        as_list: Literal[True] = True,
-        crs: CRSTYPE = ...,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        *,
+        as_list: Literal[True],
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]: ...
 
     @classmethod
@@ -405,10 +409,11 @@ class STNFloodEventData:
     def get_filtered_data(
         cls,
         data_type: str,
-        query_params: dict[str, Any] | None = ...,
+        query_params: dict[str, Any] | None = None,
+        *,
         as_list: Literal[False] = False,
-        crs: CRSTYPE = ...,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
     @classmethod
@@ -416,10 +421,11 @@ class STNFloodEventData:
     def get_filtered_data(
         cls,
         data_type: str,
-        query_params: dict[str, Any] | None = ...,
-        as_list: Literal[True] = True,
-        crs: CRSTYPE = ...,
-        async_retriever_kwargs: dict[str, Any] | None = ...,
+        query_params: dict[str, Any] | None = None,
+        *,
+        as_list: Literal[True],
+        crs: CRSTYPE = 4326,
+        async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]: ...
 
     @classmethod
@@ -635,5 +641,5 @@ def stn_flood_event(
         dtype='object')
     """
     if query_params is None:
-        return STNFloodEventData.get_all_data(data_type=data_type)
-    return STNFloodEventData.get_filtered_data(data_type=data_type, query_params=query_params)
+        return STNFloodEventData.get_all_data(data_type)
+    return STNFloodEventData.get_filtered_data(data_type, query_params)

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import importlib.util
 import warnings
+from collections.abc import Iterable, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Iterable, Sequence, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -22,13 +23,13 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeoogc import ServiceURL
-from pygeoutils import EmptyResponseError
+from pygeoutils.exceptions import EmptyResponseError
 
 if TYPE_CHECKING:
     import pyproj
     from shapely import MultiPolygon, Polygon
 
-    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = ["NID"]
@@ -83,7 +84,7 @@ class NID:
             12: "Other",
         }
         dtype_str = {str(k): v for k, v in self.dam_type.items() if str(k).isdigit()}
-        self.dam_type = {**self.dam_type, **dtype_str}
+        self.dam_type = self.dam_type | dtype_str
         self.dam_purpose = {
             pd.NA: "N/A",
             None: "N/A",
@@ -101,7 +102,7 @@ class NID:
             12: "Other",
         }
         purp_str = {str(k): v for k, v in self.dam_purpose.items() if str(k).isdigit()}
-        self.dam_purpose = {**self.dam_purpose, **purp_str}
+        self.dam_purpose = self.dam_purpose | purp_str
         self.data_units = {
             "distance": "mile",
             "damHeight": "ft",
@@ -305,7 +306,7 @@ class NID:
         if not isinstance(urls, list):
             raise InputTypeError("urls", "list or str")
 
-        kwds = None if params is None else [{"params": {**p, "out": "json"}} for p in params]
+        kwds = None if params is None else [{"params": p | {"out": "json"}} for p in params]
         resp = ar.retrieve_json(urls, kwds)
         resp = cast("list[dict[str, Any]]", resp)
         if not resp:
@@ -314,8 +315,8 @@ class NID:
         failed = [(i, f"Req_{i}: {r['message']}") for i, r in enumerate(resp) if "error" in r]
         if failed:
             idx, err_msgs = zip(*failed)
-            idx = cast("Tuple[int]", idx)
-            err_msgs = cast("Tuple[str]", err_msgs)
+            idx = cast("tuple[int]", idx)
+            err_msgs = cast("tuple[str]", err_msgs)
             errs = " service requests failed with the following messages:\n"
             errs += "\n".join(err_msgs)
             if len(failed) == len(urls):

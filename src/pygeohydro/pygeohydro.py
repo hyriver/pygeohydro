@@ -9,7 +9,7 @@ import io
 import itertools
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Literal, Tuple, Union, cast
+from typing import TYPE_CHECKING, Literal, Union, cast
 from unittest.mock import patch
 from zipfile import ZipFile
 
@@ -38,13 +38,15 @@ from pygeohydro.exceptions import (
     ZeroMatchedError,
 )
 from pygeoogc import RetrySession, ServiceURL
-from pygeoutils import EmptyResponseError
+from pygeoutils.exceptions import EmptyResponseError
 from pynhd.core import AGRBase, ScienceBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from shapely import MultiPolygon, Polygon
 
-    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [
@@ -289,7 +291,7 @@ def ssebopeta_bygeom(
 
     try:
         _ = geoutils.geo2polygon(geometry)
-    except geoutils.InputTypeError as ex:
+    except geoutils.exceptions.InputTypeError as ex:
         raise InputTypeError("geometry", "(Multi)Polygon or tuple of length 4") from ex
 
     gtiff2xarray = functools.partial(geoutils.gtiff2xarray, geometry=geometry, geo_crs=geo_crs)
@@ -383,10 +385,7 @@ def soil_properties(
 
 def _open_tiff(file: Path, name: str) -> xr.DataArray:
     """Open a .tif file."""
-    ds = rxr.open_rasterio(file)
-    ds = cast("xr.DataArray", ds)
-    if "band" in ds:
-        ds = ds.squeeze("band", drop=True)
+    ds = rxr.open_rasterio(file).squeeze(drop=True)
     ds.name = name
     return xr.where(ds != ds.rio.nodata, ds, np.nan).rio.write_nodata(np.nan)
 

@@ -7,12 +7,11 @@ import contextlib
 import itertools
 import re
 import warnings
+from collections.abc import Iterable, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Iterable,
     Literal,
-    Sequence,
     TypeVar,
     cast,
     overload,
@@ -154,7 +153,7 @@ class NWIS:
         try:
             resp = ar.retrieve_text(
                 [url] * len(payloads),
-                [{"params": {**p, "format": "rdb"}} for p in payloads],
+                [{"params": p | {"format": "rdb"}} for p in payloads],
             )
         except ar.ServiceError as ex:
             raise ZeroMatchedError(ogc_utils.check_response(str(ex))) from ex
@@ -288,7 +287,7 @@ class NWIS:
         else:
             output_type = {"siteOutput": "basic"}
 
-        return [{**query, **output_type, "format": "rdb"} for query in _queries]
+        return [query | output_type | {"format": "rdb"} for query in _queries]
 
     @staticmethod
     def _nhd_info(site_ids: list[str]) -> pd.DataFrame:
@@ -582,8 +581,8 @@ class NWIS:
                 "sites": ",".join(s),
                 "startDT": start_dt,
                 "endDT": end_dt,
-                **kwargs,
             }
+            | kwargs
             for s in tlz.partition_all(1500, sids)
         ]
         resp = ar.retrieve_json(
@@ -640,8 +639,9 @@ class NWIS:
         cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
-        freq: str = ...,
-        mmd: bool = ...,
+        freq: str = "dv",
+        mmd: bool = False,
+        *,
         to_xarray: Literal[False] = False,
     ) -> pd.DataFrame: ...
 
@@ -651,9 +651,10 @@ class NWIS:
         cls,
         station_ids: Sequence[str] | str,
         dates: tuple[str, str],
-        freq: str = ...,
-        mmd: bool = ...,
-        to_xarray: Literal[True] = True,
+        freq: str = "dv",
+        mmd: bool = False,
+        *,
+        to_xarray: Literal[True],
     ) -> xr.Dataset: ...
 
     @classmethod

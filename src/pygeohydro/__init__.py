@@ -5,18 +5,6 @@ from __future__ import annotations
 from importlib.metadata import PackageNotFoundError, version
 
 from pygeohydro import exceptions, helpers, plot
-from pygeohydro.exceptions import (
-    DataNotAvailableError,
-    DependencyError,
-    InputRangeError,
-    InputTypeError,
-    InputValueError,
-    MissingColumnError,
-    MissingCRSError,
-    ServiceError,
-    ServiceUnavailableError,
-    ZeroMatchedError,
-)
 from pygeohydro.helpers import get_us_states
 from pygeohydro.levee import NLD
 from pygeohydro.nfhl import NFHL
@@ -78,16 +66,6 @@ __all__ = [
     "helpers",
     "get_us_states",
     "plot",
-    "DataNotAvailableError",
-    "InputRangeError",
-    "InputTypeError",
-    "MissingCRSError",
-    "MissingColumnError",
-    "DependencyError",
-    "InputValueError",
-    "ZeroMatchedError",
-    "ServiceError",
-    "ServiceUnavailableError",
     "show_versions",
     "exceptions",
     "__version__",

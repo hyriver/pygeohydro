@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import TYPE_CHECKING, Mapping, Tuple, Union, cast
+from typing import TYPE_CHECKING, Union, cast
 
 import cytoolz.curried as tlz
 import geopandas as gpd
@@ -26,11 +26,12 @@ from pygeoogc import WMS, ServiceURL
 from pygeoogc import utils as ogc_utils
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from numbers import Number
 
     from shapely import MultiPolygon, Polygon
 
-    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [

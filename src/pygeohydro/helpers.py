@@ -6,7 +6,7 @@ from __future__ import annotations
 import io
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Tuple, Union, cast
+from typing import TYPE_CHECKING, Any, Union, cast
 
 import cytoolz.curried as tlz
 import geopandas as gpd
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     import pyproj
     from shapely import MultiPolygon, Polygon
 
-    GTYPE = Union[Polygon, MultiPolygon, Tuple[float, float, float, float]]
+    GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
 __all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table", "get_us_states"]
 
@@ -144,7 +144,7 @@ def get_ssebopeta_urls(dates: tuple[str, str] | int | list[int]) -> list[tuple[p
         date_range = pd.date_range(start, end)
     else:
         years = dates if isinstance(dates, list) else [dates]
-        seebop_yrs = np.arange(2000, year)
+        seebop_yrs = np.arange(2000, year + 1)
 
         if any(y not in seebop_yrs for y in years):
             raise InputRangeError("SSEBop", ("2000", str(year)))

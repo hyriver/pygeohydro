@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Generator, Sequence
+from typing import TYPE_CHECKING
 
-import async_retriever as ar
-import pygeoogc as ogc
+import async_retriever.exceptions as ar
+import pygeoogc.exceptions as ogc
+
+if TYPE_CHECKING:
+    from collections.abc import Generator, Sequence
 
 
 class ServiceError(ar.ServiceError):
