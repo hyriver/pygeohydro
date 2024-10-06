@@ -3,11 +3,11 @@ channels:
 - conda-forge
 - nodefaults
 dependencies:
-- python>=3.10
+- python>=3.12
 
 # async-retriever deps
 - aiodns
-- aiohttp-client-cache >=0.8.1
+- aiohttp-client-cache >=0.12.3
 - brotli
 - cytoolz
 - nest-asyncio
@@ -32,10 +32,9 @@ dependencies:
 
 # pygeoutils deps
 - cytoolz
-- geopandas-base >=0.10
-- fiona
+- geopandas-base >=1
 - netcdf4
-- numpy >=1.21
+- numpy >=2
 - pyproj >=3.0.1
 - rasterio >=1.2
 - rioxarray >=0.11
@@ -45,7 +44,7 @@ dependencies:
 - xarray >=2023.01
 
 # hydrosignatures deps
-- numpy >=1.21
+- numpy >=2
 - pandas >=1
 - scipy
 - xarray >=2023.01
@@ -57,8 +56,8 @@ dependencies:
 # - async-retriever
 - click >=0.7
 - cytoolz
-- geopandas-base >=0.10
-- numpy >=1.21
+- geopandas-base >=1
+- numpy >=2
 # - pygeoogc
 # - pygeoutils
 - rasterio >=1.2
@@ -66,29 +65,26 @@ dependencies:
 - scipy
 - shapely >=2
 - xarray >=2023.01
-# optional deps
-- pyflwdir >=0.5.8
 
 # pynhd deps
 # - async-retriever
 - cytoolz
-- geopandas-base >=0.9
+- geopandas-base >=1
 - networkx
-- numpy >=1.21
+- numpy >=2
 - pandas >=1.0
 - pyarrow >=1.0.1
 # - pygeoogc
 # - pygeoutils
 - shapely >=2.0
 # optional deps
-- pyogrio
 - py7zr
 
 # pydaymet deps
 # - async-retriever
 - click >=0.7
-- geopandas-base >=0.10
-- numpy >=1.21
+- geopandas-base >=1
+- numpy >=2
 - pandas >=1
 # - py3dep
 # - pygeoogc
@@ -103,8 +99,8 @@ dependencies:
 # pygridmet deps
 # - async-retriever
 - click >=0.7
-- geopandas-base >=0.10
-- numpy >=1.21
+- geopandas-base >=1
+- numpy >=2
 - pandas >=1
 # - pygeoogc
 # - pygeoutils
@@ -117,11 +113,11 @@ dependencies:
 - cytoolz
 - defusedxml
 - folium
-- geopandas-base >=0.10
+- geopandas-base >=1
 - h5netcdf
 # - hydrosignatures
-- matplotlib >=3.5
-- numpy >=1.21
+- matplotlib-base >=3.5
+- numpy >=2
 - pandas >=1
 # - pygeoogc
 # - pygeoutils
@@ -135,12 +131,11 @@ dependencies:
 # optional deps
 - planetary-computer
 - pystac-client
-- pyogrio
 
 # pynldas2
 # - async-retriever
 - h5netcdf
-- numpy >=1.21
+- numpy >=2
 - pandas >=1.0
 # - pygeoutils
 - pyproj >=3.0.1
@@ -159,6 +154,7 @@ dependencies:
 - pytables
 - ffmpeg
 - xarray-spatial
+- dask-expr
 - datashader
 
 # dev deps
