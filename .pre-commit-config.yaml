@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.6.0
+  rev: v5.0.0
   hooks:
   - id: check-added-large-files
     args: [--maxkb=50000]
@@ -47,7 +47,7 @@ repos:
     - ufmt
 
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.18.0
+  rev: 1.19.0
   hooks:
   - id: blacken-docs
     name: Autoformat codes in docstrings with blacken-docs
@@ -55,7 +55,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.6.9
+  rev: v0.7.0
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -89,7 +89,7 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 2.2.4
+  rev: 2.4.3
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
