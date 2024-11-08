@@ -111,4 +111,5 @@ tags*
 cache
 junit.xml
 .DS_Store
-ehydro_cache
+.pixi
+pixi.lock
