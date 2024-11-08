@@ -34,7 +34,7 @@ repos:
     args: [--autofix, --indent, '2']
 
 - repo: https://github.com/bwhmather/ssort
-  rev: 0.13.0
+  rev: 0.14.0
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
@@ -47,7 +47,7 @@ repos:
     - ufmt
 
 - repo: https://github.com/asottile/blacken-docs
-  rev: 1.19.0
+  rev: 1.19.1
   hooks:
   - id: blacken-docs
     name: Autoformat codes in docstrings with blacken-docs
@@ -55,7 +55,7 @@ repos:
     args: [-t, py38, -l, '100']
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.7.0
+  rev: v0.7.2
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -89,13 +89,13 @@ repos:
     - numpy
 
 - repo: https://github.com/tox-dev/pyproject-fmt
-  rev: 2.4.3
+  rev: v2.5.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
 
 - repo: https://github.com/rhysd/actionlint
-  rev: v1.7.3
+  rev: v1.7.4
   hooks:
   - id: actionlint
     files: .github/workflows/
