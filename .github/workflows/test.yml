@@ -62,7 +62,7 @@ jobs:
       run: |-
         pytest --cov --cov-append
     - name: Run codecov and upload the report
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         file: ./coverage.xml
         flags: unittests
