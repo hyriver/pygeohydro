@@ -27,43 +27,28 @@ repos:
     args: [--markdown-linebreak-ext=md]
     exclude: \.(html|svg)$
 
-- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
-  hooks:
-  - id: pretty-format-yaml
-    args: [--autofix, --indent, '2']
-
 - repo: https://github.com/bwhmather/ssort
   rev: 0.14.0
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
 
-- repo: https://github.com/Instagram/Fixit
-  rev: v2.1.0
+- repo: https://github.com/aio-libs/sort-all
+  rev: v1.3.0
   hooks:
-  - id: fixit-fix
-    additional_dependencies:
-    - ufmt
-
-- repo: https://github.com/asottile/blacken-docs
-  rev: 1.19.1
-  hooks:
-  - id: blacken-docs
-    name: Autoformat codes in docstrings with blacken-docs
-    additional_dependencies: [black]
-    args: [-t, py38, -l, '100']
+  - id: sort-all
+    name: Sort __all__ alphabetically
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.7.4
   hooks:
   - id: ruff
     name: Linting with Ruff
-    types_or: [python]
+    types_or: [python, jupyter]
     args: [--fix]
   - id: ruff-format
     name: Formatting with Ruff
-    types_or: [python]
+    types_or: [python, jupyter]
 
 - repo: https://github.com/PyCQA/doc8
   rev: v1.1.2
@@ -80,19 +65,17 @@ repos:
     additional_dependencies:
     - tomli
 
-- repo: https://github.com/dosisod/refurb
-  rev: v2.0.0
-  hooks:
-  - id: refurb
-    name: Modernizing Python codebases using Refurb
-    additional_dependencies:
-    - numpy
-
 - repo: https://github.com/tox-dev/pyproject-fmt
   rev: v2.5.0
   hooks:
   - id: pyproject-fmt
     name: Apply a consistent format to pyproject.toml
+
+- repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
+  rev: v2.14.0
+  hooks:
+  - id: pretty-format-yaml
+    args: [--autofix, --indent, '2']
 
 - repo: https://github.com/rhysd/actionlint
   rev: v1.7.4
