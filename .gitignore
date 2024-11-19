@@ -113,3 +113,4 @@ junit.xml
 .DS_Store
 .pixi
 pixi.lock
+ehydro_cache/
