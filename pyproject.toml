@@ -278,13 +278,6 @@ reportUntypedFunctionDecorator = false
 reportAttributeAccessIssue = false
 typeCheckingMode = "strict"
 
-[tool.fixit]
-formatter = "ufmt"
-
-[tool.refurb]
-python_version = "3.9"
-quiet = true
-
 [[tool.refurb.amend]]
 path = "tests"
 ignore = [
