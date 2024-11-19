@@ -1,6 +1,5 @@
 """Some helper function for PyGeoHydro."""
 
-# pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import io
@@ -26,7 +25,7 @@ if TYPE_CHECKING:
 
     GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
     CRSTYPE = Union[int, str, pyproj.CRS]
-__all__ = ["nlcd_helper", "nwis_errors", "states_lookup_table", "get_us_states"]
+__all__ = ["get_us_states", "nlcd_helper", "nwis_errors", "states_lookup_table"]
 
 
 def nlcd_helper() -> dict[str, Any]:

@@ -4,7 +4,6 @@ Plots include daily, monthly and annual hydrograph as well as regime
 curve (monthly mean) and flow duration curve.
 """
 
-# pyright: reportGeneralTypeIssues=false
 from __future__ import annotations
 
 import contextlib
@@ -29,7 +28,7 @@ if TYPE_CHECKING:
     DF = TypeVar("DF", pd.DataFrame, pd.Series)
     CRSTYPE = Union[int, str, pyproj.CRS]
 
-__all__ = ["signatures", "prepare_plot_data"]
+__all__ = ["prepare_plot_data", "signatures"]
 
 
 @dataclass(frozen=True)

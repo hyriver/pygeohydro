@@ -15,7 +15,7 @@ from pygeohydro.exceptions import InputTypeError, InputValueError, ServiceError
 if TYPE_CHECKING:
     import geopandas as gpd
 
-__all__ = ["WaterQuality", "SensorThings"]
+__all__ = ["SensorThings", "WaterQuality"]
 
 
 class WaterQuality:

@@ -35,11 +35,11 @@ if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [
-    "nlcd_bygeom",
-    "nlcd_bycoords",
     "cover_statistics",
-    "overland_roughness",
     "nlcd_area_percent",
+    "nlcd_bycoords",
+    "nlcd_bygeom",
+    "overland_roughness",
 ]
 
 

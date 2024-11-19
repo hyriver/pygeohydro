@@ -50,14 +50,14 @@ if TYPE_CHECKING:
     CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [
+    "EHydro",
     "get_camels",
-    "ssebopeta_bycoords",
-    "ssebopeta_bygeom",
-    "soil_properties",
     "soil_gnatsgo",
     "soil_properties",
+    "soil_properties",
     "soil_soilgrids",
-    "EHydro",
+    "ssebopeta_bycoords",
+    "ssebopeta_bygeom",
 ]
 
 
