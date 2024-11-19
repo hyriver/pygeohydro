@@ -64,9 +64,4 @@ jobs:
     - name: Run codecov and upload the report
       uses: codecov/codecov-action@v5
       with:
-        file: ./coverage.xml
-        flags: unittests
-        env_vars: RUNNER_OS,PYTHON_VERSION
-        name: codecov-umbrella
-        fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
