@@ -40,7 +40,7 @@ repos:
     name: Sort __all__ alphabetically
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.7.4
+  rev: v0.8.1
   hooks:
   - id: ruff
     name: Linting with Ruff
