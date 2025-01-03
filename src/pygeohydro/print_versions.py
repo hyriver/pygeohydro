@@ -63,7 +63,7 @@ def _get_sys_info():
     return blob
 
 
-def _get_package_version(modname):
+def _get_package_version(modname: str) -> str:
     try:
         _ = distribution(modname)
         try:
