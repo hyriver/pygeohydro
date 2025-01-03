@@ -38,14 +38,14 @@ except PackageNotFoundError:
     __version__ = "999"
 
 __all__ = [
-    "EHydro",
     "NFHL",
     "NID",
     "NLD",
     "NWIS",
+    "WBD",
+    "EHydro",
     "STNFloodEventData",
     "SensorThings",
-    "WBD",
     "WaterQuality",
     "__version__",
     "cover_statistics",
