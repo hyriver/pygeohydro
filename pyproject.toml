@@ -187,6 +187,8 @@ lint.per-file-ignores."tests/*.py" = [
   "D107",
   # specific type error ignored
   "PGH003",
+  # use typing.ClassVar
+  "RUF012",
   # use of "assert"
   "S101",
 ]
