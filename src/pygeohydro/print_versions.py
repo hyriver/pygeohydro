@@ -4,19 +4,16 @@ The original script is from
 `xarray <https://github.com/pydata/xarray/blob/main/xarray/util/print_versions.py>`__
 """
 
-# pyright: reportMissingImports=false
 from __future__ import annotations
 
 import contextlib
-import importlib
-import importlib.util
 import locale
 import os
 import platform
 import struct
 import subprocess
 import sys
-from importlib.metadata import PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, distribution
 from importlib.metadata import version as get_version
 from pathlib import Path
 from typing import TextIO
@@ -24,24 +21,7 @@ from typing import TextIO
 __all__ = ["show_versions"]
 
 
-def netcdf_and_hdf5_versions() -> list[tuple[str, str | None]]:
-    libhdf5_version = None
-    libnetcdf_version = None
-
-    if importlib.util.find_spec("netCDF4"):
-        import netCDF4
-
-        libhdf5_version = netCDF4.__hdf5libversion__
-        libnetcdf_version = netCDF4.__netcdf4libversion__
-    elif importlib.util.find_spec("h5py"):
-        import h5py
-
-        libhdf5_version = h5py.version.hdf5_version
-
-    return [("libhdf5", libhdf5_version), ("libnetcdf", libnetcdf_version)]
-
-
-def get_sys_info():
+def _get_sys_info():
     """Return system information as a dict."""
     blob = []
 
@@ -49,7 +29,7 @@ def get_sys_info():
     commit = None
     if Path(".git").is_dir():
         with contextlib.suppress(Exception):
-            pipe = subprocess.Popen(  # noqa: S603
+            pipe = subprocess.Popen(
                 'git log --format="%H" -n 1'.split(" "),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -81,6 +61,17 @@ def get_sys_info():
             ]
         )
     return blob
+
+
+def _get_package_version(modname):
+    try:
+        _ = distribution(modname)
+        try:
+            return get_version(modname)
+        except (NotImplementedError, AttributeError):
+            return "installed"
+    except PackageNotFoundError:
+        return "N/A"
 
 
 def show_versions(file: TextIO = sys.stdout) -> None:
@@ -133,7 +124,6 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "xarray",
         #  py3dep deps
         "click",
-        "pyflwdir",
         #  pynhd deps
         "networkx",
         "pyarrow",
@@ -144,27 +134,17 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "pandas",
         #  optional
         "numba",
-        "bottleneck",
         "py7zr",
         "pyogrio",
     ]
-    pad = len(max(deps, key=len)) + 1
-
-    deps_blob = {}
-    for modname in deps:
-        try:
-            deps_blob[modname] = get_version(modname)
-        except PackageNotFoundError:
-            deps_blob[modname] = "N/A"
-        except (NotImplementedError, AttributeError):
-            deps_blob[modname] = "installed"
+    deps_blob = {modname: _get_package_version(modname) for modname in deps}
 
     print("\nSYS INFO", file=file)
     print("--------", file=file)
-
-    for k, stat in get_sys_info():
+    for k, stat in _get_sys_info():
         print(f"{k}: {stat}", file=file)
 
+    pad = len(max(deps, key=len)) + 1
     header = f"\n{'PACKAGE':<{pad}}  VERSION"
     print(header, file=file)
     print("-" * len(header), file=file)
