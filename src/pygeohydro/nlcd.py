@@ -131,7 +131,7 @@ class NLCD:
             if lyr == "impervious":
                 return f"NLCD_{yr}_Impervious_{self.region}"
             if self.region in ("HI", "PR"):
-                raise InputValueError("region (descriptor)", ("L48", "AK"))  # noqa: TRY003
+                raise InputValueError("region (descriptor)", ("L48", "AK"))
             service_lyr = (
                 "Impervious_Descriptor" if self.region == "AK" else "Impervious_descriptor"
             )
