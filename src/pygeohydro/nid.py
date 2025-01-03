@@ -153,9 +153,9 @@ class NID:
             if fname_ is None:
                 raise EmptyResponseError
             dams = (
-                gpd.read_file(gpkg_file, engine="pyogrio", use_arrow=True)
+                gpd.read_file(fname_, engine="pyogrio", use_arrow=True)
                 if importlib.util.find_spec("pyogrio")
-                else gpd.read_file(gpkg_file)
+                else gpd.read_file(fname_)
             )
             dams = cast("gpd.GeoDataFrame", dams)
 
