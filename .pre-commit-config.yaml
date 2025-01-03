@@ -33,12 +33,6 @@ repos:
   - id: ssort
     name: Sort top level statements with ssort
 
-- repo: https://github.com/aio-libs/sort-all
-  rev: v1.3.0
-  hooks:
-  - id: sort-all
-    name: Sort __all__ alphabetically
-
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.8.5
   hooks:
