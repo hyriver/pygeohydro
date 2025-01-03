@@ -195,7 +195,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (92392, 83)
-        assert self.nid.gdf.shape == (92183, 96)
+        assert self.nid.gdf.shape == (92189, 96)
 
 
 class TestWaterQuality:
@@ -352,8 +352,8 @@ def test_ehydro():
     bound = (-122.53, 45.57, -122.52, 45.59)
     ehydro = EHydro("bathymetry")
     bathy = ehydro.bygeom(bound)
-    assert_close(bathy["depthMean"].mean(), 25.5285)
-    assert ehydro.survey_grid.shape[0] == 1126
+    assert_close(bathy["depthMean"].mean(), 25.39277)
+    assert ehydro.survey_grid.shape[0] == 1129
 
 
 class TestNFHL:
