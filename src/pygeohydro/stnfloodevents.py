@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from io import BytesIO
 from typing import TYPE_CHECKING, Any, ClassVar, Literal, Union, cast, overload
 
 import geopandas as gpd
@@ -83,7 +82,6 @@ class STNFloodEventData:
     # this is the CRS used for visualization on STN front-end.
     service_crs: ClassVar[int] = 4326
     service_url: ClassVar[str] = ServiceURL().restful.stnflood
-    data_dictionary_url: ClassVar[str] = ServiceURL().restful.stnflood_dd
     instruments_query_params: ClassVar[set[str]] = {
         "Event",
         "EventType",
@@ -183,110 +181,6 @@ class STNFloodEventData:
 
     @classmethod
     @overload
-    def data_dictionary(
-        cls,
-        data_type: str,
-        *,
-        as_dict: Literal[False] = False,
-        async_retriever_kwargs: dict[str, Any] | None = None,
-    ) -> pd.DataFrame: ...
-
-    @classmethod
-    @overload
-    def data_dictionary(
-        cls,
-        data_type: str,
-        *,
-        as_dict: Literal[True],
-        async_retriever_kwargs: dict[str, Any] | None = None,
-    ) -> dict[str, Any]: ...
-
-    @classmethod
-    def data_dictionary(
-        cls,
-        data_type: str,
-        as_dict: bool = False,
-        async_retriever_kwargs: dict[str, Any] | None = None,
-    ) -> pd.DataFrame | dict[str, Any]:
-        """Retrieve data dictionaries from the STN Flood Event Data API.
-
-        Parameters
-        ----------
-        data_type : str
-            The data source from STN Flood Event Data API.
-            It can be ``instruments``, ``peaks``, ``hwms``, or ``sites``.
-        as_dict : bool, default = False
-            If True, return the data dictionary as a dictionary.
-            Otherwise, it returns as ``pandas.DataFrame``.
-        async_retriever_kwargs : dict, optional
-            Additional keyword arguments to pass to
-            ``async_retriever.retrieve_json()``. The ``url`` and ``request_kwds``
-            options are already set.
-
-        Returns
-        -------
-        pandas.DataFrame or dict
-            The retrieved data dictionary as pandas.DataFrame or dict.
-
-        See Also
-        --------
-        :meth:`~get_all_data` : Retrieves all data for a given data type.
-        :meth:`~get_filtered_data` : Retrieves filtered data for a given data type.
-
-        Examples
-        --------
-        >>> from pygeohydro import STNFloodEventData
-        >>> data = STNFloodEventData.data_dictionary(data_type="instruments", as_dict=False)  # doctest: +SKIP
-        >>> data.shape[1]  # doctest: +SKIP
-        2
-        >>> data.columns  # doctest: +SKIP
-        Index(['Field', 'Definition'], dtype='object')
-        """
-        dtype_dict = {
-            "instruments": "Instruments.csv",
-            "peaks": "FilteredPeaks.csv",
-            "hwms": "FilteredHWMs.csv",
-            "sites": "sites.csv",
-        }
-
-        try:
-            endpoint = dtype_dict[data_type]
-        except KeyError as ke:
-            raise InputValueError(data_type, list(dtype_dict.keys())) from ke
-
-        if async_retriever_kwargs is None:
-            async_retriever_kwargs = {}
-        else:
-            async_retriever_kwargs.pop("url", None)
-
-        resp = ar.retrieve_binary(
-            [f"{cls.data_dictionary_url}{endpoint}"], **async_retriever_kwargs
-        )
-        data = pd.read_csv(BytesIO(resp[0]), encoding="latin-1")
-
-        if "Field" not in data.columns:
-            data.iloc[0] = data.columns.tolist()
-            data.columns = ["Field", "Definition"]
-
-        data["Definition"] = data["Definition"].str.replace("\r\n", "  ")
-
-        # concatenate definitions corresponding to NaN fields until
-        # a non-NaN field is encountered
-        data_dict = {"Field": [], "Definition": []}
-
-        for f, d in data[["Field", "Definition"]].itertuples(index=False, name=None):
-            if pd.isna(f):
-                data_dict["Definition"][-1] += " " + d
-            else:
-                data_dict["Field"].append(f)
-                data_dict["Definition"].append(d)
-
-        if as_dict:
-            return data_dict
-        return pd.DataFrame(data_dict)
-
-    @classmethod
-    @overload
     def get_all_data(
         cls,
         data_type: str,
@@ -368,24 +262,23 @@ class STNFloodEventData:
                'last_updated_by', 'housing_serial_number'],
                dtype='object')
         """
-        endpoint_dict = {
+        dtype_dict = {
             "instruments": "Instruments.json",
             "peaks": "PeakSummaries.json",
             "hwms": "HWMs.json",
             "sites": "Sites.json",
         }
 
-        try:
-            endpoint = endpoint_dict[data_type]
-        except KeyError as ke:
-            raise InputValueError(data_type, list(endpoint_dict.keys())) from ke
+        endpoint = dtype_dict.get(data_type)
+        if endpoint is None:
+            raise InputValueError(data_type, list(dtype_dict))
 
         if async_retriever_kwargs is None:
             async_retriever_kwargs = {}
         else:
             _ = async_retriever_kwargs.pop("url", None)
 
-        resp = ar.retrieve_json([f"{cls.service_url}{endpoint}"], **async_retriever_kwargs)
+        resp = ar.retrieve_json([f"{cls.service_url}/{endpoint}"], **async_retriever_kwargs)
         data = [cls._delist_dict(d) for d in resp[0]]  # pyright: ignore[reportArgumentType]
 
         if as_list:
@@ -546,7 +439,7 @@ class STNFloodEventData:
             async_retriever_kwargs.pop("request_kwds", None)
 
         resp = ar.retrieve_json(
-            [f"{cls.service_url}{endpoint}"],
+            [f"{cls.service_url}/{endpoint}"],
             request_kwds=[{"params": query_params}],
             **async_retriever_kwargs,
         )
