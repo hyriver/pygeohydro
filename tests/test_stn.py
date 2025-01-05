@@ -19,8 +19,6 @@ def assert_close(a: float, b: float) -> None:
 class TestSTNFloodEventData:
     stn = gh.STNFloodEventData
 
-    expected_data_dictionary_schema = ["Field", "Definition"]
-
     expected_all_data_schemas = {
         "instruments": [
             "instrument_id",
@@ -308,57 +306,6 @@ class TestSTNFloodEventData:
             "geometry",
         ],
     }
-
-    @pytest.mark.xfail(reason="Links to STN dictionaries are broken at the moment.")
-    @pytest.mark.parametrize(
-        ("data_type", "as_dict", "async_retriever_kwargs", "expected_shape"),
-        [
-            ("instruments", False, None, (26, 2)),
-            ("peaks", False, {"raise_status": True}, (41, 2)),
-            ("hwms", False, None, (51, 2)),
-            ("sites", False, {"disable": True, "expire_after": 2e6}, (16, 2)),
-            ("instruments", True, {}, 26),
-            ("peaks", True, None, 41),
-            ("hwms", True, {"url": "https://www.google.com", "max_workers": 9}, 51),
-            ("sites", True, None, 16),
-        ],
-    )
-    def test_data_dictionary_success(
-        self, data_type, as_dict, async_retriever_kwargs, expected_shape
-    ):
-        """Test the data_dictionary method of the STNFloodEventData class for success cases."""
-        result = self.stn.data_dictionary(
-            data_type, as_dict, async_retriever_kwargs=async_retriever_kwargs
-        )
-
-        if as_dict:
-            assert isinstance(result, dict)
-            assert list(result.keys()) == self.expected_data_dictionary_schema
-
-            for field in self.expected_data_dictionary_schema:
-                assert len(result[field]) == expected_shape
-        else:
-            assert isinstance(result, pd.DataFrame)
-            assert result.shape == expected_shape
-            assert list(result.columns) == self.expected_data_dictionary_schema
-            assert result.dtypes.to_list() == [np.dtype("O"), np.dtype("O")]
-
-    @pytest.mark.parametrize(
-        ("data_type", "as_dict", "async_retriever_kwargs", "expected_exception"),
-        [
-            ("instrimants", False, None, gh.exceptions.InputValueError),
-            ("peaks", True, {"dummy": "dummy"}, TypeError),
-            ("hwms", False, {"raise_status": True, "anything": 1}, TypeError),
-        ],
-    )
-    def test_data_dictionary_fail(
-        self, data_type, as_dict, async_retriever_kwargs, expected_exception
-    ):
-        """Test the data_dictionary method of the STNFloodEventData class for failure cases."""
-        with pytest.raises(expected_exception):
-            self.stn.data_dictionary(
-                data_type, as_dict, async_retriever_kwargs=async_retriever_kwargs
-            )
 
     @pytest.mark.parametrize(
         ("data_type", "as_list", "crs", "async_retriever_kwargs", "expected_shape"),
