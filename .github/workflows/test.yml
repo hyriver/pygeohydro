@@ -55,7 +55,7 @@ jobs:
         python -m pip install --no-deps .
     - name: Run pytest
       run: |-
-        pytest --cov-branch --cov-report=xml
+        pytest --cov --cov-append --cov-branch --cov-report=xml --junitxml=junit.xml
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
       with:
