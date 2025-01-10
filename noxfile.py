@@ -128,7 +128,16 @@ def run_tests(
     extra_args: list[str] | None = None,
 ) -> None:
     """Run the test suite with optional jit and extra arguments."""
-    session.run("pytest", *(extra_args or []), *session.posargs)
+    session.run(
+        "pytest",
+        "--cov",
+        "--cov-append",
+        "--cov-branch",
+        "--cov-report=xml",
+        "--junitxml=junit.xml",
+        *(extra_args or []),
+        *session.posargs,
+    )
     session.notify("cover")
     if jit:
         session.notify(f"jit{py_version}")
