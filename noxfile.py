@@ -110,12 +110,12 @@ def type_check(session: nox.Session) -> None:
     session.run("pyright")
 
 
-def setup_session(session: nox.Session) -> bool:
+def setup_session(session: nox.Session, with_jit: bool) -> bool:
     """Set up session environment with conda and dependencies."""
     session.conda_install("gdal", channel="conda-forge")
     extras = get_extras()
     jit_dep = "jit" in extras
-    if jit_dep:
+    if jit_dep and not with_jit:
         extras.remove("jit")
     install_deps(session, ",".join(["test", *extras]))
     return jit_dep
@@ -146,28 +146,28 @@ def run_tests(
 @nox.session(python="3.9", venv_backend="micromamba")
 def test39(session: nox.Session) -> None:
     """Run the test suite for Python 3.9."""
-    jit_dep = setup_session(session)
+    jit_dep = setup_session(session, False)
     run_tests(session, jit_dep, 39)
 
 
 @nox.session(python="3.12", venv_backend="micromamba")
 def test312(session: nox.Session) -> None:
     """Run the test suite for Python 3.12."""
-    jit_dep = setup_session(session)
+    jit_dep = setup_session(session, False)
     run_tests(session, jit_dep, 312)
 
 
 @nox.session(python="3.9", venv_backend="micromamba")
 def jit39(session: nox.Session) -> None:
     """Run tests that require jit dependencies for Python 3.9."""
-    setup_session(session)
+    setup_session(session, True)
     session.run("pytest", "-m", "jit", *session.posargs)
 
 
 @nox.session(python="3.12", venv_backend="micromamba")
 def jit312(session: nox.Session) -> None:
     """Run tests that require jit dependencies for Python 3.12."""
-    setup_session(session)
+    setup_session(session, True)
     session.run("pytest", "-m", "jit", *session.posargs)
 
 
