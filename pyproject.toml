@@ -192,6 +192,10 @@ lint.per-file-ignores."tests/*.py" = [
   "S101",
 ]
 lint.extend-safe-fixes = [
+  # Move third-party import
+  "TC002",
+  # Move import out of type-checking block
+  "TC004",
   # absolute imports
   "TID252",
 ]
