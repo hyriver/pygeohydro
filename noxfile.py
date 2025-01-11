@@ -50,7 +50,6 @@ gh_deps = {
     "pynldas2": ["async-retriever", "pygeoutils"],
 }
 nox.options.sessions = (
-    "pc-update",
     "pre-commit",
     "type-check",
     "test39",
