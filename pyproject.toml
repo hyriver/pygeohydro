@@ -198,6 +198,8 @@ lint.extend-safe-fixes = [
   "TC004",
   # absolute imports
   "TID252",
+  # break down assert
+  "PT018",
 ]
 lint.isort.known-first-party = [
   "async_retriever",
