@@ -192,14 +192,14 @@ lint.per-file-ignores."tests/*.py" = [
   "S101",
 ]
 lint.extend-safe-fixes = [
-  # Move third-party import
-  "TC002",
-  # Move import out of type-checking block
-  "TC004",
-  # absolute imports
-  "TID252",
+  # module level imports
+  "E402",
   # break down assert
   "PT018",
+  # Move imports
+  "TC",
+  # absolute imports
+  "TID252",
 ]
 lint.isort.known-first-party = [
   "async_retriever",
