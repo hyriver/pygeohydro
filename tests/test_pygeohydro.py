@@ -292,7 +292,7 @@ def test_us_states(key, expected):
 
 def test_full_huc():
     hu16 = gh.huc_wb_full(16)
-    assert hu16.shape[0] == 7202
+    assert hu16.shape[0] == 7266
 
 
 def test_irrigation():
