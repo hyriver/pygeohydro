@@ -2,16 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from pygeohydro.exceptions import InputValueError
 from pygeoogc import ServiceURL
 from pynhd import AGRBase
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
 
-    CRSTYPE = Union[int, str, pyproj.CRS]
+    CRSType = int | str | CRS
 
 __all__ = ["NFHL"]
 
@@ -115,7 +115,7 @@ class NFHL(AGRBase):
     """
 
     def __init__(
-        self, service: str, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326
+        self, service: str, layer: str, outfields: str | list[str] = "*", crs: CRSType = 4326
     ):
         # service URLs
         self.__valid_services = {
