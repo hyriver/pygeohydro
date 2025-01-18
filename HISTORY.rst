@@ -2,6 +2,15 @@
 History
 =======
 
+0.19.0 (2025-01-17)
+-------------------
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Update all dependencies on HyRiver libraries to the latest versions
+  and modify the code to be compatible with the latest versions of
+  the libraries.
+
 0.18.0 (2024-10-05)
 -------------------
 
