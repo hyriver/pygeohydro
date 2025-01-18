@@ -20,11 +20,11 @@ from pygeohydro.exceptions import InputRangeError, InputTypeError, InputValueErr
 from pygeoogc import ServiceURL
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
     from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
-    CRSTYPE = Union[int, str, pyproj.CRS]
+    CRSType = int | str | CRS
 __all__ = ["get_us_states", "nlcd_helper", "nwis_errors", "states_lookup_table"]
 
 
@@ -216,7 +216,7 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
     geopandas.GeoDataFrame
         GeoDataFrame of requested US states.
     """
-    url = "https://www2.census.gov/geo/tiger/TIGER2023/STATE/tl_2023_us_state.zip"
+    url = "https://www2.census.gov/geo/tiger/TIGER2024/STATE/tl_2024_us_state.zip"
     us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))
     if subset_key is not None:
         state_cd = _get_state_codes(subset_key)

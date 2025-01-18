@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Union
+from typing import TYPE_CHECKING, Literal
 
 from pygeohydro.exceptions import InputValueError
 from pynhd import AGRBase
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
 
-    CRSTYPE = Union[int, str, pyproj.CRS]
+    CRSType = int | str | CRS
 
 __all__ = ["NLD"]
 
@@ -92,7 +92,7 @@ class NLD(AGRBase):
             "channels",
         ],
         outfields: str | list[str] = "*",
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
     ):
         self.valid_layers = {
             "boreholes": "0",
