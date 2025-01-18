@@ -9,7 +9,7 @@ from __future__ import annotations
 import contextlib
 from dataclasses import dataclass, fields
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypeVar, Union
+from typing import TYPE_CHECKING, Any, TypeVar
 
 import folium
 import matplotlib.pyplot as plt
@@ -23,10 +23,10 @@ from pygeohydro.exceptions import InputTypeError
 from pygeohydro.nwis import NWIS
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
 
+    CRSType = int | str | CRS
     DF = TypeVar("DF", pd.DataFrame, pd.Series)
-    CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = ["prepare_plot_data", "signatures"]
 
@@ -247,7 +247,7 @@ def cover_legends() -> tuple[ListedColormap, BoundaryNorm, list[int]]:
 
 def interactive_map(
     bbox: tuple[float, float, float, float],
-    crs: CRSTYPE = 4326,
+    crs: CRSType = 4326,
     nwis_kwds: dict[str, Any] | None = None,
 ) -> folium.Map:
     """Generate an interactive map including all USGS stations within a bounding box.

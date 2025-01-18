@@ -5,7 +5,7 @@ from __future__ import annotations
 import importlib.util
 import io
 from pathlib import Path
-from typing import TYPE_CHECKING, Union, cast
+from typing import TYPE_CHECKING, cast
 
 import geopandas as gpd
 import pandas as pd
@@ -19,9 +19,9 @@ from pynhd import AGRBase
 from pynhd.core import ScienceBase
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
 
-    CRSTYPE = Union[int, str, pyproj.CRS]
+    CRSType = int | str | CRS
 
 __all__ = [
     "WBD",
@@ -60,7 +60,7 @@ class WBD(AGRBase):
         Target spatial reference, default to ``EPSG:4326``.
     """
 
-    def __init__(self, layer: str, outfields: str | list[str] = "*", crs: CRSTYPE = 4326):
+    def __init__(self, layer: str, outfields: str | list[str] = "*", crs: CRSType = 4326):
         self.valid_layers = {
             "wbdline": "wbdline",
             "huc2": "2-digit hu (region)",

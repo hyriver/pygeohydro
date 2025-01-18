@@ -29,10 +29,12 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from numbers import Number
 
+    from pyproj import CRS
     from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
-    CRSTYPE = Union[int, str, pyproj.CRS]
+
+    CRSType = int | str | CRS
 
 __all__ = [
     "cover_statistics",
@@ -68,7 +70,7 @@ class NLCD:
         self,
         years: Mapping[str, int | list[int]] | None = None,
         region: str = "L48",
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         ssl: bool = True,
     ) -> None:
         default_years = {
@@ -176,7 +178,7 @@ def nlcd_bygeom(
     resolution: int = 30,
     years: Mapping[str, int | list[int]] | None = None,
     region: str = "L48",
-    crs: CRSTYPE = 4326,
+    crs: CRSType = 4326,
     ssl: bool = True,
 ) -> dict[int | str, xr.Dataset]:
     """Get data from NLCD database (2019).

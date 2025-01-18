@@ -26,11 +26,12 @@ from pygeoogc import ServiceURL
 from pygeoutils.exceptions import EmptyResponseError
 
 if TYPE_CHECKING:
-    import pyproj
+    from pyproj import CRS
     from shapely import MultiPolygon, Polygon
 
     GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
-    CRSTYPE = Union[int, str, pyproj.CRS]
+
+    CRSType = int | str | CRS
 
 __all__ = ["NID"]
 
@@ -385,7 +386,7 @@ class NID:
             for r in self._get_json([f"{self.base_url}/query"] * len(params), params)
         ]
 
-    def get_bygeom(self, geometry: GTYPE, geo_crs: CRSTYPE) -> gpd.GeoDataFrame:
+    def get_bygeom(self, geometry: GTYPE, geo_crs: CRSType) -> gpd.GeoDataFrame:
         """Retrieve NID data within a geometry.
 
         Parameters

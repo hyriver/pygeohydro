@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Union, cast, overload
+from typing import TYPE_CHECKING, Any, ClassVar, Literal, cast, overload
 
 import geopandas as gpd
 import numpy as np
@@ -15,7 +15,7 @@ from pygeoogc import ServiceURL
 if TYPE_CHECKING:
     from pyproj import CRS
 
-    CRSTYPE = Union[int, str, CRS]
+    CRSType = int | str | CRS
 
 __all__ = ["STNFloodEventData", "stn_flood_event"]
 
@@ -130,8 +130,8 @@ class STNFloodEventData:
         input_list: list[dict[str, Any]],
         x_col: str,
         y_col: str,
-        crs: CRSTYPE | None,
-        service_crs: CRSTYPE,
+        crs: CRSType | None,
+        service_crs: CRSType,
     ) -> gpd.GeoDataFrame:
         """Georeference a list of dictionaries to a GeoDataFrame.
 
@@ -186,7 +186,7 @@ class STNFloodEventData:
         data_type: str,
         *,
         as_list: Literal[False] = False,
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
@@ -197,7 +197,7 @@ class STNFloodEventData:
         data_type: str,
         *,
         as_list: Literal[True],
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]: ...
 
@@ -206,7 +206,7 @@ class STNFloodEventData:
         cls,
         data_type: str,
         as_list: bool = False,
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
         """Retrieve all data from the STN Flood Event Data API.
@@ -305,7 +305,7 @@ class STNFloodEventData:
         query_params: dict[str, Any] | None = None,
         *,
         as_list: Literal[False] = False,
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame: ...
 
@@ -317,7 +317,7 @@ class STNFloodEventData:
         query_params: dict[str, Any] | None = None,
         *,
         as_list: Literal[True],
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]: ...
 
@@ -327,7 +327,7 @@ class STNFloodEventData:
         data_type: str,
         query_params: dict[str, Any] | None = None,
         as_list: bool = False,
-        crs: CRSTYPE = 4326,
+        crs: CRSType = 4326,
         async_retriever_kwargs: dict[str, Any] | None = None,
     ) -> gpd.GeoDataFrame | pd.DataFrame | list[dict[str, Any]]:
         """Retrieve filtered data from the STN Flood Event Data API.

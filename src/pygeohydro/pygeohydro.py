@@ -44,10 +44,12 @@ from pynhd.core import AGRBase, ScienceBase
 if TYPE_CHECKING:
     from collections.abc import Iterator
 
+    from pyproj import CRS
     from shapely import MultiPolygon, Polygon
 
+    CRSType = int | str | CRS
+
     GTYPE = Union[Polygon, MultiPolygon, tuple[float, float, float, float]]
-    CRSTYPE = Union[int, str, pyproj.CRS]
 
 __all__ = [
     "EHydro",
@@ -193,7 +195,7 @@ def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
 def ssebopeta_bycoords(
     coords: pd.DataFrame,
     dates: tuple[str, str] | int | list[int],
-    crs: CRSTYPE = 4326,
+    crs: CRSType = 4326,
 ) -> xr.Dataset:
     """Daily actual ET for a dataframe of coords from SSEBop database in mm/day.
 
@@ -261,7 +263,7 @@ def ssebopeta_bycoords(
 def ssebopeta_bygeom(
     geometry: GTYPE,
     dates: tuple[str, str] | int | list[int],
-    geo_crs: CRSTYPE = 4326,
+    geo_crs: CRSType = 4326,
 ) -> xr.DataArray:
     """Get daily actual ET for a region from SSEBop database.
 
@@ -390,7 +392,7 @@ def _open_tiff(file: Path, name: str) -> xr.DataArray:
     return xr.where(ds != ds.rio.nodata, ds, np.nan).rio.write_nodata(np.nan)
 
 
-def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) -> xr.Dataset:
+def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSType = 4326) -> xr.Dataset:
     """Get US soil data from the gNATSGO dataset.
 
     Notes
@@ -456,7 +458,7 @@ def soil_gnatsgo(layers: list[str] | str, geometry: GTYPE, crs: CRSTYPE = 4326) 
 def soil_soilgrids(
     layers: list[str] | str,
     geometry: GTYPE,
-    geo_crs: CRSTYPE = 4326,
+    geo_crs: CRSType = 4326,
 ) -> xr.Dataset:
     """Get soil data from SoilGrids for the area of interest.
 
