@@ -94,48 +94,57 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "hydrosignatures",
         "pynldas2",
         "pygeohydro",
-        #  async-retriever deps
+        # async-retriever
+        "aiodns",
+        "aiofiles",
         "aiohttp",
         "aiohttp-client-cache",
         "aiosqlite",
+        "brotli",
         "cytoolz",
         "ujson",
-        #  pygeoogc deps
-        "defusedxml",
-        "joblib",
-        "multidict",
-        "owslib",
-        "pyproj",
-        "requests",
-        "requests-cache",
-        "shapely",
-        "url-normalize",
-        "urllib3",
-        "yarl",
-        #  pygeoutils deps
-        "geopandas",
-        "netcdf4",
+        # hydrosignatures
         "numpy",
+        "pandas",
+        "scipy",
+        "xarray",
+        "numba",
+        "numbagg",
+        # py3dep
+        "click",
+        "geopandas",
         "rasterio",
         "rioxarray",
-        "scipy",
         "shapely",
-        "ujson",
-        "xarray",
-        #  py3dep deps
-        "click",
-        #  pynhd deps
-        "networkx",
-        "pyarrow",
-        #  pygeohydro deps
+        # pydaymet/pygridmet/pynldas2
+        "netcdf4",
+        "pyproj",
+        # pygeohydro
+        "defusedxml",
         "folium",
         "h5netcdf",
         "matplotlib",
-        "pandas",
-        #  optional
-        "numba",
+        "planetary-computer",
+        "pystac-client",
+        # pygeoogc
+        "joblib",
+        "multidict",
+        "owslib",
+        "requests",
+        "requests-cache",
+        "typing-extensions",
+        "url-normalize",
+        "urllib3",
+        "yarl",
+        # pygeoutils
+        # (no unique dependencies not already listed)
+        # pynhd
+        "networkx",
+        "pyarrow",
         "py7zr",
-        "pyogrio",
+        # performance
+        "flox",
+        "opt-einsum"
     ]
     deps_blob = {modname: _get_package_version(modname) for modname in deps}
 
