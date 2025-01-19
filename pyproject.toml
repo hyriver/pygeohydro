@@ -50,14 +50,11 @@ dependencies = [
   "pygeoutils>=0.19,<0.20",
   "pynhd>=0.19,<0.20",
   "pyproj>=3.0.1",
-  "rioxarray>=0.11",
+  "rioxarray>=0.15",
   "scipy",
   "shapely>=2",
   "ujson",
-  "xarray>=2023.1",
-]
-optional-dependencies.io = [
-  "pyogrio",
+  "xarray>=2024.7",
 ]
 optional-dependencies.stac = [
   "planetary-computer",
@@ -247,6 +244,9 @@ exclude_lines = [
   "if TYPE_CHECKING:",
 ]
 ignore_errors = true
+omit = [
+  "**/__init__.py",
+]
 
 [tool.coverage.paths]
 source = [ "src", "*/site-packages" ]
@@ -256,9 +256,6 @@ branch = true
 parallel = true
 source_pkgs = [
   "pygeohydro",
-]
-omit = [
-  "**/__init__.py",
 ]
 
 [tool.pyright]
