@@ -102,7 +102,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "aiosqlite",
         "brotli",
         "cytoolz",
-        "ujson",
+        "orjson",
         # hydrosignatures
         "numpy",
         "pandas",
@@ -144,7 +144,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "py7zr",
         # performance
         "flox",
-        "opt-einsum"
+        "opt-einsum",
     ]
     deps_blob = {modname: _get_package_version(modname) for modname in deps}
 
