@@ -45,6 +45,7 @@ dependencies = [
   "hydrosignatures>=0.19,<0.20",
   "matplotlib>=3.5",
   "numpy>=2",
+  "orjson>=3.10,<4",
   "pandas>=1",
   "pygeoogc>=0.19,<0.20",
   "pygeoutils>=0.19,<0.20",
@@ -53,7 +54,6 @@ dependencies = [
   "rioxarray>=0.15",
   "scipy",
   "shapely>=2",
-  "ujson",
   "xarray>=2024.7",
 ]
 optional-dependencies.stac = [
