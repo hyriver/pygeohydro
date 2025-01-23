@@ -52,7 +52,7 @@ repos:
     args: [--max-line-length, '100']
 
 - repo: https://github.com/codespell-project/codespell
-  rev: v2.3.0
+  rev: v2.4.0
   hooks:
   - id: codespell
     name: Check common misspellings in text files with codespell.
