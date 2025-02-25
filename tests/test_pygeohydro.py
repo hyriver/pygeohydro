@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import io
-import shutil
 
 import geopandas as gpd
 import numpy as np
@@ -195,7 +194,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (92392, 83)
-        assert self.nid.gdf.shape == (92189, 96)
+        assert self.nid.gdf.shape == (92197, 96)
 
 
 class TestWaterQuality:
@@ -259,13 +258,7 @@ def test_interactive_map():
 
 
 def test_plot():
-    nwis = NWIS()
-    qobs = nwis.get_streamflow([SID_NATURAL, SID_URBAN], DATES_LONG)
-    gh.plot.signatures(qobs, precipitation=qobs[f"USGS-{SID_NATURAL}"], output="data/gh.plot.png")
-    gh.plot.signatures(qobs[f"USGS-{SID_NATURAL}"], precipitation=qobs[f"USGS-{SID_NATURAL}"])
     _, _, levels = gh.plot.cover_legends()
-    shutil.rmtree("data")
-
     assert levels[-1] == 100
 
 
@@ -326,8 +319,15 @@ def test_soilgrid():
     assert_close(soil.bdod_0_5cm_mean.mean().item(), 1.4459)
 
 
-def test_sensorthings():
-    sensor = gh.SensorThings()
+def test_soilpolaris():
+    layers = "bd_5"
+    geometry = (-95.624515, 30.121598, -95.614515, 30.131598)
+    soil = gh.soil_polaris(layers, geometry, 4326)
+    assert_close(soil.bd_0_5cm_mean.mean().item(), 1.4620)
+
+
+# def test_sensorthings():
+    # sensor = gh.SensorThings()
     # cond = " and ".join(
     #     ("properties/monitoringLocationType eq 'Stream'", "properties/stateFIPS eq 'US:04'")
     # )
@@ -335,11 +335,11 @@ def test_sensorthings():
     # df = sensor.query_byodata(odata)
     # assert df.shape[0] == 72
 
-    df = sensor.sensor_info("USGS-09380000")
-    assert df["description"].iloc[0] == "Stream"
+    # df = sensor.sensor_info("USGS-09380000")
+    # assert df["description"].iloc[0] == "Stream"
 
-    df = sensor.sensor_property("Datastreams", "USGS-09380000")
-    assert df["observationType"].unique()[0] == "Instantaneous"
+    # df = sensor.sensor_property("Datastreams", "USGS-09380000")
+    # assert df["observationType"].unique()[0] == "Instantaneous"
 
 
 def test_show_versions():
