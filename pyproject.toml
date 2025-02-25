@@ -39,11 +39,9 @@ dependencies = [
   "async-retriever>=0.19,<0.20",
   "cytoolz",
   "defusedxml",
-  "folium",
   "geopandas>=1",
   "h5netcdf",
   "hydrosignatures>=0.19,<0.20",
-  "matplotlib>=3.5",
   "numpy>=2",
   "orjson>=3.10,<4",
   "pandas>=1",
@@ -55,6 +53,10 @@ dependencies = [
   "scipy",
   "shapely>=2",
   "xarray>=2024.7",
+]
+optional-dependencies.plot = [
+  "folium",
+  "matplotlib>=3.5",
 ]
 optional-dependencies.stac = [
   "planetary-computer",
@@ -209,6 +211,7 @@ lint.isort.known-first-party = [
   "pydaymet",
   "pygridmet",
   "pynldas2",
+  "tiny_retriever",
 ]
 lint.isort.required-imports = [ "from __future__ import annotations" ]
 
