@@ -4,7 +4,10 @@ from __future__ import annotations
 
 from importlib.metadata import PackageNotFoundError, version
 
-from pygeohydro import exceptions, helpers, plot
+# for now export the plotting functions from hydrosignatures
+# since they have been moved from pygeohydro.plot to hydrosignatures
+from hydrosignatures import plot
+from pygeohydro import exceptions, helpers
 from pygeohydro.helpers import get_us_states
 from pygeohydro.levee import NLD
 from pygeohydro.nfhl import NFHL
@@ -17,12 +20,13 @@ from pygeohydro.nlcd import (
     overland_roughness,
 )
 from pygeohydro.nwis import NWIS, streamflow_fillna
-from pygeohydro.plot import interactive_map
+from pygeohydro.plot import cover_legends, descriptor_legends, interactive_map
 from pygeohydro.print_versions import show_versions
 from pygeohydro.pygeohydro import (
     EHydro,
     get_camels,
     soil_gnatsgo,
+    soil_polaris,
     soil_properties,
     soil_soilgrids,
     ssebopeta_bycoords,
@@ -48,7 +52,9 @@ __all__ = [
     "SensorThings",
     "WaterQuality",
     "__version__",
+    "cover_legends",
     "cover_statistics",
+    "descriptor_legends",
     "exceptions",
     "get_camels",
     "get_us_states",
@@ -63,6 +69,7 @@ __all__ = [
     "plot",
     "show_versions",
     "soil_gnatsgo",
+    "soil_polaris",
     "soil_properties",
     "soil_soilgrids",
     "ssebopeta_bycoords",
