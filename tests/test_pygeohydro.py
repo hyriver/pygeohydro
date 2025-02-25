@@ -327,19 +327,19 @@ def test_soilpolaris():
 
 
 # def test_sensorthings():
-    # sensor = gh.SensorThings()
-    # cond = " and ".join(
-    #     ("properties/monitoringLocationType eq 'Stream'", "properties/stateFIPS eq 'US:04'")
-    # )
-    # odata = sensor.odata_helper(conditionals=cond)
-    # df = sensor.query_byodata(odata)
-    # assert df.shape[0] == 72
+# sensor = gh.SensorThings()
+# cond = " and ".join(
+#     ("properties/monitoringLocationType eq 'Stream'", "properties/stateFIPS eq 'US:04'")
+# )
+# odata = sensor.odata_helper(conditionals=cond)
+# df = sensor.query_byodata(odata)
+# assert df.shape[0] == 72
 
-    # df = sensor.sensor_info("USGS-09380000")
-    # assert df["description"].iloc[0] == "Stream"
+# df = sensor.sensor_info("USGS-09380000")
+# assert df["description"].iloc[0] == "Stream"
 
-    # df = sensor.sensor_property("Datastreams", "USGS-09380000")
-    # assert df["observationType"].unique()[0] == "Instantaneous"
+# df = sensor.sensor_property("Datastreams", "USGS-09380000")
+# assert df["observationType"].unique()[0] == "Instantaneous"
 
 
 def test_show_versions():
