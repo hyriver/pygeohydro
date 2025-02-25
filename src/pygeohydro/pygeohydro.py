@@ -55,7 +55,7 @@ __all__ = [
     "EHydro",
     "get_camels",
     "soil_gnatsgo",
-    "soil_properties",
+    "soil_polaris",
     "soil_properties",
     "soil_soilgrids",
     "ssebopeta_bycoords",
@@ -140,6 +140,74 @@ SG_ATTRS = {
         "mapped_units": "t/ha",
         "conversion_factor": 10,
         "conventional_units": "kg/m²",
+    },
+}
+
+PS_ATTRS = {
+    "silt": {
+        "description": "silt percentage",
+        "long_name": "Silt Content Percentage",
+        "units": "%",
+    },
+    "sand": {
+        "description": "sand percentage",
+        "long_name": "Sand Content Percentage",
+        "units": "%",
+    },
+    "clay": {
+        "description": "clay percentage",
+        "long_name": "Clay Content Percentage",
+        "units": "%",
+    },
+    "bd": {
+        "description": "bulk density",
+        "long_name": "Bulk Density of Soil",
+        "units": "g/cm3",
+    },
+    "theta_s": {
+        "description": "saturated soil water content",
+        "long_name": "Saturated Soil Water Content",
+        "units": "m3/m3",
+    },
+    "theta_r": {
+        "description": "residual soil water content",
+        "long_name": "Residual Soil Water Content",
+        "units": "m3/m3",
+    },
+    "ksat": {
+        "description": "saturated hydraulic conductivity",
+        "long_name": "Saturated Hydraulic Conductivity",
+        "units": "log10(cm/hr)",
+    },
+    "ph": {
+        "description": "soil pH in H2O",
+        "long_name": "Soil pH in Water",
+        "units": "-",
+    },
+    "om": {
+        "description": "organic matter",
+        "long_name": "Organic Matter Content",
+        "units": "log10(%)",
+    },
+    "lambda": {
+        "description": "pore size distribution index (Brooks-Corey)",
+        "long_name": "Brooks-Corey Pore Size Distribution Index",
+        "units": "-",
+    },
+    "hb": {
+        "description": "bubbling pressure (Brooks-Corey)",
+        "long_name": "Brooks-Corey Bubbling Pressure",
+        "units": "log10(kPa)",
+    },
+    "n": {
+        "description": "measure of the pore size distribution (Van Genuchten)",
+        "long_name": "Van Genuchten Pore Size Distribution Parameter",
+        "units": "-",
+    },
+    "alpha": {
+        "description": "scale parameter inversely proportional to mean pore diameter (Van Genuchten)",
+        "long_name": "Van Genuchten Scale Parameter",
+        "units": "log10(kPa-1)",
     },
 }
 
@@ -460,7 +528,7 @@ def soil_soilgrids(
     geometry: GTYPE,
     geo_crs: CRSType = 4326,
 ) -> xr.Dataset:
-    """Get soil data from SoilGrids for the area of interest.
+    """Get soil data from SoilGrids for the area of interest at 250m resolution.
 
     Notes
     -----
@@ -472,9 +540,10 @@ def soil_soilgrids(
     layers : list of str
         SoilGrids layers to get. Available options are:
         ``bdod_*``, ``cec_*``, ``cfvo_*``, ``clay_*``, ``nitrogen_*``, ``ocd_*``,
-        ``ocs_*``, ``phh2o_*``, ``sand_*``, ``silt_*``, and ``soc_*`` where ``*``
-        is the depth in cm and can be one of ``5``, ``15``, ``30``, ``60``,
-        ``100``, or ``200``. For example, ``bdod_5`` is the mean bulk density of
+        ``ocs_*``, ``phh2o_*``, ``sand_*``, ``silt_*``, and ``soc_*``
+        represents depths in cm and can be one of ``5`` (0-5 cm), ``15``
+        (5-15 cm), ``30`` (15-30 cm), ``60`` (30-60 cm), ``100`` (60-100 cm), or ``200``
+        (100-200 cm). For example, ``bdod_5`` is the mean bulk density of
         the fine earth fraction at 0-5 cm depth, and ``bdod_200`` is the mean bulk
         density of the fine earth fraction at 100-200 cm depth.
     geometry : Polygon, MultiPolygon, or tuple of length 4
@@ -498,8 +567,7 @@ def soil_soilgrids(
         "200": "100-200cm",
     }
     valid_layers = [
-        f"{layer}_{depth}"
-        for layer, depth in itertools.product(SG_ATTRS.keys(), valid_depths.keys())
+        f"{layer}_{depth}" for layer, depth in itertools.product(SG_ATTRS, valid_depths)
     ]
     invalid_layers = [layer for layer in layers_ if layer not in valid_layers]
     if invalid_layers:
@@ -530,6 +598,82 @@ def soil_soilgrids(
         ds.attrs["description"] = attributes["description"]
         ds.attrs["units"] = attributes["conventional_units"]
 
+        return ds
+
+    return xr.merge([_read_layer(lyr, valid_depths[d]) for lyr, d in zip(lyr_names, lyr_depths)])
+
+
+def soil_polaris(
+    layers: list[str] | str,
+    geometry: GTYPE,
+    geo_crs: CRSType = 4326,
+) -> xr.Dataset:
+    """Get soil data from Polaris for the area of interest at 30m resolution.
+
+    Notes
+    -----
+    For more information on the Polaris dataset, read the original paper
+    `here <https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2018WR022797>`__.
+
+    Parameters
+    ----------
+    layers : list of str
+        SoilGrids layers to get. Available options are:
+        ``bd_*``, ``ksat_*``, ``ph_*``, ``om_*``, ``sand_*``, ``silt_*``, ``clay_*``,
+        ``theta_s_*``, ``theta_r_*``, ``lambda_*``, ``hb_*``, ``n_*``, and ``alpha_*``
+        where ``*`` represents depths in cm and can be one of ``5`` (0-5 cm), ``15``
+        (5-15 cm), ``30`` (15-30 cm), ``60`` (30-60 cm), ``100`` (60-100 cm), or ``200``
+        (100-200 cm). For example, ``bd_5`` is the mean bulk density of
+        the fine earth fraction at 0-5 cm depth, and ``bd_200`` is the mean bulk
+        density of the fine earth fraction at 100-200 cm depth.
+    geometry : Polygon, MultiPolygon, or tuple of length 4
+        Geometry to get DEM within. It can be a polygon or a boundong box
+        of form (xmin, ymin, xmax, ymax).
+    geo_crs : int, str, of pyproj.CRS, optional
+        CRS of the input geometry, defaults to ``epsg:4326``.
+
+    Returns
+    -------
+    xarray.DataArray
+        The request DEM at the specified resolution.
+    """
+    layers_ = [layers] if isinstance(layers, str) else list(layers)
+    valid_depths = {
+        "5": "0_5",
+        "15": "5_15",
+        "30": "15_30",
+        "60": "30_60",
+        "100": "60_100",
+        "200": "100_200",
+    }
+    valid_layers = [
+        f"{layer}_{depth}" for layer, depth in itertools.product(PS_ATTRS, valid_depths)
+    ]
+    invalid_layers = [layer for layer in layers_ if layer not in valid_layers]
+    if invalid_layers:
+        raise InputValueError("layers", valid_layers, ", ".join(invalid_layers))
+    lyr_names, lyr_depths = zip(*[layer.split("_") for layer in layers_])
+    base_url = "http://hydrology.cee.duke.edu/POLARIS/PROPERTIES/v1.0/vrt"
+    geometry_ = geoutils.geo2polygon(geometry)
+    bounds = geometry_.bounds
+
+    def _read_layer(lyr: str, depth: str) -> xr.DataArray:
+        """Read a SoilGrids layer."""
+        ds = rxr.open_rasterio(f"{base_url}/{lyr}_mean_{depth}.vrt")
+        ds = cast("xr.DataArray", ds)
+        ds = (
+            ds.squeeze(drop=True)
+            .rio.clip_box(*bounds, crs=geo_crs)
+            .rio.clip([geometry_], crs=geo_crs)
+        )
+        ds = ds.where(ds != ds.rio.nodata)
+        ds = ds.rio.write_nodata(np.nan)
+
+        attributes = PS_ATTRS[lyr]
+        ds.name = f"{lyr}_{depth}cm_mean"
+        ds.attrs["long_name"] = f"Mean {attributes['long_name']} ({depth.replace('_', '-')} cm)"
+        ds.attrs["description"] = attributes["description"]
+        ds.attrs["units"] = attributes["units"]
         return ds
 
     return xr.merge([_read_layer(lyr, valid_depths[d]) for lyr, d in zip(lyr_names, lyr_depths)])
