@@ -240,7 +240,7 @@ class SensorThings:
     """Class for interacting with SensorThings API."""
 
     def __init__(self) -> None:
-        self.base_url = "https://labs.waterdata.usgs.gov/sta/v1.1/Things"
+        self.base_url = "https://api.water.usgs.gov/sta/v1.1/Things"
 
     @overload
     @staticmethod
