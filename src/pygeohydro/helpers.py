@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING, Any, Union, cast
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
+import orjson as json
 import pandas as pd
-import ujson as json
 from defusedxml import ElementTree
 
 import async_retriever as ar
