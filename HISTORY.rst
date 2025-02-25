@@ -2,6 +2,26 @@
 History
 =======
 
+0.19.3 (2025-02-24)
+-------------------
+
+New Features
+~~~~~~~~~~~~
+- Add support for POLARIS soil dataset. The new function is called ``soil_polaris``.
+  The function returns soil properties from the POLARIS dataset for a given location.
+  The dataset includes soil properties such as soil texture, bulk density, organic
+  carbon, pH, and soil moisture. The dataset is available for CONUS at 30m resolution.
+
+Internal Changes
+~~~~~~~~~~~~~~~~
+- Make ``matplotlib`` and ``folium`` optional dependencies instead
+  of required dependencies. This is to reduce the size of the package
+  and make it more lightweight. They are now required only if the
+  ``plot`` module is used.
+- Move the plotting functionality of PyGeoHydro for hydrologic signatures
+  to HydroSignatures package. For now, the plot module is exported from
+  HydroSignatures package to maintain backward compatibility.
+
 0.19.0 (2025-01-17)
 -------------------
 
