@@ -94,6 +94,7 @@ def show_versions(file: TextIO = sys.stdout) -> None:
         "hydrosignatures",
         "pynldas2",
         "pygeohydro",
+        "tiny-retriever",
         # async-retriever
         "aiodns",
         "aiofiles",
