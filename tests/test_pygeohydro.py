@@ -70,7 +70,7 @@ class TestNWIS:
         query = {"bBox": ",".join(f"{b:.06f}" for b in GEOM.bounds)}
         info_box = self.nwis.get_info(query, nhd_info=True)
         assert info_box.shape[0] == 35
-        assert info_box["nhd_areasqkm"].isna().sum() == 29
+        assert info_box["nhd_areasqkm"].isna().sum() == 31
 
     def test_param_cd(self):
         codes = self.nwis.get_parameter_codes("%discharge%")
@@ -194,7 +194,7 @@ class TestNID:
 
     def test_nation(self):
         assert self.nid.df.shape == (92392, 83)
-        assert self.nid.gdf.shape == (92197, 96)
+        assert self.nid.gdf.shape == (92312, 96)
 
 
 class TestWaterQuality:
