@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Union, cast
@@ -10,7 +11,6 @@ from typing import TYPE_CHECKING, Any, Union, cast
 import cytoolz.curried as tlz
 import geopandas as gpd
 import numpy as np
-import orjson as json
 import pandas as pd
 from defusedxml import ElementTree
 
