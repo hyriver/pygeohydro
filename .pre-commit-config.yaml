@@ -34,7 +34,7 @@ repos:
     name: Sort top level statements with ssort
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.9.9
+  rev: v0.11.5
   hooks:
   - id: ruff
     name: Linting with Ruff
