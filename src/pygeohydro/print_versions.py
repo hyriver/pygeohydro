@@ -30,7 +30,7 @@ def _get_sys_info():
     if Path(".git").is_dir():
         with contextlib.suppress(Exception):
             pipe = subprocess.Popen(
-                'git log --format="%H" -n 1'.split(" "),
+                ["git", "log", '--format="%H"', "-n", "1"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
