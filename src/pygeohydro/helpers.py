@@ -217,7 +217,23 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
         GeoDataFrame of requested US states.
     """
     url = "https://www2.census.gov/geo/tiger/TIGER2024/STATE/tl_2024_us_state.zip"
-    us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url])[0]))
+    headers = {
+        "headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Cache-Control": "max-age=0",
+        }
+    }
+    us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url], request_kwds=[headers])[0]))
     if subset_key is not None:
         state_cd = _get_state_codes(subset_key)
         return us_states[us_states.STUSPS.isin(state_cd)].copy()  # pyright: ignore[reportReturnType]
