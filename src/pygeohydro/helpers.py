@@ -233,7 +233,9 @@ def get_us_states(subset_key: str | list[str] | None = None) -> gpd.GeoDataFrame
             "Cache-Control": "max-age=0",
         }
     }
-    us_states = gpd.read_file(io.BytesIO(ar.retrieve_binary([url], request_kwds=[headers])[0]))
+    us_states = gpd.read_file(
+        io.BytesIO(ar.retrieve_binary([url], request_kwds=[headers], ssl=False)[0])
+    )
     if subset_key is not None:
         state_cd = _get_state_codes(subset_key)
         return us_states[us_states.STUSPS.isin(state_cd)].copy()  # pyright: ignore[reportReturnType]
@@ -271,7 +273,7 @@ def states_lookup_table() -> dict[str, StateCounties]:
             ]
         ),
     ]
-    resp = ar.retrieve_text(urls)
+    resp = ar.retrieve_text(urls, ssl=False)
 
     codes = pd.read_csv(io.StringIO(resp[0]), sep="|")
     codes["STATE"] = codes["STATE"].astype(str).str.zfill(2)
