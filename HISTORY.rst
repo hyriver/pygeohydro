@@ -2,6 +2,14 @@
 History
 =======
 
+0.19.4 (2025-05-23)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Fix the download URL for ``get_camels`` function according to the changes
+  in the Hydroshare web service.
+
 0.19.3 (2025-03-07)
 -------------------
 
