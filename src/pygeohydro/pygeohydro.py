@@ -225,12 +225,7 @@ def get_camels() -> tuple[gpd.GeoDataFrame, xr.Dataset]:
         The first is basin attributes as a ``geopandas.GeoDataFrame`` and the second
         is streamflow data and basin attributes as an ``xarray.Dataset``.
     """
-    base_url = "/".join(
-        (
-            "https://thredds.hydroshare.org/thredds/fileServer/hydroshare",
-            "resources/658c359b8c83494aac0f58145b1b04e6/data/contents",
-        )
-    )
+    base_url = "https://www.hydroshare.org/resource/658c359b8c83494aac0f58145b1b04e6/data/contents"
     urls = [
         f"{base_url}/camels_attributes_v2.0.feather",
         f"{base_url}/camels_attrs_v2_streamflow_v1p2.nc",
