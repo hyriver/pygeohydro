@@ -9,6 +9,8 @@ Bug Fixes
 ~~~~~~~~~
 - Fix the download URL for ``get_camels`` function according to the changes
   in the Hydroshare web service.
+- Use the new links for the eHydro web service.
+- Fix the download issue with the Census data in ``get_us_states`` function.
 
 0.19.3 (2025-03-07)
 -------------------
