@@ -34,7 +34,7 @@ repos:
     name: Sort top level statements with ssort
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.11.13
+  rev: v0.12.0
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -45,7 +45,7 @@ repos:
     types_or: [python, jupyter]
 
 - repo: https://github.com/PyCQA/doc8
-  rev: v1.1.2
+  rev: v2.0.0
   hooks:
   - id: doc8
     name: Check documentation formats with doc8
