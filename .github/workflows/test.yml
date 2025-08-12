@@ -30,7 +30,7 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set environment variables
       run: |-
         echo "PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV

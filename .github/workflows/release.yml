@@ -16,7 +16,7 @@ jobs:
     name: Create Release Notes
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Generate Changelog
       run: |-
         echo "Release Notes" > ${{ github.workflow }}-CHANGELOG.rst
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: release-notes
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
       with:
         fetch-depth: 0
 
@@ -64,7 +64,7 @@ jobs:
 
     steps:
     - name: Download packages built by build-and-inspect-python-package
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: Packages
         path: dist
