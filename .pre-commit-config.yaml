@@ -1,6 +1,6 @@
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v5.0.0
+  rev: v6.0.0
   hooks:
   - id: check-added-large-files
     args: [--maxkb=50000]
@@ -28,13 +28,13 @@ repos:
     exclude: \.(html|svg)$
 
 - repo: https://github.com/bwhmather/ssort
-  rev: 0.14.0
+  rev: 0.15.0
   hooks:
   - id: ssort
     name: Sort top level statements with ssort
 
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.12.0
+  rev: v0.12.8
   hooks:
   - id: ruff
     name: Linting with Ruff
@@ -66,7 +66,7 @@ repos:
     name: Apply a consistent format to pyproject.toml
 
 - repo: https://github.com/macisamuele/language-formatters-pre-commit-hooks
-  rev: v2.14.0
+  rev: v2.15.0
   hooks:
   - id: pretty-format-yaml
     args: [--autofix, --indent, '2']
