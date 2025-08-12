@@ -161,6 +161,8 @@ lint.ignore = [
   "ISC001",
   # specific type error ignored
   "PGH003",
+  # topo level import
+  "PLC0415",
   "PLR0913",
   "PLR2004",
   # url schema
