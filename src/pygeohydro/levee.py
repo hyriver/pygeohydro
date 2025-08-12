@@ -20,7 +20,7 @@ class NLD(AGRBase):
 
     Notes
     -----
-    For more info visit: https://geospatial.sec.usace.army.mil/server/rest/services/NLD2_PUBLIC/FeatureServer
+    For more info visit: https://geospatial.sec.usace.army.mil/dls/rest/services/NLD/Public/FeatureServer
 
     Parameters
     ----------
@@ -118,7 +118,7 @@ class NLD(AGRBase):
         if _layer is None:
             raise InputValueError("layer", list(self.valid_layers))
         base_url = (
-            "https://geospatial.sec.usace.army.mil/server/rest/services/NLD2_PUBLIC/FeatureServer"
+            "https://geospatial.sec.usace.army.mil/dls/rest/services/NLD/Public/FeatureServer"
         )
         super().__init__(
             f"{base_url}/{_layer}",
