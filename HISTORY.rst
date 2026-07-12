@@ -2,6 +2,17 @@
 History
 =======
 
+0.19.5 (2026-07-12)
+-------------------
+
+Bug Fixes
+~~~~~~~~~
+- Update the NID schema to reflect upstream data changes: rename ``hazardId``
+  to ``publicHazardId``. Also raise a descriptive ``ValueError`` if expected
+  columns are missing from the response, so future schema changes are surfaced
+  immediately rather than silently ignored.
+  By `sclaw <https://github.com/sclaw>`_
+
 0.19.4 (2025-05-23)
 -------------------
 
